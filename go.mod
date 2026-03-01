@@ -9,6 +9,7 @@ require (
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/kaptinlin/jsonrepair v0.2.6
 	github.com/openai/openai-go v1.12.0
+	github.com/vmihailenco/msgpack/v5 v5.4.1
 	google.golang.org/genai v1.42.0
 )
 
@@ -27,6 +28,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
