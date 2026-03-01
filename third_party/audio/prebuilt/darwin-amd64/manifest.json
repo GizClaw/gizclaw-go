@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "platform": "darwin-amd64",
+  "opus_source_tag": "v1.5.2",
+  "opus_source_rev": "ddbe48383984d56acd9e1ab6a090c54ca6b735a6",
+  "build": {
+    "OPUS_BUILD_SHARED_LIBRARY": "OFF",
+    "OPUS_BUILD_PROGRAMS": "OFF",
+    "OPUS_BUILD_TESTING": "OFF"
+  },
+  "generated_at": "2026-03-01T20:54:54Z",
+  "artifacts": [
+    {
+      "path": "include/opus/opus.h",
+      "sha256": "0d5e90fe5d2651ce616b238a81b33d393949b99ef9528efdbd653c0097abbbd4"
+    },
+    {
+      "path": "include/opus/opus_defines.h",
+      "sha256": "8918f65309058be1921e59e9ef9cd4081497ce8a487e55cb45c5547046447d9b"
+    },
+    {
+      "path": "include/opus/opus_multistream.h",
+      "sha256": "49b727edb7306f94980713bb6c2777fa1fb52de00005cd77c5aff3b935435c22"
+    },
+    {
+      "path": "include/opus/opus_projection.h",
+      "sha256": "a53752449f55b5f60679eab8fda96835102251aeefccf7c54256460d02747216"
+    },
+    {
+      "path": "include/opus/opus_types.h",
+      "sha256": "19cb301ea1eedbcbdbb5049363de061893bf11c20e505a657b69ce6ffa5b11fa"
+    },
+    {
+      "path": "lib/libopus.a",
+      "sha256": "a867ecac3b29afe336700d7d315210a4126528ad363a67b63fe9102754a49415"
+    }
+  ]
+}
