@@ -9,6 +9,7 @@ require (
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/kaptinlin/jsonrepair v0.2.6
 	github.com/openai/openai-go v1.12.0
+	github.com/tphakala/go-audio-resampling v0.0.0-20251123212058-a9dde25e8eea
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	google.golang.org/genai v1.42.0
 )
@@ -28,6 +29,7 @@ require (
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
+	github.com/tphakala/simd v1.0.12 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
@@ -38,6 +40,7 @@ require (
 	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
+	gonum.org/v1/gonum v0.16.0 // indirect
 	google.golang.org/api v0.257.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	google.golang.org/grpc v1.77.0 // indirect
