@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	gnet "github.com/haivivi/giztoy/go/pkg/net"
+	gnet "github.com/haivivi/giztoy/go/pkg/net/core"
 	"github.com/haivivi/giztoy/go/pkg/net/noise"
 )
 

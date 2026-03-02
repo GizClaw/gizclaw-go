@@ -1,5 +1,5 @@
 // Package net provides network abstractions built on the Noise Protocol.
-package net
+package core
 
 import (
 	"errors"

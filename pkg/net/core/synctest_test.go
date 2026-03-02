@@ -1,6 +1,6 @@
 //go:build go1.24
 
-package net
+package core
 
 import (
 	"testing"

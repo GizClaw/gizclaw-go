@@ -1,3 +1,3 @@
 //go:build !linux
 
-package net
+package core
