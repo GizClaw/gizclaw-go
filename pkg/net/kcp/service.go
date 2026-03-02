@@ -6,8 +6,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/hashicorp/yamux"
 )
 
 var (
@@ -19,38 +17,33 @@ var (
 
 // ServiceMuxConfig holds configuration for ServiceMux.
 type ServiceMuxConfig struct {
-	// IsClient determines yamux role. Client initiates streams with odd IDs.
+	// IsClient is kept for API compatibility. Direct KCP stream mode
+	// does not require separate client/server session roles.
 	IsClient bool
 
 	// Output is called to send KCP packets over the wire.
-	// The service ID is included so the caller can prepend it to the packet.
 	Output func(service uint64, data []byte) error
 
 	// OnOutputError is called when Output returns an error.
-	// Optional; can be used for metrics/monitoring/degradation policy.
 	OnOutputError func(service uint64, err error)
 
-	// OnNewService is called when a new service is seen for the first time
-	// (from incoming data). Return true to accept, false to reject.
-	// If nil, all services are accepted.
+	// OnNewService is called when a service is first created.
+	// Return true to accept, false to reject.
 	OnNewService func(service uint64) bool
-
-	// YamuxConfig is the yamux session configuration. nil uses defaults.
-	YamuxConfig *yamux.Config
 }
 
-// serviceEntry holds one service's KCPConn + yamux session.
 type serviceEntry struct {
-	conn    *KCPConn
-	session *yamux.Session
-	pipe    *kcpPipe
+	conn      *KCPConn
+	announced atomic.Bool
+	readyOnce sync.Once
+	readyCh   chan struct{}
 }
 
-// ServiceMux manages per-service KCP instances and yamux sessions for a peer.
+// ServiceMux manages per-service KCP streams for a peer.
 //
-// Each service gets its own KCPConn (reliable byte stream with independent
-// goroutine) and yamux.Session (stream multiplexing over the KCPConn).
-// Different services are completely isolated at the KCP level.
+// Compared with yamux mode, each service now maps to exactly one direct KCPConn.
+// OpenStream returns that KCPConn directly. AcceptStream is triggered when
+// inbound packets are first seen on a service.
 type ServiceMux struct {
 	config ServiceMuxConfig
 
@@ -62,7 +55,6 @@ type ServiceMux struct {
 
 	closed    atomic.Bool
 	closeOnce sync.Once
-	acceptWg  sync.WaitGroup
 
 	outputErrors atomic.Uint64
 }
@@ -70,6 +62,29 @@ type ServiceMux struct {
 type acceptResult struct {
 	conn    net.Conn
 	service uint64
+}
+
+// directStream is a logical stream wrapper on top of a shared per-service KCPConn.
+// Close is a no-op to preserve request-scoped close semantics without tearing down
+// the underlying long-lived KCP channel.
+type directStream struct {
+	conn net.Conn
+}
+
+func (s *directStream) Read(b []byte) (int, error)         { return s.conn.Read(b) }
+func (s *directStream) Write(b []byte) (int, error)        { return s.conn.Write(b) }
+func (s *directStream) Close() error                       { return nil }
+func (s *directStream) LocalAddr() net.Addr                { return s.conn.LocalAddr() }
+func (s *directStream) RemoteAddr() net.Addr               { return s.conn.RemoteAddr() }
+func (s *directStream) SetDeadline(t time.Time) error      { return s.conn.SetDeadline(t) }
+func (s *directStream) SetReadDeadline(t time.Time) error  { return s.conn.SetReadDeadline(t) }
+func (s *directStream) SetWriteDeadline(t time.Time) error { return s.conn.SetWriteDeadline(t) }
+
+func wrapDirectStream(conn net.Conn) net.Conn {
+	if conn == nil {
+		return nil
+	}
+	return &directStream{conn: conn}
 }
 
 // NewServiceMux creates a new ServiceMux.
@@ -82,8 +97,7 @@ func NewServiceMux(cfg ServiceMuxConfig) *ServiceMux {
 	}
 }
 
-// Input routes an incoming KCP packet to the correct service's KCPConn.
-// If the service doesn't exist and OnNewService allows it, creates it.
+// Input routes an incoming KCP packet to the correct service KCPConn.
 func (m *ServiceMux) Input(service uint64, data []byte) error {
 	if m.closed.Load() {
 		return ErrServiceMuxClosed
@@ -93,11 +107,25 @@ func (m *ServiceMux) Input(service uint64, data []byte) error {
 	if err != nil {
 		return err
 	}
-	return entry.conn.Input(data)
+
+	if err := entry.conn.Input(data); err != nil {
+		if !errors.Is(err, ErrConnClosed) {
+			return err
+		}
+		entry, err = m.recreateService(service, entry)
+		if err != nil {
+			return err
+		}
+		if err := entry.conn.Input(data); err != nil {
+			return err
+		}
+	}
+
+	m.announceAccept(service, entry)
+	return nil
 }
 
-// OpenStream opens a new yamux stream on the given service.
-// If the service doesn't exist yet, creates KCPConn + yamux session.
+// OpenStream returns the direct KCP stream for a service.
 func (m *ServiceMux) OpenStream(service uint64) (net.Conn, error) {
 	if m.closed.Load() {
 		return nil, ErrServiceMuxClosed
@@ -107,24 +135,44 @@ func (m *ServiceMux) OpenStream(service uint64) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return entry.session.Open()
+
+	if entry.conn.IsClosed() {
+		entry, err = m.recreateService(service, entry)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return wrapDirectStream(entry.conn), nil
 }
 
-// AcceptStream accepts the next incoming yamux stream from any service.
-// Returns the stream and its service ID.
+// AcceptStream accepts the next inbound service stream.
+// A service is announced when inbound packets are first observed.
 func (m *ServiceMux) AcceptStream() (net.Conn, uint64, error) {
 	if m.closed.Load() {
 		return nil, 0, ErrServiceMuxClosed
 	}
 
+	// Fast path: if any service has been announced, return it directly.
+	m.servicesMu.RLock()
+	for svc, entry := range m.services {
+		if entry != nil && entry.announced.Load() {
+			conn := entry.conn
+			m.servicesMu.RUnlock()
+			return wrapDirectStream(conn), svc, nil
+		}
+	}
+	m.servicesMu.RUnlock()
+
 	result, ok := <-m.acceptCh
 	if !ok {
 		return nil, 0, ErrAcceptQueueClosed
 	}
-	return result.conn, result.service, nil
+	return wrapDirectStream(result.conn), result.service, nil
 }
 
-// AcceptStreamOn accepts the next incoming yamux stream on a specific service.
+// AcceptStreamOn waits for inbound activity on a specific service and
+// returns the corresponding direct KCP stream.
 func (m *ServiceMux) AcceptStreamOn(service uint64) (net.Conn, error) {
 	if m.closed.Load() {
 		return nil, ErrServiceMuxClosed
@@ -134,14 +182,23 @@ func (m *ServiceMux) AcceptStreamOn(service uint64) (net.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	return entry.session.Accept()
+
+	if entry.announced.Load() {
+		return entry.conn, nil
+	}
+
+	select {
+	case <-entry.readyCh:
+		return wrapDirectStream(entry.conn), nil
+	case <-m.closeCh:
+		return nil, ErrServiceMuxClosed
+	}
 }
 
-// Close closes all services, KCPConns, and yamux sessions.
+// Close closes all service streams.
 func (m *ServiceMux) Close() error {
 	m.closeOnce.Do(func() {
 		m.closed.Store(true)
-
 		close(m.closeCh)
 
 		m.servicesMu.Lock()
@@ -153,12 +210,9 @@ func (m *ServiceMux) Close() error {
 		m.servicesMu.Unlock()
 
 		for _, e := range entries {
-			e.session.Close()
-			e.pipe.Close()
-			e.conn.Close()
+			_ = e.conn.Close()
 		}
 
-		m.acceptWg.Wait()
 		close(m.acceptCh)
 	})
 	return nil
@@ -171,15 +225,10 @@ func (m *ServiceMux) NumServices() int {
 	return len(m.services)
 }
 
-// NumStreams returns the total number of active yamux streams across all services.
+// NumStreams returns the number of direct KCP streams.
+// In direct mode, one service corresponds to one stream.
 func (m *ServiceMux) NumStreams() int {
-	m.servicesMu.RLock()
-	defer m.servicesMu.RUnlock()
-	total := 0
-	for _, e := range m.services {
-		total += e.session.NumStreams()
-	}
-	return total
+	return m.NumServices()
 }
 
 // OutputErrorCount returns the number of output callback failures observed.
@@ -197,21 +246,38 @@ func (m *ServiceMux) reportOutputError(service uint64, err error) {
 	}
 }
 
-// getOrCreateService returns an existing service entry or creates a new one.
+func (m *ServiceMux) announceAccept(service uint64, entry *serviceEntry) {
+	if !entry.announced.CompareAndSwap(false, true) {
+		return
+	}
+
+	entry.readyOnce.Do(func() {
+		close(entry.readyCh)
+	})
+
+	select {
+	case m.acceptCh <- acceptResult{conn: entry.conn, service: service}:
+	case <-m.closeCh:
+	}
+}
+
 func (m *ServiceMux) getOrCreateService(service uint64) (*serviceEntry, error) {
 	m.servicesMu.RLock()
 	entry, ok := m.services[service]
 	m.servicesMu.RUnlock()
-	if ok {
+	if ok && !entry.conn.IsClosed() {
 		return entry, nil
 	}
 
 	m.servicesMu.Lock()
 	defer m.servicesMu.Unlock()
 
-	// Double-check after acquiring write lock.
 	if entry, ok := m.services[service]; ok {
-		return entry, nil
+		if !entry.conn.IsClosed() {
+			return entry, nil
+		}
+		_ = entry.conn.Close()
+		delete(m.services, service)
 	}
 
 	if m.closed.Load() {
@@ -222,26 +288,34 @@ func (m *ServiceMux) getOrCreateService(service uint64) (*serviceEntry, error) {
 		return nil, ErrServiceRejected
 	}
 
-	entry, err := m.createServiceLocked(service)
-	if err != nil {
-		return nil, err
-	}
-
-	// Close 可能在 createServiceLocked 执行期间并发发生。
-	// 这里二次检查，避免关闭期间把新 service 放入表中。
-	if m.closed.Load() {
-		entry.session.Close()
-		entry.pipe.Close()
-		entry.conn.Close()
-		return nil, ErrServiceMuxClosed
-	}
-
+	entry = m.createServiceLocked(service)
 	m.services[service] = entry
 	return entry, nil
 }
 
-// createServiceLocked creates a new service entry. Must hold servicesMu write lock.
-func (m *ServiceMux) createServiceLocked(service uint64) (*serviceEntry, error) {
+func (m *ServiceMux) recreateService(service uint64, stale *serviceEntry) (*serviceEntry, error) {
+	m.servicesMu.Lock()
+	defer m.servicesMu.Unlock()
+
+	if m.closed.Load() {
+		return nil, ErrServiceMuxClosed
+	}
+
+	current, ok := m.services[service]
+	if ok && current != stale && !current.conn.IsClosed() {
+		return current, nil
+	}
+
+	if ok {
+		_ = current.conn.Close()
+	}
+
+	entry := m.createServiceLocked(service)
+	m.services[service] = entry
+	return entry, nil
+}
+
+func (m *ServiceMux) createServiceLocked(service uint64) *serviceEntry {
 	conn := NewKCPConn(uint32(service), func(data []byte) {
 		if m.config.Output == nil {
 			return
@@ -251,75 +325,8 @@ func (m *ServiceMux) createServiceLocked(service uint64) (*serviceEntry, error) 
 		}
 	})
 
-	pipe := newKCPPipe(conn)
-
-	var session *yamux.Session
-	var err error
-	if m.config.IsClient {
-		session, err = yamux.Client(pipe, m.config.YamuxConfig)
-	} else {
-		session, err = yamux.Server(pipe, m.config.YamuxConfig)
-	}
-	if err != nil {
-		pipe.Close()
-		conn.Close()
-		return nil, err
-	}
-
-	entry := &serviceEntry{
+	return &serviceEntry{
 		conn:    conn,
-		session: session,
-		pipe:    pipe,
-	}
-
-	// Start accept loop for this service's yamux session.
-	m.acceptWg.Add(1)
-	go m.serviceAcceptLoop(service, session)
-
-	return entry, nil
-}
-
-// serviceAcceptLoop accepts yamux streams and forwards them to the global accept queue.
-func (m *ServiceMux) serviceAcceptLoop(service uint64, session *yamux.Session) {
-	defer m.acceptWg.Done()
-	for {
-		stream, err := session.Accept()
-		if err != nil {
-			return
-		}
-
-		select {
-		case m.acceptCh <- acceptResult{conn: stream, service: service}:
-		case <-m.closeCh:
-			stream.Close()
-			return
-		}
+		readyCh: make(chan struct{}),
 	}
 }
-
-// kcpPipe adapts KCPConn to net.Conn for yamux.
-// Forwards deadline calls to the underlying KCPConn so yamux's
-// keepalive and timeout detection work correctly.
-type kcpPipe struct {
-	conn *KCPConn
-}
-
-func newKCPPipe(conn *KCPConn) *kcpPipe {
-	return &kcpPipe{conn: conn}
-}
-
-func (p *kcpPipe) Read(b []byte) (int, error)         { return p.conn.Read(b) }
-func (p *kcpPipe) Write(b []byte) (int, error)        { return p.conn.Write(b) }
-func (p *kcpPipe) Close() error                       { return p.conn.Close() }
-func (p *kcpPipe) LocalAddr() net.Addr                { return pipeAddr{} }
-func (p *kcpPipe) RemoteAddr() net.Addr               { return pipeAddr{} }
-func (p *kcpPipe) SetDeadline(t time.Time) error      { return p.conn.SetDeadline(t) }
-func (p *kcpPipe) SetReadDeadline(t time.Time) error  { return p.conn.SetReadDeadline(t) }
-func (p *kcpPipe) SetWriteDeadline(t time.Time) error { return p.conn.SetWriteDeadline(t) }
-
-type pipeAddr struct{}
-
-func (pipeAddr) Network() string { return "kcp" }
-func (pipeAddr) String() string  { return "kcp-pipe" }
-
-var _ net.Conn = (*kcpPipe)(nil)

@@ -94,6 +94,11 @@ func TestSmoke_YamuxKCPNoise_StreamDataPath(t *testing.T) {
 	}
 	defer clientStream.Close()
 
+	req := []byte("smoke-yamux-req")
+	if _, err := clientStream.Write(req); err != nil {
+		t.Fatalf("client write req failed: %v", err)
+	}
+
 	serverStream, service, err := pair.Server.AcceptStream()
 	if err != nil {
 		t.Fatalf("server accept stream failed: %v", err)
@@ -103,10 +108,6 @@ func TestSmoke_YamuxKCPNoise_StreamDataPath(t *testing.T) {
 		t.Fatalf("accepted service=%d, want 0", service)
 	}
 
-	req := []byte("smoke-yamux-req")
-	if _, err := clientStream.Write(req); err != nil {
-		t.Fatalf("client write req failed: %v", err)
-	}
 	if got := readExactWithTimeout(t, serverStream, len(req), 2*time.Second); !bytes.Equal(got, req) {
 		t.Fatalf("server recv req mismatch: got=%q want=%q", got, req)
 	}

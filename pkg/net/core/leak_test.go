@@ -212,6 +212,9 @@ func TestClosedChanGoroutineLeak(t *testing.T) {
 	if err != nil {
 		t.Fatalf("warmup OpenStream: %v", err)
 	}
+	if _, err := warmClientStream.Write([]byte("w")); err != nil {
+		t.Fatalf("warmup Write: %v", err)
+	}
 	select {
 	case warmServerStream := <-warmAccepted:
 		warmServerStream.Close()

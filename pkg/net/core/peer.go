@@ -87,7 +87,7 @@ func (u *UDP) sendDirect(peer *peerState, protocol byte, data []byte) error {
 	return u.sendDirectWithService(peer, protocol, 0, data)
 }
 
-// OpenStream opens a new yamux stream to the specified peer on the given service.
+// OpenStream opens a direct KCP stream to the specified peer on the given service.
 func (u *UDP) OpenStream(pk noise.PublicKey, service uint64) (net.Conn, error) {
 	if service != 0 {
 		return nil, ErrUnsupportedService
@@ -120,7 +120,7 @@ func (u *UDP) OpenStream(pk noise.PublicKey, service uint64) (net.Conn, error) {
 	return m.OpenStream(service)
 }
 
-// AcceptStream accepts an incoming yamux stream from the specified peer.
+// AcceptStream accepts an incoming direct KCP stream from the specified peer.
 // Returns the stream, service ID, and any error.
 func (u *UDP) AcceptStream(pk noise.PublicKey) (net.Conn, uint64, error) {
 	if u.closed.Load() {

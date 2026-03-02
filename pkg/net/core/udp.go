@@ -1197,7 +1197,7 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 	pkt.payload = make([]byte, len(payload))
 	copy(pkt.payload, payload)
 	pkt.payloadN = len(payload)
-	// RPC 协议统一走 yamux over KCP，不走普通透传路径。
+	// RPC 协议统一走 KCP stream，不走普通透传路径。
 	if protocol == noise.ProtocolRPC {
 		if smux == nil {
 			u.rpcRouteErrors.Add(1)
@@ -1209,7 +1209,7 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 			pkt.err = err
 			return
 		}
-		pkt.err = ErrNoData // RPC 数据已交给 smux/yamux
+		pkt.err = ErrNoData // RPC 数据已交给 smux/KCP
 		return
 	}
 

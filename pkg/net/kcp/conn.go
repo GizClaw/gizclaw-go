@@ -3,6 +3,7 @@ package kcp
 import (
 	"errors"
 	"io"
+	"net"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -36,7 +37,7 @@ type writeResult struct {
 // in the runLoop goroutine. This eliminates any concurrency issues with the
 // KCP C library. Write() and Input() communicate with runLoop via channels.
 //
-// Supports read/write deadlines for yamux compatibility.
+// Supports read/write deadlines for net.Conn compatibility.
 type KCPConn struct {
 	kcp    *KCP
 	output func([]byte)
@@ -59,6 +60,11 @@ type KCPConn struct {
 
 	wg sync.WaitGroup
 }
+
+type kcpConnAddr string
+
+func (a kcpConnAddr) Network() string { return "kcp" }
+func (a kcpConnAddr) String() string  { return string(a) }
 
 // NewKCPConn creates a KCPConn with the given conversation ID and output function.
 // output is called when KCP wants to send a packet over the wire.
@@ -227,6 +233,21 @@ func (c *KCPConn) SetDeadline(t time.Time) error {
 	return nil
 }
 
+// LocalAddr returns a placeholder local address for net.Conn compatibility.
+func (c *KCPConn) LocalAddr() net.Addr {
+	return kcpConnAddr("kcp-local")
+}
+
+// RemoteAddr returns a placeholder remote address for net.Conn compatibility.
+func (c *KCPConn) RemoteAddr() net.Addr {
+	return kcpConnAddr("kcp-remote")
+}
+
+// IsClosed reports whether the connection has been closed.
+func (c *KCPConn) IsClosed() bool {
+	return c.closed.Load()
+}
+
 const (
 	idleTimeout     = 15 * time.Second
 	idleTimeoutPure = 30 * time.Second
@@ -360,3 +381,4 @@ func (c *KCPConn) drainRecv() {
 }
 
 var _ io.ReadWriteCloser = (*KCPConn)(nil)
+var _ net.Conn = (*KCPConn)(nil)

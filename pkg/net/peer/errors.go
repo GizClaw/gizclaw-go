@@ -1,0 +1,18 @@
+package peer
+
+import "errors"
+
+var (
+	ErrNilUDP                  = errors.New("peer: nil udp")
+	ErrNilListener             = errors.New("peer: nil listener")
+	ErrNilConn                 = errors.New("peer: nil conn")
+	ErrClosed                  = errors.New("peer: listener closed")
+	ErrOpusFrameTooShort       = errors.New("peer: opus frame too short")
+	ErrInvalidOpusFrameVersion = errors.New("peer: invalid opus frame version")
+	ErrInvalidV                = errors.New("peer: invalid version")
+	ErrMissingID               = errors.New("peer: missing id")
+	ErrMissingName             = errors.New("peer: missing name")
+	ErrMissingMethod           = errors.New("peer: missing method")
+	ErrRPCErrorMessageRequired = errors.New("peer: rpc error message is required")
+	ErrUnexpectedProtocol      = errors.New("peer: unexpected protocol")
+)

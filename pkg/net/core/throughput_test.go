@@ -66,14 +66,22 @@ func TestUDPStreamThroughput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverStream, _, err := server.AcceptStream(clientKey.Public)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	chunk := make([]byte, chunkSize)
 	for i := range chunk {
 		chunk[i] = byte(i & 0xFF)
+	}
+
+	// 先写一块数据触发服务端 AcceptStream。
+	written := 0
+	n, err := clientStream.Write(chunk)
+	if err != nil {
+		t.Fatalf("initial write error: %v", err)
+	}
+	written += n
+
+	serverStream, _, err := server.AcceptStream(clientKey.Public)
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	var wg sync.WaitGroup
@@ -96,7 +104,6 @@ func TestUDPStreamThroughput(t *testing.T) {
 
 	// Writer
 	start := time.Now()
-	written := 0
 	for written < totalSize {
 		n, err := clientStream.Write(chunk)
 		if err != nil {

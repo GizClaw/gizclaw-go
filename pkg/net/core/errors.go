@@ -54,6 +54,6 @@ var (
 	// ErrUnsupportedService indicates non-zero service is not supported in foundation phase.
 	ErrUnsupportedService = errors.New("net: only service 0 is supported")
 
-	// ErrRPCMustUseStream indicates RPC traffic must use yamux over KCP stream.
-	ErrRPCMustUseStream = errors.New("net: rpc must use yamux over kcp stream")
+	// ErrRPCMustUseStream indicates RPC traffic must use direct KCP stream.
+	ErrRPCMustUseStream = errors.New("net: rpc must use kcp stream")
 )
