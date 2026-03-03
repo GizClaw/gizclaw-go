@@ -93,7 +93,7 @@ func (u *UDP) OpenStream(pk noise.PublicKey, service uint64) (net.Conn, error) {
 		return nil, ErrUnsupportedService
 	}
 
-	if u.closed.Load() {
+	if u.closed.Load() || u.closing.Load() {
 		return nil, ErrClosed
 	}
 
@@ -123,7 +123,7 @@ func (u *UDP) OpenStream(pk noise.PublicKey, service uint64) (net.Conn, error) {
 // AcceptStream accepts an incoming yamux stream from the specified peer.
 // Returns the stream, service ID, and any error.
 func (u *UDP) AcceptStream(pk noise.PublicKey) (net.Conn, uint64, error) {
-	if u.closed.Load() {
+	if u.closed.Load() || u.closing.Load() {
 		return nil, 0, ErrClosed
 	}
 
@@ -154,7 +154,7 @@ func (u *UDP) closedChan() <-chan struct{} {
 // Read reads raw data from the specified peer (non-KCP protocols).
 // Returns the protocol byte, number of bytes read, and any error.
 func (u *UDP) Read(pk noise.PublicKey, buf []byte) (proto byte, n int, err error) {
-	if u.closed.Load() {
+	if u.closed.Load() || u.closing.Load() {
 		return 0, 0, ErrClosed
 	}
 
@@ -190,7 +190,7 @@ func (u *UDP) Read(pk noise.PublicKey, buf []byte) (proto byte, n int, err error
 
 // Write writes raw data to the specified peer with the given protocol byte.
 func (u *UDP) Write(pk noise.PublicKey, proto byte, data []byte) (n int, err error) {
-	if u.closed.Load() {
+	if u.closed.Load() || u.closing.Load() {
 		return 0, ErrClosed
 	}
 	if proto == noise.ProtocolRPC {
@@ -217,7 +217,7 @@ func (u *UDP) Write(pk noise.PublicKey, proto byte, data []byte) (n int, err err
 
 // GetServiceMux returns the ServiceMux for a peer.
 func (u *UDP) GetServiceMux(pk noise.PublicKey) (*kcp.ServiceMux, error) {
-	if u.closed.Load() {
+	if u.closed.Load() || u.closing.Load() {
 		return nil, ErrClosed
 	}
 

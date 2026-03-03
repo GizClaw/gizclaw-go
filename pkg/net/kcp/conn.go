@@ -2,6 +2,7 @@ package kcp
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 	"sync/atomic"
@@ -9,8 +10,10 @@ import (
 )
 
 var (
-	ErrConnClosed  = errors.New("kcp: conn closed")
-	ErrConnTimeout = errors.New("kcp: timeout")
+	ErrConnClosed       = errors.New("kcp: conn closed")
+	ErrConnClosedLocal  = fmt.Errorf("%w: local", ErrConnClosed)
+	ErrConnClosedByPeer = fmt.Errorf("%w: by peer", ErrConnClosed)
+	ErrConnTimeout      = errors.New("kcp: timeout")
 )
 
 var bufferPool = sync.Pool{
@@ -57,6 +60,10 @@ type KCPConn struct {
 	closeOnce sync.Once
 	closed    atomic.Bool
 
+	finalizeOnce sync.Once
+	closeErrMu   sync.Mutex
+	closeErr     error
+
 	wg sync.WaitGroup
 }
 
@@ -89,7 +96,7 @@ func NewKCPConn(conv uint32, output func([]byte)) *KCPConn {
 // Non-blocking: data is queued to the internal goroutine via channel.
 func (c *KCPConn) Input(data []byte) error {
 	if c.closed.Load() {
-		return ErrConnClosed
+		return c.getCloseErr()
 	}
 
 	cp := make([]byte, len(data))
@@ -99,7 +106,7 @@ func (c *KCPConn) Input(data []byte) error {
 	case c.inputCh <- cp:
 		return nil
 	case <-c.closeCh:
-		return ErrConnClosed
+		return c.getCloseErr()
 	}
 }
 
@@ -115,7 +122,7 @@ func (c *KCPConn) Read(b []byte) (int, error) {
 
 	for len(c.recvBuf) == 0 {
 		if c.closed.Load() {
-			return 0, io.EOF
+			return 0, c.getCloseErr()
 		}
 
 		if dl, ok := c.readDeadline.Load().(time.Time); ok && !dl.IsZero() {
@@ -153,7 +160,7 @@ func (c *KCPConn) Write(b []byte) (int, error) {
 	}
 
 	if c.closed.Load() {
-		return 0, ErrConnClosed
+		return 0, c.getCloseErr()
 	}
 
 	cp := make([]byte, len(b))
@@ -179,7 +186,7 @@ func (c *KCPConn) Write(b []byte) (int, error) {
 	select {
 	case c.writeCh <- req:
 	case <-c.closeCh:
-		return 0, ErrConnClosed
+		return 0, c.getCloseErr()
 	case <-deadline:
 		return 0, ErrConnTimeout
 	}
@@ -189,7 +196,7 @@ func (c *KCPConn) Write(b []byte) (int, error) {
 	case result := <-req.result:
 		return result.n, result.err
 	case <-c.closeCh:
-		return 0, ErrConnClosed
+		return 0, c.getCloseErr()
 	case <-deadline:
 		return 0, ErrConnTimeout
 	}
@@ -197,14 +204,54 @@ func (c *KCPConn) Write(b []byte) (int, error) {
 
 // Close shuts down the KCPConn and its internal goroutine.
 func (c *KCPConn) Close() error {
+	c.closeSignal(ErrConnClosedLocal)
+	c.finalizeClose()
+	return nil
+}
+
+func (c *KCPConn) closeWithReason(reason error) error {
+	c.closeSignal(reason)
+	c.finalizeClose()
+	return nil
+}
+
+func (c *KCPConn) closeSignal(reason error) {
 	c.closeOnce.Do(func() {
+		if reason == nil {
+			reason = ErrConnClosed
+		}
+		c.setCloseErr(reason)
 		c.closed.Store(true)
 		close(c.closeCh)
 		c.recvCond.Broadcast()
+	})
+}
+
+func (c *KCPConn) finalizeClose() {
+	c.finalizeOnce.Do(func() {
 		c.wg.Wait()
 		c.kcp.Release()
 	})
-	return nil
+}
+
+func (c *KCPConn) setCloseErr(err error) {
+	if err == nil {
+		err = ErrConnClosed
+	}
+	c.closeErrMu.Lock()
+	if c.closeErr == nil {
+		c.closeErr = err
+	}
+	c.closeErrMu.Unlock()
+}
+
+func (c *KCPConn) getCloseErr() error {
+	c.closeErrMu.Lock()
+	defer c.closeErrMu.Unlock()
+	if c.closeErr != nil {
+		return c.closeErr
+	}
+	return ErrConnClosed
 }
 
 // SetReadDeadline sets the read deadline.
@@ -242,18 +289,18 @@ func (c *KCPConn) runLoop() {
 	for {
 		// Dead link detection: KCP marks state=-1 after too many retransmits.
 		if c.kcp.State() < 0 {
-			c.closeInternal()
+			c.closeInternal(ErrConnTimeout)
 			return
 		}
 
 		// Idle timeout (matches Rust: 15s with pending sends, 30s pure idle).
 		idle := time.Since(lastRecv)
 		if idle > idleTimeout && c.kcp.WaitSnd() > 0 {
-			c.closeInternal()
+			c.closeInternal(ErrConnTimeout)
 			return
 		}
 		if idle > idleTimeoutPure {
-			c.closeInternal()
+			c.closeInternal(ErrConnTimeout)
 			return
 		}
 
@@ -303,12 +350,8 @@ func (c *KCPConn) runLoop() {
 }
 
 // closeInternal closes the connection due to dead link or idle timeout.
-func (c *KCPConn) closeInternal() {
-	c.closeOnce.Do(func() {
-		c.closed.Store(true)
-		close(c.closeCh)
-		c.recvCond.Broadcast()
-	})
+func (c *KCPConn) closeInternal(reason error) {
+	c.closeSignal(reason)
 }
 
 // drainInputChAndProcess processes all queued packets in inputCh without blocking,

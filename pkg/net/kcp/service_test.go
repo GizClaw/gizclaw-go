@@ -41,12 +41,48 @@ func serviceMuxPair(loss float64) (client, server *ServiceMux) {
 	return clientMux, serverMux
 }
 
+func serviceMuxPairWithDrop(filter func(fromClient bool, service uint64, data []byte) bool) (client, server *ServiceMux) {
+	var clientMux, serverMux *ServiceMux
+
+	clientMux = NewServiceMux(ServiceMuxConfig{
+		IsClient: true,
+		Output: func(service uint64, data []byte) error {
+			if filter != nil && filter(true, service, data) {
+				return nil
+			}
+			return serverMux.Input(service, data)
+		},
+	})
+	serverMux = NewServiceMux(ServiceMuxConfig{
+		IsClient: false,
+		Output: func(service uint64, data []byte) error {
+			if filter != nil && filter(false, service, data) {
+				return nil
+			}
+			return clientMux.Input(service, data)
+		},
+	})
+
+	return clientMux, serverMux
+}
+
 func readFull(conn net.Conn, size int, timeout time.Duration) ([]byte, error) {
 	conn.SetReadDeadline(time.Now().Add(timeout))
 	defer conn.SetReadDeadline(time.Time{})
 	buf := make([]byte, size)
 	_, err := io.ReadFull(conn, buf)
 	return buf, err
+}
+
+func serviceConnOf(t *testing.T, mux *ServiceMux, service uint64) *KCPConn {
+	t.Helper()
+	mux.servicesMu.RLock()
+	entry := mux.services[service]
+	mux.servicesMu.RUnlock()
+	if entry == nil || entry.conn == nil {
+		t.Fatalf("service %d conn not found", service)
+	}
+	return entry.conn
 }
 
 // === Basic yamux tests ===
@@ -791,7 +827,7 @@ func TestServiceMux_CloseConcurrentInput_NoNewService(t *testing.T) {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- mux.Input(blockedService, []byte{0x01, 0x02, 0x03, 0x04})
+		errCh <- mux.Input(blockedService, []byte{0x00, 0x01, 0x02, 0x03, 0x04})
 	}()
 
 	select {
@@ -1150,6 +1186,164 @@ func TestServiceMux_BUG3_AcceptBackpressure(t *testing.T) {
 	}
 
 	t.Logf("all %d streams accepted (no drops)", total)
+}
+
+func TestServiceMux_ActiveClose(t *testing.T) {
+	client, server := serviceMuxPair(0)
+	defer server.Close()
+
+	clientStream, err := client.OpenStream(0)
+	if err != nil {
+		t.Fatalf("client OpenStream failed: %v", err)
+	}
+	defer clientStream.Close()
+
+	serverStream, _, err := server.AcceptStream()
+	if err != nil {
+		t.Fatalf("server AcceptStream failed: %v", err)
+	}
+	defer serverStream.Close()
+
+	clientConn := serviceConnOf(t, client, 0)
+	serverConn := serviceConnOf(t, server, 0)
+
+	readErrCh := make(chan error, 1)
+	go func() {
+		buf := make([]byte, 1)
+		_, readErr := serverStream.Read(buf)
+		readErrCh <- readErr
+	}()
+
+	time.Sleep(20 * time.Millisecond)
+	start := time.Now()
+	if err := client.Close(); err != nil {
+		t.Fatalf("client Close failed: %v", err)
+	}
+
+	select {
+	case err := <-readErrCh:
+		if err == nil {
+			t.Fatal("server read should fail after active close")
+		}
+	case <-time.After(time.Second):
+		t.Fatal("server read was not unblocked within 1s after active close")
+	}
+
+	if took := time.Since(start); took >= activeCloseAckTimeout {
+		t.Fatalf("active close should complete before ACK timeout: took=%v timeout=%v", took, activeCloseAckTimeout)
+	}
+
+	if _, err := serverStream.Write([]byte("x")); err == nil {
+		t.Fatal("server write should fail after peer active close")
+	}
+
+	if _, err := clientConn.Write([]byte("x")); !errors.Is(err, ErrConnClosedLocal) {
+		t.Fatalf("client KCPConn write err=%v, want %v", err, ErrConnClosedLocal)
+	}
+	if _, err := serverConn.Write([]byte("x")); !errors.Is(err, ErrConnClosedByPeer) {
+		t.Fatalf("server KCPConn write err=%v, want %v", err, ErrConnClosedByPeer)
+	}
+}
+
+func TestServiceMux_AckLoss(t *testing.T) {
+	var closeFrames atomic.Uint64
+	client, server := serviceMuxPairWithDrop(func(fromClient bool, _ uint64, data []byte) bool {
+		if fromClient && len(data) > 0 && data[0] == serviceFrameClose {
+			closeFrames.Add(1)
+		}
+		return !fromClient && len(data) > 0 && data[0] == serviceFrameCloseAck
+	})
+	defer server.Close()
+
+	clientStream, err := client.OpenStream(0)
+	if err != nil {
+		t.Fatalf("client OpenStream failed: %v", err)
+	}
+	defer clientStream.Close()
+
+	serverStream, _, err := server.AcceptStream()
+	if err != nil {
+		t.Fatalf("server AcceptStream failed: %v", err)
+	}
+	defer serverStream.Close()
+
+	clientConn := serviceConnOf(t, client, 0)
+	serverConn := serviceConnOf(t, server, 0)
+
+	start := time.Now()
+	if err := client.Close(); err != nil {
+		t.Fatalf("client Close failed: %v", err)
+	}
+	elapsed := time.Since(start)
+
+	if elapsed < activeCloseRetryInterval*2 {
+		t.Fatalf("client Close returned too fast under ACK loss: %v", elapsed)
+	}
+	if elapsed > 2*time.Second {
+		t.Fatalf("client Close took too long under ACK loss: %v", elapsed)
+	}
+	if retries := closeFrames.Load(); retries < 2 {
+		t.Fatalf("CLOSE retries=%d, want >=2", retries)
+	}
+	if got := client.NumServices(); got != 0 {
+		t.Fatalf("client NumServices after close = %d, want 0", got)
+	}
+	if _, err := clientConn.Write([]byte("x")); !errors.Is(err, ErrConnClosedLocal) {
+		t.Fatalf("client KCPConn write err=%v, want %v", err, ErrConnClosedLocal)
+	}
+	if _, err := serverConn.Write([]byte("x")); !errors.Is(err, ErrConnClosedByPeer) {
+		t.Fatalf("server KCPConn write err=%v, want %v", err, ErrConnClosedByPeer)
+	}
+}
+
+func TestServiceMux_ConcurrentClose(t *testing.T) {
+	client, server := serviceMuxPair(0)
+
+	clientStream, err := client.OpenStream(0)
+	if err != nil {
+		t.Fatalf("client OpenStream failed: %v", err)
+	}
+	defer clientStream.Close()
+
+	serverStream, _, err := server.AcceptStream()
+	if err != nil {
+		t.Fatalf("server AcceptStream failed: %v", err)
+	}
+	defer serverStream.Close()
+
+	var wg sync.WaitGroup
+	errCh := make(chan error, 16)
+
+	for i := 0; i < 8; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			errCh <- client.Close()
+		}()
+		go func() {
+			defer wg.Done()
+			errCh <- server.Close()
+		}()
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(3 * time.Second):
+		t.Fatal("concurrent Close timed out")
+	}
+
+	close(errCh)
+	for err := range errCh {
+		if err != nil {
+			t.Fatalf("Close returned error: %v", err)
+		}
+	}
 }
 
 // ==================== Timeout / Dead Peer Tests ====================
