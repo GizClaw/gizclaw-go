@@ -7,11 +7,12 @@ require (
 	github.com/google/jsonschema-go v0.4.2
 	github.com/googleapis/gax-go/v2 v2.16.0
 	github.com/hajimehoshi/go-mp3 v0.3.4
-	github.com/hashicorp/yamux v0.1.2
 	github.com/kaptinlin/jsonrepair v0.2.6
 	github.com/openai/openai-go v1.12.0
 	github.com/tphakala/go-audio-resampling v0.0.0-20251123212058-a9dde25e8eea
 	github.com/vmihailenco/msgpack/v5 v5.4.1
+	golang.org/x/crypto v0.45.0
+	golang.org/x/net v0.47.0
 	google.golang.org/genai v1.42.0
 )
 
@@ -37,8 +38,6 @@ require (
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/metric v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	gonum.org/v1/gonum v0.16.0 // indirect

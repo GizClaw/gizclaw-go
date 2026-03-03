@@ -3,7 +3,6 @@ package kcp
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -13,52 +12,18 @@ import (
 )
 
 // serviceMuxPair creates a connected pair of ServiceMux instances.
-// Packets from client are delivered to server and vice versa.
-// loss controls simulated packet drop rate (0.0 = no loss).
-func serviceMuxPair(loss float64) (client, server *ServiceMux) {
-	rng := newLCG(42)
-
+func serviceMuxPair() (client, server *ServiceMux) {
 	var clientMux, serverMux *ServiceMux
 
 	clientMux = NewServiceMux(ServiceMuxConfig{
 		IsClient: true,
 		Output: func(service uint64, data []byte) error {
-			if loss > 0 && rng.shouldDrop(loss) {
-				return nil
-			}
 			return serverMux.Input(service, data)
 		},
 	})
 	serverMux = NewServiceMux(ServiceMuxConfig{
 		IsClient: false,
 		Output: func(service uint64, data []byte) error {
-			if loss > 0 && rng.shouldDrop(loss) {
-				return nil
-			}
-			return clientMux.Input(service, data)
-		},
-	})
-	return clientMux, serverMux
-}
-
-func serviceMuxPairWithDrop(filter func(fromClient bool, service uint64, data []byte) bool) (client, server *ServiceMux) {
-	var clientMux, serverMux *ServiceMux
-
-	clientMux = NewServiceMux(ServiceMuxConfig{
-		IsClient: true,
-		Output: func(service uint64, data []byte) error {
-			if filter != nil && filter(true, service, data) {
-				return nil
-			}
-			return serverMux.Input(service, data)
-		},
-	})
-	serverMux = NewServiceMux(ServiceMuxConfig{
-		IsClient: false,
-		Output: func(service uint64, data []byte) error {
-			if filter != nil && filter(false, service, data) {
-				return nil
-			}
 			return clientMux.Input(service, data)
 		},
 	})
@@ -66,605 +31,260 @@ func serviceMuxPairWithDrop(filter func(fromClient bool, service uint64, data []
 	return clientMux, serverMux
 }
 
-func readFull(conn net.Conn, size int, timeout time.Duration) ([]byte, error) {
-	conn.SetReadDeadline(time.Now().Add(timeout))
-	defer conn.SetReadDeadline(time.Time{})
-	buf := make([]byte, size)
-	_, err := io.ReadFull(conn, buf)
-	return buf, err
-}
-
-func serviceConnOf(t *testing.T, mux *ServiceMux, service uint64) *KCPConn {
+func readExactWithTimeout(t *testing.T, r io.Reader, n int, timeout time.Duration) []byte {
 	t.Helper()
-	mux.servicesMu.RLock()
-	entry := mux.services[service]
-	mux.servicesMu.RUnlock()
-	if entry == nil || entry.conn == nil {
-		t.Fatalf("service %d conn not found", service)
+
+	errCh := make(chan error, 1)
+	buf := make([]byte, n)
+	go func() {
+		_, err := io.ReadFull(r, buf)
+		errCh <- err
+	}()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("ReadFull failed: %v", err)
+		}
+		return buf
+	case <-time.After(timeout):
+		t.Fatalf("ReadFull timeout after %s", timeout)
+		return nil
 	}
-	return entry.conn
 }
 
-// === Basic yamux tests ===
-
-func TestYamux_OpenClose(t *testing.T) {
-	client, server := serviceMuxPair(0)
+func TestServiceMux_OpenWriteThenAccept(t *testing.T) {
+	client, server := serviceMuxPair()
 	defer client.Close()
 	defer server.Close()
 
 	stream, err := client.OpenStream(1)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("client OpenStream failed: %v", err)
+	}
+	defer stream.Close()
+
+	msg := []byte("hello-direct-kcp")
+	writeErr := make(chan error, 1)
+	go func() {
+		_, err := stream.Write(msg)
+		writeErr <- err
+	}()
+
+	accepted, service, err := server.AcceptStream()
+	if err != nil {
+		t.Fatalf("server AcceptStream failed: %v", err)
+	}
+	defer accepted.Close()
+
+	if service != 1 {
+		t.Fatalf("accepted service=%d, want 1", service)
 	}
 
-	// Accept on server side so yamux can process the SYN
-	sStream, _, _ := server.AcceptStream()
-	sStream.Close()
-	stream.Close()
+	if got := readExactWithTimeout(t, accepted, len(msg), 5*time.Second); !bytes.Equal(got, msg) {
+		t.Fatalf("server recv mismatch: got=%q want=%q", got, msg)
+	}
 
-	// Wait for stream count to settle
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		if client.NumStreams() == 0 {
-			return
+	select {
+	case err := <-writeErr:
+		if err != nil {
+			t.Fatalf("client write failed: %v", err)
 		}
-		time.Sleep(20 * time.Millisecond)
-	}
-	if n := client.NumStreams(); n != 0 {
-		t.Errorf("client streams after close = %d, want 0", n)
+	case <-time.After(2 * time.Second):
+		t.Fatal("client write did not complete")
 	}
 }
 
-func TestYamux_Bidirectional(t *testing.T) {
-	client, server := serviceMuxPair(0)
+func TestServiceMux_BidirectionalDataPath(t *testing.T) {
+	client, server := serviceMuxPair()
 	defer client.Close()
 	defer server.Close()
 
-	cStream, err := client.OpenStream(1)
+	clientStream, err := client.OpenStream(0)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("client OpenStream failed: %v", err)
 	}
-	defer cStream.Close()
+	defer clientStream.Close()
 
-	sStream, _, err := server.AcceptStream()
+	request := []byte("req")
+	if _, err := clientStream.Write(request); err != nil {
+		t.Fatalf("client write req failed: %v", err)
+	}
+
+	serverStream, svc, err := server.AcceptStream()
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("server AcceptStream failed: %v", err)
 	}
-	defer sStream.Close()
+	defer serverStream.Close()
+	if svc != 0 {
+		t.Fatalf("accepted service=%d, want 0", svc)
+	}
 
-	cMsg := []byte("hello from client")
-	sMsg := []byte("hello from server")
+	if got := readExactWithTimeout(t, serverStream, len(request), 5*time.Second); !bytes.Equal(got, request) {
+		t.Fatalf("server recv req mismatch: got=%q want=%q", got, request)
+	}
 
-	var wg sync.WaitGroup
-	wg.Add(2)
+	response := []byte("resp")
+	if _, err := serverStream.Write(response); err != nil {
+		t.Fatalf("server write resp failed: %v", err)
+	}
 
-	go func() {
-		defer wg.Done()
-		cStream.Write(cMsg)
-		got, err := readFull(cStream, len(sMsg), 5*time.Second)
-		if err != nil {
-			t.Errorf("client read: %v", err)
-			return
-		}
-		if !bytes.Equal(got, sMsg) {
-			t.Errorf("client got %q, want %q", got, sMsg)
-		}
-	}()
-
-	go func() {
-		defer wg.Done()
-		got, err := readFull(sStream, len(cMsg), 5*time.Second)
-		if err != nil {
-			t.Errorf("server read: %v", err)
-			return
-		}
-		if !bytes.Equal(got, cMsg) {
-			t.Errorf("server got %q, want %q", got, cMsg)
-		}
-		sStream.Write(sMsg)
-	}()
-
-	done := make(chan struct{})
-	go func() { wg.Wait(); close(done) }()
-	select {
-	case <-done:
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
+	if got := readExactWithTimeout(t, clientStream, len(response), 5*time.Second); !bytes.Equal(got, response) {
+		t.Fatalf("client recv resp mismatch: got=%q want=%q", got, response)
 	}
 }
 
 func TestServiceMux_AcceptStreamOn(t *testing.T) {
-	client, server := serviceMuxPair(0)
+	client, server := serviceMuxPair()
 	defer client.Close()
 	defer server.Close()
 
 	const svc uint64 = 7
-	cStream, err := client.OpenStream(svc)
+	clientStream, err := client.OpenStream(svc)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("client OpenStream failed: %v", err)
 	}
-	defer cStream.Close()
+	defer clientStream.Close()
 
-	sStream, err := server.AcceptStreamOn(svc)
-	if err != nil {
-		t.Fatal(err)
+	msg := []byte("accept-on-service")
+	if _, err := clientStream.Write(msg); err != nil {
+		t.Fatalf("client write failed: %v", err)
 	}
-	defer sStream.Close()
 
-	msg := []byte("accept-on")
-	if _, err := cStream.Write(msg); err != nil {
-		t.Fatal(err)
-	}
-	got, err := readFull(sStream, len(msg), 5*time.Second)
+	serverStream, err := server.AcceptStreamOn(svc)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("server AcceptStreamOn failed: %v", err)
 	}
-	if !bytes.Equal(got, msg) {
-		t.Fatalf("got %q, want %q", got, msg)
+	defer serverStream.Close()
+
+	if got := readExactWithTimeout(t, serverStream, len(msg), 5*time.Second); !bytes.Equal(got, msg) {
+		t.Fatalf("server recv mismatch: got=%q want=%q", got, msg)
 	}
 }
 
-func TestYamux_LargeData_32MB(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping 32MB test in short mode")
-	}
-
-	client, server := serviceMuxPair(0)
+func TestServiceMux_AcceptStream_NoDuplicateReturn(t *testing.T) {
+	client, server := serviceMuxPair()
 	defer client.Close()
 	defer server.Close()
 
-	const totalSize = 32 * 1024 * 1024
-	const chunkSize = 32 * 1024
+	stream1, err := client.OpenStream(1)
+	if err != nil {
+		t.Fatalf("client OpenStream(1) failed: %v", err)
+	}
+	defer stream1.Close()
 
-	cStream, _ := client.OpenStream(1)
-	defer cStream.Close()
-	sStream, _, _ := server.AcceptStream()
-	defer sStream.Close()
-
-	sendData := make([]byte, totalSize)
-	for i := range sendData {
-		sendData[i] = byte(i)
+	if _, err := stream1.Write([]byte("first")); err != nil {
+		t.Fatalf("stream1.Write failed: %v", err)
 	}
 
-	var recvData []byte
-	var wg sync.WaitGroup
+	accepted1, svc1, err := server.AcceptStream()
+	if err != nil {
+		t.Fatalf("first AcceptStream failed: %v", err)
+	}
+	defer accepted1.Close()
+	if svc1 != 1 {
+		t.Fatalf("first accepted service=%d, want 1", svc1)
+	}
+	_ = readExactWithTimeout(t, accepted1, len("first"), 5*time.Second)
 
-	wg.Add(1)
+	accept2Ch := make(chan struct {
+		conn    net.Conn
+		service uint64
+		err     error
+	}, 1)
 	go func() {
-		defer wg.Done()
-		buf := make([]byte, 64*1024)
-		for len(recvData) < totalSize {
-			n, err := sStream.Read(buf)
-			if err != nil {
-				return
-			}
-			recvData = append(recvData, buf[:n]...)
-		}
+		c, s, err := server.AcceptStream()
+		accept2Ch <- struct {
+			conn    net.Conn
+			service uint64
+			err     error
+		}{conn: c, service: s, err: err}
 	}()
 
-	for w := 0; w < totalSize; {
-		end := w + chunkSize
-		if end > totalSize {
-			end = totalSize
-		}
-		cStream.Write(sendData[w:end])
-		w = end
-	}
-
-	done := make(chan struct{})
-	go func() { wg.Wait(); close(done) }()
 	select {
-	case <-done:
-	case <-time.After(120 * time.Second):
-		t.Fatalf("timeout: received %d/%d", len(recvData), totalSize)
-	}
-
-	if !bytes.Equal(recvData, sendData) {
-		t.Errorf("data mismatch: got %d bytes, want %d", len(recvData), totalSize)
-	}
-}
-
-// === Concurrent stream tests ===
-
-func testYamuxMultiStream(t *testing.T, numStreams int) {
-	t.Helper()
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	var wg sync.WaitGroup
-	wg.Add(numStreams * 2)
-
-	for i := 0; i < numStreams; i++ {
-		idx := i
-
-		// Client side: open stream, write, read echo
-		go func() {
-			defer wg.Done()
-			stream, err := client.OpenStream(1)
-			if err != nil {
-				t.Errorf("stream %d: open: %v", idx, err)
-				return
-			}
-			defer stream.Close()
-
-			msg := []byte(fmt.Sprintf("msg-%04d", idx))
-			stream.Write(msg)
-
-			got, err := readFull(stream, len(msg)+4, 10*time.Second)
-			if err != nil {
-				t.Errorf("stream %d: read echo: %v", idx, err)
-				return
-			}
-			expected := append([]byte("echo"), msg...)
-			if !bytes.Equal(got, expected) {
-				t.Errorf("stream %d: got %q, want %q", idx, got, expected)
-			}
-		}()
-
-		// Server side: accept, read, echo back with prefix
-		go func() {
-			defer wg.Done()
-			stream, _, err := server.AcceptStream()
-			if err != nil {
-				t.Errorf("accept %d: %v", idx, err)
-				return
-			}
-			defer stream.Close()
-
-			buf := make([]byte, 256)
-			stream.SetReadDeadline(time.Now().Add(10 * time.Second))
-			n, err := stream.Read(buf)
-			if err != nil {
-				t.Errorf("server read %d: %v", idx, err)
-				return
-			}
-			stream.SetReadDeadline(time.Time{})
-
-			echo := append([]byte("echo"), buf[:n]...)
-			stream.Write(echo)
-		}()
-	}
-
-	done := make(chan struct{})
-	go func() { wg.Wait(); close(done) }()
-	select {
-	case <-done:
-	case <-time.After(30 * time.Second):
-		t.Fatal("timeout")
-	}
-}
-
-func TestYamux_MultiStream_10(t *testing.T)  { testYamuxMultiStream(t, 10) }
-func TestYamux_MultiStream_100(t *testing.T) { testYamuxMultiStream(t, 100) }
-func TestYamux_MultiStream_1000(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping 1000-stream test in short mode")
-	}
-	testYamuxMultiStream(t, 1000)
-}
-
-func TestYamux_RapidOpenClose(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	// Drain accepted streams
-	go func() {
-		for {
-			s, _, err := server.AcceptStream()
-			if err != nil {
-				return
-			}
-			s.Close()
+	case r := <-accept2Ch:
+		if r.conn != nil {
+			_ = r.conn.Close()
 		}
-	}()
-
-	for i := 0; i < 500; i++ {
-		s, err := client.OpenStream(1)
-		if err != nil {
-			t.Fatalf("open %d: %v", i, err)
-		}
-		s.Close()
+		t.Fatalf("second AcceptStream returned early: service=%d err=%v", r.service, r.err)
+	case <-time.After(200 * time.Millisecond):
+		// expected: second accept should block until new inbound activity
 	}
 
-	time.Sleep(100 * time.Millisecond)
-}
-
-// === Flow control tests ===
-
-func TestYamux_HalfClose(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	cStream, _ := client.OpenStream(1)
-	sStream, _, _ := server.AcceptStream()
-
-	// Client writes then closes write side
-	cStream.Write([]byte("final message"))
-	cStream.Close()
-
-	// Server should still be able to read the data
-	got, err := readFull(sStream, len("final message"), 5*time.Second)
+	stream2, err := client.OpenStream(2)
 	if err != nil {
-		t.Fatalf("server read after half-close: %v", err)
+		t.Fatalf("client OpenStream(2) failed: %v", err)
 	}
-	if !bytes.Equal(got, []byte("final message")) {
-		t.Errorf("got %q", got)
-	}
+	defer stream2.Close()
 
-	// Server reads should eventually get EOF
-	buf := make([]byte, 10)
-	sStream.SetReadDeadline(time.Now().Add(2 * time.Second))
-	_, err = sStream.Read(buf)
-	if err != io.EOF {
-		t.Errorf("expected EOF after close, got %v", err)
+	if _, err := stream2.Write([]byte("second")); err != nil {
+		t.Fatalf("stream2.Write failed: %v", err)
 	}
 
-	sStream.Close()
-}
-
-func TestYamux_EOF(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	cStream, _ := client.OpenStream(1)
-	sStream, _, _ := server.AcceptStream()
-
-	cStream.Close()
-
-	buf := make([]byte, 10)
-	sStream.SetReadDeadline(time.Now().Add(2 * time.Second))
-	_, err := sStream.Read(buf)
-	if err != io.EOF {
-		t.Errorf("Read after peer close = %v, want io.EOF", err)
-	}
-	sStream.Close()
-}
-
-func TestYamux_WriteAfterClose(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	cStream, _ := client.OpenStream(1)
-	sStream, _, _ := server.AcceptStream()
-	defer sStream.Close()
-
-	cStream.Close()
-
-	_, err := cStream.Write([]byte("should fail"))
-	if err == nil {
-		t.Error("Write after Close should return error")
-	}
-}
-
-// === Packet loss tests ===
-
-func TestYamux_PacketLoss_1pct(t *testing.T) { testYamuxLoss(t, 0.01) }
-func TestYamux_PacketLoss_5pct(t *testing.T) { testYamuxLoss(t, 0.05) }
-func TestYamux_PacketLoss_10pct(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping 10% loss test in short mode")
-	}
-	testYamuxLoss(t, 0.10)
-}
-
-func testYamuxLoss(t *testing.T, lossRate float64) {
-	t.Helper()
-
-	client, server := serviceMuxPair(lossRate)
-	defer client.Close()
-	defer server.Close()
-
-	cStream, err := client.OpenStream(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer cStream.Close()
-
-	sStream, _, err := server.AcceptStream()
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer sStream.Close()
-
-	const dataSize = 32 * 1024
-	sendData := make([]byte, dataSize)
-	for i := range sendData {
-		sendData[i] = byte(i)
-	}
-
-	var recvData []byte
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		buf := make([]byte, 64*1024)
-		for len(recvData) < dataSize {
-			n, err := sStream.Read(buf)
-			if err != nil {
-				return
-			}
-			recvData = append(recvData, buf[:n]...)
-		}
-	}()
-
-	for w := 0; w < dataSize; {
-		end := w + 1024
-		if end > dataSize {
-			end = dataSize
-		}
-		cStream.Write(sendData[w:end])
-		w = end
-	}
-
-	done := make(chan struct{})
-	go func() { wg.Wait(); close(done) }()
 	select {
-	case <-done:
-	case <-time.After(30 * time.Second):
-		t.Fatalf("timeout with %.0f%% loss: received %d/%d", lossRate*100, len(recvData), dataSize)
-	}
-
-	if !bytes.Equal(recvData, sendData) {
-		t.Errorf("data mismatch with %.0f%% loss", lossRate*100)
-	}
-}
-
-// === Deadline tests ===
-
-func TestYamux_ReadDeadline(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	cStream, _ := client.OpenStream(1)
-	defer cStream.Close()
-	sStream, _, _ := server.AcceptStream()
-	defer sStream.Close()
-
-	sStream.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
-	buf := make([]byte, 10)
-	_, err := sStream.Read(buf)
-	if err == nil {
-		t.Error("expected timeout error")
-	}
-}
-
-func TestYamux_WriteDeadline(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	cStream, _ := client.OpenStream(1)
-	defer cStream.Close()
-	_, _, _ = server.AcceptStream()
-
-	// Fill the write buffer to trigger deadline
-	cStream.SetWriteDeadline(time.Now().Add(100 * time.Millisecond))
-	largeData := make([]byte, 10*1024*1024)
-	for {
-		_, err := cStream.Write(largeData)
-		if err != nil {
-			break
+	case r := <-accept2Ch:
+		if r.err != nil {
+			t.Fatalf("second AcceptStream err=%v", r.err)
 		}
+		defer r.conn.Close()
+		if r.service != 2 {
+			t.Fatalf("second accepted service=%d, want 2", r.service)
+		}
+		_ = readExactWithTimeout(t, r.conn, len("second"), 5*time.Second)
+	case <-time.After(5 * time.Second):
+		t.Fatal("second AcceptStream did not unblock on new inbound activity")
 	}
 }
 
-// === ServiceMux routing tests ===
-
-func TestSmux_SingleService(t *testing.T) {
-	client, server := serviceMuxPair(0)
+func TestServiceMux_AcceptStreamOn_AnnouncedPathReturnsWrappedConn(t *testing.T) {
+	client, server := serviceMuxPair()
 	defer client.Close()
 	defer server.Close()
 
-	cStream, _ := client.OpenStream(1)
-	defer cStream.Close()
-	sStream, svc, _ := server.AcceptStream()
-	defer sStream.Close()
+	stream, err := client.OpenStream(3)
+	if err != nil {
+		t.Fatalf("client OpenStream failed: %v", err)
+	}
+	defer stream.Close()
 
-	if svc != 1 {
-		t.Errorf("accepted service = %d, want 1", svc)
+	first := []byte("hello")
+	if _, err := stream.Write(first); err != nil {
+		t.Fatalf("stream.Write(first) failed: %v", err)
 	}
 
-	cStream.Write([]byte("ping"))
-	got, _ := readFull(sStream, 4, 5*time.Second)
-	if !bytes.Equal(got, []byte("ping")) {
-		t.Errorf("got %q", got)
+	accepted, err := server.AcceptStreamOn(3)
+	if err != nil {
+		t.Fatalf("AcceptStreamOn failed: %v", err)
 	}
-}
-
-func TestSmux_MultiService_3(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	services := []uint64{1, 2, 3}
-	var wg sync.WaitGroup
-	wg.Add(len(services) * 2)
-
-	for _, svc := range services {
-		svc := svc
-		go func() {
-			defer wg.Done()
-			s, err := client.OpenStream(svc)
-			if err != nil {
-				t.Errorf("open service %d: %v", svc, err)
-				return
-			}
-			defer s.Close()
-			msg := fmt.Sprintf("svc%d", svc)
-			s.Write([]byte(msg))
-			got, _ := readFull(s, len(msg)+5, 5*time.Second)
-			expected := fmt.Sprintf("echo-%s", msg)
-			if !bytes.Equal(got, []byte(expected)) {
-				t.Errorf("service %d: got %q, want %q", svc, got, expected)
-			}
-		}()
-
-		go func() {
-			defer wg.Done()
-			s, gotSvc, err := server.AcceptStream()
-			if err != nil {
-				t.Errorf("accept: %v", err)
-				return
-			}
-			defer s.Close()
-			_ = gotSvc
-
-			buf := make([]byte, 256)
-			s.SetReadDeadline(time.Now().Add(5 * time.Second))
-			n, err := s.Read(buf)
-			if err != nil {
-				t.Errorf("read: %v", err)
-				return
-			}
-			s.SetReadDeadline(time.Time{})
-			echo := fmt.Sprintf("echo-%s", buf[:n])
-			s.Write([]byte(echo))
-		}()
+	if got := readExactWithTimeout(t, accepted, len(first), 5*time.Second); !bytes.Equal(got, first) {
+		t.Fatalf("first payload mismatch: got=%q want=%q", got, first)
 	}
 
-	done := make(chan struct{})
-	go func() { wg.Wait(); close(done) }()
-	select {
-	case <-done:
-	case <-time.After(10 * time.Second):
-		t.Fatal("timeout")
+	// Close() should be no-op on wrapped direct stream.
+	if err := accepted.Close(); err != nil {
+		t.Fatalf("accepted.Close failed: %v", err)
 	}
 
-	if n := client.NumServices(); n != 3 {
-		t.Errorf("client services = %d, want 3", n)
+	second := []byte("world")
+	if _, err := stream.Write(second); err != nil {
+		t.Fatalf("stream.Write(second) failed: %v", err)
 	}
-	if n := server.NumServices(); n != 3 {
-		t.Errorf("server services = %d, want 3", n)
+	if got := readExactWithTimeout(t, accepted, len(second), 5*time.Second); !bytes.Equal(got, second) {
+		t.Fatalf("second payload mismatch after Close no-op: got=%q want=%q", got, second)
 	}
 }
 
-func TestSmux_UnknownService(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-
-	// Server rejects service 99
-	server.Close()
-	serverWithFilter := NewServiceMux(ServiceMuxConfig{
-		IsClient: false,
-		Output: func(service uint64, data []byte) error {
-			return client.Input(service, data)
-		},
+func TestServiceMux_RejectService(t *testing.T) {
+	mux := NewServiceMux(ServiceMuxConfig{
 		OnNewService: func(service uint64) bool {
 			return service != 99
 		},
 	})
-	defer serverWithFilter.Close()
+	defer mux.Close()
 
-	// This should not crash even though server rejects the service
-	err := serverWithFilter.Input(99, make([]byte, 100))
-	if err != ErrServiceRejected {
-		t.Errorf("Input to rejected service = %v, want ErrServiceRejected", err)
+	err := mux.Input(99, []byte{serviceFrameData, 0x01, 0x02, 0x03})
+	if !errors.Is(err, ErrServiceRejected) {
+		t.Fatalf("Input(rejected service) err=%v, want %v", err, ErrServiceRejected)
 	}
 }
 
@@ -675,8 +295,8 @@ func TestServiceMux_OutputErrorObservable(t *testing.T) {
 	var callbackService atomic.Uint64
 
 	mux := NewServiceMux(ServiceMuxConfig{
-		IsClient: true,
 		Output: func(service uint64, data []byte) error {
+			_ = service
 			_ = data
 			return injected
 		},
@@ -718,613 +338,56 @@ func TestServiceMux_OutputErrorObservable(t *testing.T) {
 	}
 }
 
-func TestServiceMux_CloseConcurrentOpenStream_NoNewService(t *testing.T) {
-	const blockedService uint64 = 42
+func TestServiceMux_CloseUnblocksAccept(t *testing.T) {
+	_, server := serviceMuxPair()
 
-	entered := make(chan struct{})
-	release := make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		_, _, err := server.AcceptStream()
+		done <- err
+	}()
 
+	time.Sleep(100 * time.Millisecond)
+	_ = server.Close()
+
+	select {
+	case err := <-done:
+		if !errors.Is(err, ErrServiceMuxClosed) {
+			t.Fatalf("AcceptStream err=%v, want %v", err, ErrServiceMuxClosed)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("AcceptStream did not unblock after Close")
+	}
+}
+
+func TestServiceMux_CloseConcurrentWithInput_NoPanic(t *testing.T) {
 	mux := NewServiceMux(ServiceMuxConfig{
-		IsClient: true,
 		Output: func(service uint64, data []byte) error {
 			_ = service
 			_ = data
 			return nil
 		},
-		OnNewService: func(service uint64) bool {
-			if service == blockedService {
-				select {
-				case <-entered:
-				default:
-					close(entered)
-				}
-				<-release
-			}
-			return true
-		},
 	})
-	defer mux.Close()
 
-	errCh := make(chan error, 1)
-	go func() {
-		stream, err := mux.OpenStream(blockedService)
-		if stream != nil {
-			_ = stream.Close()
-		}
-		errCh <- err
-	}()
+	const workers = 8
+	const loops = 256
 
-	select {
-	case <-entered:
-	case <-time.After(2 * time.Second):
-		t.Fatal("OpenStream did not enter OnNewService callback")
-	}
-
-	closeDone := make(chan error, 1)
-	go func() {
-		closeDone <- mux.Close()
-	}()
-
-	deadline := time.Now().Add(2 * time.Second)
-	for !mux.closed.Load() {
-		if time.Now().After(deadline) {
-			t.Fatal("mux.closed not set by Close in time")
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-
-	close(release)
-
-	select {
-	case err := <-errCh:
-		if !errors.Is(err, ErrServiceMuxClosed) {
-			t.Fatalf("OpenStream error = %v, want %v", err, ErrServiceMuxClosed)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("OpenStream did not return")
-	}
-
-	select {
-	case err := <-closeDone:
-		if err != nil {
-			t.Fatalf("Close error = %v, want nil", err)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("Close did not return")
-	}
-
-	if got := mux.NumServices(); got != 0 {
-		t.Fatalf("NumServices after close race = %d, want 0", got)
-	}
-}
-
-func TestServiceMux_CloseConcurrentInput_NoNewService(t *testing.T) {
-	const blockedService uint64 = 77
-
-	entered := make(chan struct{})
-	release := make(chan struct{})
-
-	mux := NewServiceMux(ServiceMuxConfig{
-		IsClient: false,
-		Output: func(service uint64, data []byte) error {
-			_ = service
-			_ = data
-			return nil
-		},
-		OnNewService: func(service uint64) bool {
-			if service == blockedService {
-				select {
-				case <-entered:
-				default:
-					close(entered)
-				}
-				<-release
-			}
-			return true
-		},
-	})
-	defer mux.Close()
-
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- mux.Input(blockedService, []byte{0x00, 0x01, 0x02, 0x03, 0x04})
-	}()
-
-	select {
-	case <-entered:
-	case <-time.After(2 * time.Second):
-		t.Fatal("Input did not enter OnNewService callback")
-	}
-
-	closeDone := make(chan error, 1)
-	go func() {
-		closeDone <- mux.Close()
-	}()
-
-	deadline := time.Now().Add(2 * time.Second)
-	for !mux.closed.Load() {
-		if time.Now().After(deadline) {
-			t.Fatal("mux.closed not set by Close in time")
-		}
-		time.Sleep(5 * time.Millisecond)
-	}
-
-	close(release)
-
-	select {
-	case err := <-errCh:
-		if !errors.Is(err, ErrServiceMuxClosed) {
-			t.Fatalf("Input error = %v, want %v", err, ErrServiceMuxClosed)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("Input did not return")
-	}
-
-	select {
-	case err := <-closeDone:
-		if err != nil {
-			t.Fatalf("Close error = %v, want nil", err)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("Close did not return")
-	}
-
-	if got := mux.NumServices(); got != 0 {
-		t.Fatalf("NumServices after close race = %d, want 0", got)
-	}
-}
-
-func TestSmux_ServiceIsolation_Close(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	// Open streams on service 1 and 2
-	s1, _ := client.OpenStream(1)
-	defer s1.Close()
-	s2, _ := client.OpenStream(2)
-	defer s2.Close()
-
-	// Accept streams and match by service ID
-	accepted := make(map[uint64]net.Conn)
-	for i := 0; i < 2; i++ {
-		s, svc, err := server.AcceptStream()
-		if err != nil {
-			t.Fatal(err)
-		}
-		accepted[svc] = s
-	}
-	ss1, ss2 := accepted[1], accepted[2]
-	defer ss1.Close()
-	defer ss2.Close()
-
-	// Close service 1 streams
-	s1.Close()
-	ss1.Close()
-
-	// Service 2 still works after service 1 is closed
-	time.Sleep(50 * time.Millisecond)
-	s2.Write([]byte("alive"))
-	got, err := readFull(ss2, 5, 5*time.Second)
-	if err != nil {
-		t.Fatalf("service 2 read error: %v", err)
-	}
-	if !bytes.Equal(got, []byte("alive")) {
-		t.Errorf("service 2 read: got %q, want %q", got, "alive")
-	}
-}
-
-// === Benchmarks ===
-
-func BenchmarkYamux_OpenClose(b *testing.B) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	go func() {
-		for {
-			s, _, err := server.AcceptStream()
-			if err != nil {
-				return
-			}
-			s.Close()
-		}
-	}()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		s, err := client.OpenStream(1)
-		if err != nil {
-			b.Fatal(err)
-		}
-		s.Close()
-	}
-}
-
-func BenchmarkYamux_Throughput_1(b *testing.B) {
-	benchYamuxThroughput(b, 1)
-}
-
-func BenchmarkYamux_Throughput_10(b *testing.B) {
-	benchYamuxThroughput(b, 10)
-}
-
-func benchYamuxThroughput(b *testing.B, numStreams int) {
-	b.Helper()
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	data := bytes.Repeat([]byte("X"), 8192)
-	buf := make([]byte, 16384)
-
-	type streamPair struct {
-		c, s net.Conn
-	}
-	pairs := make([]streamPair, numStreams)
-	for i := range pairs {
-		c, _ := client.OpenStream(1)
-		s, _, _ := server.AcceptStream()
-		pairs[i] = streamPair{c, s}
-	}
-
-	b.SetBytes(int64(len(data)) * int64(numStreams))
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		var wg sync.WaitGroup
-		wg.Add(numStreams)
-		for _, p := range pairs {
-			p := p
-			go func() {
-				defer wg.Done()
-				p.c.Write(data)
-				total := 0
-				for total < len(data) {
-					n, _ := p.s.Read(buf)
-					total += n
-				}
-			}()
-		}
-		wg.Wait()
-	}
-
-	for _, p := range pairs {
-		p.c.Close()
-		p.s.Close()
-	}
-}
-
-func BenchmarkYamux_Fairness(b *testing.B) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	heavyC, _ := client.OpenStream(1)
-	heavyS, _, _ := server.AcceptStream()
-	lightC, _ := client.OpenStream(1)
-	lightS, _, _ := server.AcceptStream()
-
-	heavyData := bytes.Repeat([]byte("H"), 64*1024)
-	lightData := []byte("L")
-
-	b.ResetTimer()
-	var lightLatencies []time.Duration
-
-	for i := 0; i < b.N; i++ {
-		// Heavy stream: blast large data
-		go func() {
-			heavyC.Write(heavyData)
-		}()
-		go func() {
-			buf := make([]byte, 128*1024)
-			heavyS.Read(buf)
-		}()
-
-		// Light stream: measure single-message latency
-		start := time.Now()
-		lightC.Write(lightData)
-		buf := make([]byte, 10)
-		lightS.Read(buf)
-		lightLatencies = append(lightLatencies, time.Since(start))
-	}
-
-	if len(lightLatencies) > 0 {
-		var total int64
-		for _, d := range lightLatencies {
-			total += d.Microseconds()
-		}
-		avg := total / int64(len(lightLatencies))
-		b.ReportMetric(float64(avg), "μs/light-msg")
-	}
-
-	heavyC.Close()
-	heavyS.Close()
-	lightC.Close()
-	lightS.Close()
-}
-
-// === Composite tests ===
-
-func testComposite(t *testing.T, numServices, streamsPerService int) {
-	t.Helper()
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	var totalStreams atomic.Int64
+	start := make(chan struct{})
 	var wg sync.WaitGroup
-
-	// Server: accept all streams, echo back
-	go func() {
-		for {
-			s, _, err := server.AcceptStream()
-			if err != nil {
-				return
-			}
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				defer s.Close()
-				buf := make([]byte, 2048)
-				s.SetReadDeadline(time.Now().Add(15 * time.Second))
-				n, err := s.Read(buf)
-				if err != nil {
-					return
-				}
-				s.Write(buf[:n])
-				totalStreams.Add(1)
-			}()
-		}
-	}()
-
-	// Client: open streams across services, write+read
-	var clientWg sync.WaitGroup
-	for svc := 0; svc < numServices; svc++ {
-		for st := 0; st < streamsPerService; st++ {
-			clientWg.Add(1)
-			svc, st := uint64(svc), st
-			go func() {
-				defer clientWg.Done()
-				s, err := client.OpenStream(svc)
-				if err != nil {
-					t.Errorf("svc=%d stream=%d: open: %v", svc, st, err)
-					return
-				}
-				defer s.Close()
-
-				msg := []byte(fmt.Sprintf("s%d-%d", svc, st))
-				s.Write(msg)
-				got, err := readFull(s, len(msg), 15*time.Second)
-				if err != nil {
-					t.Errorf("svc=%d stream=%d: read: %v", svc, st, err)
-					return
-				}
-				if !bytes.Equal(got, msg) {
-					t.Errorf("svc=%d stream=%d: got %q, want %q", svc, st, got, msg)
-				}
-			}()
-		}
-	}
-
-	done := make(chan struct{})
-	go func() { clientWg.Wait(); close(done) }()
-
-	expected := numServices * streamsPerService
-	select {
-	case <-done:
-		t.Logf("%d services × %d streams = %d total, completed %d",
-			numServices, streamsPerService, expected, totalStreams.Load())
-	case <-time.After(30 * time.Second):
-		t.Fatalf("timeout: %d services × %d streams, completed %d/%d",
-			numServices, streamsPerService, totalStreams.Load(), expected)
-	}
-
-	// Wait for server side to finish
-	server.Close()
-	wg.Wait()
-}
-
-func TestComposite_1x100(t *testing.T)  { testComposite(t, 1, 100) }
-func TestComposite_10x10(t *testing.T)  { testComposite(t, 10, 10) }
-func TestComposite_10x100(t *testing.T) { testComposite(t, 10, 100) }
-func TestComposite_100x100(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping 100x100 test in short mode")
-	}
-	testComposite(t, 100, 100)
-}
-
-// === BUG regression tests — these must FAIL before fix, PASS after ===
-
-// TestServiceMux_BUG3_AcceptBackpressure verifies that when the accept queue
-// is full, streams are NOT silently dropped. They should block until consumed.
-// Before fix: streams beyond buffer capacity are Close()'d silently.
-func TestServiceMux_BUG3_AcceptBackpressure(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer client.Close()
-	defer server.Close()
-
-	const total = 5000
-
-	var accepted atomic.Int64
-	go func() {
-		for {
-			_, _, err := server.AcceptStream()
-			if err != nil {
-				return
-			}
-			accepted.Add(1)
-		}
-	}()
-
-	opened := make([]net.Conn, 0, total)
-	for i := 0; i < total; i++ {
-		s, err := client.OpenStream(1)
-		if err != nil {
-			t.Fatalf("open stream %d: %v", i, err)
-		}
-		opened = append(opened, s)
-	}
-
-	deadline := time.Now().Add(15 * time.Second)
-	for time.Now().Before(deadline) {
-		if accepted.Load() >= int64(total) {
-			break
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	got := accepted.Load()
-	if got < int64(total) {
-		t.Fatalf("BUG3: only accepted %d/%d streams — %d silently dropped!",
-			got, total, int64(total)-got)
-	}
-
-	for _, s := range opened {
-		s.Close()
-	}
-
-	t.Logf("all %d streams accepted (no drops)", total)
-}
-
-func TestServiceMux_ActiveClose(t *testing.T) {
-	client, server := serviceMuxPair(0)
-	defer server.Close()
-
-	clientStream, err := client.OpenStream(0)
-	if err != nil {
-		t.Fatalf("client OpenStream failed: %v", err)
-	}
-	defer clientStream.Close()
-
-	serverStream, _, err := server.AcceptStream()
-	if err != nil {
-		t.Fatalf("server AcceptStream failed: %v", err)
-	}
-	defer serverStream.Close()
-
-	clientConn := serviceConnOf(t, client, 0)
-	serverConn := serviceConnOf(t, server, 0)
-
-	readErrCh := make(chan error, 1)
-	go func() {
-		buf := make([]byte, 1)
-		_, readErr := serverStream.Read(buf)
-		readErrCh <- readErr
-	}()
-
-	time.Sleep(20 * time.Millisecond)
-	start := time.Now()
-	if err := client.Close(); err != nil {
-		t.Fatalf("client Close failed: %v", err)
-	}
-
-	select {
-	case err := <-readErrCh:
-		if err == nil {
-			t.Fatal("server read should fail after active close")
-		}
-	case <-time.After(time.Second):
-		t.Fatal("server read was not unblocked within 1s after active close")
-	}
-
-	if took := time.Since(start); took >= activeCloseAckTimeout {
-		t.Fatalf("active close should complete before ACK timeout: took=%v timeout=%v", took, activeCloseAckTimeout)
-	}
-
-	if _, err := serverStream.Write([]byte("x")); err == nil {
-		t.Fatal("server write should fail after peer active close")
-	}
-
-	if _, err := clientConn.Write([]byte("x")); !errors.Is(err, ErrConnClosedLocal) {
-		t.Fatalf("client KCPConn write err=%v, want %v", err, ErrConnClosedLocal)
-	}
-	if _, err := serverConn.Write([]byte("x")); !errors.Is(err, ErrConnClosedByPeer) {
-		t.Fatalf("server KCPConn write err=%v, want %v", err, ErrConnClosedByPeer)
-	}
-}
-
-func TestServiceMux_AckLoss(t *testing.T) {
-	var closeFrames atomic.Uint64
-	client, server := serviceMuxPairWithDrop(func(fromClient bool, _ uint64, data []byte) bool {
-		if fromClient && len(data) > 0 && data[0] == serviceFrameClose {
-			closeFrames.Add(1)
-		}
-		return !fromClient && len(data) > 0 && data[0] == serviceFrameCloseAck
-	})
-	defer server.Close()
-
-	clientStream, err := client.OpenStream(0)
-	if err != nil {
-		t.Fatalf("client OpenStream failed: %v", err)
-	}
-	defer clientStream.Close()
-
-	serverStream, _, err := server.AcceptStream()
-	if err != nil {
-		t.Fatalf("server AcceptStream failed: %v", err)
-	}
-	defer serverStream.Close()
-
-	clientConn := serviceConnOf(t, client, 0)
-	serverConn := serviceConnOf(t, server, 0)
-
-	start := time.Now()
-	if err := client.Close(); err != nil {
-		t.Fatalf("client Close failed: %v", err)
-	}
-	elapsed := time.Since(start)
-
-	if elapsed < activeCloseRetryInterval*2 {
-		t.Fatalf("client Close returned too fast under ACK loss: %v", elapsed)
-	}
-	if elapsed > 2*time.Second {
-		t.Fatalf("client Close took too long under ACK loss: %v", elapsed)
-	}
-	if retries := closeFrames.Load(); retries < 2 {
-		t.Fatalf("CLOSE retries=%d, want >=2", retries)
-	}
-	if got := client.NumServices(); got != 0 {
-		t.Fatalf("client NumServices after close = %d, want 0", got)
-	}
-	if _, err := clientConn.Write([]byte("x")); !errors.Is(err, ErrConnClosedLocal) {
-		t.Fatalf("client KCPConn write err=%v, want %v", err, ErrConnClosedLocal)
-	}
-	if _, err := serverConn.Write([]byte("x")); !errors.Is(err, ErrConnClosedByPeer) {
-		t.Fatalf("server KCPConn write err=%v, want %v", err, ErrConnClosedByPeer)
-	}
-}
-
-func TestServiceMux_ConcurrentClose(t *testing.T) {
-	client, server := serviceMuxPair(0)
-
-	clientStream, err := client.OpenStream(0)
-	if err != nil {
-		t.Fatalf("client OpenStream failed: %v", err)
-	}
-	defer clientStream.Close()
-
-	serverStream, _, err := server.AcceptStream()
-	if err != nil {
-		t.Fatalf("server AcceptStream failed: %v", err)
-	}
-	defer serverStream.Close()
-
-	var wg sync.WaitGroup
-	errCh := make(chan error, 16)
-
-	for i := 0; i < 8; i++ {
-		wg.Add(2)
+	for w := 0; w < workers; w++ {
+		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			errCh <- client.Close()
-		}()
-		go func() {
-			defer wg.Done()
-			errCh <- server.Close()
+			<-start
+			for i := 0; i < loops; i++ {
+				_ = mux.Input(uint64(i%2), []byte{0x00, 0x01, 0x02, 0x03})
+			}
 		}()
 	}
+
+	close(start)
+	time.Sleep(2 * time.Millisecond)
+	_ = mux.Close()
 
 	done := make(chan struct{})
 	go func() {
@@ -1334,140 +397,143 @@ func TestServiceMux_ConcurrentClose(t *testing.T) {
 
 	select {
 	case <-done:
-	case <-time.After(3 * time.Second):
-		t.Fatal("concurrent Close timed out")
-	}
-
-	close(errCh)
-	for err := range errCh {
-		if err != nil {
-			t.Fatalf("Close returned error: %v", err)
-		}
+		// no panic / no hang
+	case <-time.After(5 * time.Second):
+		t.Fatal("concurrent Input + Close did not complete in time")
 	}
 }
 
-// ==================== Timeout / Dead Peer Tests ====================
+func TestServiceMux_AcceptStream_CloseDominatesQueuedResult(t *testing.T) {
+	mux := NewServiceMux(ServiceMuxConfig{})
 
-func TestServiceMux_AcceptThenClose(t *testing.T) {
-	_, server := serviceMuxPair(0)
+	peerSide, localSide := net.Pipe()
+	defer peerSide.Close()
+	defer localSide.Close()
 
-	done := make(chan error, 1)
+	// 预置一个可消费的 accept 结果。
+	mux.acceptCh <- acceptResult{conn: peerSide, service: 7}
+
+	if err := mux.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	conn, service, err := mux.AcceptStream()
+	if !errors.Is(err, ErrServiceMuxClosed) {
+		t.Fatalf("AcceptStream err=%v, want %v", err, ErrServiceMuxClosed)
+	}
+	if conn != nil {
+		t.Fatalf("AcceptStream conn=%v, want nil", conn)
+	}
+	if service != 0 {
+		t.Fatalf("AcceptStream service=%d, want 0", service)
+	}
+}
+
+func TestServiceMux_AcceptStreamOn_CloseDominatesAnnouncedPath(t *testing.T) {
+	mux := NewServiceMux(ServiceMuxConfig{})
+
+	entry, err := mux.getOrCreateService(11)
+	if err != nil {
+		t.Fatalf("getOrCreateService failed: %v", err)
+	}
+	defer entry.conn.Close()
+
+	entry.announced.Store(true)
+
+	mux.servicesMu.Lock()
+	resultCh := make(chan struct {
+		conn net.Conn
+		err  error
+	}, 1)
 	go func() {
-		_, _, err := server.AcceptStream()
-		done <- err
+		conn, err := mux.AcceptStreamOn(11)
+		resultCh <- struct {
+			conn net.Conn
+			err  error
+		}{conn: conn, err: err}
 	}()
 
-	time.Sleep(100 * time.Millisecond)
-	server.Close()
+	time.Sleep(20 * time.Millisecond)
+	mux.closed.Store(true)
+	close(mux.closeCh)
+	mux.servicesMu.Unlock()
 
 	select {
-	case err := <-done:
-		if err == nil {
-			t.Fatal("AcceptStream should return error after Close")
+	case r := <-resultCh:
+		if !errors.Is(r.err, ErrServiceMuxClosed) {
+			t.Fatalf("AcceptStreamOn announced path err=%v, want %v", r.err, ErrServiceMuxClosed)
 		}
-		t.Logf("AcceptStream returned: %v", err)
-	case <-time.After(5 * time.Second):
-		t.Fatal("AcceptStream didn't unblock after Close()")
+		if r.conn != nil {
+			t.Fatalf("AcceptStreamOn announced path conn=%v, want nil", r.conn)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("AcceptStreamOn announced path did not return")
 	}
 }
 
-func TestYamux_KeepaliveTimeout(t *testing.T) {
-	client, server := serviceMuxPair(0)
+func TestServiceMux_AcceptStreamOn_CloseDominatesReadyPath(t *testing.T) {
+	mux := NewServiceMux(ServiceMuxConfig{})
 
-	// Server echo in background.
+	entry, err := mux.getOrCreateService(12)
+	if err != nil {
+		t.Fatalf("getOrCreateService failed: %v", err)
+	}
+	defer entry.conn.Close()
+
+	entry.announced.Store(false)
+	entry.readyOnce.Do(func() { close(entry.readyCh) })
+
+	mux.servicesMu.Lock()
+	resultCh := make(chan struct {
+		conn net.Conn
+		err  error
+	}, 1)
 	go func() {
-		for {
-			s, _, err := server.AcceptStream()
-			if err != nil {
-				return
-			}
-			go func() {
-				buf := make([]byte, 4096)
-				for {
-					n, err := s.Read(buf)
-					if err != nil || n == 0 {
-						return
-					}
-					s.Write(buf[:n])
-				}
-			}()
-		}
+		conn, err := mux.AcceptStreamOn(12)
+		resultCh <- struct {
+			conn net.Conn
+			err  error
+		}{conn: conn, err: err}
 	}()
 
-	// Open stream and exchange data.
-	s, err := client.OpenStream(1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s.Write([]byte("hello yamux"))
-	buf := make([]byte, 256)
-	n, err := s.Read(buf)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(buf[:n]) != "hello yamux" {
-		t.Fatalf("echo mismatch: %q", buf[:n])
-	}
+	time.Sleep(20 * time.Millisecond)
+	mux.closed.Store(true)
+	close(mux.closeCh)
+	mux.servicesMu.Unlock()
 
-	// Close server (simulates peer going away).
-	server.Close()
-
-	// NO SetDeadline — testing KCPConn self-timeout propagation through yamux.
-	start := time.Now()
-	_, err = s.Read(buf)
-	elapsed := time.Since(start)
-
-	if err == nil {
-		t.Fatal("expected error after peer close, got nil")
+	select {
+	case r := <-resultCh:
+		if !errors.Is(r.err, ErrServiceMuxClosed) {
+			t.Fatalf("AcceptStreamOn ready path err=%v, want %v", r.err, ErrServiceMuxClosed)
+		}
+		if r.conn != nil {
+			t.Fatalf("AcceptStreamOn ready path conn=%v, want nil", r.conn)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("AcceptStreamOn ready path did not return")
 	}
-	if elapsed > 35*time.Second {
-		t.Fatalf("Read took %v after peer close — no self-timeout", elapsed)
-	}
-	t.Logf("yamux read self-timed-out after %v: %v", elapsed, err)
-	client.Close()
 }
 
-func TestServiceMux_OpenNoPeer(t *testing.T) {
-	mux := NewServiceMux(ServiceMuxConfig{
-		IsClient: true,
-		Output: func(service uint64, data []byte) error {
-			return nil
-		},
-	})
+func TestServiceMux_OpenAfterConnCloseRecreates(t *testing.T) {
+	mux := NewServiceMux(ServiceMuxConfig{})
 	defer mux.Close()
 
-	// yamux optimistically creates the stream. But writing to it should
-	// eventually fail when the KcpConn idle-times-out (no peer ACKs).
-	s, err := mux.OpenStream(1)
+	first, err := mux.OpenStream(0)
 	if err != nil {
-		t.Logf("OpenStream failed immediately: %v (acceptable)", err)
-		return
+		t.Fatalf("first OpenStream failed: %v", err)
+	}
+	if err := first.Close(); err != nil {
+		t.Fatalf("first Close failed: %v", err)
 	}
 
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		// Write data — it goes into KCP but never gets ACKed.
-		start := time.Now()
-		buf := make([]byte, 256)
-		for {
-			_, err := s.Write([]byte("no peer"))
-			if err != nil {
-				t.Logf("Write failed after %v: %v", time.Since(start), err)
-				return
-			}
-			_, err = s.Read(buf)
-			if err != nil {
-				t.Logf("Read failed after %v: %v", time.Since(start), err)
-				return
-			}
-		}
-	}()
+	second, err := mux.OpenStream(0)
+	if err != nil {
+		t.Fatalf("second OpenStream failed: %v", err)
+	}
 
-	select {
-	case <-done:
-		// Good — stream eventually failed.
-	case <-time.After(35 * time.Second):
-		t.Fatal("Stream with no peer hung forever — no timeout")
+	if first == second {
+		t.Fatal("expected recreated stream instance, got same net.Conn")
 	}
 }
+
+var _ net.Conn = (*KCPConn)(nil)

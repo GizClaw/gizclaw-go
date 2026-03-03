@@ -120,9 +120,9 @@ func TestIntegration_NetworkInterruptionReconnect(t *testing.T) {
 	}
 }
 
-// TestIntegration_KCPYamuxService0Stream 测试 KCP + yamux 基础 stream 功能
+// TestIntegration_KCPService0Stream 测试 KCP 基础 stream 功能
 // 验证 service=0 时可以正常建立 stream 并进行双向通信
-func TestIntegration_KCPYamuxService0Stream(t *testing.T) {
+func TestIntegration_KCPService0Stream(t *testing.T) {
 	serverKey, err := noise.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("Generate server key failed: %v", err)
@@ -161,6 +161,11 @@ func TestIntegration_KCPYamuxService0Stream(t *testing.T) {
 	}
 	defer clientStream.Close()
 
+	request := []byte("kcp-stream-request")
+	if _, err := clientStream.Write(request); err != nil {
+		t.Fatalf("client stream write failed: %v", err)
+	}
+
 	var serverStream net.Conn
 	select {
 	case serverStream = <-acceptCh:
@@ -171,10 +176,6 @@ func TestIntegration_KCPYamuxService0Stream(t *testing.T) {
 		t.Fatal("server AcceptStream timeout")
 	}
 
-	request := []byte("kcp-stream-request")
-	if _, err := clientStream.Write(request); err != nil {
-		t.Fatalf("client stream write failed: %v", err)
-	}
 	if got := testutil.ReadExactWithTimeout(t, serverStream, len(request), 5*time.Second); !bytes.Equal(got, request) {
 		t.Fatalf("server stream payload mismatch: got=%q want=%q", string(got), string(request))
 	}
@@ -229,6 +230,10 @@ func TestIntegration_KCPStreamActiveClose(t *testing.T) {
 	}
 	defer clientStream.Close()
 
+	if _, err := clientStream.Write([]byte("x")); err != nil {
+		t.Fatalf("client stream priming write failed: %v", err)
+	}
+
 	var serverStream net.Conn
 	select {
 	case serverStream = <-acceptCh:
@@ -237,6 +242,10 @@ func TestIntegration_KCPStreamActiveClose(t *testing.T) {
 		t.Fatalf("server AcceptStream failed: %v", acceptErr)
 	case <-time.After(5 * time.Second):
 		t.Fatal("server AcceptStream timeout")
+	}
+
+	if got := testutil.ReadExactWithTimeout(t, serverStream, 1, 5*time.Second); !bytes.Equal(got, []byte("x")) {
+		t.Fatalf("server stream priming payload mismatch: got=%q want=%q", string(got), "x")
 	}
 
 	readErrCh := make(chan error, 1)
@@ -266,9 +275,9 @@ func TestIntegration_KCPStreamActiveClose(t *testing.T) {
 	}
 }
 
-// TestIntegration_KCPYamuxRejectNonZeroService 测试 foundation 层拒绝非零 service
+// TestIntegration_KCPRejectNonZeroService 测试 foundation 层拒绝非零 service
 // 验证 service != 0 时返回 ErrUnsupportedService
-func TestIntegration_KCPYamuxRejectNonZeroService(t *testing.T) {
+func TestIntegration_KCPRejectNonZeroService(t *testing.T) {
 	serverKey, err := noise.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("Generate server key failed: %v", err)
@@ -290,9 +299,9 @@ func TestIntegration_KCPYamuxRejectNonZeroService(t *testing.T) {
 	}
 }
 
-// TestIntegration_RPCBidirectionalOverYamux 测试 RPC 双向请求响应
+// TestIntegration_RPCBidirectionalOverKCPStream 测试 RPC 双向请求响应
 // 验证 A->B 与 B->A 各一次调用都能正常完成 req/resp
-func TestIntegration_RPCBidirectionalOverYamux(t *testing.T) {
+func TestIntegration_RPCBidirectionalOverKCPStream(t *testing.T) {
 	serverKey, err := noise.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("Generate server key failed: %v", err)
@@ -334,6 +343,10 @@ func TestIntegration_RPCBidirectionalOverYamux(t *testing.T) {
 		}
 		defer callerStream.Close()
 
+		if _, err := callerStream.Write(req); err != nil {
+			t.Fatalf("caller write req failed: %v", err)
+		}
+
 		var calleeStream net.Conn
 		select {
 		case calleeStream = <-acceptCh:
@@ -344,9 +357,6 @@ func TestIntegration_RPCBidirectionalOverYamux(t *testing.T) {
 			t.Fatal("AcceptStream timeout")
 		}
 
-		if _, err := callerStream.Write(req); err != nil {
-			t.Fatalf("caller write req failed: %v", err)
-		}
 		if got := testutil.ReadExactWithTimeout(t, calleeStream, len(req), 5*time.Second); !bytes.Equal(got, req) {
 			t.Fatalf("callee read req mismatch: got=%q want=%q", string(got), string(req))
 		}
