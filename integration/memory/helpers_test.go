@@ -1,14 +1,10 @@
 package memoryintegration_test
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
-	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -17,6 +13,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
+
+	"github.com/haivivi/giztoy/go/pkg/genx"
+	"github.com/haivivi/giztoy/go/pkg/genx/generators"
+	"github.com/haivivi/giztoy/go/pkg/genx/profilers"
+	"github.com/haivivi/giztoy/go/pkg/genx/segmentors"
 	"github.com/haivivi/giztoy/go/pkg/kv"
 	"github.com/haivivi/giztoy/go/pkg/memory"
 	"github.com/haivivi/giztoy/go/pkg/recall"
@@ -605,427 +608,46 @@ func isTransientError(err error) bool {
 	return false
 }
 
-type openAICompatClient struct {
-	runtime    realModelRuntime
-	httpClient *http.Client
-}
+const integrationGeneratorPattern = "memory-it/model"
 
-func newOpenAICompatClient(runtime realModelRuntime) *openAICompatClient {
-	return &openAICompatClient{
-		runtime: runtime,
-		httpClient: &http.Client{
-			Timeout: runtime.Timeout,
-		},
-	}
-}
-
-type chatRequest struct {
-	Model          string            `json:"model"`
-	Messages       []chatMessage     `json:"messages"`
-	Temperature    float64           `json:"temperature,omitempty"`
-	MaxTokens      int               `json:"max_tokens,omitempty"`
-	ResponseFormat map[string]string `json:"response_format,omitempty"`
-}
-
-type chatMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type chatResponse struct {
-	Choices []struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
-	Error *struct {
-		Message string `json:"message"`
-	} `json:"error,omitempty"`
-}
-
-func (c *openAICompatClient) chatJSON(ctx context.Context, systemPrompt, userPrompt string, maxTokens int) (string, error) {
-	content, err := c.chat(ctx, systemPrompt, userPrompt, maxTokens, true)
-	if err == nil {
-		return content, nil
+func newRealModelCompressor(runtime realModelRuntime) memory.Compressor {
+	client := openai.NewClient(
+		option.WithAPIKey(runtime.APIKey),
+		option.WithBaseURL(runtime.BaseURL),
+	)
+	gen := &genx.OpenAIGenerator{
+		Client:           &client,
+		Model:            runtime.Model,
+		SupportToolCalls: true,
+		UseSystemRole:    true,
+		InvokeParams:     &genx.ModelParams{MaxTokens: 4096},
 	}
 
-	lower := strings.ToLower(err.Error())
-	if strings.Contains(lower, "response_format") || strings.Contains(lower, "json_object") {
-		return c.chat(ctx, systemPrompt, userPrompt, maxTokens, false)
+	gmux := generators.NewMux()
+	if err := gmux.Handle(integrationGeneratorPattern, gen); err != nil {
+		panic("register generator: " + err.Error())
 	}
 
-	return "", err
-}
+	seg := segmentors.NewGenXWithMux(segmentors.Config{Generator: integrationGeneratorPattern}, gmux)
+	prof := profilers.NewGenXWithMux(profilers.Config{Generator: integrationGeneratorPattern}, gmux)
 
-func (c *openAICompatClient) chat(ctx context.Context, systemPrompt, userPrompt string, maxTokens int, jsonMode bool) (string, error) {
-	if maxTokens <= 0 {
-		maxTokens = 1000
+	smux := segmentors.NewMux()
+	if err := smux.Handle(integrationGeneratorPattern, seg); err != nil {
+		panic("register segmentor: " + err.Error())
+	}
+	pmux := profilers.NewMux()
+	if err := pmux.Handle(integrationGeneratorPattern, prof); err != nil {
+		panic("register profiler: " + err.Error())
 	}
 
-	reqBody := chatRequest{
-		Model: c.runtime.Model,
-		Messages: []chatMessage{
-			{Role: "system", Content: systemPrompt},
-			{Role: "user", Content: userPrompt},
-		},
-		Temperature: 0,
-		MaxTokens:   maxTokens,
-	}
-	if jsonMode {
-		reqBody.ResponseFormat = map[string]string{"type": "json_object"}
-	}
-
-	body, err := json.Marshal(reqBody)
+	c, err := memory.NewLLMCompressor(memory.LLMCompressorConfig{
+		Segmentor:    integrationGeneratorPattern,
+		Profiler:     integrationGeneratorPattern,
+		SegmentorMux: smux,
+		ProfilerMux:  pmux,
+	})
 	if err != nil {
-		return "", err
+		panic("NewLLMCompressor: " + err.Error())
 	}
-
-	endpoint := strings.TrimRight(c.runtime.BaseURL, "/") + "/chat/completions"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.runtime.APIKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	raw, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	if resp.StatusCode >= http.StatusBadRequest {
-		return "", fmt.Errorf("chat status %d: %s", resp.StatusCode, shorten(string(raw), 240))
-	}
-
-	var parsed chatResponse
-	if err := json.Unmarshal(raw, &parsed); err != nil {
-		return "", fmt.Errorf("decode chat response: %w", err)
-	}
-	if parsed.Error != nil && parsed.Error.Message != "" {
-		return "", errors.New(parsed.Error.Message)
-	}
-	if len(parsed.Choices) == 0 {
-		return "", errors.New("chat response has empty choices")
-	}
-
-	content := strings.TrimSpace(parsed.Choices[0].Message.Content)
-	if content == "" {
-		return "", errors.New("chat response content is empty")
-	}
-	return content, nil
-}
-
-func decodeModelJSON(raw string, out any) error {
-	clean := strings.TrimSpace(raw)
-	clean = strings.TrimPrefix(clean, "```json")
-	clean = strings.TrimPrefix(clean, "```")
-	clean = strings.TrimSuffix(clean, "```")
-	clean = strings.TrimSpace(clean)
-
-	if err := json.Unmarshal([]byte(clean), out); err == nil {
-		return nil
-	}
-
-	start := strings.IndexByte(clean, '{')
-	end := strings.LastIndexByte(clean, '}')
-	if start >= 0 && end > start {
-		obj := clean[start : end+1]
-		if err := json.Unmarshal([]byte(obj), out); err == nil {
-			return nil
-		}
-	}
-
-	return fmt.Errorf("decode model json failed, raw=%s", shorten(clean, 240))
-}
-
-func shorten(text string, limit int) string {
-	text = strings.TrimSpace(strings.ReplaceAll(text, "\n", " "))
-	if len(text) <= limit {
-		return text
-	}
-	if limit <= 3 {
-		return text[:limit]
-	}
-	return text[:limit-3] + "..."
-}
-
-type realModelCompressor struct {
-	client *openAICompatClient
-}
-
-func newRealModelCompressor(runtime realModelRuntime) *realModelCompressor {
-	return &realModelCompressor{client: newOpenAICompatClient(runtime)}
-}
-
-type segmentModelOutput struct {
-	Summary  string   `json:"summary"`
-	Keywords []string `json:"keywords"`
-	Labels   []string `json:"labels"`
-}
-
-type profileModelOutput struct {
-	Entities []struct {
-		Label string         `json:"label"`
-		Attrs map[string]any `json:"attrs"`
-	} `json:"entities"`
-	Relations []struct {
-		From    string `json:"from"`
-		To      string `json:"to"`
-		RelType string `json:"rel_type"`
-	} `json:"relations"`
-}
-
-func (c *realModelCompressor) CompressMessages(ctx context.Context, messages []memory.Message) (*memory.CompressResult, error) {
-	if len(messages) == 0 {
-		return &memory.CompressResult{}, nil
-	}
-
-	sampled := sampleModelMessages(messages, 220)
-	seg, err := c.segment(ctx, formatMessageLines(sampled, 40_000), 1200)
-	if err != nil {
-		return nil, err
-	}
-
-	if strings.TrimSpace(seg.Summary) == "" {
-		seg.Summary = strings.TrimSpace(sampled[len(sampled)-1].Content)
-	}
-	if len(seg.Keywords) == 0 {
-		seg.Keywords = []string{"memory", "integration"}
-	}
-	if len(seg.Labels) == 0 {
-		seg.Labels = []string{"topic:记忆"}
-	}
-
-	return &memory.CompressResult{
-		Segments: []memory.SegmentInput{{
-			Summary:  seg.Summary,
-			Keywords: dedupeStrings(seg.Keywords),
-			Labels:   dedupeStrings(seg.Labels),
-		}},
-		Summary: seg.Summary,
-	}, nil
-}
-
-func (c *realModelCompressor) ExtractEntities(ctx context.Context, messages []memory.Message) (*memory.EntityUpdate, error) {
-	if len(messages) == 0 {
-		return &memory.EntityUpdate{}, nil
-	}
-
-	sampled := sampleModelMessages(messages, 220)
-	systemPrompt := `你是对话画像器（profile）。
-请从对话里抽取人物/主题实体和关系，返回严格 JSON：
-{
-  "entities": [{"label": "person:小明", "attrs": {"likes": "恐龙"}}],
-  "relations": [{"from": "person:小明", "to": "topic:恐龙", "rel_type": "likes"}]
-}
-要求：
-1) label 必须是字符串；
-2) attrs 为对象；
-3) 只返回 JSON，不要解释。`
-
-	userPrompt := "对话如下：\n" + formatMessageLines(sampled, 40_000)
-	raw, err := c.client.chatJSON(ctx, systemPrompt, userPrompt, 1200)
-	if err != nil {
-		return nil, err
-	}
-
-	var parsed profileModelOutput
-	if err := decodeModelJSON(raw, &parsed); err != nil {
-		return nil, err
-	}
-
-	update := &memory.EntityUpdate{}
-	for _, e := range parsed.Entities {
-		label := strings.TrimSpace(e.Label)
-		if label == "" {
-			continue
-		}
-		update.Entities = append(update.Entities, memory.EntityInput{Label: label, Attrs: e.Attrs})
-	}
-	for _, r := range parsed.Relations {
-		from := strings.TrimSpace(r.From)
-		to := strings.TrimSpace(r.To)
-		relType := strings.TrimSpace(r.RelType)
-		if from == "" || to == "" || relType == "" {
-			continue
-		}
-		update.Relations = append(update.Relations, memory.RelationInput{From: from, To: to, RelType: relType})
-	}
-
-	if len(update.Entities) == 0 && len(update.Relations) == 0 {
-		seg, segErr := c.segment(ctx, formatMessageLines(sampled, 30_000), 900)
-		if segErr == nil {
-			for _, label := range dedupeStrings(seg.Labels) {
-				update.Entities = append(update.Entities, memory.EntityInput{
-					Label: label,
-					Attrs: map[string]any{"source": "segment-fallback"},
-				})
-			}
-			if len(seg.Labels) >= 2 {
-				update.Relations = append(update.Relations, memory.RelationInput{
-					From:    seg.Labels[0],
-					To:      seg.Labels[1],
-					RelType: "related_to",
-				})
-			}
-		}
-	}
-
-	return update, nil
-}
-
-func (c *realModelCompressor) CompactSegments(ctx context.Context, summaries []string) (*memory.CompressResult, error) {
-	if len(summaries) == 0 {
-		return &memory.CompressResult{}, nil
-	}
-
-	lines := make([]string, 0, len(summaries))
-	for i, summary := range summaries {
-		summary = strings.TrimSpace(summary)
-		if summary == "" {
-			continue
-		}
-		lines = append(lines, fmt.Sprintf("summary-%d: %s", i+1, summary))
-		if len(lines) >= 120 {
-			break
-		}
-	}
-	if len(lines) == 0 {
-		return &memory.CompressResult{}, nil
-	}
-
-	seg, err := c.segment(ctx, strings.Join(lines, "\n"), 1000)
-	if err != nil {
-		return nil, err
-	}
-	if strings.TrimSpace(seg.Summary) == "" {
-		seg.Summary = strings.Join(lines, " | ")
-	}
-
-	return &memory.CompressResult{
-		Segments: []memory.SegmentInput{{
-			Summary:  seg.Summary,
-			Keywords: dedupeStrings(seg.Keywords),
-			Labels:   dedupeStrings(seg.Labels),
-		}},
-		Summary: seg.Summary,
-	}, nil
-}
-
-func (c *realModelCompressor) segment(ctx context.Context, messageText string, maxTokens int) (*segmentModelOutput, error) {
-	systemPrompt := `你是对话分段器（segmentation）。
-请把输入整理成一个记忆片段，并返回严格 JSON：
-{
-  "summary": "一句或两句总结",
-  "keywords": ["关键词1", "关键词2"],
-  "labels": ["person:小明", "topic:恐龙"]
-}
-要求：
-1) summary 尽量覆盖主要事实；
-2) keywords 3~10 个；
-3) labels 至少 2 个，优先 person/topic 命名空间；
-4) 只输出 JSON。`
-
-	userPrompt := "对话如下：\n" + messageText
-	raw, err := c.client.chatJSON(ctx, systemPrompt, userPrompt, maxTokens)
-	if err != nil {
-		return nil, err
-	}
-
-	var parsed segmentModelOutput
-	if err := decodeModelJSON(raw, &parsed); err != nil {
-		return nil, err
-	}
-
-	parsed.Summary = strings.TrimSpace(parsed.Summary)
-	parsed.Keywords = dedupeStrings(parsed.Keywords)
-	parsed.Labels = dedupeStrings(parsed.Labels)
-	return &parsed, nil
-}
-
-func sampleModelMessages(messages []memory.Message, limit int) []memory.Message {
-	if limit <= 0 || len(messages) <= limit {
-		out := make([]memory.Message, len(messages))
-		copy(out, messages)
-		return out
-	}
-
-	part := limit / 3
-	if part < 1 {
-		part = 1
-	}
-
-	begin := make([]memory.Message, 0, part)
-	begin = append(begin, messages[:part]...)
-
-	midStart := len(messages)/2 - part/2
-	if midStart < part {
-		midStart = part
-	}
-	midEnd := midStart + part
-	if midEnd > len(messages)-part {
-		midEnd = len(messages) - part
-		if midEnd < midStart {
-			midEnd = midStart
-		}
-	}
-	middle := messages[midStart:midEnd]
-
-	endStart := len(messages) - part
-	if endStart < 0 {
-		endStart = 0
-	}
-	end := messages[endStart:]
-
-	out := make([]memory.Message, 0, len(begin)+len(middle)+len(end))
-	out = append(out, begin...)
-	out = append(out, middle...)
-	out = append(out, end...)
-	return out
-}
-
-func formatMessageLines(messages []memory.Message, maxChars int) string {
-	if len(messages) == 0 {
-		return ""
-	}
-
-	var b strings.Builder
-	for _, msg := range messages {
-		content := strings.TrimSpace(msg.Content)
-		if content == "" {
-			continue
-		}
-		line := fmt.Sprintf("- %s: %s\n", msg.Role, content)
-		if maxChars > 0 && b.Len()+len(line) > maxChars {
-			break
-		}
-		b.WriteString(line)
-	}
-	return b.String()
-}
-
-func dedupeStrings(items []string) []string {
-	if len(items) == 0 {
-		return nil
-	}
-	out := make([]string, 0, len(items))
-	seen := make(map[string]struct{}, len(items))
-	for _, item := range items {
-		item = strings.TrimSpace(item)
-		if item == "" {
-			continue
-		}
-		if _, ok := seen[item]; ok {
-			continue
-		}
-		seen[item] = struct{}{}
-		out = append(out, item)
-	}
-	return out
+	return c
 }
