@@ -100,6 +100,12 @@ func New(cfg Config) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("server: stores: %w", err)
 	}
+	storesOK := false
+	defer func() {
+		if !storesOK {
+			ss.Close()
+		}
+	}()
 
 	gearsKV, err := ss.KV(cfg.Gears.Store)
 	if err != nil {
@@ -117,6 +123,7 @@ func New(cfg Config) (*Server, error) {
 	}
 	fwScanner := firmware.NewScanner(fwStore)
 
+	storesOK = true
 	return &Server{
 		cfg:              cfg,
 		stores:           ss,

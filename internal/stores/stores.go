@@ -126,6 +126,7 @@ func New(baseDir string, configs map[string]Config) (*Stores, error) {
 			return nil, err
 		}
 		s.graphs[g.name] = st
+		s.closers = append(s.closers, st)
 	}
 
 	ok = true
