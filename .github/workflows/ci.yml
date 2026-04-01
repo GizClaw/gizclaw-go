@@ -32,6 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: true
+          submodules: recursive
 
       - name: Ensure Git LFS assets are available
         run: git lfs pull
