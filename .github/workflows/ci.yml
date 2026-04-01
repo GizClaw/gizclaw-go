@@ -30,6 +30,11 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Ensure Git LFS assets are available
+        run: git lfs pull
 
       - name: Set up Go
         uses: actions/setup-go@v5
