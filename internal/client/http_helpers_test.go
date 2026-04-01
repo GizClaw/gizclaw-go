@@ -42,7 +42,7 @@ func startTestServerWithConfig(t *testing.T, cfg server.Config) (*server.Server,
 	go func() {
 		_ = srv.Run(ctx)
 	}()
-	time.Sleep(200 * time.Millisecond)
+	waitForTestServerReady(t, srv)
 	return srv, cancel
 }
 
@@ -58,4 +58,36 @@ func newTestClient(t *testing.T, srv *server.Server) *Client {
 	}
 	t.Cleanup(func() { _ = c.Close() })
 	return c
+}
+
+func waitForTestServerReady(t *testing.T, srv *server.Server) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		addr := srv.ListenAddr()
+		if addr == "" {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		key, err := noise.GenerateKeyPair()
+		if err != nil {
+			t.Fatalf("GenerateKeyPair(ready check): %v", err)
+		}
+		c, err := Dial(key, addr, srv.PublicKey())
+		if err == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+			_, infoErr := c.GetServerInfo(ctx)
+			cancel()
+			_ = c.Close()
+			if infoErr == nil {
+				return
+			}
+		}
+
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	t.Fatal("test server did not become ready")
 }
