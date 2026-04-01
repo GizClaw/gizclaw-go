@@ -559,7 +559,10 @@ func TestResolveDir(t *testing.T) {
 	if got := resolveDir(base, "rel"); got != filepath.Join(base, "rel") {
 		t.Fatalf("resolveDir relative = %q", got)
 	}
-	abs := filepath.Join(string(filepath.Separator), "abs", "path")
+	abs, err := filepath.Abs(filepath.Join("abs", "path"))
+	if err != nil {
+		t.Fatalf("Abs: %v", err)
+	}
 	if got := resolveDir(base, abs); got != abs {
 		t.Fatalf("resolveDir absolute = %q", got)
 	}

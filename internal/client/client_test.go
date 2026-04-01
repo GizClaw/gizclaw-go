@@ -43,7 +43,7 @@ func TestDialAndPing(t *testing.T) {
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Run(ctx) }()
-	time.Sleep(200 * time.Millisecond)
+	waitForTestServerReady(t, srv)
 
 	serverPK := srv.PublicKey()
 	// Access listener info via a ping to discover the address.
@@ -61,6 +61,7 @@ func TestDialAndPing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Dial err=%v", err)
 	}
+	waitForClientPublicReady(t, c)
 	defer c.Close()
 
 	result, err := c.Ping()
