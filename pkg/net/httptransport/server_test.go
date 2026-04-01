@@ -27,7 +27,11 @@ func TestHTTPTransportRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverListener := testutil.NewListenerNode(t, serverKey)
+	serverListener := testutil.NewListenerNode(t, serverKey, core.WithServiceMuxConfig(core.ServiceMuxConfig{
+		OnNewService: func(_ noise.PublicKey, service uint64) bool {
+			return service == 7
+		},
+	}))
 	defer serverListener.Close()
 	clientListener := testutil.NewListenerNode(t, clientKey)
 	defer clientListener.Close()
@@ -271,7 +275,14 @@ func TestReverseServiceFirstRequestCanArriveBeforeServeStarts(t *testing.T) {
 }
 
 func TestServerShutdownDrainsActiveRequest(t *testing.T) {
-	clientConn, serverConn, cleanup := newHTTPTransportConnPair(t, core.ServiceMuxConfig{}, core.ServiceMuxConfig{})
+	clientConn, serverConn, cleanup := newHTTPTransportConnPair(t,
+		core.ServiceMuxConfig{},
+		core.ServiceMuxConfig{
+			OnNewService: func(_ noise.PublicKey, service uint64) bool {
+				return service == 7
+			},
+		},
+	)
 	defer cleanup()
 
 	started := make(chan struct{})
