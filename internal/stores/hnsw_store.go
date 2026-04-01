@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/haivivi/giztoy/go/pkg/vecstore"
+	"github.com/giztoy/giztoy-go/pkg/vecstore"
 )
 
 const hnswIndexFilename = "index.hnsw"

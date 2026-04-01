@@ -7,15 +7,25 @@ import (
 	"testing"
 	"time"
 
-	"github.com/haivivi/giztoy/go/internal/server"
-	"github.com/haivivi/giztoy/go/pkg/net/core"
-	"github.com/haivivi/giztoy/go/pkg/net/noise"
-	"github.com/haivivi/giztoy/go/pkg/net/peer"
+	"github.com/giztoy/giztoy-go/internal/server"
+	"github.com/giztoy/giztoy-go/internal/stores"
+	"github.com/giztoy/giztoy-go/pkg/net/core"
+	"github.com/giztoy/giztoy-go/pkg/net/noise"
+	"github.com/giztoy/giztoy-go/pkg/net/peer"
 )
 
 func TestDialAndPing(t *testing.T) {
 	dir := t.TempDir()
-	cfg := server.Config{DataDir: dir, ListenAddr: "127.0.0.1:0"}
+	cfg := server.Config{
+		DataDir:    dir,
+		ListenAddr: "127.0.0.1:0",
+		Stores: map[string]stores.Config{
+			"mem": {Kind: stores.KindKeyValue, Backend: "memory"},
+			"fw":  {Kind: stores.KindFS, Backend: "filesystem", Dir: "firmware"},
+		},
+		Gears:  server.GearsConfig{Store: "mem"},
+		Depots: server.DepotsConfig{Store: "fw"},
+	}
 
 	srv, err := server.New(cfg)
 	if err != nil {

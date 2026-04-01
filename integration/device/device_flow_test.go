@@ -5,22 +5,28 @@ import (
 	"testing"
 	"time"
 
-	"github.com/haivivi/giztoy/go/internal/client"
-	"github.com/haivivi/giztoy/go/internal/server"
-	"github.com/haivivi/giztoy/go/pkg/gears"
-	"github.com/haivivi/giztoy/go/pkg/net/noise"
+	"github.com/giztoy/giztoy-go/internal/client"
+	"github.com/giztoy/giztoy-go/internal/server"
+	"github.com/giztoy/giztoy-go/internal/stores"
+	"github.com/giztoy/giztoy-go/pkg/gears"
+	"github.com/giztoy/giztoy-go/pkg/net/noise"
 )
 
 func TestDeviceRegisterConfigPingFlow(t *testing.T) {
 	srv, err := server.New(server.Config{
 		DataDir:    t.TempDir(),
 		ListenAddr: "127.0.0.1:0",
+		Stores: map[string]stores.Config{
+			"mem": {Kind: stores.KindKeyValue, Backend: "memory"},
+			"fw":  {Kind: stores.KindFS, Backend: "filesystem", Dir: "firmware"},
+		},
 		Gears: server.GearsConfig{
+			Store: "mem",
 			RegistrationTokens: map[string]gears.RegistrationToken{
 				"device_default": {Role: gears.GearRoleDevice},
 			},
 		},
-		FirmwareRoot: t.TempDir(),
+		Depots: server.DepotsConfig{Store: "fw"},
 	})
 	if err != nil {
 		t.Fatal(err)
