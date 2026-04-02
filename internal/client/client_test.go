@@ -194,6 +194,10 @@ func TestPingAfterClose(t *testing.T) {
 }
 
 func TestPingServerError(t *testing.T) {
+	written := make(chan struct{})
+	release := make(chan struct{})
+	defer close(release)
+
 	c := dialMockClient(t, func(stream net.Conn) {
 		_, _ = server.ReadFrame(stream)
 		resp := &server.RPCResponse{
@@ -205,10 +209,29 @@ func TestPingServerError(t *testing.T) {
 			},
 		}
 		_ = server.WriteRPCResponse(stream, resp)
+		close(written)
+		<-release
 	})
 
-	if _, err := c.Ping(); err == nil || err.Error() != "client: server error: boom" {
-		t.Fatalf("Ping server error=%v", err)
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := c.Ping()
+		errCh <- err
+	}()
+
+	select {
+	case <-written:
+	case <-time.After(2 * time.Second):
+		t.Fatal("mock server did not write error response")
+	}
+
+	select {
+	case err := <-errCh:
+		if err == nil || err.Error() != "client: server error: boom" {
+			t.Fatalf("Ping server error=%v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Ping server error did not return")
 	}
 }
 

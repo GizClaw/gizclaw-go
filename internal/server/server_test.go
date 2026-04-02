@@ -33,9 +33,7 @@ func TestServerPeerPing(t *testing.T) {
 
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Run(ctx) }()
-
-	// Wait for server to start listening.
-	time.Sleep(200 * time.Millisecond)
+	waitForServerRPCReady(t, srv)
 
 	info := srv.listener.HostInfo()
 	serverAddr := info.Addr.String()
@@ -129,7 +127,7 @@ func TestServerUnknownMethod(t *testing.T) {
 	defer cancel()
 
 	go srv.Run(ctx)
-	time.Sleep(200 * time.Millisecond)
+	waitForServerRPCReady(t, srv)
 
 	info := srv.listener.HostInfo()
 	serverAddr := info.Addr.String()
@@ -282,6 +280,69 @@ func TestWriteRPCResponseMarshalError(t *testing.T) {
 
 func parseUDPAddr(addr string) (*net.UDPAddr, error) {
 	return net.ResolveUDPAddr("udp", addr)
+}
+
+func waitForServerRPCReady(t *testing.T, srv *Server) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if srv.listener == nil {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		clientKey, err := noise.GenerateKeyPair()
+		if err != nil {
+			t.Fatalf("GenerateKeyPair(ready check): %v", err)
+		}
+		clientListener, err := peer.Listen(clientKey,
+			core.WithBindAddr("127.0.0.1:0"),
+			core.WithAllowUnknown(true),
+		)
+		if err != nil {
+			t.Fatalf("peer.Listen(ready check): %v", err)
+		}
+
+		ready := false
+		func() {
+			defer clientListener.Close()
+
+			udpAddr, err := parseUDPAddr(srv.listener.HostInfo().Addr.String())
+			if err != nil {
+				t.Fatalf("parseUDPAddr(ready check): %v", err)
+			}
+			conn, err := clientListener.Dial(srv.keyPair.Public, udpAddr)
+			if err != nil {
+				return
+			}
+			stream, err := conn.OpenService(peer.ServicePublic)
+			if err != nil {
+				return
+			}
+			defer stream.Close()
+			_ = stream.SetDeadline(time.Now().Add(200 * time.Millisecond))
+
+			req := RPCRequest{V: 1, ID: "ready-check", Method: "peer.ping"}
+			reqData, err := json.Marshal(req)
+			if err != nil {
+				t.Fatalf("json.Marshal(ready check): %v", err)
+			}
+			if err := WriteFrame(stream, reqData); err != nil {
+				return
+			}
+			if _, err := ReadFrame(stream); err == nil {
+				ready = true
+			}
+		}()
+
+		if ready {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	t.Fatal("server rpc did not become ready")
 }
 
 type errConn struct {
