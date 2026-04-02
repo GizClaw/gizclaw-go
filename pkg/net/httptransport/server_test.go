@@ -438,9 +438,7 @@ func TestRoundTripHandlesEarlyResponse(t *testing.T) {
 	clientConn, serverConn, cleanup := newHTTPTransportConnPair(t, core.ServiceMuxConfig{}, core.ServiceMuxConfig{})
 	defer cleanup()
 
-	responseWritten := make(chan struct{})
-	releaseStream := make(chan struct{})
-	defer close(releaseStream)
+	responseStarted := make(chan struct{})
 	go func() {
 		stream, err := serverConn.AcceptService(13)
 		if err != nil {
@@ -465,13 +463,22 @@ func TestRoundTripHandlesEarlyResponse(t *testing.T) {
 				return
 			}
 		}
-		_, _ = io.WriteString(stream, "HTTP/1.1 401 Unauthorized\r\nContent-Length: 6\r\n\r\ndenied")
-		close(responseWritten)
-		<-releaseStream
+		resp := "HTTP/1.1 401 Unauthorized\r\nContent-Length: 6\r\n\r\ndenied"
+		close(responseStarted)
+		for i := 0; i < len(resp); i++ {
+			if _, err := io.WriteString(stream, resp[i:i+1]); err != nil {
+				return
+			}
+			time.Sleep(time.Millisecond)
+		}
 	}()
 
 	bodyReader, bodyWriter := io.Pipe()
-	defer bodyWriter.Close()
+	go func() {
+		<-responseStarted
+		_ = bodyWriter.CloseWithError(errors.New("client body aborted after early response"))
+	}()
+	defer func() { _ = bodyWriter.Close() }()
 
 	respDone := make(chan struct {
 		status int
@@ -507,9 +514,9 @@ func TestRoundTripHandlesEarlyResponse(t *testing.T) {
 	}()
 
 	select {
-	case <-responseWritten:
+	case <-responseStarted:
 	case <-time.After(5 * time.Second):
-		t.Fatal("early response was not written")
+		t.Fatal("early response did not start")
 	}
 
 	select {

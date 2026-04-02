@@ -38,7 +38,7 @@ func TestDeviceRegisterConfigPingFlow(t *testing.T) {
 	go func() {
 		_ = srv.Run(ctx)
 	}()
-	time.Sleep(200 * time.Millisecond)
+	waitForTestServerReady(t, srv)
 
 	key, err := noise.GenerateKeyPair()
 	if err != nil {
@@ -48,6 +48,7 @@ func TestDeviceRegisterConfigPingFlow(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	waitForClientPublicReady(t, c)
 	defer c.Close()
 
 	if _, err := c.Register(context.Background(), gears.RegistrationRequest{
@@ -74,4 +75,55 @@ func TestDeviceRegisterConfigPingFlow(t *testing.T) {
 	if _, err := c.Ping(); err != nil {
 		t.Fatalf("Ping error: %v", err)
 	}
+}
+
+func waitForTestServerReady(t *testing.T, srv *server.Server) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		addr := srv.ListenAddr()
+		if addr == "" {
+			time.Sleep(10 * time.Millisecond)
+			continue
+		}
+
+		key, err := noise.GenerateKeyPair()
+		if err != nil {
+			t.Fatalf("GenerateKeyPair(ready check): %v", err)
+		}
+		c, err := client.Dial(key, addr, srv.PublicKey())
+		if err == nil {
+			infoErr := probeClientPublicReady(c)
+			_ = c.Close()
+			if infoErr == nil {
+				return
+			}
+		}
+
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	t.Fatal("test server did not become ready")
+}
+
+func waitForClientPublicReady(t *testing.T, c *client.Client) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		if err := probeClientPublicReady(c); err == nil {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+
+	t.Fatal("test client public service did not become ready")
+}
+
+func probeClientPublicReady(c *client.Client) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_, err := c.GetServerInfo(ctx)
+	return err
 }
