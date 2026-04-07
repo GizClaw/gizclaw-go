@@ -42,7 +42,7 @@ type Config struct {
 	Backend string `yaml:"backend"`
 	Dir     string `yaml:"dir"`
 	Store   string `yaml:"store"` // graph backend "kv": reference to a keyvalue store
-	Dim     int    `yaml:"dim"`   // vecstore/hnsw: vector dimension
+	Dim     int    `yaml:"dim"`   // vecstore: vector dimension (reserved)
 	DSN     string `yaml:"dsn"`   // sql: connection string (reserved)
 }
 
@@ -92,7 +92,7 @@ func New(baseDir string, configs map[string]Config) (*Stores, error) {
 			s.kvs[name] = st
 			s.closers = append(s.closers, st)
 		case KindVecStore:
-			st, err := s.newVecStore(baseDir, name, cfg)
+			st, err := s.newVecStore(name, cfg)
 			if err != nil {
 				return nil, err
 			}
@@ -212,7 +212,7 @@ func (r *Stores) newKV(baseDir, name string, cfg Config) (kv.Store, error) {
 	}
 }
 
-func (r *Stores) newVecStore(baseDir, name string, cfg Config) (vecstore.Index, error) {
+func (r *Stores) newVecStore(name string, cfg Config) (vecstore.Index, error) {
 	switch cfg.Backend {
 	case "memory":
 		return vecstore.NewMemory(), nil
