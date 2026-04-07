@@ -85,7 +85,6 @@ type Host struct {
 
 	mu       sync.Mutex
 	memories map[string]*Memory
-	vecs     map[string]vecstore.Index // per-persona vec indexes
 }
 
 // NewHost creates a new Host and validates configuration.
@@ -112,7 +111,6 @@ func NewHost(ctx context.Context, cfg HostConfig) (*Host, error) {
 	return &Host{
 		cfg:      cfg,
 		memories: make(map[string]*Memory),
-		vecs:     make(map[string]vecstore.Index),
 	}, nil
 }
 
@@ -205,7 +203,6 @@ func (h *Host) Open(id string, opts ...OpenOption) (*Memory, error) {
 	if err != nil {
 		return nil, fmt.Errorf("memory: Open %q: create vec index: %w", id, err)
 	}
-	h.vecs[id] = vec
 
 	idx := recall.NewIndex(recall.IndexConfig{
 		Store:     h.cfg.Store,
@@ -255,13 +252,12 @@ func (h *Host) Close() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	var errs []error
-	for _, v := range h.vecs {
-		if err := v.Close(); err != nil {
+	for _, m := range h.memories {
+		if err := m.index.Close(); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	h.memories = nil
-	h.vecs = nil
 	return errors.Join(errs...)
 }
 
@@ -302,14 +298,13 @@ func (h *Host) Delete(ctx context.Context, id string) error {
 	// Close the in-memory vec index and remove its backing file.
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if vec, ok := h.vecs[id]; ok {
-		_ = vec.Close()
-		delete(h.vecs, id)
+	if m, ok := h.memories[id]; ok {
+		_ = m.index.Close()
+		delete(h.memories, id)
 	}
 	if vecName != "" {
 		_ = h.cfg.FS.Remove(vecName)
 	}
-	delete(h.memories, id)
 	return nil
 }
 
