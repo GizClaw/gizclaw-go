@@ -76,3 +76,12 @@ func NewIndex(cfg IndexConfig) *Index {
 func (idx *Index) Graph() graph.Graph {
 	return idx.graph
 }
+
+// Close releases resources held by the index (e.g. the vector store).
+// Safe to call when vec is nil (no-op).
+func (idx *Index) Close() error {
+	if idx.vec != nil {
+		return idx.vec.Close()
+	}
+	return nil
+}

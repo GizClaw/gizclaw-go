@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/goccy/go-yaml"
 	"github.com/giztoy/giztoy-go/pkg/graph"
 	"github.com/giztoy/giztoy-go/pkg/kv"
+	"github.com/goccy/go-yaml"
 )
 
 type fakeDriver struct{}
@@ -345,8 +345,8 @@ func TestNewGraphBadStoreRef(t *testing.T) {
 
 func TestNewGraphWrongKindRef(t *testing.T) {
 	if _, err := New(t.TempDir(), map[string]Config{
-		"vec": {Kind: KindVecStore, Backend: "memory"},
-		"g":   {Kind: KindGraph, Backend: "kv", Store: "vec"},
+		"fw": {Kind: KindFS, Backend: "filesystem", Dir: "data"},
+		"g":  {Kind: KindGraph, Backend: "kv", Store: "fw"},
 	}); err == nil {
 		t.Fatal("expected error for kv ref pointing at non-kv store")
 	}
