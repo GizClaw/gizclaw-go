@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/giztoy/giztoy-go/pkg/gears"
+	"github.com/giztoy/giztoy-go/pkg/httputil"
 )
 
 const minimalTestConfig = `
@@ -335,11 +336,11 @@ func TestReverseClientAndRefreshOffline(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/info":
-			writeJSON(w, http.StatusOK, gears.RefreshInfo{Name: "demo"})
+			httputil.WriteJSON(w, http.StatusOK, gears.RefreshInfo{Name: "demo"})
 		case "/identifiers":
-			writeJSON(w, http.StatusOK, gears.RefreshIdentifiers{SN: "sn-1"})
+			httputil.WriteJSON(w, http.StatusOK, gears.RefreshIdentifiers{SN: "sn-1"})
 		case "/version":
-			writeJSON(w, http.StatusOK, gears.RefreshVersion{Depot: "demo", FirmwareSemVer: "1.0.0"})
+			httputil.WriteJSON(w, http.StatusOK, gears.RefreshVersion{Depot: "demo", FirmwareSemVer: "1.0.0"})
 		default:
 			http.NotFound(w, r)
 		}
@@ -380,7 +381,7 @@ func TestReverseClientErrors(t *testing.T) {
 		case "/identifiers":
 			_, _ = w.Write([]byte("{"))
 		case "/version":
-			writeJSON(w, http.StatusOK, gears.RefreshVersion{Depot: "demo", FirmwareSemVer: "1.0.0"})
+			httputil.WriteJSON(w, http.StatusOK, gears.RefreshVersion{Depot: "demo", FirmwareSemVer: "1.0.0"})
 		default:
 			http.NotFound(w, r)
 		}
@@ -418,11 +419,11 @@ func (t rewriteTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func TestWriteError(t *testing.T) {
 	rr := httptest.NewRecorder()
-	writeError(rr, http.StatusBadRequest, "INVALID_PARAMS", "bad")
+	httputil.WriteError(rr, http.StatusBadRequest, "INVALID_PARAMS", "bad")
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d", rr.Code)
 	}
-	var body ErrorBody
+	var body httputil.ErrorBody
 	if err := json.NewDecoder(bytes.NewReader(rr.Body.Bytes())).Decode(&body); err != nil {
 		t.Fatalf("decode error: %v", err)
 	}

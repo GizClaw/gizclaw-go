@@ -301,7 +301,7 @@ depots:
 	}
 	srv.markPeerOnline("device-pk", nil)
 
-	if err := srv.firmwareUploader.PutInfo("demo", firmware.DepotInfo{
+	if err := srv.firmware.PutInfo("demo", firmware.DepotInfo{
 		Files: []firmware.DepotInfoFile{{Path: "firmware.bin"}},
 	}); err != nil {
 		t.Fatalf("PutInfo error: %v", err)
@@ -318,10 +318,10 @@ depots:
 			MD5:    hex.EncodeToString(sumMD5[:]),
 		}},
 	}, map[string][]byte{"firmware.bin": payload})
-	if _, err := srv.firmwareUploader.UploadTar("demo", firmware.ChannelStable, bytes.NewReader(tarData)); err != nil {
+	if _, err := srv.firmware.UploadTar("demo", firmware.ChannelStable, bytes.NewReader(tarData)); err != nil {
 		t.Fatalf("UploadTar error: %v", err)
 	}
-	if _, err := srv.firmwareUploader.UploadTar("demo", firmware.ChannelBeta, bytes.NewReader(buildServerReleaseTar(t, firmware.DepotRelease{
+	if _, err := srv.firmware.UploadTar("demo", firmware.ChannelBeta, bytes.NewReader(buildServerReleaseTar(t, firmware.DepotRelease{
 		FirmwareSemVer: "1.1.0",
 		Channel:        string(firmware.ChannelBeta),
 		Files: []firmware.DepotFile{{
@@ -332,7 +332,7 @@ depots:
 	}, map[string][]byte{"firmware.bin": payload}))); err != nil {
 		t.Fatalf("UploadTar beta error: %v", err)
 	}
-	if _, err := srv.firmwareUploader.UploadTar("demo", firmware.ChannelTesting, bytes.NewReader(buildServerReleaseTar(t, firmware.DepotRelease{
+	if _, err := srv.firmware.UploadTar("demo", firmware.ChannelTesting, bytes.NewReader(buildServerReleaseTar(t, firmware.DepotRelease{
 		FirmwareSemVer: "1.2.0",
 		Channel:        string(firmware.ChannelTesting),
 		Files: []firmware.DepotFile{{
@@ -343,7 +343,7 @@ depots:
 	}, map[string][]byte{"firmware.bin": payload}))); err != nil {
 		t.Fatalf("UploadTar testing error: %v", err)
 	}
-	if _, err := srv.firmwareUploader.UploadTar("demo", firmware.ChannelRollback, bytes.NewReader(buildServerReleaseTar(t, firmware.DepotRelease{
+	if _, err := srv.firmware.UploadTar("demo", firmware.ChannelRollback, bytes.NewReader(buildServerReleaseTar(t, firmware.DepotRelease{
 		FirmwareSemVer: "0.9.0",
 		Channel:        string(firmware.ChannelRollback),
 		Files: []firmware.DepotFile{{

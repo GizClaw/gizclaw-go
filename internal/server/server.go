@@ -61,11 +61,7 @@ type Server struct {
 	logger    *log.Logger
 	gears     *gears.Service
 
-	firmwareStore    *firmware.Store
-	firmwareScanner  *firmware.Scanner
-	firmwareUploader *firmware.Uploader
-	firmwareSwitcher *firmware.Switcher
-	firmwareOTA      *firmware.OTAService
+	firmware *firmware.Manager
 
 	activePeersMu sync.RWMutex
 	activePeers   map[string]*activePeer
@@ -121,21 +117,15 @@ func New(cfg Config) (*Server, error) {
 	if err := os.MkdirAll(fwStore.Root(), 0o755); err != nil {
 		return nil, fmt.Errorf("server: firmware dir: %w", err)
 	}
-	fwScanner := firmware.NewScanner(fwStore)
-
 	storesOK = true
 	return &Server{
-		cfg:              cfg,
-		stores:           ss,
-		keyPair:          kp,
-		logger:           log.New(os.Stderr, "[server] ", log.LstdFlags),
-		gears:            gearService,
-		firmwareStore:    fwStore,
-		firmwareScanner:  fwScanner,
-		firmwareUploader: firmware.NewUploader(fwStore, fwScanner),
-		firmwareSwitcher: firmware.NewSwitcher(fwStore, fwScanner),
-		firmwareOTA:      firmware.NewOTAService(fwStore, fwScanner),
-		activePeers:      make(map[string]*activePeer),
+		cfg:         cfg,
+		stores:      ss,
+		keyPair:     kp,
+		logger:      log.New(os.Stderr, "[server] ", log.LstdFlags),
+		gears:       gearService,
+		firmware:    firmware.NewManager(fwStore, "/firmwares"),
+		activePeers: make(map[string]*activePeer),
 	}, nil
 }
 

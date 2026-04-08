@@ -49,7 +49,7 @@ func TestPublicAndAdminErrorHandlers(t *testing.T) {
 		{name: "admin gear refresh missing", pk: adminPK, target: func() http.Handler { return srv.adminHandler(adminPK) }, method: http.MethodPost, path: "/gears/missing:refresh", want: http.StatusNotFound},
 		{name: "admin gear invalid route", pk: adminPK, target: func() http.Handler { return srv.adminHandler(adminPK) }, method: http.MethodGet, path: "/gears/imei/123", want: http.StatusBadRequest},
 		{name: "admin gear refresh offline", pk: adminPK, target: func() http.Handler { return srv.adminHandler(adminPK) }, method: http.MethodPost, path: "/gears/" + devicePK + ":refresh", want: http.StatusConflict},
-		{name: "admin firmware list wrong method", pk: adminPK, target: func() http.Handler { return srv.adminHandler(adminPK) }, method: http.MethodPost, path: "/firmwares", want: http.StatusBadRequest},
+		{name: "admin firmware list wrong method", pk: adminPK, target: func() http.Handler { return srv.adminHandler(adminPK) }, method: http.MethodPost, path: "/firmwares", want: http.StatusMethodNotAllowed},
 		{name: "admin depot invalid json", pk: adminPK, target: func() http.Handler { return srv.adminHandler(adminPK) }, method: http.MethodPut, path: "/firmwares/demo", body: []byte("{"), want: http.StatusBadRequest},
 		{name: "admin depot info mismatch", pk: adminPK, target: func() http.Handler { return srv.adminHandler(adminPK) }, method: http.MethodPut, path: "/firmwares/demo", body: []byte(`{"files":[{"path":"other.bin"}]}`), want: http.StatusConflict},
 		{name: "admin depot missing", pk: adminPK, target: func() http.Handler { return srv.adminHandler(adminPK) }, method: http.MethodGet, path: "/firmwares/missing", want: http.StatusNotFound},
@@ -117,7 +117,7 @@ func TestAdminFirmwareSwitchErrors(t *testing.T) {
 	})
 
 	t.Run("release not ready", func(t *testing.T) {
-		if err := srv.firmwareUploader.PutInfo("conflict", firmware.DepotInfo{
+		if err := srv.firmware.PutInfo("conflict", firmware.DepotInfo{
 			Files: []firmware.DepotInfoFile{{Path: "firmware.bin"}},
 		}); err != nil {
 			t.Fatal(err)
@@ -131,7 +131,7 @@ func TestAdminFirmwareSwitchErrors(t *testing.T) {
 	})
 
 	t.Run("release internal error", func(t *testing.T) {
-		if err := os.WriteFile(srv.firmwareStore.ManifestPath("demo", firmware.ChannelBeta), []byte("{"), 0o644); err != nil {
+		if err := os.WriteFile(srv.firmware.ManifestPath("demo", firmware.ChannelBeta), []byte("{"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		req := httptest.NewRequest(http.MethodPut, "/firmwares/demo:release", nil)
@@ -152,7 +152,7 @@ func TestAdminFirmwareSwitchErrors(t *testing.T) {
 	})
 
 	t.Run("rollback conflict", func(t *testing.T) {
-		if err := srv.firmwareUploader.PutInfo("no-rollback", firmware.DepotInfo{
+		if err := srv.firmware.PutInfo("no-rollback", firmware.DepotInfo{
 			Files: []firmware.DepotInfoFile{{Path: "firmware.bin"}},
 		}); err != nil {
 			t.Fatal(err)
@@ -166,7 +166,7 @@ func TestAdminFirmwareSwitchErrors(t *testing.T) {
 	})
 
 	t.Run("rollback internal error", func(t *testing.T) {
-		if err := os.WriteFile(srv.firmwareStore.ManifestPath("demo", firmware.ChannelRollback), []byte("{"), 0o644); err != nil {
+		if err := os.WriteFile(srv.firmware.ManifestPath("demo", firmware.ChannelRollback), []byte("{"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		req := httptest.NewRequest(http.MethodPut, "/firmwares/demo:rollback", nil)

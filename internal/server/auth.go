@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/giztoy/giztoy-go/pkg/gears"
+	"github.com/giztoy/giztoy-go/pkg/httputil"
 )
 
 type contextKey string
@@ -36,15 +37,15 @@ func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 		publicKey := callerPublicKey(r.Context())
 		gear, allowed, err := s.authorize(publicKey, gears.ServiceKindAdmin)
 		if err != nil {
-			writeError(w, http.StatusNotFound, "GEAR_NOT_FOUND", err.Error())
+			httputil.WriteError(w, http.StatusNotFound, "GEAR_NOT_FOUND", err.Error())
 			return
 		}
 		if gear.PublicKey == "" || gear.Role != gears.GearRoleAdmin {
-			writeError(w, http.StatusForbidden, "PERMISSION_DENIED", "admin role required")
+			httputil.WriteError(w, http.StatusForbidden, "PERMISSION_DENIED", "admin role required")
 			return
 		}
 		if gear.Status != gears.GearStatusActive || !allowed {
-			writeError(w, http.StatusForbidden, "CALLER_NOT_ACTIVE", "caller must be active")
+			httputil.WriteError(w, http.StatusForbidden, "CALLER_NOT_ACTIVE", "caller must be active")
 			return
 		}
 		next(w, r)
