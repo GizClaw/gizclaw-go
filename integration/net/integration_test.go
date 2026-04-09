@@ -476,7 +476,9 @@ func openAcceptedStreamPair(t *testing.T, server, client *core.UDP, clientPK, se
 
 	acceptCh := make(chan net.Conn, 1)
 	errCh := make(chan error, 1)
+	acceptReady := make(chan struct{})
 	go func() {
+		close(acceptReady)
 		stream, err := testutil.MustServiceMux(t, server, clientPK).AcceptStream(service)
 		if err != nil {
 			errCh <- err
@@ -484,6 +486,9 @@ func openAcceptedStreamPair(t *testing.T, server, client *core.UDP, clientPK, se
 		}
 		acceptCh <- stream
 	}()
+
+	<-acceptReady
+	time.Sleep(50 * time.Millisecond)
 
 	clientStream, err := testutil.MustServiceMux(t, client, serverPK).OpenStream(service)
 	if err != nil {
