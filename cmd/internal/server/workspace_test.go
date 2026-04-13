@@ -1,0 +1,164 @@
+package server
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/giztoy/giztoy-go/cmd/internal/stores"
+)
+
+func TestPrepareWorkspaceConfigLoadsWorkspaceConfig(t *testing.T) {
+	workspace := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workspace, workspaceConfigFile), []byte(`
+listen: "127.0.0.1:39001"
+stores:
+  mem:
+    kind: keyvalue
+    backend: memory
+gears:
+  store: mem
+depots:
+  store: mem
+`), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	cfg, err := prepareWorkspaceConfig(workspace)
+	if err != nil {
+		t.Fatalf("prepareWorkspaceConfig error = %v", err)
+	}
+	if cfg.KeyPair == nil {
+		t.Fatal("KeyPair should not be nil")
+	}
+	if cfg.ListenAddr != "127.0.0.1:39001" {
+		t.Fatalf("ListenAddr = %q", cfg.ListenAddr)
+	}
+	if got := cfg.Stores["mem"].Dir; got != "" {
+		t.Fatalf("memory store dir = %q", got)
+	}
+}
+
+func TestPrepareWorkspaceConfigUsesDefaultListenAddr(t *testing.T) {
+	workspace := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workspace, workspaceConfigFile), []byte(`
+stores:
+  mem:
+    kind: keyvalue
+    backend: memory
+gears:
+  store: mem
+depots:
+  store: mem
+`), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	cfg, err := prepareWorkspaceConfig(workspace)
+	if err != nil {
+		t.Fatalf("prepareWorkspaceConfig error = %v", err)
+	}
+	if cfg.ListenAddr != DefaultConfig().ListenAddr {
+		t.Fatalf("ListenAddr = %q, want %q", cfg.ListenAddr, DefaultConfig().ListenAddr)
+	}
+}
+
+func TestPrepareWorkspaceConfigLoadError(t *testing.T) {
+	_, err := prepareWorkspaceConfig(t.TempDir())
+	if err == nil {
+		t.Fatal("prepareWorkspaceConfig should fail without config.yaml")
+	}
+}
+
+func TestPrepareWorkspaceConfigResolvesRelativeStoreDirs(t *testing.T) {
+	workspace := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workspace, workspaceConfigFile), []byte(`
+stores:
+  fw:
+    kind: filestore
+    backend: filesystem
+    dir: firmware
+gears:
+  store: fw
+depots:
+  store: fw
+`), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	cfg, err := prepareWorkspaceConfig(workspace)
+	if err != nil {
+		t.Fatalf("prepareWorkspaceConfig error = %v", err)
+	}
+	if got := cfg.Stores["fw"].Dir; got != filepath.Join(workspace, "firmware") {
+		t.Fatalf("fw dir = %q", got)
+	}
+}
+
+func TestPrepareWorkspaceConfigIdentityError(t *testing.T) {
+	workspace := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workspace, workspaceConfigFile), []byte(`
+stores:
+  mem:
+    kind: keyvalue
+    backend: memory
+gears:
+  store: mem
+depots:
+  store: mem
+`), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+	if err := os.Mkdir(filepath.Join(workspace, workspaceIdentityFile), 0o755); err != nil {
+		t.Fatalf("Mkdir error = %v", err)
+	}
+
+	_, err := prepareWorkspaceConfig(workspace)
+	if err == nil {
+		t.Fatal("prepareWorkspaceConfig should fail when identity.key is a directory")
+	}
+}
+
+func TestResolveWorkspaceStoreConfigsPreservesAbsoluteDirs(t *testing.T) {
+	root := t.TempDir()
+	absoluteDir := filepath.Join(t.TempDir(), "firmware")
+
+	got := resolveWorkspaceStoreConfigs(root, map[string]stores.Config{
+		"fw": {
+			Kind:    stores.KindFS,
+			Backend: "filesystem",
+			Dir:     absoluteDir,
+		},
+	})
+	if got["fw"].Dir != absoluteDir {
+		t.Fatalf("fw dir = %q, want %q", got["fw"].Dir, absoluteDir)
+	}
+}
+
+func TestServeReturnsWorkspaceLoadError(t *testing.T) {
+	err := Serve(t.TempDir())
+	if err == nil {
+		t.Fatal("Serve should fail without config.yaml")
+	}
+}
+
+func TestServeReturnsServerBuildError(t *testing.T) {
+	workspace := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workspace, workspaceConfigFile), []byte(`
+stores:
+  bad:
+    kind: keyvalue
+    backend: unknown
+gears:
+  store: bad
+depots:
+  store: bad
+`), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	err := Serve(workspace)
+	if err == nil {
+		t.Fatal("Serve should fail when New cannot build stores")
+	}
+}
