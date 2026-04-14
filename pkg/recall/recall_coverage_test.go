@@ -67,7 +67,7 @@ func TestBucketSegmentsAndBucketStats(t *testing.T) {
 	}
 
 	// Add one malformed entry under 1h prefix; BucketSegments/BucketStats should skip it.
-	if err := idx.store.Set(ctx, segmentKey(idx.prefix, Bucket1H, 250), []byte("not-msgpack")); err != nil {
+	if err := idx.store.Set(ctx, segmentKey(idx.prefix, Bucket1H, 250), []byte("not-json")); err != nil {
 		t.Fatalf("inject malformed segment: %v", err)
 	}
 

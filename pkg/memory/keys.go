@@ -32,13 +32,13 @@ func validateKeySegment(field, value string, sep byte) error {
 // by the recall.Index for segments and graph data. The memory package adds
 // keys for conversations.
 //
-//	{mid}:conv:{convID}:msg:{ts_ns}   → msgpack Message
+//	{mid}:conv:{convID}:msg:{ts_ns}   → JSON Message
 //	{mid}:conv:{convID}:revert        → timestamp string (revert point)
 //
 // The {mid} prefix is set per-Memory instance and ensures complete isolation
 // between personas. Segment and graph keys are managed by the recall layer:
 //
-//	{mid}:seg:{bucket}:{ts_ns}        → msgpack Segment (recall manages)
+//	{mid}:seg:{bucket}:{ts_ns}        → JSON Segment (recall manages)
 //	{mid}:sid:{id}                    → "{bucket}:{ts}" (recall manages)
 //	{mid}:g:e:{label}                 → Entity (recall/graph manages)
 //	{mid}:g:r:{from}:{type}:{to}     → Relation (recall/graph manages)

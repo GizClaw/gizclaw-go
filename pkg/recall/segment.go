@@ -2,13 +2,13 @@ package recall
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"math"
 	"sort"
 	"strings"
 
 	"github.com/giztoy/giztoy-go/pkg/kv"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 // Score fusion weights for combining search signals.
@@ -23,7 +23,7 @@ const (
 // The segment's Bucket field determines which bucket it is stored in.
 // If Bucket is empty, it defaults to [Bucket1H].
 //
-// It stores the segment data in KV (msgpack-encoded, keyed by bucket+timestamp),
+// It stores the segment data in KV (JSON-encoded, keyed by bucket+timestamp),
 // writes a reverse index entry (sid:{id} → "bucket:timestamp") for O(1) ID lookups,
 // and if an embedder and vector index are configured, embeds the summary
 // text and inserts the resulting vector.
@@ -32,7 +32,7 @@ func (idx *Index) StoreSegment(ctx context.Context, seg Segment) error {
 		seg.Bucket = Bucket1H
 	}
 
-	data, err := msgpack.Marshal(seg)
+	data, err := json.Marshal(seg)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (idx *Index) GetSegment(ctx context.Context, id string) (*Segment, error) {
 	}
 
 	var seg Segment
-	if err := msgpack.Unmarshal(data, &seg); err != nil {
+	if err := json.Unmarshal(data, &seg); err != nil {
 		return nil, err
 	}
 	return &seg, nil
@@ -143,7 +143,7 @@ func (idx *Index) RecentSegments(ctx context.Context, n int) ([]Segment, error) 
 			return nil, err
 		}
 		var seg Segment
-		if err := msgpack.Unmarshal(entry.Value, &seg); err != nil {
+		if err := json.Unmarshal(entry.Value, &seg); err != nil {
 			continue
 		}
 		all = append(all, seg)
@@ -171,7 +171,7 @@ func (idx *Index) BucketSegments(ctx context.Context, bucket Bucket) ([]Segment,
 			return nil, err
 		}
 		var seg Segment
-		if err := msgpack.Unmarshal(entry.Value, &seg); err != nil {
+		if err := json.Unmarshal(entry.Value, &seg); err != nil {
 			continue
 		}
 		segments = append(segments, seg)
@@ -189,7 +189,7 @@ func (idx *Index) BucketStats(ctx context.Context, bucket Bucket) (count int, ch
 			return 0, 0, e
 		}
 		var seg Segment
-		if err := msgpack.Unmarshal(entry.Value, &seg); err != nil {
+		if err := json.Unmarshal(entry.Value, &seg); err != nil {
 			continue
 		}
 		count++
@@ -334,7 +334,7 @@ func (idx *Index) loadSegments(ctx context.Context, q SearchQuery) ([]Segment, e
 			return nil, err
 		}
 		var seg Segment
-		if err := msgpack.Unmarshal(entry.Value, &seg); err != nil {
+		if err := json.Unmarshal(entry.Value, &seg); err != nil {
 			continue
 		}
 

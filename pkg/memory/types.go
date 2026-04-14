@@ -68,19 +68,19 @@ const (
 
 // Message is a single conversation turn stored in short-term memory.
 type Message struct {
-	Role    Role   `json:"role" msgpack:"role"`
-	Name    string `json:"name,omitempty" msgpack:"name,omitempty"`
-	Content string `json:"content,omitempty" msgpack:"content,omitempty"`
+	Role    Role   `json:"role"`
+	Name    string `json:"name,omitzero"`
+	Content string `json:"content,omitzero"`
 
 	// Timestamp is the Unix timestamp in nanoseconds when this message
 	// was created.
-	Timestamp int64 `json:"ts" msgpack:"ts"`
+	Timestamp int64 `json:"ts"`
 
 	// Tool call fields (only used when Role == RoleTool).
-	ToolCallID   string `json:"tc_id,omitempty" msgpack:"tc_id,omitempty"`
-	ToolCallName string `json:"tc_name,omitempty" msgpack:"tc_name,omitempty"`
-	ToolCallArgs string `json:"tc_args,omitempty" msgpack:"tc_args,omitempty"`
-	ToolResultID string `json:"tr_id,omitempty" msgpack:"tr_id,omitempty"`
+	ToolCallID   string `json:"tc_id,omitzero"`
+	ToolCallName string `json:"tc_name,omitzero"`
+	ToolCallArgs string `json:"tc_args,omitzero"`
+	ToolResultID string `json:"tr_id,omitzero"`
 }
 
 // ---------------------------------------------------------------------------
@@ -117,15 +117,15 @@ type RecallResult struct {
 // EntityInfo holds a graph entity's label and attributes for context building.
 type EntityInfo struct {
 	Label string         `json:"label"`
-	Attrs map[string]any `json:"attrs,omitempty"`
+	Attrs map[string]any `json:"attrs,omitzero"`
 }
 
 // ScoredSegment pairs a segment summary with its relevance score.
 type ScoredSegment struct {
 	ID        string   `json:"id"`
 	Summary   string   `json:"summary"`
-	Keywords  []string `json:"keywords,omitempty"`
-	Labels    []string `json:"labels,omitempty"`
+	Keywords  []string `json:"keywords,omitzero"`
+	Labels    []string `json:"labels,omitzero"`
 	Timestamp int64    `json:"ts"`
 	Score     float64  `json:"score"`
 }

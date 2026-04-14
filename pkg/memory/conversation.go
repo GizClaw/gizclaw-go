@@ -2,12 +2,12 @@ package memory
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strconv"
 
 	"github.com/giztoy/giztoy-go/pkg/kv"
 	"github.com/giztoy/giztoy-go/pkg/recall"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 // Conversation is an active dialogue tied to a device or session.
@@ -67,7 +67,7 @@ func (c *Conversation) Append(ctx context.Context, msg Message) error {
 		msg.Timestamp = nowNano()
 	}
 
-	data, err := msgpack.Marshal(msg)
+	data, err := json.Marshal(msg)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func (c *Conversation) Recent(ctx context.Context, n int) ([]Message, error) {
 			return nil, err
 		}
 		var msg Message
-		if err := msgpack.Unmarshal(entry.Value, &msg); err != nil {
+		if err := json.Unmarshal(entry.Value, &msg); err != nil {
 			continue
 		}
 		all = append(all, msg)
@@ -216,7 +216,7 @@ func (c *Conversation) Revert(ctx context.Context) error {
 			return err
 		}
 		var msg Message
-		if err := msgpack.Unmarshal(entry.Value, &msg); err != nil {
+		if err := json.Unmarshal(entry.Value, &msg); err != nil {
 			continue
 		}
 		if msg.Role == RoleUser && msg.Timestamp > latestUserTS {
@@ -258,7 +258,7 @@ func (c *Conversation) All(ctx context.Context) ([]Message, error) {
 			return nil, err
 		}
 		var msg Message
-		if err := msgpack.Unmarshal(entry.Value, &msg); err != nil {
+		if err := json.Unmarshal(entry.Value, &msg); err != nil {
 			continue
 		}
 		msgs = append(msgs, msg)
@@ -306,7 +306,7 @@ func (c *Conversation) recomputePending(ctx context.Context) error {
 			return err
 		}
 		var msg Message
-		if err := msgpack.Unmarshal(entry.Value, &msg); err != nil {
+		if err := json.Unmarshal(entry.Value, &msg); err != nil {
 			continue
 		}
 		pendingChars += len(msg.Content)

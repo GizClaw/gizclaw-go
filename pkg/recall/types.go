@@ -92,26 +92,26 @@ func BucketForSpan(span time.Duration) Bucket {
 // filtering, a timestamp, and a bucket indicating its time granularity.
 type Segment struct {
 	// ID is the unique identifier for this segment.
-	ID string `json:"id" msgpack:"id"`
+	ID string `json:"id"`
 
 	// Summary is the human-readable text content of this segment.
-	Summary string `json:"summary" msgpack:"summary"`
+	Summary string `json:"summary"`
 
 	// Keywords are terms extracted from the segment for keyword matching.
-	Keywords []string `json:"keywords,omitempty" msgpack:"keywords,omitempty"`
+	Keywords []string `json:"keywords,omitzero"`
 
 	// Labels tag this segment with entity references (e.g., "person:Alice",
 	// "topic:dinosaurs"). Used for label-based filtering during search.
-	Labels []string `json:"labels,omitempty" msgpack:"labels,omitempty"`
+	Labels []string `json:"labels,omitzero"`
 
 	// Timestamp is the Unix timestamp in nanoseconds of the latest event
 	// covered by this segment. Used for ordering and time-range queries.
-	Timestamp int64 `json:"ts" msgpack:"ts"`
+	Timestamp int64 `json:"ts"`
 
 	// Bucket identifies which time-granularity bucket this segment
 	// belongs to. Set when the segment is stored. Defaults to Bucket1H
 	// for segments produced by realtime conversation compression.
-	Bucket Bucket `json:"bucket,omitempty" msgpack:"bucket,omitempty"`
+	Bucket Bucket `json:"bucket,omitzero"`
 }
 
 // SearchQuery specifies parameters for [Index.SearchSegments].

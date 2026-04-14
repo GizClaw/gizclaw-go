@@ -10,7 +10,7 @@ import (
 
 // Key layout (relative to the Index prefix):
 //
-//	{prefix}:seg:{bucket}:{ts_ns}    → msgpack-encoded Segment
+//	{prefix}:seg:{bucket}:{ts_ns}    → JSON-encoded Segment
 //	{prefix}:sid:{id}                → "{bucket}:{ts_ns}" (reverse index)
 //
 // Segments are partitioned by bucket (time granularity). Within each
