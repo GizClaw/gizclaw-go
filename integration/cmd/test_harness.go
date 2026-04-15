@@ -434,7 +434,7 @@ func mustBuildCLI(t testing.TB, repoRoot string) string {
 		}
 
 		binaryPath := filepath.Join(outDir, "gizclaw")
-		cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
+		cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/gizclaw")
 		cmd.Dir = repoRoot
 		output, err := cmd.CombinedOutput()
 		if err != nil {

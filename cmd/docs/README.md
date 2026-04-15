@@ -1,6 +1,6 @@
 # `gizclaw` CLI Docs
 
-`gizclaw` 是项目当前的命令行入口，定义在 `cmd/main.go`，实际命令树来自 `cmd/internal/cli`。
+`gizclaw` 是项目当前的命令行入口，定义在 `cmd/gizclaw/main.go`，实际命令树来自 `cmd/internal/commands`。
 
 按职责可以分成两类：
 
