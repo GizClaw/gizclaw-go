@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/giztoy/giztoy-go/pkg/depotstore"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/adminservice"
+	"github.com/giztoy/giztoy-go/pkg/store/depotstore"
 )
 
 var (

@@ -7,13 +7,13 @@ import (
 	"net"
 	"sync"
 
-	"github.com/giztoy/giztoy-go/pkg/depotstore"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/rpc"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/firmware"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/gear"
 	"github.com/giztoy/giztoy-go/pkg/giznet"
-	"github.com/giztoy/giztoy-go/pkg/kv"
+	"github.com/giztoy/giztoy-go/pkg/store/depotstore"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 var ErrNilSecurityPolicy = errors.New("gizclaw: nil security policy")

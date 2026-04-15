@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/giztoy/giztoy-go/pkg/kv"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 // Score fusion weights for combining search signals.

@@ -5,9 +5,9 @@
 - This is a **pure Go** repository.
 - The project does **not** use Bazel.
 - The team does **not** use pull requests for this repo.
-- There is currently **no CI pipeline** for automated checks.
+- The repository has a **GitHub Actions CI workflow** for automated checks.
 
-Because of this, quality gates must be enforced during local development and manual review.
+Even with CI, quality gates must still be enforced during local development and manual review.
 
 ## Development & Merge Workflow
 
@@ -34,7 +34,7 @@ No PR metadata (title/body/checks) is required in this repo.
 
 ### 3) Local Validation (Required)
 
-Since there is no CI, developers must run local checks and record results:
+Developers must run local checks and record results before merge, even when CI is available:
 
 - `go test ./...` (or a scoped equivalent with justification)
 - Any additional task-specific verification commands

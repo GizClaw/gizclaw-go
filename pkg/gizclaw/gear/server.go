@@ -10,7 +10,7 @@ import (
 
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/serverpublic"
-	"github.com/giztoy/giztoy-go/pkg/kv"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 var (

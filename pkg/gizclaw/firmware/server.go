@@ -10,10 +10,10 @@ import (
 	"path"
 	"sync"
 
-	"github.com/giztoy/giztoy-go/pkg/depotstore"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/adminservice"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/serverpublic"
+	"github.com/giztoy/giztoy-go/pkg/store/depotstore"
 	"github.com/gofiber/fiber/v2"
 )
 

@@ -7,7 +7,7 @@ import (
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/gear"
 	"github.com/giztoy/giztoy-go/pkg/giznet"
-	"github.com/giztoy/giztoy-go/pkg/kv"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 func TestGearsSecurityPolicyAllowsAdminServicesForActiveAdmin(t *testing.T) {

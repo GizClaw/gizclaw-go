@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/giztoy/giztoy-go/pkg/kv"
-	"github.com/giztoy/giztoy-go/pkg/recall"
+	"github.com/giztoy/giztoy-go/pkg/agent/recall"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 type multiOutputCompressor struct{}

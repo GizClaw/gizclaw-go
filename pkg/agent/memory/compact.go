@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/giztoy/giztoy-go/pkg/recall"
+	"github.com/giztoy/giztoy-go/pkg/agent/recall"
 )
 
 // Compact checks all compactable buckets and compacts any that exceed

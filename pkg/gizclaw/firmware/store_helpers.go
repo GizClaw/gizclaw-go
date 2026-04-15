@@ -7,7 +7,7 @@ import (
 	"path"
 	"sync"
 
-	"github.com/giztoy/giztoy-go/pkg/depotstore"
+	"github.com/giztoy/giztoy-go/pkg/store/depotstore"
 )
 
 func (s *Server) ensureDepot(depot string) error {

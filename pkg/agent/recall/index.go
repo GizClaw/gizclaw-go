@@ -1,10 +1,10 @@
 package recall
 
 import (
-	"github.com/giztoy/giztoy-go/pkg/embed"
-	"github.com/giztoy/giztoy-go/pkg/graph"
-	"github.com/giztoy/giztoy-go/pkg/kv"
-	"github.com/giztoy/giztoy-go/pkg/vecstore"
+	"github.com/giztoy/giztoy-go/pkg/agent/embed"
+	"github.com/giztoy/giztoy-go/pkg/store/graph"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
+	"github.com/giztoy/giztoy-go/pkg/store/vecstore"
 )
 
 // IndexConfig configures a new [Index].

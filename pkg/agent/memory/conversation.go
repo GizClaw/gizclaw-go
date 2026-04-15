@@ -6,8 +6,8 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/giztoy/giztoy-go/pkg/kv"
-	"github.com/giztoy/giztoy-go/pkg/recall"
+	"github.com/giztoy/giztoy-go/pkg/agent/recall"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 // Conversation is an active dialogue tied to a device or session.

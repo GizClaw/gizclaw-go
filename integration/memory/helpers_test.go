@@ -16,13 +16,13 @@ import (
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 
+	"github.com/giztoy/giztoy-go/pkg/agent/memory"
+	"github.com/giztoy/giztoy-go/pkg/agent/recall"
 	"github.com/giztoy/giztoy-go/pkg/genx"
 	"github.com/giztoy/giztoy-go/pkg/genx/generators"
 	"github.com/giztoy/giztoy-go/pkg/genx/profilers"
 	"github.com/giztoy/giztoy-go/pkg/genx/segmentors"
-	"github.com/giztoy/giztoy-go/pkg/kv"
-	"github.com/giztoy/giztoy-go/pkg/memory"
-	"github.com/giztoy/giztoy-go/pkg/recall"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 const integrationSeparator byte = 0x1F

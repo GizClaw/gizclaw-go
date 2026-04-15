@@ -7,7 +7,7 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 PLATFORM="${1:-linux-amd64}"
 PREBUILT_DIR="${ROOT_DIR}/third_party/ncnn/prebuilt/${PLATFORM}"
-MODEL_DIR="${ROOT_DIR}/pkg/ncnn/models"
+MODEL_DIR="${ROOT_DIR}/pkg/agent/ncnn/models"
 
 fail() {
 	echo "[verify_artifacts] error: $*" >&2

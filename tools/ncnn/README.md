@@ -53,4 +53,4 @@ tools/ncnn/verify_artifacts.sh darwin-amd64
 - Initialize submodule before building:
   - `git submodule update --init --recursive`
 - `build.env` records submodule metadata (`NCNN_COMMIT`, `NCNN_DESCRIBE`) for traceability.
-- `pkg/ncnn` links prebuilt static libraries from `third_party/ncnn/prebuilt/<platform>/lib/libncnn.a`.
+- `pkg/agent/ncnn` links prebuilt static libraries from `third_party/ncnn/prebuilt/<platform>/lib/libncnn.a`.

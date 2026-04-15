@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/giztoy/giztoy-go/pkg/graph"
-	"github.com/giztoy/giztoy-go/pkg/kv"
+	"github.com/giztoy/giztoy-go/pkg/store/graph"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 	"github.com/goccy/go-yaml"
 )
 

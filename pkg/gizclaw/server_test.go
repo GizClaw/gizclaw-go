@@ -6,11 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/giztoy/giztoy-go/pkg/depotstore"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw/gear"
 	"github.com/giztoy/giztoy-go/pkg/giznet"
-	"github.com/giztoy/giztoy-go/pkg/kv"
+	"github.com/giztoy/giztoy-go/pkg/store/depotstore"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 func TestServerListenAndServeRequiresGearStore(t *testing.T) {

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/giztoy/giztoy-go/pkg/graph"
-	"github.com/giztoy/giztoy-go/pkg/kv"
-	"github.com/giztoy/giztoy-go/pkg/recall"
+	"github.com/giztoy/giztoy-go/pkg/agent/recall"
+	"github.com/giztoy/giztoy-go/pkg/store/graph"
+	"github.com/giztoy/giztoy-go/pkg/store/kv"
 )
 
 // Memory is the complete memory system for a single persona (virtual character).
