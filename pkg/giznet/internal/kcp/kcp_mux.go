@@ -231,6 +231,12 @@ func (m *KcpMux) Input(data []byte) error {
 	if frameType != kcpMuxFrameData {
 		invalid = true
 	}
+	if !exists && !invalid && frameType == kcpMuxFrameData {
+		if err := m.handleOpen(streamID); err != nil {
+			return err
+		}
+		entry, exists = m.getEntry(streamID)
+	}
 	if invalid {
 		if exists {
 			m.removeStream(streamID, errStreamInvalid)

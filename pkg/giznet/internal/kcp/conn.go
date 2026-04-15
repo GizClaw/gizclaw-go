@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	gokcp "github.com/xtaci/kcp-go/v5"
 )
 
 var (
@@ -42,7 +44,7 @@ type writeResult struct {
 //
 // Supports read/write deadlines for net.Conn compatibility.
 type KCPConn struct {
-	kcp    *KCP
+	kcp    *gokcp.KCP
 	output func([]byte)
 
 	inputCh chan []byte
@@ -85,12 +87,19 @@ func NewKCPConn(conv uint32, output func([]byte)) *KCPConn {
 	}
 	c.recvCond = sync.NewCond(&c.recvMu)
 
-	c.kcp = NewKCP(conv, func(data []byte) {
-		out := make([]byte, len(data))
-		copy(out, data)
+	c.kcp = gokcp.NewKCP(conv, func(buf []byte, size int) {
+		if size <= 0 {
+			return
+		}
+		if size > len(buf) {
+			size = len(buf)
+		}
+		out := append([]byte(nil), buf[:size]...)
 		c.output(out)
 	})
-	c.kcp.DefaultConfig()
+	c.kcp.NoDelay(2, 10, 2, 1)
+	c.kcp.WndSize(4096, 4096)
+	c.kcp.SetMtu(1400)
 
 	c.wg.Add(1)
 	go c.runLoop()
@@ -236,7 +245,6 @@ func (c *KCPConn) closeSignal(reason error) {
 func (c *KCPConn) finalizeClose() {
 	c.finalizeOnce.Do(func() {
 		c.wg.Wait()
-		c.kcp.Release()
 	})
 }
 
@@ -298,6 +306,7 @@ func (c *KCPConn) IsClosed() bool {
 const (
 	idleTimeout     = 15 * time.Second
 	idleTimeoutPure = 30 * time.Second
+	kcpPollInterval = 10 * time.Millisecond
 )
 
 // runLoop is the internal goroutine that exclusively owns all KCP operations.
@@ -308,12 +317,6 @@ func (c *KCPConn) runLoop() {
 	lastRecv := time.Now()
 
 	for {
-		// Dead link detection: KCP marks state=-1 after too many retransmits.
-		if c.kcp.State() < 0 {
-			c.closeInternal(ErrConnTimeout)
-			return
-		}
-
 		// Idle timeout (matches Rust: 15s with pending sends, 30s pure idle).
 		idle := time.Since(lastRecv)
 		if idle > idleTimeout && c.kcp.WaitSnd() > 0 {
@@ -325,26 +328,15 @@ func (c *KCPConn) runLoop() {
 			return
 		}
 
-		now := uint32(time.Now().UnixMilli())
-		nextUpdate := c.kcp.Check(now)
-
-		var delay time.Duration
-		if nextUpdate <= now {
-			delay = time.Millisecond
-		} else {
-			d := time.Duration(nextUpdate-now) * time.Millisecond
-			if d > 50*time.Millisecond {
-				d = 50 * time.Millisecond
-			}
-			delay = d
-		}
-
-		timer := time.NewTimer(delay)
+		// kcp-go's low-level Check() uses an internal monotonic epoch that is
+		// not exposed publicly, so this wrapper drives Update() on a fixed poll
+		// interval instead of mixing incompatible time bases.
+		timer := time.NewTimer(kcpPollInterval)
 
 		select {
 		case data := <-c.inputCh:
 			timer.Stop()
-			c.kcp.Input(data)
+			c.kcp.Input(data, gokcp.IKCP_PACKET_REGULAR, false)
 			c.drainInputChAndProcess(true)
 			lastRecv = time.Now()
 
@@ -354,13 +346,13 @@ func (c *KCPConn) runLoop() {
 			if ret < 0 {
 				req.result <- writeResult{0, errors.New("kcp: send failed")}
 			} else {
-				c.kcp.Flush()
+				c.kcp.Update()
 				req.result <- writeResult{len(req.data), nil}
 			}
 			c.drainRecv()
 
 		case <-timer.C:
-			c.kcp.Update(uint32(time.Now().UnixMilli()))
+			c.kcp.Update()
 			c.drainRecv()
 
 		case <-c.closeCh:
@@ -385,11 +377,11 @@ func (c *KCPConn) drainInputChAndProcess(hasProcessedCurrent bool) {
 	for {
 		select {
 		case data := <-c.inputCh:
-			c.kcp.Input(data)
+			c.kcp.Input(data, gokcp.IKCP_PACKET_REGULAR, false)
 			drained = true
 		default:
 			if drained {
-				c.kcp.Update(uint32(time.Now().UnixMilli()))
+				c.kcp.Update()
 				c.drainRecv()
 			}
 			return

@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"net"
+	"sync"
 	"testing"
 	"time"
 )
@@ -164,6 +165,75 @@ func TestKcpMux_OpenFramesAreIdempotent(t *testing.T) {
 	}
 	if got := server.NumStreams(); got != 1 {
 		t.Fatalf("NumStreams=%d, want 1", got)
+	}
+}
+
+func TestKcpMux_DataBeforeOpenIsTolerated(t *testing.T) {
+	var (
+		mu     sync.Mutex
+		queued [][]byte
+	)
+
+	server := NewKcpMux(0, false, KcpMuxConfig{}, nil, nil)
+	defer server.Close()
+	client := NewKcpMux(0, true, KcpMuxConfig{}, func(service uint64, data []byte) error {
+		_ = service
+		mu.Lock()
+		queued = append(queued, append([]byte(nil), data...))
+		mu.Unlock()
+		return nil
+	}, nil)
+	defer client.Close()
+
+	clientStream, err := client.Open()
+	if err != nil {
+		t.Fatalf("Open failed: %v", err)
+	}
+	defer clientStream.Close()
+
+	payload := []byte("hello-reordered")
+	if _, err := clientStream.Write(payload); err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+
+	var openFrame, dataFrame []byte
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		snapshot := append([][]byte(nil), queued...)
+		mu.Unlock()
+		for _, frame := range snapshot {
+			_, frameType, _, err := decodeMuxFrame(frame)
+			if err != nil {
+				continue
+			}
+			switch frameType {
+			case kcpMuxFrameOpen:
+				openFrame = frame
+			case kcpMuxFrameData:
+				dataFrame = frame
+			}
+		}
+		if openFrame != nil && dataFrame != nil {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if openFrame == nil || dataFrame == nil {
+		t.Fatalf("expected both open and data frames, got open=%v data=%v", openFrame != nil, dataFrame != nil)
+	}
+
+	if err := server.Input(dataFrame); err != nil {
+		t.Fatalf("Input(data before open) failed: %v", err)
+	}
+	if err := server.Input(openFrame); err != nil {
+		t.Fatalf("Input(open after data) failed: %v", err)
+	}
+
+	serverStream := acceptWithTimeout(t, server, 2*time.Second)
+	defer serverStream.Close()
+	if got := readExactWithTimeout(t, serverStream, len(payload), 5*time.Second); !bytes.Equal(got, payload) {
+		t.Fatalf("payload mismatch: got=%q want=%q", got, payload)
 	}
 }
 
