@@ -1,5 +1,7 @@
 package: peerpublic
 generate:
+  fiber-server: true
+  strict-server: true
   client: true
   models: true
 output-options:

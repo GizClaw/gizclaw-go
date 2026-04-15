@@ -1,0 +1,71 @@
+package playservecmd
+
+import (
+	"context"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/giztoy/giztoy-go/cmd/internal/client"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
+	"github.com/spf13/cobra"
+)
+
+func NewCmd() *cobra.Command {
+	var ctxName string
+	var name string
+	var manufacturer string
+	var model string
+	var hardwareRevision string
+	var sn string
+	var depot string
+	var firmwareSemver string
+
+	cmd := &cobra.Command{
+		Use:   "serve",
+		Short: "Connect and serve reverse device API",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, serverPK, serverAddr, err := client.DialFromContext(ctxName)
+			if err != nil {
+				return err
+			}
+			defer c.Close()
+
+			c.Device = gearservice.DeviceInfo{
+				Name: optionalString(name),
+				Sn:   optionalString(sn),
+				Hardware: &gearservice.HardwareInfo{
+					Manufacturer:     optionalString(manufacturer),
+					Model:            optionalString(model),
+					HardwareRevision: optionalString(hardwareRevision),
+					Depot:            optionalString(depot),
+					FirmwareSemver:   optionalString(firmwareSemver),
+				},
+			}
+
+			ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+			defer stop()
+			go func() {
+				<-ctx.Done()
+				_ = c.Close()
+			}()
+			return c.DialAndServe(serverPK, serverAddr)
+		},
+	}
+	cmd.Flags().StringVar(&ctxName, "context", "", "context name (default: current)")
+	cmd.Flags().StringVar(&name, "name", "", "device name")
+	cmd.Flags().StringVar(&manufacturer, "manufacturer", "", "manufacturer")
+	cmd.Flags().StringVar(&model, "model", "", "model")
+	cmd.Flags().StringVar(&hardwareRevision, "hardware-revision", "", "hardware revision")
+	cmd.Flags().StringVar(&sn, "sn", "", "serial number")
+	cmd.Flags().StringVar(&depot, "depot", "", "firmware depot")
+	cmd.Flags().StringVar(&firmwareSemver, "firmware-semver", "", "firmware semver")
+	return cmd
+}
+
+func optionalString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
+}

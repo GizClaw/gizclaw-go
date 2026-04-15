@@ -152,7 +152,7 @@
         }
       }
     },
-    "/firmwares/{depot}:release": {
+    "/firmwares/{depot}/@release": {
       "put": {
         "operationId": "releaseDepot",
         "summary": "Promote testing channel to stable",
@@ -208,7 +208,7 @@
         }
       }
     },
-    "/firmwares/{depot}:rollback": {
+    "/firmwares/{depot}/@rollback": {
       "put": {
         "operationId": "rollbackDepot",
         "summary": "Roll back stable channel to the rollback snapshot",
@@ -375,13 +375,7 @@
     },
     "schemas": {
       "Channel": {
-        "type": "string",
-        "enum": [
-          "rollback",
-          "stable",
-          "beta",
-          "testing"
-        ]
+        "type": "string"
       },
       "Depot": {
         "type": "object",

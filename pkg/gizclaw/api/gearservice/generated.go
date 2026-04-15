@@ -18,30 +18,6 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for Channel.
-const (
-	ChannelBeta     Channel = "beta"
-	ChannelRollback Channel = "rollback"
-	ChannelStable   Channel = "stable"
-	ChannelTesting  Channel = "testing"
-)
-
-// Valid indicates whether the value is a known member of the Channel enum.
-func (e Channel) Valid() bool {
-	switch e {
-	case ChannelBeta:
-		return true
-	case ChannelRollback:
-		return true
-	case ChannelStable:
-		return true
-	case ChannelTesting:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GearCertificationAuthority.
 const (
 	Ccc      GearCertificationAuthority = "ccc"
@@ -90,30 +66,6 @@ func (e GearCertificationType) Valid() bool {
 	case Certification:
 		return true
 	case License:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearFirmwareChannel.
-const (
-	GearFirmwareChannelBeta     GearFirmwareChannel = "beta"
-	GearFirmwareChannelRollback GearFirmwareChannel = "rollback"
-	GearFirmwareChannelStable   GearFirmwareChannel = "stable"
-	GearFirmwareChannelTesting  GearFirmwareChannel = "testing"
-)
-
-// Valid indicates whether the value is a known member of the GearFirmwareChannel enum.
-func (e GearFirmwareChannel) Valid() bool {
-	switch e {
-	case GearFirmwareChannelBeta:
-		return true
-	case GearFirmwareChannelRollback:
-		return true
-	case GearFirmwareChannelStable:
-		return true
-	case GearFirmwareChannelTesting:
 		return true
 	default:
 		return false
@@ -171,7 +123,7 @@ type ApproveRequest struct {
 }
 
 // Channel defines model for Channel.
-type Channel string
+type Channel = string
 
 // Configuration defines model for Configuration.
 type Configuration struct {
@@ -270,7 +222,7 @@ type GearCertificationAuthority string
 type GearCertificationType string
 
 // GearFirmwareChannel defines model for GearFirmwareChannel.
-type GearFirmwareChannel string
+type GearFirmwareChannel = string
 
 // GearIMEI defines model for GearIMEI.
 type GearIMEI struct {
@@ -368,11 +320,11 @@ type ServerInfo struct {
 // PublicKey defines model for publicKey.
 type PublicKey = string
 
-// PutGearConfigJSONRequestBody defines body for PutGearConfig for application/json ContentType.
-type PutGearConfigJSONRequestBody = Configuration
-
 // ApproveGearJSONRequestBody defines body for ApproveGear for application/json ContentType.
 type ApproveGearJSONRequestBody = ApproveRequest
+
+// PutGearConfigJSONRequestBody defines body for PutGearConfig for application/json ContentType.
+type PutGearConfigJSONRequestBody = Configuration
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -471,6 +423,17 @@ type ClientInterface interface {
 	// GetGear request
 	GetGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ApproveGearWithBody request with any body
+	ApproveGearWithBody(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ApproveGear(ctx context.Context, publicKey PublicKey, body ApproveGearJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// BlockGear request
+	BlockGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RefreshGear request
+	RefreshGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetGearConfig request
 	GetGearConfig(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -487,17 +450,6 @@ type ClientInterface interface {
 
 	// GetGearRuntime request
 	GetGearRuntime(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ApproveGearWithBody request with any body
-	ApproveGearWithBody(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	ApproveGear(ctx context.Context, publicKey PublicKey, body ApproveGearJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// BlockGear request
-	BlockGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// RefreshGear request
-	RefreshGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) ListGears(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -596,6 +548,54 @@ func (c *Client) GetGear(ctx context.Context, publicKey PublicKey, reqEditors ..
 	return c.Client.Do(req)
 }
 
+func (c *Client) ApproveGearWithBody(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApproveGearRequestWithBody(c.Server, publicKey, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ApproveGear(ctx context.Context, publicKey PublicKey, body ApproveGearJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApproveGearRequest(c.Server, publicKey, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) BlockGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewBlockGearRequest(c.Server, publicKey)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RefreshGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRefreshGearRequest(c.Server, publicKey)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) GetGearConfig(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetGearConfigRequest(c.Server, publicKey)
 	if err != nil {
@@ -658,54 +658,6 @@ func (c *Client) GetGearOTA(ctx context.Context, publicKey PublicKey, reqEditors
 
 func (c *Client) GetGearRuntime(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetGearRuntimeRequest(c.Server, publicKey)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ApproveGearWithBody(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewApproveGearRequestWithBody(c.Server, publicKey, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ApproveGear(ctx context.Context, publicKey PublicKey, body ApproveGearJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewApproveGearRequest(c.Server, publicKey, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) BlockGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewBlockGearRequest(c.Server, publicKey)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RefreshGear(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRefreshGearRequest(c.Server, publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -1016,6 +968,121 @@ func NewGetGearRequest(server string, publicKey PublicKey) (*http.Request, error
 	return req, nil
 }
 
+// NewApproveGearRequest calls the generic ApproveGear builder with application/json body
+func NewApproveGearRequest(server string, publicKey PublicKey, body ApproveGearJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewApproveGearRequestWithBody(server, publicKey, "application/json", bodyReader)
+}
+
+// NewApproveGearRequestWithBody generates requests for ApproveGear with any type of body
+func NewApproveGearRequestWithBody(server string, publicKey PublicKey, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "publicKey", publicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/gears/%s/@approve", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewBlockGearRequest generates requests for BlockGear
+func NewBlockGearRequest(server string, publicKey PublicKey) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "publicKey", publicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/gears/%s/@block", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRefreshGearRequest generates requests for RefreshGear
+func NewRefreshGearRequest(server string, publicKey PublicKey) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "publicKey", publicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/gears/%s/@refresh", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetGearConfigRequest generates requests for GetGearConfig
 func NewGetGearConfigRequest(server string, publicKey PublicKey) (*http.Request, error) {
 	var err error
@@ -1199,121 +1266,6 @@ func NewGetGearRuntimeRequest(server string, publicKey PublicKey) (*http.Request
 	return req, nil
 }
 
-// NewApproveGearRequest calls the generic ApproveGear builder with application/json body
-func NewApproveGearRequest(server string, publicKey PublicKey, body ApproveGearJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewApproveGearRequestWithBody(server, publicKey, "application/json", bodyReader)
-}
-
-// NewApproveGearRequestWithBody generates requests for ApproveGear with any type of body
-func NewApproveGearRequestWithBody(server string, publicKey PublicKey, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "publicKey", publicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/gears/%s:approve", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewBlockGearRequest generates requests for BlockGear
-func NewBlockGearRequest(server string, publicKey PublicKey) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "publicKey", publicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/gears/%s:block", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewRefreshGearRequest generates requests for RefreshGear
-func NewRefreshGearRequest(server string, publicKey PublicKey) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "publicKey", publicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/gears/%s:refresh", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -1381,6 +1333,17 @@ type ClientWithResponsesInterface interface {
 	// GetGearWithResponse request
 	GetGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetGearResponse, error)
 
+	// ApproveGearWithBodyWithResponse request with any body
+	ApproveGearWithBodyWithResponse(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApproveGearResponse, error)
+
+	ApproveGearWithResponse(ctx context.Context, publicKey PublicKey, body ApproveGearJSONRequestBody, reqEditors ...RequestEditorFn) (*ApproveGearResponse, error)
+
+	// BlockGearWithResponse request
+	BlockGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*BlockGearResponse, error)
+
+	// RefreshGearWithResponse request
+	RefreshGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*RefreshGearResponse, error)
+
 	// GetGearConfigWithResponse request
 	GetGearConfigWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetGearConfigResponse, error)
 
@@ -1397,17 +1360,6 @@ type ClientWithResponsesInterface interface {
 
 	// GetGearRuntimeWithResponse request
 	GetGearRuntimeWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetGearRuntimeResponse, error)
-
-	// ApproveGearWithBodyWithResponse request with any body
-	ApproveGearWithBodyWithResponse(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApproveGearResponse, error)
-
-	ApproveGearWithResponse(ctx context.Context, publicKey PublicKey, body ApproveGearJSONRequestBody, reqEditors ...RequestEditorFn) (*ApproveGearResponse, error)
-
-	// BlockGearWithResponse request
-	BlockGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*BlockGearResponse, error)
-
-	// RefreshGearWithResponse request
-	RefreshGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*RefreshGearResponse, error)
 }
 
 type ListGearsResponse struct {
@@ -1594,6 +1546,77 @@ func (r GetGearResponse) StatusCode() int {
 	return 0
 }
 
+type ApproveGearResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Registration
+	JSON400      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ApproveGearResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ApproveGearResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type BlockGearResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Registration
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r BlockGearResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r BlockGearResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type RefreshGearResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *RefreshResult
+	JSON404      *ErrorResponse
+	JSON409      *ErrorResponse
+	JSON502      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r RefreshGearResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RefreshGearResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetGearConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -1709,77 +1732,6 @@ func (r GetGearRuntimeResponse) StatusCode() int {
 	return 0
 }
 
-type ApproveGearResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Registration
-	JSON400      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r ApproveGearResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ApproveGearResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type BlockGearResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *Registration
-	JSON404      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r BlockGearResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r BlockGearResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type RefreshGearResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *RefreshResult
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
-	JSON502      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r RefreshGearResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RefreshGearResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 // ListGearsWithResponse request returning *ListGearsResponse
 func (c *ClientWithResponses) ListGearsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListGearsResponse, error) {
 	rsp, err := c.ListGears(ctx, reqEditors...)
@@ -1852,6 +1804,41 @@ func (c *ClientWithResponses) GetGearWithResponse(ctx context.Context, publicKey
 	return ParseGetGearResponse(rsp)
 }
 
+// ApproveGearWithBodyWithResponse request with arbitrary body returning *ApproveGearResponse
+func (c *ClientWithResponses) ApproveGearWithBodyWithResponse(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApproveGearResponse, error) {
+	rsp, err := c.ApproveGearWithBody(ctx, publicKey, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApproveGearResponse(rsp)
+}
+
+func (c *ClientWithResponses) ApproveGearWithResponse(ctx context.Context, publicKey PublicKey, body ApproveGearJSONRequestBody, reqEditors ...RequestEditorFn) (*ApproveGearResponse, error) {
+	rsp, err := c.ApproveGear(ctx, publicKey, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApproveGearResponse(rsp)
+}
+
+// BlockGearWithResponse request returning *BlockGearResponse
+func (c *ClientWithResponses) BlockGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*BlockGearResponse, error) {
+	rsp, err := c.BlockGear(ctx, publicKey, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseBlockGearResponse(rsp)
+}
+
+// RefreshGearWithResponse request returning *RefreshGearResponse
+func (c *ClientWithResponses) RefreshGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*RefreshGearResponse, error) {
+	rsp, err := c.RefreshGear(ctx, publicKey, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRefreshGearResponse(rsp)
+}
+
 // GetGearConfigWithResponse request returning *GetGearConfigResponse
 func (c *ClientWithResponses) GetGearConfigWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetGearConfigResponse, error) {
 	rsp, err := c.GetGearConfig(ctx, publicKey, reqEditors...)
@@ -1903,41 +1890,6 @@ func (c *ClientWithResponses) GetGearRuntimeWithResponse(ctx context.Context, pu
 		return nil, err
 	}
 	return ParseGetGearRuntimeResponse(rsp)
-}
-
-// ApproveGearWithBodyWithResponse request with arbitrary body returning *ApproveGearResponse
-func (c *ClientWithResponses) ApproveGearWithBodyWithResponse(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApproveGearResponse, error) {
-	rsp, err := c.ApproveGearWithBody(ctx, publicKey, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseApproveGearResponse(rsp)
-}
-
-func (c *ClientWithResponses) ApproveGearWithResponse(ctx context.Context, publicKey PublicKey, body ApproveGearJSONRequestBody, reqEditors ...RequestEditorFn) (*ApproveGearResponse, error) {
-	rsp, err := c.ApproveGear(ctx, publicKey, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseApproveGearResponse(rsp)
-}
-
-// BlockGearWithResponse request returning *BlockGearResponse
-func (c *ClientWithResponses) BlockGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*BlockGearResponse, error) {
-	rsp, err := c.BlockGear(ctx, publicKey, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseBlockGearResponse(rsp)
-}
-
-// RefreshGearWithResponse request returning *RefreshGearResponse
-func (c *ClientWithResponses) RefreshGearWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*RefreshGearResponse, error) {
-	rsp, err := c.RefreshGear(ctx, publicKey, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRefreshGearResponse(rsp)
 }
 
 // ParseListGearsResponse parses an HTTP response from a ListGearsWithResponse call
@@ -2204,6 +2156,119 @@ func ParseGetGearResponse(rsp *http.Response) (*GetGearResponse, error) {
 	return response, nil
 }
 
+// ParseApproveGearResponse parses an HTTP response from a ApproveGearWithResponse call
+func ParseApproveGearResponse(rsp *http.Response) (*ApproveGearResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ApproveGearResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Registration
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseBlockGearResponse parses an HTTP response from a BlockGearWithResponse call
+func ParseBlockGearResponse(rsp *http.Response) (*BlockGearResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &BlockGearResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Registration
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRefreshGearResponse parses an HTTP response from a RefreshGearWithResponse call
+func ParseRefreshGearResponse(rsp *http.Response) (*RefreshGearResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RefreshGearResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RefreshResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseGetGearConfigResponse parses an HTTP response from a GetGearConfigWithResponse call
 func ParseGetGearConfigResponse(rsp *http.Response) (*GetGearConfigResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -2369,119 +2434,6 @@ func ParseGetGearRuntimeResponse(rsp *http.Response) (*GetGearRuntimeResponse, e
 	return response, nil
 }
 
-// ParseApproveGearResponse parses an HTTP response from a ApproveGearWithResponse call
-func ParseApproveGearResponse(rsp *http.Response) (*ApproveGearResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ApproveGearResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Registration
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseBlockGearResponse parses an HTTP response from a BlockGearWithResponse call
-func ParseBlockGearResponse(rsp *http.Response) (*BlockGearResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &BlockGearResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Registration
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRefreshGearResponse parses an HTTP response from a RefreshGearWithResponse call
-func ParseRefreshGearResponse(rsp *http.Response) (*RefreshGearResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RefreshGearResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest RefreshResult
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON502 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List all gears
@@ -2508,6 +2460,15 @@ type ServerInterface interface {
 	// Get gear registration
 	// (GET /gears/{publicKey})
 	GetGear(c *fiber.Ctx, publicKey PublicKey) error
+	// Approve a gear with a given role
+	// (POST /gears/{publicKey}/@approve)
+	ApproveGear(c *fiber.Ctx, publicKey PublicKey) error
+	// Block a gear
+	// (POST /gears/{publicKey}/@block)
+	BlockGear(c *fiber.Ctx, publicKey PublicKey) error
+	// Refresh gear info from connected device
+	// (POST /gears/{publicKey}/@refresh)
+	RefreshGear(c *fiber.Ctx, publicKey PublicKey) error
 	// Get gear configuration
 	// (GET /gears/{publicKey}/config)
 	GetGearConfig(c *fiber.Ctx, publicKey PublicKey) error
@@ -2523,15 +2484,6 @@ type ServerInterface interface {
 	// Get gear runtime status
 	// (GET /gears/{publicKey}/runtime)
 	GetGearRuntime(c *fiber.Ctx, publicKey PublicKey) error
-	// Approve a gear with a given role
-	// (POST /gears/{publicKey}:approve)
-	ApproveGear(c *fiber.Ctx, publicKey PublicKey) error
-	// Block a gear
-	// (POST /gears/{publicKey}:block)
-	BlockGear(c *fiber.Ctx, publicKey PublicKey) error
-	// Refresh gear info from connected device
-	// (POST /gears/{publicKey}:refresh)
-	RefreshGear(c *fiber.Ctx, publicKey PublicKey) error
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -2699,6 +2651,54 @@ func (siw *ServerInterfaceWrapper) GetGear(c *fiber.Ctx) error {
 	return siw.Handler.GetGear(c, publicKey)
 }
 
+// ApproveGear operation middleware
+func (siw *ServerInterfaceWrapper) ApproveGear(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "publicKey" -------------
+	var publicKey PublicKey
+
+	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter publicKey: %w", err).Error())
+	}
+
+	return siw.Handler.ApproveGear(c, publicKey)
+}
+
+// BlockGear operation middleware
+func (siw *ServerInterfaceWrapper) BlockGear(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "publicKey" -------------
+	var publicKey PublicKey
+
+	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter publicKey: %w", err).Error())
+	}
+
+	return siw.Handler.BlockGear(c, publicKey)
+}
+
+// RefreshGear operation middleware
+func (siw *ServerInterfaceWrapper) RefreshGear(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "publicKey" -------------
+	var publicKey PublicKey
+
+	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter publicKey: %w", err).Error())
+	}
+
+	return siw.Handler.RefreshGear(c, publicKey)
+}
+
 // GetGearConfig operation middleware
 func (siw *ServerInterfaceWrapper) GetGearConfig(c *fiber.Ctx) error {
 
@@ -2779,54 +2779,6 @@ func (siw *ServerInterfaceWrapper) GetGearRuntime(c *fiber.Ctx) error {
 	return siw.Handler.GetGearRuntime(c, publicKey)
 }
 
-// ApproveGear operation middleware
-func (siw *ServerInterfaceWrapper) ApproveGear(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
-
-	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter publicKey: %w", err).Error())
-	}
-
-	return siw.Handler.ApproveGear(c, publicKey)
-}
-
-// BlockGear operation middleware
-func (siw *ServerInterfaceWrapper) BlockGear(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
-
-	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter publicKey: %w", err).Error())
-	}
-
-	return siw.Handler.BlockGear(c, publicKey)
-}
-
-// RefreshGear operation middleware
-func (siw *ServerInterfaceWrapper) RefreshGear(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
-
-	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter publicKey: %w", err).Error())
-	}
-
-	return siw.Handler.RefreshGear(c, publicKey)
-}
-
 // FiberServerOptions provides options for the Fiber server.
 type FiberServerOptions struct {
 	BaseURL     string
@@ -2864,6 +2816,12 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Get(options.BaseURL+"/gears/:publicKey", wrapper.GetGear)
 
+	router.Post(options.BaseURL+"/gears/:publicKey/@approve", wrapper.ApproveGear)
+
+	router.Post(options.BaseURL+"/gears/:publicKey/@block", wrapper.BlockGear)
+
+	router.Post(options.BaseURL+"/gears/:publicKey/@refresh", wrapper.RefreshGear)
+
 	router.Get(options.BaseURL+"/gears/:publicKey/config", wrapper.GetGearConfig)
 
 	router.Put(options.BaseURL+"/gears/:publicKey/config", wrapper.PutGearConfig)
@@ -2873,12 +2831,6 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Get(options.BaseURL+"/gears/:publicKey/ota", wrapper.GetGearOTA)
 
 	router.Get(options.BaseURL+"/gears/:publicKey/runtime", wrapper.GetGearRuntime)
-
-	router.Post(options.BaseURL+"/gears/:publicKey:approve", wrapper.ApproveGear)
-
-	router.Post(options.BaseURL+"/gears/:publicKey:block", wrapper.BlockGear)
-
-	router.Post(options.BaseURL+"/gears/:publicKey:refresh", wrapper.RefreshGear)
 
 }
 
@@ -3094,6 +3046,103 @@ func (response GetGear404JSONResponse) VisitGetGearResponse(ctx *fiber.Ctx) erro
 	return ctx.JSON(&response)
 }
 
+type ApproveGearRequestObject struct {
+	PublicKey PublicKey `json:"publicKey"`
+	Body      *ApproveGearJSONRequestBody
+}
+
+type ApproveGearResponseObject interface {
+	VisitApproveGearResponse(ctx *fiber.Ctx) error
+}
+
+type ApproveGear200JSONResponse Registration
+
+func (response ApproveGear200JSONResponse) VisitApproveGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ApproveGear400JSONResponse ErrorResponse
+
+func (response ApproveGear400JSONResponse) VisitApproveGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type BlockGearRequestObject struct {
+	PublicKey PublicKey `json:"publicKey"`
+}
+
+type BlockGearResponseObject interface {
+	VisitBlockGearResponse(ctx *fiber.Ctx) error
+}
+
+type BlockGear200JSONResponse Registration
+
+func (response BlockGear200JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type BlockGear404JSONResponse ErrorResponse
+
+func (response BlockGear404JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type RefreshGearRequestObject struct {
+	PublicKey PublicKey `json:"publicKey"`
+}
+
+type RefreshGearResponseObject interface {
+	VisitRefreshGearResponse(ctx *fiber.Ctx) error
+}
+
+type RefreshGear200JSONResponse RefreshResult
+
+func (response RefreshGear200JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type RefreshGear404JSONResponse ErrorResponse
+
+func (response RefreshGear404JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type RefreshGear409JSONResponse ErrorResponse
+
+func (response RefreshGear409JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type RefreshGear502JSONResponse ErrorResponse
+
+func (response RefreshGear502JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(502)
+
+	return ctx.JSON(&response)
+}
+
 type GetGearConfigRequestObject struct {
 	PublicKey PublicKey `json:"publicKey"`
 }
@@ -3225,103 +3274,6 @@ func (response GetGearRuntime200JSONResponse) VisitGetGearRuntimeResponse(ctx *f
 	return ctx.JSON(&response)
 }
 
-type ApproveGearRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
-	Body      *ApproveGearJSONRequestBody
-}
-
-type ApproveGearResponseObject interface {
-	VisitApproveGearResponse(ctx *fiber.Ctx) error
-}
-
-type ApproveGear200JSONResponse Registration
-
-func (response ApproveGear200JSONResponse) VisitApproveGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type ApproveGear400JSONResponse ErrorResponse
-
-func (response ApproveGear400JSONResponse) VisitApproveGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(400)
-
-	return ctx.JSON(&response)
-}
-
-type BlockGearRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
-}
-
-type BlockGearResponseObject interface {
-	VisitBlockGearResponse(ctx *fiber.Ctx) error
-}
-
-type BlockGear200JSONResponse Registration
-
-func (response BlockGear200JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type BlockGear404JSONResponse ErrorResponse
-
-func (response BlockGear404JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(404)
-
-	return ctx.JSON(&response)
-}
-
-type RefreshGearRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
-}
-
-type RefreshGearResponseObject interface {
-	VisitRefreshGearResponse(ctx *fiber.Ctx) error
-}
-
-type RefreshGear200JSONResponse RefreshResult
-
-func (response RefreshGear200JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type RefreshGear404JSONResponse ErrorResponse
-
-func (response RefreshGear404JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(404)
-
-	return ctx.JSON(&response)
-}
-
-type RefreshGear409JSONResponse ErrorResponse
-
-func (response RefreshGear409JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(409)
-
-	return ctx.JSON(&response)
-}
-
-type RefreshGear502JSONResponse ErrorResponse
-
-func (response RefreshGear502JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(502)
-
-	return ctx.JSON(&response)
-}
-
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// List all gears
@@ -3348,6 +3300,15 @@ type StrictServerInterface interface {
 	// Get gear registration
 	// (GET /gears/{publicKey})
 	GetGear(ctx context.Context, request GetGearRequestObject) (GetGearResponseObject, error)
+	// Approve a gear with a given role
+	// (POST /gears/{publicKey}/@approve)
+	ApproveGear(ctx context.Context, request ApproveGearRequestObject) (ApproveGearResponseObject, error)
+	// Block a gear
+	// (POST /gears/{publicKey}/@block)
+	BlockGear(ctx context.Context, request BlockGearRequestObject) (BlockGearResponseObject, error)
+	// Refresh gear info from connected device
+	// (POST /gears/{publicKey}/@refresh)
+	RefreshGear(ctx context.Context, request RefreshGearRequestObject) (RefreshGearResponseObject, error)
 	// Get gear configuration
 	// (GET /gears/{publicKey}/config)
 	GetGearConfig(ctx context.Context, request GetGearConfigRequestObject) (GetGearConfigResponseObject, error)
@@ -3363,15 +3324,6 @@ type StrictServerInterface interface {
 	// Get gear runtime status
 	// (GET /gears/{publicKey}/runtime)
 	GetGearRuntime(ctx context.Context, request GetGearRuntimeRequestObject) (GetGearRuntimeResponseObject, error)
-	// Approve a gear with a given role
-	// (POST /gears/{publicKey}:approve)
-	ApproveGear(ctx context.Context, request ApproveGearRequestObject) (ApproveGearResponseObject, error)
-	// Block a gear
-	// (POST /gears/{publicKey}:block)
-	BlockGear(ctx context.Context, request BlockGearRequestObject) (BlockGearResponseObject, error)
-	// Refresh gear info from connected device
-	// (POST /gears/{publicKey}:refresh)
-	RefreshGear(ctx context.Context, request RefreshGearRequestObject) (RefreshGearResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *fiber.Ctx, args interface{}) (interface{}, error)
@@ -3606,6 +3558,93 @@ func (sh *strictHandler) GetGear(ctx *fiber.Ctx, publicKey PublicKey) error {
 	return nil
 }
 
+// ApproveGear operation middleware
+func (sh *strictHandler) ApproveGear(ctx *fiber.Ctx, publicKey PublicKey) error {
+	var request ApproveGearRequestObject
+
+	request.PublicKey = publicKey
+
+	var body ApproveGearJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ApproveGear(ctx.UserContext(), request.(ApproveGearRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApproveGear")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ApproveGearResponseObject); ok {
+		if err := validResponse.VisitApproveGearResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// BlockGear operation middleware
+func (sh *strictHandler) BlockGear(ctx *fiber.Ctx, publicKey PublicKey) error {
+	var request BlockGearRequestObject
+
+	request.PublicKey = publicKey
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.BlockGear(ctx.UserContext(), request.(BlockGearRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "BlockGear")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(BlockGearResponseObject); ok {
+		if err := validResponse.VisitBlockGearResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// RefreshGear operation middleware
+func (sh *strictHandler) RefreshGear(ctx *fiber.Ctx, publicKey PublicKey) error {
+	var request RefreshGearRequestObject
+
+	request.PublicKey = publicKey
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.RefreshGear(ctx.UserContext(), request.(RefreshGearRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RefreshGear")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(RefreshGearResponseObject); ok {
+		if err := validResponse.VisitRefreshGearResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
 // GetGearConfig operation middleware
 func (sh *strictHandler) GetGearConfig(ctx *fiber.Ctx, publicKey PublicKey) error {
 	var request GetGearConfigRequestObject
@@ -3739,93 +3778,6 @@ func (sh *strictHandler) GetGearRuntime(ctx *fiber.Ctx, publicKey PublicKey) err
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(GetGearRuntimeResponseObject); ok {
 		if err := validResponse.VisitGetGearRuntimeResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// ApproveGear operation middleware
-func (sh *strictHandler) ApproveGear(ctx *fiber.Ctx, publicKey PublicKey) error {
-	var request ApproveGearRequestObject
-
-	request.PublicKey = publicKey
-
-	var body ApproveGearJSONRequestBody
-	if err := ctx.BodyParser(&body); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-	request.Body = &body
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.ApproveGear(ctx.UserContext(), request.(ApproveGearRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ApproveGear")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(ApproveGearResponseObject); ok {
-		if err := validResponse.VisitApproveGearResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// BlockGear operation middleware
-func (sh *strictHandler) BlockGear(ctx *fiber.Ctx, publicKey PublicKey) error {
-	var request BlockGearRequestObject
-
-	request.PublicKey = publicKey
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.BlockGear(ctx.UserContext(), request.(BlockGearRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "BlockGear")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(BlockGearResponseObject); ok {
-		if err := validResponse.VisitBlockGearResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// RefreshGear operation middleware
-func (sh *strictHandler) RefreshGear(ctx *fiber.Ctx, publicKey PublicKey) error {
-	var request RefreshGearRequestObject
-
-	request.PublicKey = publicKey
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.RefreshGear(ctx.UserContext(), request.(RefreshGearRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RefreshGear")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(RefreshGearResponseObject); ok {
-		if err := validResponse.VisitRefreshGearResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

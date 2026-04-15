@@ -7,24 +7,24 @@ import (
 )
 
 func TestEventValidate(t *testing.T) {
-	err := (Event{V: Version, Name: "joined"}).Validate()
+	err := (Event{V: EventVersion, Name: "joined"}).Validate()
 	if err != nil {
 		t.Fatalf("Validate(valid) error = %v", err)
 	}
 
-	if err := (Event{V: 2, Name: "joined"}).Validate(); !errors.Is(err, ErrInvalidV) {
+	if err := (Event{V: 2, Name: "joined"}).Validate(); !errors.Is(err, ErrInvalidEventVersion) {
 		t.Fatalf("Validate(invalid version) err = %v", err)
 	}
 
-	if err := (Event{V: Version, Name: "   "}).Validate(); !errors.Is(err, ErrMissingName) {
+	if err := (Event{V: EventVersion, Name: "   "}).Validate(); !errors.Is(err, ErrEventMissingName) {
 		t.Fatalf("Validate(blank name) err = %v", err)
 	}
 }
 
 func TestEventJSONRoundTrip(t *testing.T) {
-	raw := RawMessage(`{"room":"alpha"}`)
+	raw := json.RawMessage(`{"room":"alpha"}`)
 	want := Event{
-		V:    Version,
+		V:    EventVersion,
 		Name: "joined",
 		Data: &raw,
 	}

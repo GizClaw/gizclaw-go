@@ -17,32 +17,8 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for Channel.
-const (
-	Beta     Channel = "beta"
-	Rollback Channel = "rollback"
-	Stable   Channel = "stable"
-	Testing  Channel = "testing"
-)
-
-// Valid indicates whether the value is a known member of the Channel enum.
-func (e Channel) Valid() bool {
-	switch e {
-	case Beta:
-		return true
-	case Rollback:
-		return true
-	case Stable:
-		return true
-	case Testing:
-		return true
-	default:
-		return false
-	}
-}
-
 // Channel defines model for Channel.
-type Channel string
+type Channel = string
 
 // Depot defines model for Depot.
 type Depot struct {
@@ -111,8 +87,8 @@ type HttpRequestDoer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// GeneratedClient conforms to the OpenAPI3 specification for this service.
-type GeneratedClient struct {
+// Client which conforms to the OpenAPI3 specification for this service.
+type Client struct {
 	// The endpoint of the server conforming to this interface, with scheme,
 	// https://api.deepmap.com for example. This can contain a path relative
 	// to the server, such as https://api.deepmap.com/dev-test, and all the
@@ -129,12 +105,12 @@ type GeneratedClient struct {
 }
 
 // ClientOption allows setting custom parameters during construction
-type ClientOption func(*GeneratedClient) error
+type ClientOption func(*Client) error
 
-// NewGeneratedClient creates a new generated client with reasonable defaults.
-func NewGeneratedClient(server string, opts ...ClientOption) (*GeneratedClient, error) {
+// Creates a new Client, with reasonable defaults
+func NewClient(server string, opts ...ClientOption) (*Client, error) {
 	// create a client with sane default values
-	client := GeneratedClient{
+	client := Client{
 		Server: server,
 	}
 	// mutate client and add all optional params
@@ -157,7 +133,7 @@ func NewGeneratedClient(server string, opts ...ClientOption) (*GeneratedClient, 
 // WithHTTPClient allows overriding the default Doer, which is
 // automatically created using http.Client. This is useful for tests.
 func WithHTTPClient(doer HttpRequestDoer) ClientOption {
-	return func(c *GeneratedClient) error {
+	return func(c *Client) error {
 		c.Client = doer
 		return nil
 	}
@@ -166,7 +142,7 @@ func WithHTTPClient(doer HttpRequestDoer) ClientOption {
 // WithRequestEditorFn allows setting up a callback function, which will be
 // called right before sending the request. This can be used to mutate the request.
 func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
-	return func(c *GeneratedClient) error {
+	return func(c *Client) error {
 		c.RequestEditors = append(c.RequestEditors, fn)
 		return nil
 	}
@@ -185,20 +161,20 @@ type ClientInterface interface {
 
 	PutDepotInfo(ctx context.Context, depot DepotName, body PutDepotInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetChannel request
-	GetChannel(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// PutChannelWithBody request with any body
-	PutChannelWithBody(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// ReleaseDepot request
 	ReleaseDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RollbackDepot request
 	RollbackDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetChannel request
+	GetChannel(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutChannelWithBody request with any body
+	PutChannelWithBody(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *GeneratedClient) ListDepots(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ListDepots(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListDepotsRequest(c.Server)
 	if err != nil {
 		return nil, err
@@ -210,7 +186,7 @@ func (c *GeneratedClient) ListDepots(ctx context.Context, reqEditors ...RequestE
 	return c.Client.Do(req)
 }
 
-func (c *GeneratedClient) GetDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetDepotRequest(c.Server, depot)
 	if err != nil {
 		return nil, err
@@ -222,7 +198,7 @@ func (c *GeneratedClient) GetDepot(ctx context.Context, depot DepotName, reqEdit
 	return c.Client.Do(req)
 }
 
-func (c *GeneratedClient) PutDepotInfoWithBody(ctx context.Context, depot DepotName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutDepotInfoWithBody(ctx context.Context, depot DepotName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutDepotInfoRequestWithBody(c.Server, depot, contentType, body)
 	if err != nil {
 		return nil, err
@@ -234,7 +210,7 @@ func (c *GeneratedClient) PutDepotInfoWithBody(ctx context.Context, depot DepotN
 	return c.Client.Do(req)
 }
 
-func (c *GeneratedClient) PutDepotInfo(ctx context.Context, depot DepotName, body PutDepotInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutDepotInfo(ctx context.Context, depot DepotName, body PutDepotInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutDepotInfoRequest(c.Server, depot, body)
 	if err != nil {
 		return nil, err
@@ -246,31 +222,7 @@ func (c *GeneratedClient) PutDepotInfo(ctx context.Context, depot DepotName, bod
 	return c.Client.Do(req)
 }
 
-func (c *GeneratedClient) GetChannel(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetChannelRequest(c.Server, depot, channel)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *GeneratedClient) PutChannelWithBody(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutChannelRequestWithBody(c.Server, depot, channel, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *GeneratedClient) ReleaseDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ReleaseDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewReleaseDepotRequest(c.Server, depot)
 	if err != nil {
 		return nil, err
@@ -282,8 +234,32 @@ func (c *GeneratedClient) ReleaseDepot(ctx context.Context, depot DepotName, req
 	return c.Client.Do(req)
 }
 
-func (c *GeneratedClient) RollbackDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) RollbackDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRollbackDepotRequest(c.Server, depot)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetChannel(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetChannelRequest(c.Server, depot, channel)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutChannelWithBody(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutChannelRequestWithBody(c.Server, depot, channel, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -402,6 +378,74 @@ func NewPutDepotInfoRequestWithBody(server string, depot DepotName, contentType 
 	return req, nil
 }
 
+// NewReleaseDepotRequest generates requests for ReleaseDepot
+func NewReleaseDepotRequest(server string, depot DepotName) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/firmwares/%s/@release", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRollbackDepotRequest generates requests for RollbackDepot
+func NewRollbackDepotRequest(server string, depot DepotName) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/firmwares/%s/@rollback", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewGetChannelRequest generates requests for GetChannel
 func NewGetChannelRequest(server string, depot DepotName, channel Channel) (*http.Request, error) {
 	var err error
@@ -486,75 +530,7 @@ func NewPutChannelRequestWithBody(server string, depot DepotName, channel Channe
 	return req, nil
 }
 
-// NewReleaseDepotRequest generates requests for ReleaseDepot
-func NewReleaseDepotRequest(server string, depot DepotName) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/firmwares/%s:release", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewRollbackDepotRequest generates requests for RollbackDepot
-func NewRollbackDepotRequest(server string, depot DepotName) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/firmwares/%s:rollback", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("PUT", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-func (c *GeneratedClient) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
+func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
 			return err
@@ -576,7 +552,7 @@ type ClientWithResponses struct {
 // NewClientWithResponses creates a new ClientWithResponses, which wraps
 // Client with return type handling
 func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithResponses, error) {
-	client, err := NewGeneratedClient(server, opts...)
+	client, err := NewClient(server, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -585,7 +561,7 @@ func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithRes
 
 // WithBaseURL overrides the baseURL.
 func WithBaseURL(baseURL string) ClientOption {
-	return func(c *GeneratedClient) error {
+	return func(c *Client) error {
 		newBaseURL, err := url.Parse(baseURL)
 		if err != nil {
 			return err
@@ -608,17 +584,17 @@ type ClientWithResponsesInterface interface {
 
 	PutDepotInfoWithResponse(ctx context.Context, depot DepotName, body PutDepotInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*PutDepotInfoResponse, error)
 
-	// GetChannelWithResponse request
-	GetChannelWithResponse(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*GetChannelResponse, error)
-
-	// PutChannelWithBodyWithResponse request with any body
-	PutChannelWithBodyWithResponse(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutChannelResponse, error)
-
 	// ReleaseDepotWithResponse request
 	ReleaseDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*ReleaseDepotResponse, error)
 
 	// RollbackDepotWithResponse request
 	RollbackDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*RollbackDepotResponse, error)
+
+	// GetChannelWithResponse request
+	GetChannelWithResponse(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*GetChannelResponse, error)
+
+	// PutChannelWithBodyWithResponse request with any body
+	PutChannelWithBodyWithResponse(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutChannelResponse, error)
 }
 
 type ListDepotsResponse struct {
@@ -692,52 +668,6 @@ func (r PutDepotInfoResponse) StatusCode() int {
 	return 0
 }
 
-type GetChannelResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *DepotRelease
-	JSON404      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r GetChannelResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetChannelResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type PutChannelResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *DepotRelease
-	JSON409      *ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r PutChannelResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PutChannelResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type ReleaseDepotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -788,6 +718,52 @@ func (r RollbackDepotResponse) StatusCode() int {
 	return 0
 }
 
+type GetChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *DepotRelease
+	JSON404      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutChannelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *DepotRelease
+	JSON409      *ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutChannelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutChannelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // ListDepotsWithResponse request returning *ListDepotsResponse
 func (c *ClientWithResponses) ListDepotsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListDepotsResponse, error) {
 	rsp, err := c.ListDepots(ctx, reqEditors...)
@@ -823,24 +799,6 @@ func (c *ClientWithResponses) PutDepotInfoWithResponse(ctx context.Context, depo
 	return ParsePutDepotInfoResponse(rsp)
 }
 
-// GetChannelWithResponse request returning *GetChannelResponse
-func (c *ClientWithResponses) GetChannelWithResponse(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*GetChannelResponse, error) {
-	rsp, err := c.GetChannel(ctx, depot, channel, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetChannelResponse(rsp)
-}
-
-// PutChannelWithBodyWithResponse request with arbitrary body returning *PutChannelResponse
-func (c *ClientWithResponses) PutChannelWithBodyWithResponse(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutChannelResponse, error) {
-	rsp, err := c.PutChannelWithBody(ctx, depot, channel, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePutChannelResponse(rsp)
-}
-
 // ReleaseDepotWithResponse request returning *ReleaseDepotResponse
 func (c *ClientWithResponses) ReleaseDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*ReleaseDepotResponse, error) {
 	rsp, err := c.ReleaseDepot(ctx, depot, reqEditors...)
@@ -857,6 +815,24 @@ func (c *ClientWithResponses) RollbackDepotWithResponse(ctx context.Context, dep
 		return nil, err
 	}
 	return ParseRollbackDepotResponse(rsp)
+}
+
+// GetChannelWithResponse request returning *GetChannelResponse
+func (c *ClientWithResponses) GetChannelWithResponse(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*GetChannelResponse, error) {
+	rsp, err := c.GetChannel(ctx, depot, channel, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetChannelResponse(rsp)
+}
+
+// PutChannelWithBodyWithResponse request with arbitrary body returning *PutChannelResponse
+func (c *ClientWithResponses) PutChannelWithBodyWithResponse(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutChannelResponse, error) {
+	rsp, err := c.PutChannelWithBody(ctx, depot, channel, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutChannelResponse(rsp)
 }
 
 // ParseListDepotsResponse parses an HTTP response from a ListDepotsWithResponse call
@@ -972,72 +948,6 @@ func ParsePutDepotInfoResponse(rsp *http.Response) (*PutDepotInfoResponse, error
 	return response, nil
 }
 
-// ParseGetChannelResponse parses an HTTP response from a GetChannelWithResponse call
-func ParseGetChannelResponse(rsp *http.Response) (*GetChannelResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetChannelResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest DepotRelease
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePutChannelResponse parses an HTTP response from a PutChannelWithResponse call
-func ParsePutChannelResponse(rsp *http.Response) (*PutChannelResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PutChannelResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest DepotRelease
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseReleaseDepotResponse parses an HTTP response from a ReleaseDepotWithResponse call
 func ParseReleaseDepotResponse(rsp *http.Response) (*ReleaseDepotResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -1132,6 +1042,72 @@ func ParseRollbackDepotResponse(rsp *http.Response) (*RollbackDepotResponse, err
 	return response, nil
 }
 
+// ParseGetChannelResponse parses an HTTP response from a GetChannelWithResponse call
+func ParseGetChannelResponse(rsp *http.Response) (*GetChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DepotRelease
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutChannelResponse parses an HTTP response from a PutChannelWithResponse call
+func ParsePutChannelResponse(rsp *http.Response) (*PutChannelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutChannelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest DepotRelease
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// List all firmware depots
@@ -1143,18 +1119,18 @@ type ServerInterface interface {
 	// Create or update depot info (file manifest)
 	// (PUT /firmwares/{depot})
 	PutDepotInfo(c *fiber.Ctx, depot DepotName) error
+	// Promote testing channel to stable
+	// (PUT /firmwares/{depot}/@release)
+	ReleaseDepot(c *fiber.Ctx, depot DepotName) error
+	// Roll back stable channel to the rollback snapshot
+	// (PUT /firmwares/{depot}/@rollback)
+	RollbackDepot(c *fiber.Ctx, depot DepotName) error
 	// Get a specific channel release
 	// (GET /firmwares/{depot}/{channel})
 	GetChannel(c *fiber.Ctx, depot DepotName, channel Channel) error
 	// Upload a firmware release tarball for a channel
 	// (PUT /firmwares/{depot}/{channel})
 	PutChannel(c *fiber.Ctx, depot DepotName, channel Channel) error
-	// Promote testing channel to stable
-	// (PUT /firmwares/{depot}:release)
-	ReleaseDepot(c *fiber.Ctx, depot DepotName) error
-	// Roll back stable channel to the rollback snapshot
-	// (PUT /firmwares/{depot}:rollback)
-	RollbackDepot(c *fiber.Ctx, depot DepotName) error
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -1200,6 +1176,38 @@ func (siw *ServerInterfaceWrapper) PutDepotInfo(c *fiber.Ctx) error {
 	}
 
 	return siw.Handler.PutDepotInfo(c, depot)
+}
+
+// ReleaseDepot operation middleware
+func (siw *ServerInterfaceWrapper) ReleaseDepot(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "depot" -------------
+	var depot DepotName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
+	}
+
+	return siw.Handler.ReleaseDepot(c, depot)
+}
+
+// RollbackDepot operation middleware
+func (siw *ServerInterfaceWrapper) RollbackDepot(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "depot" -------------
+	var depot DepotName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
+	}
+
+	return siw.Handler.RollbackDepot(c, depot)
 }
 
 // GetChannel operation middleware
@@ -1250,38 +1258,6 @@ func (siw *ServerInterfaceWrapper) PutChannel(c *fiber.Ctx) error {
 	return siw.Handler.PutChannel(c, depot, channel)
 }
 
-// ReleaseDepot operation middleware
-func (siw *ServerInterfaceWrapper) ReleaseDepot(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "depot" -------------
-	var depot DepotName
-
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
-	}
-
-	return siw.Handler.ReleaseDepot(c, depot)
-}
-
-// RollbackDepot operation middleware
-func (siw *ServerInterfaceWrapper) RollbackDepot(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "depot" -------------
-	var depot DepotName
-
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
-	}
-
-	return siw.Handler.RollbackDepot(c, depot)
-}
-
 // FiberServerOptions provides options for the Fiber server.
 type FiberServerOptions struct {
 	BaseURL     string
@@ -1309,13 +1285,13 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Put(options.BaseURL+"/firmwares/:depot", wrapper.PutDepotInfo)
 
+	router.Put(options.BaseURL+"/firmwares/:depot/@release", wrapper.ReleaseDepot)
+
+	router.Put(options.BaseURL+"/firmwares/:depot/@rollback", wrapper.RollbackDepot)
+
 	router.Get(options.BaseURL+"/firmwares/:depot/:channel", wrapper.GetChannel)
 
 	router.Put(options.BaseURL+"/firmwares/:depot/:channel", wrapper.PutChannel)
-
-	router.Put(options.BaseURL+"/firmwares/:depot:release", wrapper.ReleaseDepot)
-
-	router.Put(options.BaseURL+"/firmwares/:depot:rollback", wrapper.RollbackDepot)
 
 }
 
@@ -1415,61 +1391,6 @@ func (response PutDepotInfo500JSONResponse) VisitPutDepotInfoResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type GetChannelRequestObject struct {
-	Depot   DepotName `json:"depot"`
-	Channel Channel   `json:"channel"`
-}
-
-type GetChannelResponseObject interface {
-	VisitGetChannelResponse(ctx *fiber.Ctx) error
-}
-
-type GetChannel200JSONResponse DepotRelease
-
-func (response GetChannel200JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type GetChannel404JSONResponse ErrorResponse
-
-func (response GetChannel404JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(404)
-
-	return ctx.JSON(&response)
-}
-
-type PutChannelRequestObject struct {
-	Depot   DepotName `json:"depot"`
-	Channel Channel   `json:"channel"`
-	Body    io.Reader
-}
-
-type PutChannelResponseObject interface {
-	VisitPutChannelResponse(ctx *fiber.Ctx) error
-}
-
-type PutChannel200JSONResponse DepotRelease
-
-func (response PutChannel200JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type PutChannel409JSONResponse ErrorResponse
-
-func (response PutChannel409JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(409)
-
-	return ctx.JSON(&response)
-}
-
 type ReleaseDepotRequestObject struct {
 	Depot DepotName `json:"depot"`
 }
@@ -1558,6 +1479,61 @@ func (response RollbackDepot500JSONResponse) VisitRollbackDepotResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
+type GetChannelRequestObject struct {
+	Depot   DepotName `json:"depot"`
+	Channel Channel   `json:"channel"`
+}
+
+type GetChannelResponseObject interface {
+	VisitGetChannelResponse(ctx *fiber.Ctx) error
+}
+
+type GetChannel200JSONResponse DepotRelease
+
+func (response GetChannel200JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetChannel404JSONResponse ErrorResponse
+
+func (response GetChannel404JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type PutChannelRequestObject struct {
+	Depot   DepotName `json:"depot"`
+	Channel Channel   `json:"channel"`
+	Body    io.Reader
+}
+
+type PutChannelResponseObject interface {
+	VisitPutChannelResponse(ctx *fiber.Ctx) error
+}
+
+type PutChannel200JSONResponse DepotRelease
+
+func (response PutChannel200JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutChannel409JSONResponse ErrorResponse
+
+func (response PutChannel409JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// List all firmware depots
@@ -1569,18 +1545,18 @@ type StrictServerInterface interface {
 	// Create or update depot info (file manifest)
 	// (PUT /firmwares/{depot})
 	PutDepotInfo(ctx context.Context, request PutDepotInfoRequestObject) (PutDepotInfoResponseObject, error)
+	// Promote testing channel to stable
+	// (PUT /firmwares/{depot}/@release)
+	ReleaseDepot(ctx context.Context, request ReleaseDepotRequestObject) (ReleaseDepotResponseObject, error)
+	// Roll back stable channel to the rollback snapshot
+	// (PUT /firmwares/{depot}/@rollback)
+	RollbackDepot(ctx context.Context, request RollbackDepotRequestObject) (RollbackDepotResponseObject, error)
 	// Get a specific channel release
 	// (GET /firmwares/{depot}/{channel})
 	GetChannel(ctx context.Context, request GetChannelRequestObject) (GetChannelResponseObject, error)
 	// Upload a firmware release tarball for a channel
 	// (PUT /firmwares/{depot}/{channel})
 	PutChannel(ctx context.Context, request PutChannelRequestObject) (PutChannelResponseObject, error)
-	// Promote testing channel to stable
-	// (PUT /firmwares/{depot}:release)
-	ReleaseDepot(ctx context.Context, request ReleaseDepotRequestObject) (ReleaseDepotResponseObject, error)
-	// Roll back stable channel to the rollback snapshot
-	// (PUT /firmwares/{depot}:rollback)
-	RollbackDepot(ctx context.Context, request RollbackDepotRequestObject) (RollbackDepotResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *fiber.Ctx, args interface{}) (interface{}, error)
@@ -1681,6 +1657,60 @@ func (sh *strictHandler) PutDepotInfo(ctx *fiber.Ctx, depot DepotName) error {
 	return nil
 }
 
+// ReleaseDepot operation middleware
+func (sh *strictHandler) ReleaseDepot(ctx *fiber.Ctx, depot DepotName) error {
+	var request ReleaseDepotRequestObject
+
+	request.Depot = depot
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ReleaseDepot(ctx.UserContext(), request.(ReleaseDepotRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReleaseDepot")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ReleaseDepotResponseObject); ok {
+		if err := validResponse.VisitReleaseDepotResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// RollbackDepot operation middleware
+func (sh *strictHandler) RollbackDepot(ctx *fiber.Ctx, depot DepotName) error {
+	var request RollbackDepotRequestObject
+
+	request.Depot = depot
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.RollbackDepot(ctx.UserContext(), request.(RollbackDepotRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RollbackDepot")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(RollbackDepotResponseObject); ok {
+		if err := validResponse.VisitRollbackDepotResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
 // GetChannel operation middleware
 func (sh *strictHandler) GetChannel(ctx *fiber.Ctx, depot DepotName, channel Channel) error {
 	var request GetChannelRequestObject
@@ -1731,60 +1761,6 @@ func (sh *strictHandler) PutChannel(ctx *fiber.Ctx, depot DepotName, channel Cha
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(PutChannelResponseObject); ok {
 		if err := validResponse.VisitPutChannelResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// ReleaseDepot operation middleware
-func (sh *strictHandler) ReleaseDepot(ctx *fiber.Ctx, depot DepotName) error {
-	var request ReleaseDepotRequestObject
-
-	request.Depot = depot
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.ReleaseDepot(ctx.UserContext(), request.(ReleaseDepotRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ReleaseDepot")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(ReleaseDepotResponseObject); ok {
-		if err := validResponse.VisitReleaseDepotResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// RollbackDepot operation middleware
-func (sh *strictHandler) RollbackDepot(ctx *fiber.Ctx, depot DepotName) error {
-	var request RollbackDepotRequestObject
-
-	request.Depot = depot
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.RollbackDepot(ctx.UserContext(), request.(RollbackDepotRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RollbackDepot")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(RollbackDepotResponseObject); ok {
-		if err := validResponse.VisitRollbackDepotResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

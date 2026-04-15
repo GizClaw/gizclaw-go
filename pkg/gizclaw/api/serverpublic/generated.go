@@ -18,30 +18,6 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for Channel.
-const (
-	ChannelBeta     Channel = "beta"
-	ChannelRollback Channel = "rollback"
-	ChannelStable   Channel = "stable"
-	ChannelTesting  Channel = "testing"
-)
-
-// Valid indicates whether the value is a known member of the Channel enum.
-func (e Channel) Valid() bool {
-	switch e {
-	case ChannelBeta:
-		return true
-	case ChannelRollback:
-		return true
-	case ChannelStable:
-		return true
-	case ChannelTesting:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GearCertificationAuthority.
 const (
 	Ccc      GearCertificationAuthority = "ccc"
@@ -90,30 +66,6 @@ func (e GearCertificationType) Valid() bool {
 	case Certification:
 		return true
 	case License:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearFirmwareChannel.
-const (
-	GearFirmwareChannelBeta     GearFirmwareChannel = "beta"
-	GearFirmwareChannelRollback GearFirmwareChannel = "rollback"
-	GearFirmwareChannelStable   GearFirmwareChannel = "stable"
-	GearFirmwareChannelTesting  GearFirmwareChannel = "testing"
-)
-
-// Valid indicates whether the value is a known member of the GearFirmwareChannel enum.
-func (e GearFirmwareChannel) Valid() bool {
-	switch e {
-	case GearFirmwareChannelBeta:
-		return true
-	case GearFirmwareChannelRollback:
-		return true
-	case GearFirmwareChannelStable:
-		return true
-	case GearFirmwareChannelTesting:
 		return true
 	default:
 		return false
@@ -171,7 +123,7 @@ type ApproveRequest struct {
 }
 
 // Channel defines model for Channel.
-type Channel string
+type Channel = string
 
 // Configuration defines model for Configuration.
 type Configuration struct {
@@ -270,7 +222,7 @@ type GearCertificationAuthority string
 type GearCertificationType string
 
 // GearFirmwareChannel defines model for GearFirmwareChannel.
-type GearFirmwareChannel string
+type GearFirmwareChannel = string
 
 // GearIMEI defines model for GearIMEI.
 type GearIMEI struct {

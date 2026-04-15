@@ -10,7 +10,7 @@ import (
 func TestDialFromContextNoActiveContext(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	_, err := DialFromContext("")
+	_, _, _, err := DialFromContext("")
 	if err == nil {
 		t.Fatal("DialFromContext should fail without an active context")
 	}
@@ -30,7 +30,7 @@ func TestDialFromContextInvalidServerPublicKey(t *testing.T) {
 		t.Fatalf("Create error = %v", err)
 	}
 
-	_, err = DialFromContext("local")
+	_, _, _, err = DialFromContext("local")
 	if err == nil {
 		t.Fatal("DialFromContext should fail on invalid server public key")
 	}
@@ -42,7 +42,7 @@ func TestDialFromContextInvalidServerPublicKey(t *testing.T) {
 func TestDialFromContextMissingNamedContext(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
-	_, err := DialFromContext("missing")
+	_, _, _, err := DialFromContext("missing")
 	if err == nil {
 		t.Fatal("DialFromContext should fail for a missing named context")
 	}

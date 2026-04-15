@@ -367,7 +367,7 @@
         }
       }
     },
-    "/gears/{publicKey}:approve": {
+    "/gears/{publicKey}/@approve": {
       "post": {
         "operationId": "approveGear",
         "summary": "Approve a gear with a given role",
@@ -413,7 +413,7 @@
         }
       }
     },
-    "/gears/{publicKey}:block": {
+    "/gears/{publicKey}/@block": {
       "post": {
         "operationId": "blockGear",
         "summary": "Block a gear",
@@ -449,7 +449,7 @@
         }
       }
     },
-    "/gears/{publicKey}:refresh": {
+    "/gears/{publicKey}/@refresh": {
       "post": {
         "operationId": "refreshGear",
         "summary": "Refresh gear info from connected device",
@@ -708,13 +708,7 @@
     },
     "schemas": {
       "Channel": {
-        "type": "string",
-        "enum": [
-          "rollback",
-          "stable",
-          "beta",
-          "testing"
-        ]
+        "type": "string"
       },
       "Depot": {
         "type": "object",
@@ -840,13 +834,7 @@
         ]
       },
       "GearFirmwareChannel": {
-        "type": "string",
-        "enum": [
-          "rollback",
-          "stable",
-          "beta",
-          "testing"
-        ]
+        "type": "string"
       },
       "GearCertificationType": {
         "type": "string",

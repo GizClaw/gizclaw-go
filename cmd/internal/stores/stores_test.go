@@ -386,8 +386,8 @@ stores:
 		t.Fatalf("FS(fw): %v", err)
 	}
 	want := filepath.Join(dir, "firmware")
-	if s.Root() != want {
-		t.Fatalf("Root = %q, want %q", s.Root(), want)
+	if string(s) != want {
+		t.Fatalf("Root = %q, want %q", string(s), want)
 	}
 
 	s2, err := reg.FS("fw")

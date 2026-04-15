@@ -12,7 +12,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/giztoy/giztoy-go/pkg/firmware"
+	"github.com/giztoy/giztoy-go/pkg/depotstore"
 	"github.com/giztoy/giztoy-go/pkg/graph"
 	"github.com/giztoy/giztoy-go/pkg/kv"
 	"github.com/giztoy/giztoy-go/pkg/vecstore"
@@ -52,7 +52,7 @@ type Stores struct {
 	vecs    map[string]vecstore.Index
 	graphs  map[string]graph.Graph
 	sqls    map[string]*sql.DB
-	fss     map[string]*firmware.Store
+	fss     map[string]depotstore.Dir
 	closers []io.Closer
 }
 
@@ -65,7 +65,7 @@ func New(configs map[string]Config) (*Stores, error) {
 		vecs:   make(map[string]vecstore.Index),
 		graphs: make(map[string]graph.Graph),
 		sqls:   make(map[string]*sql.DB),
-		fss:    make(map[string]*firmware.Store),
+		fss:    make(map[string]depotstore.Dir),
 	}
 	ok := false
 	defer func() {
@@ -107,7 +107,6 @@ func New(configs map[string]Config) (*Stores, error) {
 				return nil, err
 			}
 			s.fss[name] = st
-			s.closers = append(s.closers, st)
 		case KindGraph:
 			graphCfgs = append(graphCfgs, struct {
 				name string
@@ -167,11 +166,11 @@ func (r *Stores) SQL(name string) (*sql.DB, error) {
 	return s, nil
 }
 
-// FS returns the named firmware.Store.
-func (r *Stores) FS(name string) (*firmware.Store, error) {
+// FS returns the named depot store.
+func (r *Stores) FS(name string) (depotstore.Dir, error) {
 	s, ok := r.fss[name]
 	if !ok {
-		return nil, fmt.Errorf("stores: filestore %q not found", name)
+		return "", fmt.Errorf("stores: filestore %q not found", name)
 	}
 	return s, nil
 }
@@ -233,15 +232,15 @@ func (r *Stores) newGraph(name string, cfg Config) (graph.Graph, error) {
 	}
 }
 
-func (r *Stores) newFS(name string, cfg Config) (*firmware.Store, error) {
+func (r *Stores) newFS(name string, cfg Config) (depotstore.Dir, error) {
 	switch cfg.Backend {
 	case "filesystem":
 		if cfg.Dir == "" {
-			return nil, fmt.Errorf("stores: filestore %q (filesystem) requires dir", name)
+			return "", fmt.Errorf("stores: filestore %q (filesystem) requires dir", name)
 		}
-		return firmware.NewStore(cfg.Dir), nil
+		return depotstore.Dir(cfg.Dir), nil
 	default:
-		return nil, fmt.Errorf("stores: filestore %q unknown backend %q", name, cfg.Backend)
+		return "", fmt.Errorf("stores: filestore %q unknown backend %q", name, cfg.Backend)
 	}
 }
 

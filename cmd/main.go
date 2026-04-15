@@ -3,11 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/giztoy/giztoy-go/cmd/internal/cli"
+	"github.com/giztoy/giztoy-go/cmd/internal/commands"
 )
 
 func main() {
-	if err := cli.NewRootCmd().Execute(); err != nil {
+	if err := commands.New().Execute(); err != nil {
 		os.Exit(1)
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/fs"
 	"math"
 	"math/rand/v2"
 	"os"
@@ -27,7 +28,7 @@ var _ filesystem.FS = (*testDirFS)(nil)
 
 func newTestDirFS(root string) *testDirFS { return &testDirFS{root: root} }
 
-func (d *testDirFS) Open(name string) (io.ReadCloser, error) {
+func (d *testDirFS) Open(name string) (fs.File, error) {
 	return os.Open(filepath.Join(d.root, name))
 }
 
@@ -45,6 +46,39 @@ func (d *testDirFS) Remove(name string) error {
 		return nil
 	}
 	return err
+}
+
+func (d *testDirFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	return os.ReadDir(filepath.Join(d.root, name))
+}
+
+func (d *testDirFS) Stat(name string) (fs.FileInfo, error) {
+	return os.Stat(filepath.Join(d.root, name))
+}
+
+func (d *testDirFS) Glob(pattern string) ([]string, error) {
+	return fs.Glob(d, pattern)
+}
+
+func (d *testDirFS) Sub(dir string) (fs.FS, error) {
+	return os.DirFS(filepath.Join(d.root, dir)), nil
+}
+
+func (d *testDirFS) MkdirAll(name string) error {
+	return os.MkdirAll(filepath.Join(d.root, name), 0o755)
+}
+
+func (d *testDirFS) Rename(oldName, newName string) error {
+	oldPath := filepath.Join(d.root, oldName)
+	newPath := filepath.Join(d.root, newName)
+	if err := os.MkdirAll(filepath.Dir(newPath), 0o755); err != nil {
+		return err
+	}
+	return os.Rename(oldPath, newPath)
+}
+
+func (d *testDirFS) RemoveAll(name string) error {
+	return os.RemoveAll(filepath.Join(d.root, name))
 }
 
 // newTestHNSW creates an HNSW index with small parameters for fast tests.

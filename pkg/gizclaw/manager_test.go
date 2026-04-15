@@ -5,7 +5,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/giztoy/giztoy-go/pkg/gears"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/peerpublic"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/gear"
 	"github.com/giztoy/giztoy-go/pkg/giznet"
 	"github.com/giztoy/giztoy-go/pkg/kv"
 )
@@ -23,7 +25,7 @@ func TestManagerMarkPeerOfflineDeletesActivePeer(t *testing.T) {
 	if _, ok := manager.ActivePeer("device-pk"); ok {
 		t.Fatal("peer should be removed after disconnect")
 	}
-	if runtime := manager.PeerRuntime(context.Background(), "device-pk"); runtime.Online || runtime.LastSeenAt != 0 {
+	if runtime := manager.PeerRuntime(context.Background(), "device-pk"); runtime.Online || !runtime.LastSeenAt.IsZero() {
 		t.Fatalf("runtime after removal = %+v", runtime)
 	}
 }
@@ -47,24 +49,125 @@ func TestManagerMarkPeerOfflineKeepsNewerConnection(t *testing.T) {
 }
 
 func TestManagerRefreshDeviceErrors(t *testing.T) {
-	service := gears.NewService(gears.NewStore(kv.NewMemory(nil)), nil)
+	service := &gear.Server{Store: kv.NewMemory(nil)}
 	manager := NewManager(service)
 	ctx := context.Background()
 
-	if _, _, err := manager.RefreshDevice(ctx, "missing"); !errors.Is(err, gears.ErrGearNotFound) {
-		t.Fatalf("RefreshDevice missing err = %v", err)
+	if _, _, err := manager.RefreshGear(ctx, "missing"); !errors.Is(err, gear.ErrGearNotFound) {
+		t.Fatalf("RefreshGear missing err = %v", err)
 	}
 
-	if _, err := service.Register(ctx, gears.RegistrationRequest{
-		PublicKey: "device-pk",
-		Device:    gears.DeviceInfo{},
+	if _, err := service.SaveGear(ctx, gearservice.Gear{
+		PublicKey:     "device-pk",
+		Role:          gearservice.GearRoleUnspecified,
+		Status:        gearservice.GearStatusUnspecified,
+		Device:        gearservice.DeviceInfo{},
+		Configuration: gearservice.Configuration{},
 	}); err != nil {
-		t.Fatalf("Register error: %v", err)
+		t.Fatalf("SaveGear error: %v", err)
 	}
 
-	if _, online, err := manager.RefreshDevice(ctx, "device-pk"); !errors.Is(err, ErrDeviceOffline) {
-		t.Fatalf("RefreshDevice offline err = %v", err)
+	if _, online, err := manager.RefreshGear(ctx, "device-pk"); !errors.Is(err, ErrDeviceOffline) {
+		t.Fatalf("RefreshGear offline err = %v", err)
 	} else if online {
-		t.Fatal("offline RefreshDevice should report online=false")
+		t.Fatal("offline RefreshGear should report online=false")
 	}
+}
+
+func TestApplyPeerRefreshIdentifiersSkipsUnchangedCollections(t *testing.T) {
+	name := "primary"
+	sn := "sn-1"
+	gear := gearservice.Gear{
+		Device: gearservice.DeviceInfo{
+			Sn: &sn,
+			Hardware: &gearservice.HardwareInfo{
+				Imeis: &[]gearservice.GearIMEI{{
+					Name:   &name,
+					Tac:    "12345678",
+					Serial: "0000001",
+				}},
+				Labels: &[]gearservice.GearLabel{{
+					Key:   "batch",
+					Value: "cn-east",
+				}},
+			},
+		},
+	}
+	identifiers := peerpublic.RefreshIdentifiers{
+		Sn: &sn,
+		Imeis: &[]peerpublic.GearIMEI{{
+			Name:   &name,
+			Tac:    "12345678",
+			Serial: "0000001",
+		}},
+		Labels: &[]peerpublic.GearLabel{{
+			Key:   "batch",
+			Value: "cn-east",
+		}},
+	}
+
+	var updatedFields []string
+	applyPeerRefreshIdentifiers(&gear, identifiers, &updatedFields)
+
+	if len(updatedFields) != 0 {
+		t.Fatalf("applyPeerRefreshIdentifiers() updatedFields = %v, want none", updatedFields)
+	}
+}
+
+func TestApplyPeerRefreshIdentifiersUpdatesChangedCollections(t *testing.T) {
+	name := "primary"
+	nextName := "secondary"
+	gear := gearservice.Gear{
+		Device: gearservice.DeviceInfo{
+			Hardware: &gearservice.HardwareInfo{
+				Imeis: &[]gearservice.GearIMEI{{
+					Name:   &name,
+					Tac:    "12345678",
+					Serial: "0000001",
+				}},
+				Labels: &[]gearservice.GearLabel{{
+					Key:   "batch",
+					Value: "cn-east",
+				}},
+			},
+		},
+	}
+	identifiers := peerpublic.RefreshIdentifiers{
+		Imeis: &[]peerpublic.GearIMEI{{
+			Name:   &nextName,
+			Tac:    "87654321",
+			Serial: "0000009",
+		}},
+		Labels: &[]peerpublic.GearLabel{{
+			Key:   "batch",
+			Value: "cn-west",
+		}},
+	}
+
+	var updatedFields []string
+	applyPeerRefreshIdentifiers(&gear, identifiers, &updatedFields)
+
+	if len(updatedFields) != 2 {
+		t.Fatalf("applyPeerRefreshIdentifiers() updatedFields = %v, want 2 entries", updatedFields)
+	}
+	if gear.Device.Hardware == nil || gear.Device.Hardware.Imeis == nil || (*gear.Device.Hardware.Imeis)[0].Tac != "87654321" {
+		t.Fatalf("IMEIs not updated: %+v", gear.Device.Hardware)
+	}
+	if gear.Device.Hardware.Labels == nil || (*gear.Device.Hardware.Labels)[0].Value != "cn-west" {
+		t.Fatalf("labels not updated: %+v", gear.Device.Hardware)
+	}
+}
+
+func TestIsPeerDisconnectedError(t *testing.T) {
+	t.Run("closed connection errors are offline", func(t *testing.T) {
+		if !isPeerDisconnectedError(errors.New("gizhttp: read response: kcp: conn closed: local")) {
+			t.Fatal("conn closed error should be treated as disconnected")
+		}
+	})
+
+	t.Run("generic read response errors stay online", func(t *testing.T) {
+		if isPeerDisconnectedError(errors.New("gizhttp: read response: malformed HTTP response")) {
+			t.Fatal("generic read response error should not be treated as disconnected")
+		}
+	})
 }

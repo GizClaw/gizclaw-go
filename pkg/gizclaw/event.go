@@ -1,28 +1,25 @@
 package gizclaw
 
 import (
-	"encoding/json"
 	"errors"
 	"strings"
 )
 
 //go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen -config=event_codegen_config.yaml -o event_generated.go ../../api/event_types.json
 
-const Version = 1
-
-type RawMessage = json.RawMessage
+const EventVersion = 1
 
 var (
-	ErrInvalidV    = errors.New("event: invalid version")
-	ErrMissingName = errors.New("event: missing name")
+	ErrInvalidEventVersion = errors.New("event: invalid version")
+	ErrEventMissingName    = errors.New("event: missing name")
 )
 
 func (e Event) Validate() error {
-	if e.V != Version {
-		return ErrInvalidV
+	if e.V != EventVersion {
+		return ErrInvalidEventVersion
 	}
 	if strings.TrimSpace(e.Name) == "" {
-		return ErrMissingName
+		return ErrEventMissingName
 	}
 	return nil
 }

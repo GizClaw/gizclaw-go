@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/giztoy/giztoy-go/cmd/internal/stores"
-	"github.com/giztoy/giztoy-go/pkg/gears"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
 	"github.com/giztoy/giztoy-go/pkg/giznet"
 	"github.com/goccy/go-yaml"
 )
@@ -20,7 +20,11 @@ type Config struct {
 
 type GearsConfig struct {
 	Store              string                             `yaml:"store"`
-	RegistrationTokens map[string]gears.RegistrationToken `yaml:"registration-tokens"`
+	RegistrationTokens map[string]RegistrationTokenConfig `yaml:"registration-tokens"`
+}
+
+type RegistrationTokenConfig struct {
+	Role gearservice.GearRole `yaml:"role"`
 }
 
 type DepotsConfig struct {

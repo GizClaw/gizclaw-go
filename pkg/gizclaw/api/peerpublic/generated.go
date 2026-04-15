@@ -11,6 +11,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 // GearIMEI defines model for GearIMEI.
@@ -57,8 +59,8 @@ type HttpRequestDoer interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
-// GeneratedClient conforms to the OpenAPI3 specification for this service.
-type GeneratedClient struct {
+// Client which conforms to the OpenAPI3 specification for this service.
+type Client struct {
 	// The endpoint of the server conforming to this interface, with scheme,
 	// https://api.deepmap.com for example. This can contain a path relative
 	// to the server, such as https://api.deepmap.com/dev-test, and all the
@@ -75,12 +77,12 @@ type GeneratedClient struct {
 }
 
 // ClientOption allows setting custom parameters during construction
-type ClientOption func(*GeneratedClient) error
+type ClientOption func(*Client) error
 
-// NewGeneratedClient creates a new generated client with reasonable defaults.
-func NewGeneratedClient(server string, opts ...ClientOption) (*GeneratedClient, error) {
+// Creates a new Client, with reasonable defaults
+func NewClient(server string, opts ...ClientOption) (*Client, error) {
 	// create a client with sane default values
-	client := GeneratedClient{
+	client := Client{
 		Server: server,
 	}
 	// mutate client and add all optional params
@@ -103,7 +105,7 @@ func NewGeneratedClient(server string, opts ...ClientOption) (*GeneratedClient, 
 // WithHTTPClient allows overriding the default Doer, which is
 // automatically created using http.Client. This is useful for tests.
 func WithHTTPClient(doer HttpRequestDoer) ClientOption {
-	return func(c *GeneratedClient) error {
+	return func(c *Client) error {
 		c.Client = doer
 		return nil
 	}
@@ -112,7 +114,7 @@ func WithHTTPClient(doer HttpRequestDoer) ClientOption {
 // WithRequestEditorFn allows setting up a callback function, which will be
 // called right before sending the request. This can be used to mutate the request.
 func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
-	return func(c *GeneratedClient) error {
+	return func(c *Client) error {
 		c.RequestEditors = append(c.RequestEditors, fn)
 		return nil
 	}
@@ -130,7 +132,7 @@ type ClientInterface interface {
 	GetVersion(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *GeneratedClient) GetIdentifiers(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetIdentifiers(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetIdentifiersRequest(c.Server)
 	if err != nil {
 		return nil, err
@@ -142,7 +144,7 @@ func (c *GeneratedClient) GetIdentifiers(ctx context.Context, reqEditors ...Requ
 	return c.Client.Do(req)
 }
 
-func (c *GeneratedClient) GetInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetInfoRequest(c.Server)
 	if err != nil {
 		return nil, err
@@ -154,7 +156,7 @@ func (c *GeneratedClient) GetInfo(ctx context.Context, reqEditors ...RequestEdit
 	return c.Client.Do(req)
 }
 
-func (c *GeneratedClient) GetVersion(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetVersion(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetVersionRequest(c.Server)
 	if err != nil {
 		return nil, err
@@ -247,7 +249,7 @@ func NewGetVersionRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
-func (c *GeneratedClient) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
+func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
 			return err
@@ -269,7 +271,7 @@ type ClientWithResponses struct {
 // NewClientWithResponses creates a new ClientWithResponses, which wraps
 // Client with return type handling
 func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithResponses, error) {
-	client, err := NewGeneratedClient(server, opts...)
+	client, err := NewClient(server, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +280,7 @@ func NewClientWithResponses(server string, opts ...ClientOption) (*ClientWithRes
 
 // WithBaseURL overrides the baseURL.
 func WithBaseURL(baseURL string) ClientOption {
-	return func(c *GeneratedClient) error {
+	return func(c *Client) error {
 		newBaseURL, err := url.Parse(baseURL)
 		if err != nil {
 			return err
@@ -469,4 +471,247 @@ func ParseGetVersionResponse(rsp *http.Response) (*GetVersionResponse, error) {
 	}
 
 	return response, nil
+}
+
+// ServerInterface represents all server handlers.
+type ServerInterface interface {
+	// Get device identifiers
+	// (GET /identifiers)
+	GetIdentifiers(c *fiber.Ctx) error
+	// Get basic device information
+	// (GET /info)
+	GetInfo(c *fiber.Ctx) error
+	// Get current firmware version metadata
+	// (GET /version)
+	GetVersion(c *fiber.Ctx) error
+}
+
+// ServerInterfaceWrapper converts contexts to parameters.
+type ServerInterfaceWrapper struct {
+	Handler ServerInterface
+}
+
+type MiddlewareFunc fiber.Handler
+
+// GetIdentifiers operation middleware
+func (siw *ServerInterfaceWrapper) GetIdentifiers(c *fiber.Ctx) error {
+
+	return siw.Handler.GetIdentifiers(c)
+}
+
+// GetInfo operation middleware
+func (siw *ServerInterfaceWrapper) GetInfo(c *fiber.Ctx) error {
+
+	return siw.Handler.GetInfo(c)
+}
+
+// GetVersion operation middleware
+func (siw *ServerInterfaceWrapper) GetVersion(c *fiber.Ctx) error {
+
+	return siw.Handler.GetVersion(c)
+}
+
+// FiberServerOptions provides options for the Fiber server.
+type FiberServerOptions struct {
+	BaseURL     string
+	Middlewares []MiddlewareFunc
+}
+
+// RegisterHandlers creates http.Handler with routing matching OpenAPI spec.
+func RegisterHandlers(router fiber.Router, si ServerInterface) {
+	RegisterHandlersWithOptions(router, si, FiberServerOptions{})
+}
+
+// RegisterHandlersWithOptions creates http.Handler with additional options
+func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, options FiberServerOptions) {
+	wrapper := ServerInterfaceWrapper{
+		Handler: si,
+	}
+
+	for _, m := range options.Middlewares {
+		router.Use(fiber.Handler(m))
+	}
+
+	router.Get(options.BaseURL+"/identifiers", wrapper.GetIdentifiers)
+
+	router.Get(options.BaseURL+"/info", wrapper.GetInfo)
+
+	router.Get(options.BaseURL+"/version", wrapper.GetVersion)
+
+}
+
+type GetIdentifiersRequestObject struct {
+}
+
+type GetIdentifiersResponseObject interface {
+	VisitGetIdentifiersResponse(ctx *fiber.Ctx) error
+}
+
+type GetIdentifiers200JSONResponse RefreshIdentifiers
+
+func (response GetIdentifiers200JSONResponse) VisitGetIdentifiersResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetIdentifiersdefaultResponse struct {
+	StatusCode int
+}
+
+func (response GetIdentifiersdefaultResponse) VisitGetIdentifiersResponse(ctx *fiber.Ctx) error {
+	ctx.Status(response.StatusCode)
+	return nil
+}
+
+type GetInfoRequestObject struct {
+}
+
+type GetInfoResponseObject interface {
+	VisitGetInfoResponse(ctx *fiber.Ctx) error
+}
+
+type GetInfo200JSONResponse RefreshInfo
+
+func (response GetInfo200JSONResponse) VisitGetInfoResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetInfodefaultResponse struct {
+	StatusCode int
+}
+
+func (response GetInfodefaultResponse) VisitGetInfoResponse(ctx *fiber.Ctx) error {
+	ctx.Status(response.StatusCode)
+	return nil
+}
+
+type GetVersionRequestObject struct {
+}
+
+type GetVersionResponseObject interface {
+	VisitGetVersionResponse(ctx *fiber.Ctx) error
+}
+
+type GetVersion200JSONResponse RefreshVersion
+
+func (response GetVersion200JSONResponse) VisitGetVersionResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetVersiondefaultResponse struct {
+	StatusCode int
+}
+
+func (response GetVersiondefaultResponse) VisitGetVersionResponse(ctx *fiber.Ctx) error {
+	ctx.Status(response.StatusCode)
+	return nil
+}
+
+// StrictServerInterface represents all server handlers.
+type StrictServerInterface interface {
+	// Get device identifiers
+	// (GET /identifiers)
+	GetIdentifiers(ctx context.Context, request GetIdentifiersRequestObject) (GetIdentifiersResponseObject, error)
+	// Get basic device information
+	// (GET /info)
+	GetInfo(ctx context.Context, request GetInfoRequestObject) (GetInfoResponseObject, error)
+	// Get current firmware version metadata
+	// (GET /version)
+	GetVersion(ctx context.Context, request GetVersionRequestObject) (GetVersionResponseObject, error)
+}
+
+type StrictHandlerFunc func(ctx *fiber.Ctx, args interface{}) (interface{}, error)
+
+type StrictMiddlewareFunc func(f StrictHandlerFunc, operationID string) StrictHandlerFunc
+
+func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareFunc) ServerInterface {
+	return &strictHandler{ssi: ssi, middlewares: middlewares}
+}
+
+type strictHandler struct {
+	ssi         StrictServerInterface
+	middlewares []StrictMiddlewareFunc
+}
+
+// GetIdentifiers operation middleware
+func (sh *strictHandler) GetIdentifiers(ctx *fiber.Ctx) error {
+	var request GetIdentifiersRequestObject
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetIdentifiers(ctx.UserContext(), request.(GetIdentifiersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetIdentifiers")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetIdentifiersResponseObject); ok {
+		if err := validResponse.VisitGetIdentifiersResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetInfo operation middleware
+func (sh *strictHandler) GetInfo(ctx *fiber.Ctx) error {
+	var request GetInfoRequestObject
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetInfo(ctx.UserContext(), request.(GetInfoRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetInfo")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetInfoResponseObject); ok {
+		if err := validResponse.VisitGetInfoResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetVersion operation middleware
+func (sh *strictHandler) GetVersion(ctx *fiber.Ctx) error {
+	var request GetVersionRequestObject
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetVersion(ctx.UserContext(), request.(GetVersionRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetVersion")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetVersionResponseObject); ok {
+		if err := validResponse.VisitGetVersionResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
 }

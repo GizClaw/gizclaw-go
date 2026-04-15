@@ -70,7 +70,7 @@ func Serve(workspace string) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- srv.ListenAndServe(giznet.WithBindAddr(cfg.ListenAddr))
+		errCh <- srv.ListenAndServe(nil, giznet.WithBindAddr(cfg.ListenAddr))
 	}()
 
 	select {

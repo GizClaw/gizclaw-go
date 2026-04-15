@@ -1,13 +1,24 @@
 package gizclaw
 
 import (
+	"context"
 	"errors"
-	"github.com/giztoy/giztoy-go/pkg/giznet"
+	"fmt"
 	"net"
 	"sync"
+
+	"github.com/giztoy/giztoy-go/pkg/depotstore"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/rpc"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/firmware"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/gear"
+	"github.com/giztoy/giztoy-go/pkg/giznet"
+	"github.com/giztoy/giztoy-go/pkg/kv"
 )
 
 var ErrNilSecurityPolicy = errors.New("gizclaw: nil security policy")
+var ErrNilGearStore = errors.New("gizclaw: nil gear store")
+var ErrNilDepotStore = errors.New("gizclaw: nil depot store")
 
 type SecurityPolicy interface {
 	AllowPeerService(giznet.PublicKey, uint64) bool
@@ -23,37 +34,38 @@ func (AllowAll) AllowPeerService(giznet.PublicKey, uint64) bool {
 // *giznet.Listener when you need multiple UDP listeners (similar to net/http.Server
 // serving multiple listeners). Per-stream protocol handling can be extended later.
 //
-// Set KeyPair, SecurityPolicy, and pass giznet.WithBindAddr (and any other giznet.Option)
-// to ListenAndServe. Manager is optional state shared with refresh / runtime helpers.
+// Set gear/firmware storage config on the struct, then call ListenAndServe.
+// Internal runtime state is built automatically on first serve.
 type Server struct {
-	KeyPair    *giznet.KeyPair
-	Manager    *Manager
-	PeerServer *PeerServer
+	KeyPair *giznet.KeyPair
 
-	// SecurityPolicy is required.
-	SecurityPolicy SecurityPolicy
+	GearStore          kv.Store
+	RegistrationTokens map[string]gearservice.GearRole
+	BuildCommit        string
+	ServerPublicKey    string
+	DepotStore         depotstore.Store
 
-	// Cleanup runs once when Close is called.
-	Cleanup func() error
+	manager *Manager
+	service *Service
 
 	mu          sync.Mutex
 	listener    *giznet.Listener
-	cleanupOnce sync.Once
-	cleanupErr  error
+	runtimeOnce sync.Once
+	runtimeErr  error
 }
 
 // ListenAndServe starts a UDP peer listener and blocks serving connections until
 // Accept returns an error (for example after Listener.Close). opts are appended
 // after default options (AllowUnknown + service mux policy).
-func (s *Server) ListenAndServe(opts ...giznet.Option) error {
+func (s *Server) ListenAndServe(keyPair *giznet.KeyPair, opts ...giznet.Option) error {
 	if s == nil {
 		return errors.New("gizclaw: nil server")
 	}
+	if keyPair != nil {
+		s.KeyPair = keyPair
+	}
 	if s.KeyPair == nil {
 		return errors.New("gizclaw: nil key pair")
-	}
-	if s.SecurityPolicy == nil {
-		return ErrNilSecurityPolicy
 	}
 	all := append([]giznet.Option{
 		giznet.WithAllowUnknown(true),
@@ -65,7 +77,11 @@ func (s *Server) ListenAndServe(opts ...giznet.Option) error {
 	if err != nil {
 		return err
 	}
-	return s.Serve(l)
+	if err := s.Serve(l); err != nil {
+		_ = l.Close()
+		return err
+	}
+	return nil
 }
 
 // Serve accepts peer connections until l.Accept returns an error (for example
@@ -77,6 +93,9 @@ func (s *Server) Serve(l *giznet.Listener) error {
 	if l == nil {
 		return errors.New("gizclaw: nil listener")
 	}
+	if err := s.initOnce(l.HostInfo().PublicKey.String()); err != nil {
+		return err
+	}
 	s.setListener(l)
 	defer s.clearListener(l)
 	for {
@@ -87,54 +106,68 @@ func (s *Server) Serve(l *giznet.Listener) error {
 			}
 			return err
 		}
-		peerServer := s.PeerServer
-		if peerServer == nil {
-			peerServer = &PeerServer{}
+		svc := s.service
+		if svc == nil {
+			svc = &Service{}
 		}
 		go func() {
-			_ = peerServer.Serve(conn)
+			_ = svc.ServeConn(conn)
 		}()
 	}
 }
 
 // PublicKey returns the configured server public key.
 func (s *Server) PublicKey() giznet.PublicKey {
-	if s == nil || s.KeyPair == nil {
+	if s == nil {
 		return giznet.PublicKey{}
 	}
-	return s.KeyPair.Public
+	if s.KeyPair != nil {
+		return s.KeyPair.Public
+	}
+	s.mu.Lock()
+	listener := s.listener
+	s.mu.Unlock()
+	if listener == nil {
+		return giznet.PublicKey{}
+	}
+	return listener.HostInfo().PublicKey
+}
+
+// Service returns the initialized peer service, or nil before Serve initializes it.
+func (s *Server) Service() *Service {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.service
 }
 
 func (s *Server) Close() error {
 	if s == nil {
 		return nil
 	}
-	var err error
-
 	s.mu.Lock()
 	listener := s.listener
 	s.listener = nil
 	s.mu.Unlock()
-
-	if listener != nil {
-		err = listener.Close()
+	if listener == nil {
+		return nil
 	}
-	s.cleanupOnce.Do(func() {
-		if s.Cleanup != nil {
-			s.cleanupErr = s.Cleanup()
-		}
-	})
-	if s.cleanupErr != nil {
-		return errors.Join(err, s.cleanupErr)
-	}
-	return err
+	return listener.Close()
 }
 
 func (s *Server) allowPeerService(pk giznet.PublicKey, service uint64) bool {
-	if s == nil || s.SecurityPolicy == nil {
+	if s == nil {
 		return false
 	}
-	return s.SecurityPolicy.AllowPeerService(pk, service)
+	s.mu.Lock()
+	manager := s.manager
+	s.mu.Unlock()
+	if manager == nil {
+		return service == ServiceRPC || service == ServiceServerPublic
+	}
+	return GearsSecurityPolicy{Gears: manager.Gears}.AllowPeerService(pk, service)
 }
 
 func (s *Server) setListener(l *giznet.Listener) {
@@ -149,4 +182,91 @@ func (s *Server) clearListener(l *giznet.Listener) {
 	if s.listener == l {
 		s.listener = nil
 	}
+}
+
+func (s *Server) initOnce(serverPublicKey string) error {
+	s.runtimeOnce.Do(func() {
+		s.runtimeErr = s.initRuntime(serverPublicKey)
+	})
+	return s.runtimeErr
+}
+
+func (s *Server) initRuntime(serverPublicKey string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.manager != nil && s.service != nil {
+		return nil
+	}
+	if s.GearStore == nil {
+		return ErrNilGearStore
+	}
+	if s.DepotStore == nil {
+		return ErrNilDepotStore
+	}
+	if serverPublicKey == "" {
+		serverPublicKey = s.ServerPublicKey
+	}
+	if serverPublicKey == "" && s.KeyPair != nil {
+		serverPublicKey = s.KeyPair.Public.String()
+	}
+	if serverPublicKey == "" {
+		return fmt.Errorf("gizclaw: empty server public key")
+	}
+
+	gearsServer := &gear.Server{
+		Store:              s.GearStore,
+		RegistrationTokens: s.RegistrationTokens,
+		BuildCommit:        s.BuildCommit,
+		ServerPublicKey:    serverPublicKey,
+	}
+	manager := NewManager(gearsServer)
+	gearsServer.PeerManager = manager
+
+	firmwareServer := &firmware.Server{
+		Store: s.DepotStore,
+		ResolveGearTarget: func(ctx context.Context, publicKey string) (string, firmware.Channel, error) {
+			return resolveGearTarget(ctx, gearsServer, publicKey)
+		},
+	}
+
+	s.manager = manager
+	s.service = &Service{
+		manager: manager,
+		admin: &adminService{
+			FirmwareAdminService: firmwareServer,
+			GearsAdminService:    gearsServer,
+		},
+		gear: &gearService{
+			FirmwareGearService: firmwareServer,
+			GearsGearService:    gearsServer,
+		},
+		public: &serverPublic{
+			FirmwareServerPublic: firmwareServer,
+			GearsServerPublic:    gearsServer,
+		},
+		rpc: rpc.NewServer(&rpc.RPCServer{}),
+	}
+	return nil
+}
+
+func resolveGearTarget(ctx context.Context, gearsServer *gear.Server, publicKey string) (string, firmware.Channel, error) {
+	if gearsServer == nil {
+		return "", "", errors.New("gizclaw: gears service not configured")
+	}
+	gear, err := gearsServer.LoadGear(ctx, publicKey)
+	if err != nil {
+		return "", "", err
+	}
+	if gear.Device.Hardware == nil || gear.Device.Hardware.Depot == nil {
+		return "", "", errors.New("missing depot")
+	}
+	if gear.Configuration.Firmware == nil || gear.Configuration.Firmware.Channel == nil {
+		return "", "", errors.New("missing channel")
+	}
+	channel := firmware.Channel(*gear.Configuration.Firmware.Channel)
+	if !channel.Valid() {
+		return "", "", fmt.Errorf("invalid firmware channel %q", channel)
+	}
+	return *gear.Device.Hardware.Depot, channel, nil
 }

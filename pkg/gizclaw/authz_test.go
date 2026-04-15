@@ -2,10 +2,12 @@ package gizclaw
 
 import (
 	"context"
-	"github.com/giztoy/giztoy-go/pkg/gears"
+	"testing"
+
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/gear"
 	"github.com/giztoy/giztoy-go/pkg/giznet"
 	"github.com/giztoy/giztoy-go/pkg/kv"
-	"testing"
 )
 
 func TestGearsSecurityPolicyAllowsAdminServicesForActiveAdmin(t *testing.T) {
@@ -14,14 +16,15 @@ func TestGearsSecurityPolicyAllowsAdminServicesForActiveAdmin(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	service := gears.NewService(gears.NewStore(kv.NewMemory(nil)), map[string]gears.RegistrationToken{
-		"admin_default": {Role: gears.GearRoleAdmin},
-	})
-	if _, err := service.Register(context.Background(), gears.RegistrationRequest{
-		PublicKey:         keyPair.Public.String(),
-		RegistrationToken: "admin_default",
+	service := &gear.Server{Store: kv.NewMemory(nil)}
+	if _, err := service.SaveGear(context.Background(), gearservice.Gear{
+		PublicKey:     keyPair.Public.String(),
+		Role:          gearservice.GearRoleAdmin,
+		Status:        gearservice.GearStatusActive,
+		Device:        gearservice.DeviceInfo{},
+		Configuration: gearservice.Configuration{},
 	}); err != nil {
-		t.Fatalf("Register error = %v", err)
+		t.Fatalf("SaveGear error = %v", err)
 	}
 
 	policy := GearsSecurityPolicy{Gears: service}
@@ -58,18 +61,16 @@ func TestGearsSecurityPolicyDeniesAdminServicesForBlockedAdmin(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	service := gears.NewService(gears.NewStore(kv.NewMemory(nil)), map[string]gears.RegistrationToken{
-		"admin_default": {Role: gears.GearRoleAdmin},
-	})
+	service := &gear.Server{Store: kv.NewMemory(nil)}
 	ctx := context.Background()
-	if _, err := service.Register(ctx, gears.RegistrationRequest{
-		PublicKey:         keyPair.Public.String(),
-		RegistrationToken: "admin_default",
+	if _, err := service.SaveGear(ctx, gearservice.Gear{
+		PublicKey:     keyPair.Public.String(),
+		Role:          gearservice.GearRoleAdmin,
+		Status:        gearservice.GearStatusBlocked,
+		Device:        gearservice.DeviceInfo{},
+		Configuration: gearservice.Configuration{},
 	}); err != nil {
-		t.Fatalf("Register error = %v", err)
-	}
-	if _, err := service.Block(ctx, keyPair.Public.String()); err != nil {
-		t.Fatalf("Block error = %v", err)
+		t.Fatalf("SaveGear error = %v", err)
 	}
 
 	policy := GearsSecurityPolicy{Gears: service}

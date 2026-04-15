@@ -8,8 +8,9 @@ import (
 	"testing"
 
 	"github.com/giztoy/giztoy-go/cmd/internal/stores"
-	"github.com/giztoy/giztoy-go/pkg/gears"
 	"github.com/giztoy/giztoy-go/pkg/gizclaw"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/api/gearservice"
+	"github.com/giztoy/giztoy-go/pkg/gizclaw/gear"
 	"github.com/giztoy/giztoy-go/pkg/giznet"
 	"github.com/giztoy/giztoy-go/pkg/kv"
 )
@@ -31,8 +32,8 @@ func TestNewWithPreparedConfig(t *testing.T) {
 		},
 		Gears: GearsConfig{
 			Store: "mem",
-			RegistrationTokens: map[string]gears.RegistrationToken{
-				"admin_default": {Role: gears.GearRoleAdmin},
+			RegistrationTokens: map[string]RegistrationTokenConfig{
+				"admin_default": {Role: gearservice.GearRoleAdmin},
 			},
 		},
 		Depots: DepotsConfig{Store: "fw"},
@@ -42,14 +43,11 @@ func TestNewWithPreparedConfig(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = srv.Close() })
 
-	if srv.SecurityPolicy == nil {
-		t.Fatal("SecurityPolicy is nil")
+	if srv.GearStore == nil {
+		t.Fatal("GearStore is nil")
 	}
-	if srv.Manager == nil {
-		t.Fatal("Manager is nil")
-	}
-	if srv.PeerServer == nil {
-		t.Fatal("PeerServer is nil")
+	if srv.DepotStore == nil {
+		t.Fatal("DepotStore is nil")
 	}
 	if srv.PublicKey().String() == "" {
 		t.Fatal("PublicKey should not be empty")
@@ -86,8 +84,8 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		},
 		Gears: GearsConfig{
 			Store: "runtime-gears",
-			RegistrationTokens: map[string]gears.RegistrationToken{
-				"runtime": {Role: gears.GearRoleAdmin},
+			RegistrationTokens: map[string]RegistrationTokenConfig{
+				"runtime": {Role: gearservice.GearRoleAdmin},
 			},
 		},
 		Depots: DepotsConfig{Store: "runtime-depots"},
@@ -99,8 +97,8 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		},
 		Gears: GearsConfig{
 			Store: "file-gears",
-			RegistrationTokens: map[string]gears.RegistrationToken{
-				"file": {Role: gears.GearRoleAdmin},
+			RegistrationTokens: map[string]RegistrationTokenConfig{
+				"file": {Role: gearservice.GearRoleAdmin},
 			},
 		},
 		Depots: DepotsConfig{Store: "file-depots"},
@@ -116,7 +114,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	if merged.Gears.Store != "runtime-gears" {
 		t.Fatalf("Gears.Store = %q", merged.Gears.Store)
 	}
-	if len(merged.Gears.RegistrationTokens) != 1 || merged.Gears.RegistrationTokens["runtime"].Role != gears.GearRoleAdmin {
+	if len(merged.Gears.RegistrationTokens) != 1 || merged.Gears.RegistrationTokens["runtime"].Role != gearservice.GearRoleAdmin {
 		t.Fatalf("RegistrationTokens = %+v", merged.Gears.RegistrationTokens)
 	}
 	if merged.Depots.Store != "runtime-depots" {
@@ -212,15 +210,15 @@ func TestSecurityPolicyAllowsAdminServicesForActiveAdmin(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
-	service := gears.NewService(gears.NewStore(kv.NewMemory(nil)), map[string]gears.RegistrationToken{
-		"admin_default": {Role: gears.GearRoleAdmin},
-	})
-	_, err = service.Register(context.Background(), gears.RegistrationRequest{
-		PublicKey:         keyPair.Public.String(),
-		RegistrationToken: "admin_default",
-	})
-	if err != nil {
-		t.Fatalf("Register error = %v", err)
+	service := &gear.Server{Store: kv.NewMemory(nil)}
+	if _, err := service.SaveGear(context.Background(), gearservice.Gear{
+		PublicKey:     keyPair.Public.String(),
+		Role:          gearservice.GearRoleAdmin,
+		Status:        gearservice.GearStatusActive,
+		Device:        gearservice.DeviceInfo{},
+		Configuration: gearservice.Configuration{},
+	}); err != nil {
+		t.Fatalf("SaveGear error = %v", err)
 	}
 
 	policy := gizclaw.GearsSecurityPolicy{Gears: service}

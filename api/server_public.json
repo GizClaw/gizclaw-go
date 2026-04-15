@@ -372,13 +372,7 @@
   "components": {
     "schemas": {
       "Channel": {
-        "type": "string",
-        "enum": [
-          "rollback",
-          "stable",
-          "beta",
-          "testing"
-        ]
+        "type": "string"
       },
       "Depot": {
         "type": "object",
@@ -504,13 +498,7 @@
         ]
       },
       "GearFirmwareChannel": {
-        "type": "string",
-        "enum": [
-          "rollback",
-          "stable",
-          "beta",
-          "testing"
-        ]
+        "type": "string"
       },
       "GearCertificationType": {
         "type": "string",
