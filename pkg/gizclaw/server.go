@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpc"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -45,8 +44,8 @@ type Server struct {
 	ServerPublicKey    string
 	DepotStore         depotstore.Store
 
-	manager *Manager
-	service *Service
+	manager     *Manager
+	gearService *GearService
 
 	mu          sync.Mutex
 	listener    *giznet.Listener
@@ -106,12 +105,16 @@ func (s *Server) Serve(l *giznet.Listener) error {
 			}
 			return err
 		}
-		svc := s.service
+		svc := s.gearService
 		if svc == nil {
-			svc = &Service{}
+			svc = &GearService{}
+		}
+		host := &GearPeer{
+			Conn:    conn,
+			Service: svc,
 		}
 		go func() {
-			_ = svc.ServeConn(conn)
+			_ = host.serve()
 		}()
 	}
 }
@@ -133,14 +136,24 @@ func (s *Server) PublicKey() giznet.PublicKey {
 	return listener.HostInfo().PublicKey
 }
 
-// Service returns the initialized peer service, or nil before Serve initializes it.
-func (s *Server) Service() *Service {
+// GearService returns the initialized gear service, or nil before Serve initializes it.
+func (s *Server) GearService() *GearService {
 	if s == nil {
 		return nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.service
+	return s.gearService
+}
+
+// Manager returns the initialized peer manager, or nil before Serve initializes it.
+func (s *Server) Manager() *Manager {
+	if s == nil {
+		return nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.manager
 }
 
 func (s *Server) Close() error {
@@ -195,7 +208,7 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.manager != nil && s.service != nil {
+	if s.manager != nil && s.gearService != nil {
 		return nil
 	}
 	if s.GearStore == nil {
@@ -231,13 +244,13 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 	}
 
 	s.manager = manager
-	s.service = &Service{
-		manager: manager,
+	s.gearService = &GearService{
+		peerManager: manager,
 		admin: &adminService{
 			FirmwareAdminService: firmwareServer,
 			GearsAdminService:    gearsServer,
 		},
-		gear: &gearService{
+		gear: &gearAPIBundle{
 			FirmwareGearService: firmwareServer,
 			GearsGearService:    gearsServer,
 		},
@@ -245,7 +258,6 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 			FirmwareServerPublic: firmwareServer,
 			GearsServerPublic:    gearsServer,
 		},
-		rpc: rpc.NewServer(&rpc.RPCServer{}),
 	}
 	return nil
 }

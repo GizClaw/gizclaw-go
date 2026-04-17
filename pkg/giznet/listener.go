@@ -78,12 +78,6 @@ func (l *Listener) Accept() (*Conn, error) {
 	}
 }
 
-// PeerEvents returns the channel that receives peer state change events.
-// The channel is buffered (cap 64); slow consumers miss events.
-func (l *Listener) PeerEvents() <-chan PeerEvent {
-	return l.events
-}
-
 func (l *Listener) Peer(pk PublicKey) (*Conn, error) {
 	if l == nil {
 		return nil, ErrNilListener
@@ -150,10 +144,10 @@ func (l *Listener) Close() error {
 	l.closeOnce.Do(func() {
 		close(l.closedCh)
 		l.closed.Store(true)
-		// Close UDP first so no more onPeerEvent callbacks can fire,
-		// then close the events channel safely.
+		// Do not close l.events here. UDP teardown can race with a final
+		// onPeerEvent callback, and callers already observe shutdown via
+		// closedCh/ErrClosed from Accept.
 		err = l.udp.Close()
-		close(l.events)
 	})
 
 	return err

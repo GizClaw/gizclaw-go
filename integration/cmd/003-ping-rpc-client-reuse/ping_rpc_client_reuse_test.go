@@ -17,16 +17,10 @@ func TestPingRPCClientReuseUserStory(t *testing.T) {
 	client := h.ConnectClientFromContext("client-a")
 	defer func() { _ = client.Close() }()
 
-	rpcClient, err := client.RPCClient()
-	if err != nil {
-		t.Fatalf("open rpc client: %v", err)
-	}
-	defer func() { _ = rpcClient.Close() }()
-
 	var previousServerTime time.Time
 	for i := 0; i < 5; i++ {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		ping, err := rpcClient.Ping(ctx, "ping-"+itoa(i))
+		ping, err := client.Ping(ctx, "ping-"+itoa(i))
 		cancel()
 		if err != nil {
 			t.Fatalf("ping round %d failed: %v", i, err)

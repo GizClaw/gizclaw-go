@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -20,14 +21,9 @@ const MethodPing = "peer.ping"
 type Client struct {
 	rw io.ReadWriter
 
-	writeMu sync.Mutex
-
-	pendingMu sync.Mutex
-	pending   map[string]chan callResult
-
+	callMu    sync.Mutex
 	closeOnce sync.Once
-	closedCh  chan struct{}
-	closedErr error
+	closed    atomic.Bool
 }
 
 type Server struct {
@@ -39,22 +35,10 @@ type StrictServerInterface interface {
 	Ping(ctx context.Context, request PingRequest) (*PingResponse, error)
 }
 
-type callResult struct {
-	resp *RPCResponse
-	err  error
-}
-
-var ErrDuplicateRequestID = errors.New("rpc: duplicate request id")
 var ErrClientClosed = errors.New("rpc: client closed")
 
 func NewClient(rw io.ReadWriter) *Client {
-	c := &Client{
-		rw:       rw,
-		pending:  make(map[string]chan callResult),
-		closedCh: make(chan struct{}),
-	}
-	go c.readLoop()
-	return c
+	return &Client{rw: rw}
 }
 
 func NewServer(ssi StrictServerInterface) *Server {
@@ -153,42 +137,65 @@ func (c *Client) call(ctx context.Context, req *RPCRequest) (*RPCResponse, error
 	if req.Id == "" {
 		return nil, errors.New("rpc: request id required")
 	}
-
-	resultCh := make(chan callResult, 1)
-
-	c.pendingMu.Lock()
-	if c.pending == nil {
-		c.pendingMu.Unlock()
+	if c.closed.Load() {
 		return nil, ErrClientClosed
 	}
-	if _, exists := c.pending[req.Id]; exists {
-		c.pendingMu.Unlock()
-		return nil, ErrDuplicateRequestID
-	}
-	c.pending[req.Id] = resultCh
-	c.pendingMu.Unlock()
-
-	c.writeMu.Lock()
-	err := WriteRequest(c.rw, req)
-	c.writeMu.Unlock()
-	if err != nil {
-		c.removePending(req.Id)
+	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
-	select {
-	case result := <-resultCh:
-		return result.resp, result.err
-	case <-ctx.Done():
-		c.removePending(req.Id)
-		return nil, ctx.Err()
-	case <-c.closedCh:
-		c.removePending(req.Id)
-		if c.closedErr != nil {
-			return nil, c.closedErr
-		}
+	c.callMu.Lock()
+	defer c.callMu.Unlock()
+	if c.closed.Load() {
 		return nil, ErrClientClosed
 	}
+
+	var deadline time.Time
+	var hasDeadline bool
+	if deadline, hasDeadline = ctx.Deadline(); hasDeadline {
+		// handled below together with cancel-triggered deadline updates
+	}
+	if conn, ok := c.rw.(interface{ SetDeadline(time.Time) error }); ok {
+		if hasDeadline {
+			if err := conn.SetDeadline(deadline); err != nil {
+				return nil, err
+			}
+		}
+		stopCancel := make(chan struct{})
+		defer func() {
+			close(stopCancel)
+			_ = conn.SetDeadline(time.Time{})
+		}()
+		go func() {
+			select {
+			case <-ctx.Done():
+				_ = conn.SetDeadline(time.Now())
+			case <-stopCancel:
+			}
+		}()
+	}
+
+	if err := WriteRequest(c.rw, req); err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if hasDeadline && time.Now().After(deadline) {
+			return nil, context.DeadlineExceeded
+		}
+		return nil, err
+	}
+
+	resp, err := ReadResponse(c.rw)
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
+		}
+		if hasDeadline && time.Now().After(deadline) {
+			return nil, context.DeadlineExceeded
+		}
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (c *Client) Ping(ctx context.Context, id string) (*PingResponse, error) {
@@ -211,65 +218,14 @@ func (c *Client) Ping(ctx context.Context, id string) (*PingResponse, error) {
 }
 
 func (c *Client) Close() error {
-	c.shutdown(ErrClientClosed)
-	if closer, ok := c.rw.(io.Closer); ok {
-		return closer.Close()
-	}
-	return nil
-}
-
-func (c *Client) readLoop() {
-	for {
-		resp, err := ReadResponse(c.rw)
-		if err != nil {
-			c.shutdown(err)
-			return
-		}
-		if resp == nil || resp.Id == "" {
-			continue
-		}
-
-		c.pendingMu.Lock()
-		ch, ok := c.pending[resp.Id]
-		if ok {
-			delete(c.pending, resp.Id)
-		}
-		c.pendingMu.Unlock()
-
-		if ok {
-			ch <- callResult{resp: resp}
-		}
-	}
-}
-
-func (c *Client) removePending(id string) {
-	c.pendingMu.Lock()
-	defer c.pendingMu.Unlock()
-	if c.pending == nil {
-		return
-	}
-	delete(c.pending, id)
-}
-
-func (c *Client) shutdown(err error) {
+	var closeErr error
 	c.closeOnce.Do(func() {
-		if err == nil {
-			err = ErrClientClosed
-		}
-		c.closedErr = err
-
-		c.pendingMu.Lock()
-		pending := c.pending
-		c.pending = nil
-		c.pendingMu.Unlock()
-
-		close(c.closedCh)
-
-		for id, ch := range pending {
-			delete(pending, id)
-			ch <- callResult{err: err}
+		c.closed.Store(true)
+		if closer, ok := c.rw.(io.Closer); ok {
+			closeErr = closer.Close()
 		}
 	})
+	return closeErr
 }
 
 func (s *Server) Serve(rw io.ReadWriter) error {

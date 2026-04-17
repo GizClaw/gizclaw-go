@@ -65,19 +65,19 @@ func TestServerListenAndServeValidatesReceiverAndKeyPair(t *testing.T) {
 	})
 }
 
-func TestServerPublicKeyAndServiceAccessors(t *testing.T) {
+func TestServerPublicKeyAndGearServiceAccessors(t *testing.T) {
 	keyPair, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	service := &Service{}
-	server := &Server{KeyPair: keyPair, service: service}
+	service := &GearService{}
+	server := &Server{KeyPair: keyPair, gearService: service}
 	if got := server.PublicKey(); got != keyPair.Public {
 		t.Fatalf("PublicKey() = %v, want %v", got, keyPair.Public)
 	}
-	if got := server.Service(); got != service {
-		t.Fatalf("Service() = %v, want %v", got, service)
+	if got := server.GearService(); got != service {
+		t.Fatalf("GearService() = %v, want %v", got, service)
 	}
 
 	listenerKey, err := giznet.GenerateKeyPair()

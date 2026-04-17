@@ -1,7 +1,9 @@
 package gizclaw
 
 import (
+	"context"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -9,6 +11,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpc"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -88,22 +91,6 @@ func TestClientProxyHandlerValidation(t *testing.T) {
 	})
 }
 
-func TestClientServePeerPublicValidation(t *testing.T) {
-	t.Run("nil client", func(t *testing.T) {
-		var client *Client
-		if err := client.servePeerPublic(); err == nil || !strings.Contains(err.Error(), "nil client") {
-			t.Fatalf("servePeerPublic(nil) err = %v", err)
-		}
-	})
-
-	t.Run("disconnected client", func(t *testing.T) {
-		client := &Client{}
-		if err := client.servePeerPublic(); err == nil || !strings.Contains(err.Error(), "not connected") {
-			t.Fatalf("servePeerPublic(disconnected) err = %v", err)
-		}
-	})
-}
-
 func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 	client, serverConn, cleanup := newProxyTestPair(t)
 	defer cleanup()
@@ -113,13 +100,15 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 		BuildCommit:     "test-build",
 		ServerPublicKey: "server-pk",
 	}
+	manager := NewManager(gearServer)
 	firmwareServer := &firmware.Server{Store: depotstore.Dir(t.TempDir())}
-	service := &Service{
+	service := &GearService{
+		peerManager: manager,
 		admin: &adminService{
 			FirmwareAdminService: firmwareServer,
 			GearsAdminService:    gearServer,
 		},
-		gear: &gearService{
+		gear: &gearAPIBundle{
 			FirmwareGearService: firmwareServer,
 			GearsGearService:    gearServer,
 		},
@@ -204,8 +193,10 @@ func TestClientAccessorsAndConversions(t *testing.T) {
 		t.Fatal("PeerPublicClient() returned nil client")
 	}
 
-	if _, err := client.RPCClient(); err == nil || !strings.Contains(err.Error(), "not connected") {
-		t.Fatalf("RPCClient() err = %v", err)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if _, err := client.Ping(ctx, "ping"); err == nil || !strings.Contains(err.Error(), "not connected") {
+		t.Fatalf("Ping() err = %v", err)
 	}
 
 	name := "main"
@@ -261,6 +252,70 @@ func TestClientAccessorsAndConversions(t *testing.T) {
 	if label.Key != "batch" || label.Value != "cn-west" {
 		t.Fatalf("gearToPeerGearLabel() = %+v", label)
 	}
+}
+
+func TestClientRPCDispatchAndServeStream(t *testing.T) {
+	t.Run("dispatch missing params", func(t *testing.T) {
+		client := &Client{}
+		resp, err := client.dispatchRPC(context.Background(), &rpc.RPCRequest{
+			Id:     "missing",
+			Method: rpc.MethodPing,
+		})
+		if err != nil {
+			t.Fatalf("dispatchRPC() error = %v", err)
+		}
+		if resp == nil || resp.Error == nil || resp.Error.Code != -32602 {
+			t.Fatalf("dispatchRPC() response = %+v", resp)
+		}
+	})
+
+	t.Run("dispatch unknown method", func(t *testing.T) {
+		client := &Client{}
+		resp, err := client.dispatchRPC(context.Background(), &rpc.RPCRequest{
+			Id:     "unknown",
+			Method: "rpc.unknown",
+		})
+		if err != nil {
+			t.Fatalf("dispatchRPC() error = %v", err)
+		}
+		if resp == nil || resp.Error == nil || !strings.Contains(resp.Error.Message, "unknown method") {
+			t.Fatalf("dispatchRPC() response = %+v", resp)
+		}
+	})
+
+	t.Run("serve rpc stream ping", func(t *testing.T) {
+		serverSide, clientSide := net.Pipe()
+		defer serverSide.Close()
+		defer clientSide.Close()
+
+		errCh := make(chan error, 1)
+		go func() {
+			errCh <- (&Client{}).serveRPCStream(serverSide)
+		}()
+
+		if err := rpc.WriteRequest(clientSide, &rpc.RPCRequest{
+			V:      1,
+			Id:     "ping",
+			Method: rpc.MethodPing,
+			Params: &rpc.PingRequest{ClientSendTime: time.Now().UnixMilli()},
+		}); err != nil {
+			t.Fatalf("WriteRequest() error = %v", err)
+		}
+
+		resp, err := rpc.ReadResponse(clientSide)
+		if err != nil {
+			t.Fatalf("ReadResponse() error = %v", err)
+		}
+		if resp.Error != nil {
+			t.Fatalf("serveRPCStream() response error = %+v", resp.Error)
+		}
+		if resp.Result == nil || resp.Result.ServerTime <= 0 {
+			t.Fatalf("serveRPCStream() response result = %+v", resp.Result)
+		}
+		if err := <-errCh; err != nil {
+			t.Fatalf("serveRPCStream() error = %v", err)
+		}
+	})
 }
 
 func newProxyTestPair(t *testing.T) (*Client, *giznet.Conn, func()) {

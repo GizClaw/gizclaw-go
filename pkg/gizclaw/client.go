@@ -2,12 +2,15 @@ package gizclaw
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
@@ -17,6 +20,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
 	"github.com/gofiber/fiber/v2"
+	"golang.org/x/sync/errgroup"
 )
 
 var _ peerpublic.StrictServerInterface = (*Client)(nil)
@@ -56,7 +60,7 @@ func (c *Client) DialAndServe(serverPK giznet.PublicKey, serverAddr string, opts
 		giznet.WithAllowUnknown(true),
 		giznet.WithServiceMuxConfig(giznet.ServiceMuxConfig{
 			OnNewService: func(_ giznet.PublicKey, service uint64) bool {
-				return service == ServiceServerPublic || service == ServicePeerPublic
+				return service == ServiceServerPublic || service == ServicePeerPublic || service == ServiceRPC
 			},
 		}),
 	}, opts...)
@@ -102,7 +106,11 @@ func (c *Client) DialAndServe(serverPK giznet.PublicKey, serverAddr string, opts
 	c.conn = conn
 	c.mu.Unlock()
 
-	if err := c.servePeerPublic(); err != nil {
+	var g errgroup.Group
+	g.Go(c.servePeerPublic)
+	g.Go(c.serveRPC)
+	g.Go(c.servePackets)
+	if err := g.Wait(); err != nil {
 		_ = c.Close()
 		return err
 	}
@@ -178,8 +186,22 @@ func (c *Client) PeerPublicClient() (*peerpublic.ClientWithResponses, error) {
 	)
 }
 
-// RPCClient opens a JSON-RPC session over the peer RPC service.
-func (c *Client) RPCClient() (*rpc.Client, error) {
+// Ping opens a fresh RPC stream, sends one ping, and closes it.
+//
+// Our current RPC transport uses one KCP stream per round trip so multiple RPC
+// requests can run concurrently on separate streams. This is closer to
+// HTTP/1.0-style request lifecycles; HTTP/1.1-style stream reuse is not
+// supported yet.
+func (c *Client) Ping(ctx context.Context, id string) (*rpc.PingResponse, error) {
+	rpcClient, err := c.rpcClient()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rpcClient.Close() }()
+	return rpcClient.Ping(ctx, id)
+}
+
+func (c *Client) rpcClient() (*rpc.Client, error) {
 	conn := c.PeerConn()
 	if conn == nil {
 		return nil, fmt.Errorf("gizclaw: client is not connected")
@@ -207,17 +229,80 @@ func (c *Client) ServerPublicKey() giznet.PublicKey {
 
 // servePeerPublic runs the device-side peer public HTTP service on ServicePeerPublic.
 func (c *Client) servePeerPublic() error {
-	if c == nil {
-		return fmt.Errorf("gizclaw: nil client")
-	}
-	if c.conn == nil {
-		return fmt.Errorf("gizclaw: client is not connected")
-	}
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	peerpublic.RegisterHandlers(app, peerpublic.NewStrictHandler(c, nil))
 
 	server := gizhttp.NewServer(c.conn, ServicePeerPublic, fiberHTTPHandler(app))
 	return server.Serve()
+}
+
+func (c *Client) serveRPC() error {
+	listener := c.conn.ListenService(ServiceRPC)
+	defer func() {
+		_ = listener.Close()
+	}()
+	for {
+		stream, err := listener.Accept()
+		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return nil
+			}
+			return err
+		}
+
+		go func(stream net.Conn) {
+			if err := c.serveRPCStream(stream); err != nil {
+				_ = stream.Close()
+			}
+		}(stream)
+	}
+}
+
+func (c *Client) serveRPCStream(stream net.Conn) error {
+	req, err := rpc.ReadRequest(stream)
+	if err != nil {
+		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+			return nil
+		}
+		return err
+	}
+
+	resp, err := c.dispatchRPC(context.Background(), req)
+	if err != nil {
+		return err
+	}
+	if resp == nil {
+		resp = &rpc.RPCResponse{V: 1, Id: req.Id}
+	}
+	if resp.Id == "" {
+		resp.Id = req.Id
+	}
+	if resp.V == 0 {
+		resp.V = 1
+	}
+	if err := rpc.WriteResponse(stream, resp); err != nil {
+		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+func (c *Client) dispatchRPC(_ context.Context, req *rpc.RPCRequest) (*rpc.RPCResponse, error) {
+	switch req.Method {
+	case rpc.MethodPing:
+		if req.Params == nil {
+			return rpc.ErrorResponse(req.Id, -32602, "missing params"), nil
+		}
+		return rpc.ResultResponse(req.Id, &rpc.PingResponse{ServerTime: time.Now().UnixMilli()}), nil
+	default:
+		return rpc.ErrorResponse(req.Id, -1, fmt.Sprintf("unknown method: %s", req.Method)), nil
+	}
+}
+
+func (c *Client) servePackets() error {
+	return nil
 }
 
 // ProxyHandler exposes the local reverse-proxy routes for remote server APIs.

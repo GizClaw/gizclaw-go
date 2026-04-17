@@ -14,7 +14,6 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpc"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
@@ -35,7 +34,7 @@ type adminService struct {
 	gear.GearsAdminService
 }
 
-type gearService struct {
+type gearAPIBundle struct {
 	firmware.FirmwareGearService
 	gear.GearsGearService
 }
@@ -45,23 +44,21 @@ type serverPublic struct {
 	gear.GearsServerPublic
 }
 
-// Service serves one peer connection.
-type Service struct {
-	admin  *adminService
-	gear   *gearService
-	public *serverPublic
-	rpc    *rpc.Server
-
-	manager *Manager
+// GearService serves one peer connection.
+type GearService struct {
+	admin       *adminService
+	gear        *gearAPIBundle
+	public      *serverPublic
+	peerManager *Manager
 }
 
 var _ adminservice.StrictServerInterface = (*adminService)(nil)
-var _ gearservice.StrictServerInterface = (*gearService)(nil)
+var _ gearservice.StrictServerInterface = (*gearAPIBundle)(nil)
 var _ serverpublic.StrictServerInterface = (*serverPublic)(nil)
 
-func (s *Service) ServeConn(conn *giznet.Conn) error {
+func (s *GearService) ServeConn(conn *giznet.Conn) error {
 	if s == nil {
-		return errors.New("gizclaw: nil service")
+		return errors.New("gizclaw: nil gear service")
 	}
 	if conn == nil {
 		return errors.New("gizclaw: nil conn")
@@ -79,12 +76,11 @@ func (s *Service) ServeConn(conn *giznet.Conn) error {
 	g.Go(func() error { return s.serveAdmin(conn) })
 	g.Go(func() error { return s.serveGear(conn) })
 	g.Go(func() error { return s.servePublic(conn) })
-	g.Go(func() error { return s.serveRPC(conn) })
 
 	return g.Wait()
 }
 
-func (s *Service) validateServices() error {
+func (s *GearService) validateServices() error {
 	switch {
 	case s.admin == nil:
 		return errors.New("gizclaw: nil admin service")
@@ -92,14 +88,12 @@ func (s *Service) validateServices() error {
 		return errors.New("gizclaw: nil gear service")
 	case s.public == nil:
 		return errors.New("gizclaw: nil public service")
-	case s.rpc == nil:
-		return errors.New("gizclaw: nil rpc server")
 	default:
 		return nil
 	}
 }
 
-func (s *Service) servePublic(conn *giznet.Conn) error {
+func (s *GearService) servePublic(conn *giznet.Conn) error {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	app.Use(func(ctx *fiber.Ctx) error {
 		s.touchPeer(conn)
@@ -119,7 +113,7 @@ func (s *Service) servePublic(conn *giznet.Conn) error {
 	return server.Serve()
 }
 
-func (s *Service) serveAdmin(conn *giznet.Conn) error {
+func (s *GearService) serveAdmin(conn *giznet.Conn) error {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	app.Use(func(ctx *fiber.Ctx) error {
 		s.touchPeer(conn)
@@ -135,7 +129,7 @@ func (s *Service) serveAdmin(conn *giznet.Conn) error {
 	return server.Serve()
 }
 
-func (s *Service) serveGear(conn *giznet.Conn) error {
+func (s *GearService) serveGear(conn *giznet.Conn) error {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	app.Use(func(ctx *fiber.Ctx) error {
 		s.touchPeer(conn)
@@ -149,37 +143,6 @@ func (s *Service) serveGear(conn *giznet.Conn) error {
 		_ = server.Shutdown(context.Background())
 	}()
 	return server.Serve()
-}
-
-func (s *Service) serveRPC(conn *giznet.Conn) error {
-	listener := conn.ListenService(ServiceRPC)
-	defer func() {
-		_ = listener.Close()
-	}()
-	for {
-		stream, err := listener.Accept()
-		if err != nil {
-			if errors.Is(err, net.ErrClosed) {
-				return nil
-			}
-			return err
-		}
-		s.touchPeer(conn)
-
-		go func(stream net.Conn) {
-			defer stream.Close()
-			for {
-				err := s.rpc.Serve(stream)
-				if err == nil {
-					continue
-				}
-				if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
-					return
-				}
-				return
-			}
-		}(stream)
-	}
 }
 
 // fiberHTTPHandler adapts a Fiber app to net/http for gizhttp.NewServer.
@@ -240,23 +203,14 @@ func fiberHTTPHandler(app *fiber.App) http.Handler {
 	})
 }
 
-func (s *Service) markPeerOnline(conn *giznet.Conn) {
-	if s == nil || s.manager == nil || conn == nil {
-		return
-	}
-	s.manager.MarkPeerOnline(conn.PublicKey().String(), conn)
+func (s *GearService) markPeerOnline(conn *giznet.Conn) {
+	s.peerManager.MarkPeerOnline(conn.PublicKey().String(), conn)
 }
 
-func (s *Service) markPeerOffline(conn *giznet.Conn) {
-	if s == nil || s.manager == nil || conn == nil {
-		return
-	}
-	s.manager.MarkPeerOffline(conn.PublicKey().String(), conn)
+func (s *GearService) markPeerOffline(conn *giznet.Conn) {
+	s.peerManager.MarkPeerOffline(conn.PublicKey().String(), conn)
 }
 
-func (s *Service) touchPeer(conn *giznet.Conn) {
-	if s == nil || s.manager == nil || conn == nil {
-		return
-	}
-	s.manager.TouchPeer(conn.PublicKey().String(), conn)
+func (s *GearService) touchPeer(conn *giznet.Conn) {
+	s.peerManager.TouchPeer(conn.PublicKey().String(), conn)
 }

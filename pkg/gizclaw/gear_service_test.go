@@ -46,7 +46,7 @@ func TestPublicFiberAdapterServerInfo(t *testing.T) {
 	}
 }
 
-func TestServicePublicRoundTrip(t *testing.T) {
+func TestGearServicePublicRoundTrip(t *testing.T) {
 	serverKey, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(server) error = %v", err)
@@ -103,12 +103,14 @@ func TestServicePublicRoundTrip(t *testing.T) {
 	}
 	defer serverConn.Close()
 
-	service := &Service{
+	gearsServer := &gear.Server{
+		BuildCommit:     "test-build",
+		ServerPublicKey: serverKey.Public.String(),
+	}
+	service := &GearService{
+		peerManager: NewManager(gearsServer),
 		public: &serverPublic{
-			GearsServerPublic: &gear.Server{
-				BuildCommit:     "test-build",
-				ServerPublicKey: serverKey.Public.String(),
-			},
+			GearsServerPublic: gearsServer,
 		},
 	}
 	serveErrCh := make(chan error, 1)
@@ -138,8 +140,8 @@ func TestServicePublicRoundTrip(t *testing.T) {
 	}
 }
 
-func TestServiceServeConnRequiresHandlers(t *testing.T) {
-	service := &Service{}
+func TestGearServiceServeConnRequiresHandlers(t *testing.T) {
+	service := &GearService{}
 
 	err := service.ServeConn(&giznet.Conn{})
 	if err == nil {
@@ -150,7 +152,7 @@ func TestServiceServeConnRequiresHandlers(t *testing.T) {
 	}
 }
 
-func TestIntegrationServeConnClientCloseUnblocksAndMarksPeerOffline(t *testing.T) {
+func TestIntegrationGearServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t *testing.T) {
 	const closeTimeout = 2 * time.Second
 
 	serverKey, err := giznet.GenerateKeyPair()
@@ -229,7 +231,7 @@ func TestIntegrationServeConnClientCloseUnblocksAndMarksPeerOffline(t *testing.T
 
 	serveErrCh := make(chan error, 1)
 	go func() {
-		serveErrCh <- server.service.ServeConn(serverConn)
+		serveErrCh <- server.gearService.ServeConn(serverConn)
 	}()
 
 	client := &http.Client{

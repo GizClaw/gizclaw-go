@@ -22,17 +22,11 @@ func NewCmd() *cobra.Command {
 			}
 			defer c.Close()
 
-			rpcClient, err := c.RPCClient()
-			if err != nil {
-				return err
-			}
-			defer func() { _ = rpcClient.Close() }()
-
 			t1 := time.Now()
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 
-			ping, err := rpcClient.Ping(ctx, "ping")
+			ping, err := c.Ping(ctx, "ping")
 			if err != nil {
 				return err
 			}
