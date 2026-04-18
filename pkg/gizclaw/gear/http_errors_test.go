@@ -3,6 +3,9 @@ package gear
 import (
 	"testing"
 
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/gofiber/fiber/v2"
 	"github.com/valyala/fasthttp"
 )
@@ -34,27 +37,33 @@ func TestHTTPErrorHelpersAndVisitors(t *testing.T) {
 	}
 
 	checkStatus("get-gear-config", func(c *fiber.Ctx) error {
-		return getGearConfig500JSONResponse(gearError("ERR", "boom")).VisitGetGearConfigResponse(c)
+		return getGearConfig500JSONResponse(adminError("ERR", "boom")).VisitGetGearConfigResponse(c)
 	})
 	checkStatus("put-gear-config", func(c *fiber.Ctx) error {
-		return putGearConfig500JSONResponse(gearError("ERR", "boom")).VisitPutGearConfigResponse(c)
+		return putGearConfig500JSONResponse(adminError("ERR", "boom")).VisitPutGearConfigResponse(c)
 	})
 	checkStatus("get-gear-info", func(c *fiber.Ctx) error {
-		return getGearInfo500JSONResponse(gearError("ERR", "boom")).VisitGetGearInfoResponse(c)
+		return getGearInfo500JSONResponse(adminError("ERR", "boom")).VisitGetGearInfoResponse(c)
 	})
 	checkStatus("refresh-gear", func(c *fiber.Ctx) error {
-		return refreshGear500JSONResponse(gearError("ERR", "boom")).VisitRefreshGearResponse(c)
+		return refreshGear500JSONResponse(adminError("ERR", "boom")).VisitRefreshGearResponse(c)
 	})
 	checkStatus("get-config", func(c *fiber.Ctx) error {
-		return getConfig500JSONResponse(publicError("ERR", "boom")).VisitGetConfigResponse(c)
+		return getConfig500JSONResponse(gearError("ERR", "boom")).VisitGetConfigResponse(c)
 	})
 	checkStatus("get-info", func(c *fiber.Ctx) error {
-		return getInfo500JSONResponse(publicError("ERR", "boom")).VisitGetInfoResponse(c)
+		return getInfo500JSONResponse(gearError("ERR", "boom")).VisitGetInfoResponse(c)
 	})
 	checkStatus("put-info", func(c *fiber.Ctx) error {
-		return putInfo500JSONResponse(publicError("ERR", "boom")).VisitPutInfoResponse(c)
+		return putInfo500JSONResponse(gearError("ERR", "boom")).VisitPutInfoResponse(c)
 	})
 	checkStatus("register-gear", func(c *fiber.Ctx) error {
 		return registerGear500JSONResponse(publicError("ERR", "boom")).VisitRegisterGearResponse(c)
 	})
+
+	var (
+		_ adminservice.ErrorResponse
+		_ gearservice.ErrorResponse
+		_ serverpublic.ErrorResponse
+	)
 }

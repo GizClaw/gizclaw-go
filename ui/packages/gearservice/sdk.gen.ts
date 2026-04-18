@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApproveGearData, ApproveGearErrors, ApproveGearResponses, BlockGearData, BlockGearErrors, BlockGearResponses, DeleteGearData, DeleteGearErrors, DeleteGearResponses, GetGearConfigData, GetGearConfigErrors, GetGearConfigResponses, GetGearData, GetGearErrors, GetGearInfoData, GetGearInfoErrors, GetGearInfoResponses, GetGearOtaData, GetGearOtaErrors, GetGearOtaResponses, GetGearResponses, GetGearRuntimeData, GetGearRuntimeResponses, ListByCertificationData, ListByCertificationErrors, ListByCertificationResponses, ListByFirmwareData, ListByFirmwareErrors, ListByFirmwareResponses, ListByLabelData, ListByLabelErrors, ListByLabelResponses, ListGearsData, ListGearsErrors, ListGearsResponses, PutGearConfigData, PutGearConfigErrors, PutGearConfigResponses, RefreshGearData, RefreshGearErrors, RefreshGearResponses, ResolveByImeiData, ResolveByImeiErrors, ResolveByImeiResponses, ResolveBySnData, ResolveBySnErrors, ResolveBySnResponses } from './types.gen';
+import type { DownloadFirmwareData, DownloadFirmwareErrors, DownloadFirmwareResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetInfoData, GetInfoErrors, GetInfoResponses, GetOtaData, GetOtaErrors, GetOtaResponses, GetRegistrationData, GetRegistrationErrors, GetRegistrationResponses, GetRuntimeData, GetRuntimeErrors, GetRuntimeResponses, PutInfoData, PutInfoErrors, PutInfoResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -19,95 +19,43 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
- * List all gears
+ * Get device info
  */
-export const listGears = <ThrowOnError extends boolean = false>(options?: Options<ListGearsData, ThrowOnError>) => (options?.client ?? client).get<ListGearsResponses, ListGearsErrors, ThrowOnError>({ url: '/gears', ...options });
+export const getInfo = <ThrowOnError extends boolean = false>(options?: Options<GetInfoData, ThrowOnError>) => (options?.client ?? client).get<GetInfoResponses, GetInfoErrors, ThrowOnError>({ url: '/info', ...options });
 
 /**
- * Resolve gear public key by serial number
+ * Update device info
  */
-export const resolveBySn = <ThrowOnError extends boolean = false>(options: Options<ResolveBySnData, ThrowOnError>) => (options.client ?? client).get<ResolveBySnResponses, ResolveBySnErrors, ThrowOnError>({ url: '/gears/sn/{sn}', ...options });
-
-/**
- * Resolve gear public key by IMEI
- */
-export const resolveByImei = <ThrowOnError extends boolean = false>(options: Options<ResolveByImeiData, ThrowOnError>) => (options.client ?? client).get<ResolveByImeiResponses, ResolveByImeiErrors, ThrowOnError>({ url: '/gears/imei/{tac}/{serial}', ...options });
-
-/**
- * List gears by label
- */
-export const listByLabel = <ThrowOnError extends boolean = false>(options: Options<ListByLabelData, ThrowOnError>) => (options.client ?? client).get<ListByLabelResponses, ListByLabelErrors, ThrowOnError>({ url: '/gears/label/{key}/{value}', ...options });
-
-/**
- * List gears by certification
- */
-export const listByCertification = <ThrowOnError extends boolean = false>(options: Options<ListByCertificationData, ThrowOnError>) => (options.client ?? client).get<ListByCertificationResponses, ListByCertificationErrors, ThrowOnError>({ url: '/gears/certification/{type}/{authority}/{id}', ...options });
-
-/**
- * List gears by firmware depot and channel
- */
-export const listByFirmware = <ThrowOnError extends boolean = false>(options: Options<ListByFirmwareData, ThrowOnError>) => (options.client ?? client).get<ListByFirmwareResponses, ListByFirmwareErrors, ThrowOnError>({ url: '/gears/firmware/{depot}/{channel}', ...options });
-
-/**
- * Delete a gear
- */
-export const deleteGear = <ThrowOnError extends boolean = false>(options: Options<DeleteGearData, ThrowOnError>) => (options.client ?? client).delete<DeleteGearResponses, DeleteGearErrors, ThrowOnError>({ url: '/gears/{publicKey}', ...options });
+export const putInfo = <ThrowOnError extends boolean = false>(options: Options<PutInfoData, ThrowOnError>) => (options.client ?? client).put<PutInfoResponses, PutInfoErrors, ThrowOnError>({
+    url: '/info',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Get gear registration
  */
-export const getGear = <ThrowOnError extends boolean = false>(options: Options<GetGearData, ThrowOnError>) => (options.client ?? client).get<GetGearResponses, GetGearErrors, ThrowOnError>({ url: '/gears/{publicKey}', ...options });
+export const getRegistration = <ThrowOnError extends boolean = false>(options?: Options<GetRegistrationData, ThrowOnError>) => (options?.client ?? client).get<GetRegistrationResponses, GetRegistrationErrors, ThrowOnError>({ url: '/registration', ...options });
 
 /**
- * Approve a gear with a given role
+ * Get runtime status
  */
-export const approveGear = <ThrowOnError extends boolean = false>(options: Options<ApproveGearData, ThrowOnError>) => (options.client ?? client).post<ApproveGearResponses, ApproveGearErrors, ThrowOnError>({
-    url: '/gears/{publicKey}/@approve',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
+export const getRuntime = <ThrowOnError extends boolean = false>(options?: Options<GetRuntimeData, ThrowOnError>) => (options?.client ?? client).get<GetRuntimeResponses, GetRuntimeErrors, ThrowOnError>({ url: '/runtime', ...options });
 
 /**
- * Block a gear
+ * Get configuration
  */
-export const blockGear = <ThrowOnError extends boolean = false>(options: Options<BlockGearData, ThrowOnError>) => (options.client ?? client).post<BlockGearResponses, BlockGearErrors, ThrowOnError>({ url: '/gears/{publicKey}/@block', ...options });
+export const getConfig = <ThrowOnError extends boolean = false>(options?: Options<GetConfigData, ThrowOnError>) => (options?.client ?? client).get<GetConfigResponses, GetConfigErrors, ThrowOnError>({ url: '/config', ...options });
 
 /**
- * Refresh gear info from connected device
+ * Get OTA summary
  */
-export const refreshGear = <ThrowOnError extends boolean = false>(options: Options<RefreshGearData, ThrowOnError>) => (options.client ?? client).post<RefreshGearResponses, RefreshGearErrors, ThrowOnError>({ url: '/gears/{publicKey}/@refresh', ...options });
+export const getOta = <ThrowOnError extends boolean = false>(options?: Options<GetOtaData, ThrowOnError>) => (options?.client ?? client).get<GetOtaResponses, GetOtaErrors, ThrowOnError>({ url: '/ota', ...options });
 
 /**
- * Get gear device info
+ * Download a firmware file
  */
-export const getGearInfo = <ThrowOnError extends boolean = false>(options: Options<GetGearInfoData, ThrowOnError>) => (options.client ?? client).get<GetGearInfoResponses, GetGearInfoErrors, ThrowOnError>({ url: '/gears/{publicKey}/info', ...options });
-
-/**
- * Get gear configuration
- */
-export const getGearConfig = <ThrowOnError extends boolean = false>(options: Options<GetGearConfigData, ThrowOnError>) => (options.client ?? client).get<GetGearConfigResponses, GetGearConfigErrors, ThrowOnError>({ url: '/gears/{publicKey}/config', ...options });
-
-/**
- * Update gear configuration
- */
-export const putGearConfig = <ThrowOnError extends boolean = false>(options: Options<PutGearConfigData, ThrowOnError>) => (options.client ?? client).put<PutGearConfigResponses, PutGearConfigErrors, ThrowOnError>({
-    url: '/gears/{publicKey}/config',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Get gear runtime status
- */
-export const getGearRuntime = <ThrowOnError extends boolean = false>(options: Options<GetGearRuntimeData, ThrowOnError>) => (options.client ?? client).get<GetGearRuntimeResponses, unknown, ThrowOnError>({ url: '/gears/{publicKey}/runtime', ...options });
-
-/**
- * Get gear OTA firmware summary
- */
-export const getGearOta = <ThrowOnError extends boolean = false>(options: Options<GetGearOtaData, ThrowOnError>) => (options.client ?? client).get<GetGearOtaResponses, GetGearOtaErrors, ThrowOnError>({ url: '/gears/{publicKey}/ota', ...options });
+export const downloadFirmware = <ThrowOnError extends boolean = false>(options: Options<DownloadFirmwareData, ThrowOnError>) => (options.client ?? client).get<DownloadFirmwareResponses, DownloadFirmwareErrors, ThrowOnError>({ url: '/download/firmware/{path}', ...options });

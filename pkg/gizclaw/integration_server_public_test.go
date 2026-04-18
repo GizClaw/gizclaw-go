@@ -54,17 +54,17 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetRegistration error: %v", err)
 	}
-	if registration.Role != serverpublic.GearRoleDevice {
+	if registration.Role != gearservice.GearRoleDevice {
 		t.Fatalf("role = %q", registration.Role)
 	}
 
 	if _, err := getServerInfo(context.Background(), device); err != nil {
 		t.Fatalf("GetServerInfo error: %v", err)
 	}
-	if _, err := putInfo(context.Background(), device, serverpublic.DeviceInfo{
+	if _, err := putInfo(context.Background(), device, gearservice.DeviceInfo{
 		Name: strPtr("demo-device-2"),
 		Sn:   strPtr("sn-002"),
-		Hardware: &serverpublic.HardwareInfo{
+		Hardware: &gearservice.HardwareInfo{
 			Depot: strPtr("demo-main"),
 		},
 	}); err != nil {
@@ -105,9 +105,9 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	if _, err := uploadFirmware(context.Background(), admin, "demo-main", adminservice.Channel("stable"), tarData); err != nil {
 		t.Fatalf("UploadFirmware error: %v", err)
 	}
-	if _, err := putGearConfig(context.Background(), admin, result.Gear.PublicKey, gearservice.Configuration{
-		Firmware: &gearservice.FirmwareConfig{Channel: func() *gearservice.GearFirmwareChannel {
-			ch := gearservice.GearFirmwareChannel("stable")
+	if _, err := putGearConfig(context.Background(), admin, result.Gear.PublicKey, adminservice.Configuration{
+		Firmware: &adminservice.FirmwareConfig{Channel: func() *adminservice.GearFirmwareChannel {
+			ch := adminservice.GearFirmwareChannel("stable")
 			return &ch
 		}()},
 	}); err != nil {

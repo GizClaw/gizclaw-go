@@ -2,6 +2,7 @@ package firmware
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -12,7 +13,6 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/gofiber/fiber/v2"
 )
@@ -27,6 +27,18 @@ type Server struct {
 	depotMu map[string]*sync.Mutex
 }
 
+func convertViaJSON[T any](in any) (T, error) {
+	var out T
+	data, err := json.Marshal(in)
+	if err != nil {
+		return out, err
+	}
+	if err := json.Unmarshal(data, &out); err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
 type FirmwareAdminService interface {
 	ListDepots(context.Context, adminservice.ListDepotsRequestObject) (adminservice.ListDepotsResponseObject, error)
 	GetDepot(context.Context, adminservice.GetDepotRequestObject) (adminservice.GetDepotResponseObject, error)
@@ -35,16 +47,15 @@ type FirmwareAdminService interface {
 	PutChannel(context.Context, adminservice.PutChannelRequestObject) (adminservice.PutChannelResponseObject, error)
 	ReleaseDepot(context.Context, adminservice.ReleaseDepotRequestObject) (adminservice.ReleaseDepotResponseObject, error)
 	RollbackDepot(context.Context, adminservice.RollbackDepotRequestObject) (adminservice.RollbackDepotResponseObject, error)
+	GetGearOTA(context.Context, adminservice.GetGearOTARequestObject) (adminservice.GetGearOTAResponseObject, error)
 }
 
 type FirmwareGearService interface {
-	GetGearOTA(context.Context, gearservice.GetGearOTARequestObject) (gearservice.GetGearOTAResponseObject, error)
+	GetOTA(context.Context, gearservice.GetOTARequestObject) (gearservice.GetOTAResponseObject, error)
+	DownloadFirmware(context.Context, gearservice.DownloadFirmwareRequestObject) (gearservice.DownloadFirmwareResponseObject, error)
 }
 
-type FirmwareServerPublic interface {
-	GetOTA(context.Context, serverpublic.GetOTARequestObject) (serverpublic.GetOTAResponseObject, error)
-	DownloadFirmware(context.Context, serverpublic.DownloadFirmwareRequestObject) (serverpublic.DownloadFirmwareResponseObject, error)
-}
+type FirmwareServerPublic interface{}
 
 var _ FirmwareAdminService = (*Server)(nil)
 var _ FirmwareGearService = (*Server)(nil)
@@ -189,11 +200,11 @@ func (s *Server) RollbackDepot(_ context.Context, request adminservice.RollbackD
 	return adminservice.RollbackDepot200JSONResponse(depot), nil
 }
 
-// GetGearOTA implements `gearservice.StrictServerInterface.GetGearOTA`.
+// GetGearOTA implements `adminservice.StrictServerInterface.GetGearOTA`.
 // OTA is colocated here because firmware storage owns the underlying data.
-func (s *Server) GetGearOTA(ctx context.Context, request gearservice.GetGearOTARequestObject) (gearservice.GetGearOTAResponseObject, error) {
+func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTARequestObject) (adminservice.GetGearOTAResponseObject, error) {
 	if s.ResolveGearTarget == nil {
-		return gearservice.GetGearOTA404JSONResponse(gearError("OTA_NOT_AVAILABLE", "gear target resolver not configured")), nil
+		return adminservice.GetGearOTA404JSONResponse(adminError("OTA_NOT_AVAILABLE", "gear target resolver not configured")), nil
 	}
 	publicKey, err := url.PathUnescape(string(request.PublicKey))
 	if err != nil {
@@ -204,50 +215,54 @@ func (s *Server) GetGearOTA(ctx context.Context, request gearservice.GetGearOTAR
 		if err == nil {
 			err = fmt.Errorf("missing depot or channel")
 		}
-		return gearservice.GetGearOTA404JSONResponse(gearError("OTA_NOT_AVAILABLE", err.Error())), nil
+		return adminservice.GetGearOTA404JSONResponse(adminError("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
 	ota, err := s.resolveOTA(depotName, channel)
 	if err != nil {
-		return gearservice.GetGearOTA404JSONResponse(gearError("FIRMWARE_NOT_FOUND", err.Error())), nil
+		return adminservice.GetGearOTA404JSONResponse(adminError("FIRMWARE_NOT_FOUND", err.Error())), nil
 	}
-	return gearservice.GetGearOTA200JSONResponse(ota), nil
+	out, err := convertViaJSON[adminservice.OTASummary](ota)
+	if err != nil {
+		return getGearOTA500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.GetGearOTA200JSONResponse(out), nil
 }
 
-// GetOTA implements `serverpublic.StrictServerInterface.GetOTA`.
-func (s *Server) GetOTA(ctx context.Context, _ serverpublic.GetOTARequestObject) (serverpublic.GetOTAResponseObject, error) {
+// GetOTA implements `gearservice.StrictServerInterface.GetOTA`.
+func (s *Server) GetOTA(ctx context.Context, _ gearservice.GetOTARequestObject) (gearservice.GetOTAResponseObject, error) {
 	depotName, channel, err := s.resolveCallerTarget(ctx)
 	if err != nil {
-		return serverpublic.GetOTA404JSONResponse(publicError("OTA_NOT_AVAILABLE", err.Error())), nil
+		return gearservice.GetOTA404JSONResponse(gearError("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
 	ota, err := s.resolveOTA(depotName, channel)
 	if err != nil {
-		return serverpublic.GetOTA404JSONResponse(publicError("FIRMWARE_NOT_FOUND", err.Error())), nil
+		return gearservice.GetOTA404JSONResponse(gearError("FIRMWARE_NOT_FOUND", err.Error())), nil
 	}
-	return serverpublic.GetOTA200JSONResponse(toPublicOTASummary(ota)), nil
+	return gearservice.GetOTA200JSONResponse(ota), nil
 }
 
-// DownloadFirmware implements `serverpublic.StrictServerInterface.DownloadFirmware`.
-func (s *Server) DownloadFirmware(ctx context.Context, request serverpublic.DownloadFirmwareRequestObject) (serverpublic.DownloadFirmwareResponseObject, error) {
+// DownloadFirmware implements `gearservice.StrictServerInterface.DownloadFirmware`.
+func (s *Server) DownloadFirmware(ctx context.Context, request gearservice.DownloadFirmwareRequestObject) (gearservice.DownloadFirmwareResponseObject, error) {
 	depotName, channel, err := s.resolveCallerTarget(ctx)
 	if err != nil {
-		return serverpublic.DownloadFirmware404JSONResponse(publicError("OTA_NOT_AVAILABLE", err.Error())), nil
+		return gearservice.DownloadFirmware404JSONResponse(gearError("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
 	filePath, err := url.PathUnescape(request.Path)
 	if err != nil {
-		return serverpublic.DownloadFirmware400JSONResponse(publicError("INVALID_PARAMS", err.Error())), nil
+		return gearservice.DownloadFirmware400JSONResponse(gearError("INVALID_PARAMS", err.Error())), nil
 	}
 	body, contentLength, headers, err := s.resolveOTAFile(depotName, channel, filePath)
 	if err != nil {
 		switch {
 		case errors.Is(err, errInvalidPath):
-			return serverpublic.DownloadFirmware400JSONResponse(publicError("INVALID_PARAMS", err.Error())), nil
+			return gearservice.DownloadFirmware400JSONResponse(gearError("INVALID_PARAMS", err.Error())), nil
 		case errors.Is(err, errFirmwareNotFound), errors.Is(err, errDepotNotFound), errors.Is(err, errChannelNotFound):
-			return serverpublic.DownloadFirmware404JSONResponse(publicError("FIRMWARE_FILE_NOT_FOUND", err.Error())), nil
+			return gearservice.DownloadFirmware404JSONResponse(gearError("FIRMWARE_FILE_NOT_FOUND", err.Error())), nil
 		default:
-			return downloadFirmware500JSONResponse(publicError("INTERNAL_ERROR", err.Error())), nil
+			return downloadFirmware500JSONResponse(gearError("INTERNAL_ERROR", err.Error())), nil
 		}
 	}
-	return serverpublic.DownloadFirmware200ApplicationoctetStreamResponse{
+	return gearservice.DownloadFirmware200ApplicationoctetStreamResponse{
 		Body:          body,
 		Headers:       headers,
 		ContentLength: contentLength,
@@ -258,7 +273,7 @@ func (s *Server) resolveCallerTarget(ctx context.Context) (string, Channel, erro
 	if s.ResolveGearTarget == nil {
 		return "", "", fmt.Errorf("gear target resolver not configured")
 	}
-	publicKey := serverpublic.CallerPublicKey(ctx)
+	publicKey := gearservice.CallerPublicKey(ctx)
 	if publicKey == "" {
 		return "", "", fmt.Errorf("caller public key not configured")
 	}
@@ -272,25 +287,25 @@ func (s *Server) resolveCallerTarget(ctx context.Context) (string, Channel, erro
 	return depotName, channel, nil
 }
 
-func (s *Server) resolveOTAFile(depotName string, channel Channel, relativePath string) (io.Reader, int64, serverpublic.DownloadFirmware200ResponseHeaders, error) {
+func (s *Server) resolveOTAFile(depotName string, channel Channel, relativePath string) (io.Reader, int64, gearservice.DownloadFirmware200ResponseHeaders, error) {
 	if err := validateRelativePath(relativePath); err != nil {
-		return nil, 0, serverpublic.DownloadFirmware200ResponseHeaders{}, err
+		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, err
 	}
 	depot, err := s.scanDepot(depotName)
 	if err != nil {
-		return nil, 0, serverpublic.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
+		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
 	}
 	release, ok := depotRelease(depot, channel)
 	if !ok {
-		return nil, 0, serverpublic.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
+		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
 	}
-	var headers serverpublic.DownloadFirmware200ResponseHeaders
+	var headers gearservice.DownloadFirmware200ResponseHeaders
 	found := false
 	for _, file := range releaseFiles(release) {
 		if file.Path != relativePath {
 			continue
 		}
-		headers = serverpublic.DownloadFirmware200ResponseHeaders{
+		headers = gearservice.DownloadFirmware200ResponseHeaders{
 			XChecksumMD5:    file.Md5,
 			XChecksumSHA256: file.Sha256,
 		}
@@ -298,40 +313,23 @@ func (s *Server) resolveOTAFile(depotName string, channel Channel, relativePath 
 		break
 	}
 	if !found {
-		return nil, 0, serverpublic.DownloadFirmware200ResponseHeaders{}, fmt.Errorf("%w: %s", errFirmwareNotFound, relativePath)
+		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, fmt.Errorf("%w: %s", errFirmwareNotFound, relativePath)
 	}
 
 	fullPath := path.Join(s.channelPath(depotName, string(channel)), relativePath)
 	file, err := s.store().Open(fullPath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, 0, serverpublic.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
+			return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
 		}
-		return nil, 0, serverpublic.DownloadFirmware200ResponseHeaders{}, err
+		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, err
 	}
 	info, err := file.Stat()
 	if err != nil {
 		_ = file.Close()
-		return nil, 0, serverpublic.DownloadFirmware200ResponseHeaders{}, err
+		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, err
 	}
 	return file, info.Size(), headers, nil
-}
-
-func toPublicOTASummary(in gearservice.OTASummary) serverpublic.OTASummary {
-	files := make([]serverpublic.DepotFile, 0, len(in.Files))
-	for _, file := range in.Files {
-		files = append(files, serverpublic.DepotFile{
-			Md5:    file.Md5,
-			Path:   file.Path,
-			Sha256: file.Sha256,
-		})
-	}
-	return serverpublic.OTASummary{
-		Channel:        in.Channel,
-		Depot:          in.Depot,
-		Files:          files,
-		FirmwareSemver: in.FirmwareSemver,
-	}
 }
 
 func adminError(code, message string) adminservice.ErrorResponse {
@@ -342,11 +340,15 @@ func gearError(code, message string) gearservice.ErrorResponse {
 	return gearservice.ErrorResponse{Error: gearservice.ErrorPayload{Code: code, Message: message}}
 }
 
-func publicError(code, message string) serverpublic.ErrorResponse {
-	return serverpublic.ErrorResponse{Error: serverpublic.ErrorPayload{Code: code, Message: message}}
+type getGearOTA500JSONResponse adminservice.ErrorResponse
+
+func (response getGearOTA500JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+	return ctx.JSON(&response)
 }
 
-type downloadFirmware500JSONResponse serverpublic.ErrorResponse
+type downloadFirmware500JSONResponse gearservice.ErrorResponse
 
 func (response downloadFirmware500JSONResponse) VisitDownloadFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")

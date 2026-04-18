@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -55,13 +56,13 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("RegisterGear error: %v", err)
 	}
 
-	getResp, err := server.GetGear(ctx, gearservice.GetGearRequestObject{
-		PublicKey: gearservice.PublicKey("peer-gear"),
+	getResp, err := server.GetGear(ctx, adminservice.GetGearRequestObject{
+		PublicKey: adminservice.PublicKey("peer-gear"),
 	})
 	if err != nil {
 		t.Fatalf("GetGear error: %v", err)
 	}
-	getRegistered, ok := getResp.(gearservice.GetGear200JSONResponse)
+	getRegistered, ok := getResp.(adminservice.GetGear200JSONResponse)
 	if !ok {
 		t.Fatalf("GetGear response type = %T", getResp)
 	}
@@ -69,11 +70,11 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("GetGear = %+v", getRegistered)
 	}
 
-	listResp, err := server.ListGears(ctx, gearservice.ListGearsRequestObject{})
+	listResp, err := server.ListGears(ctx, adminservice.ListGearsRequestObject{})
 	if err != nil {
 		t.Fatalf("ListGears error: %v", err)
 	}
-	listed, ok := listResp.(gearservice.ListGears200JSONResponse)
+	listed, ok := listResp.(adminservice.ListGears200JSONResponse)
 	if !ok {
 		t.Fatalf("ListGears response type = %T", listResp)
 	}
@@ -82,31 +83,32 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	stable := gearservice.GearFirmwareChannel("stable")
-	putConfigResp, err := server.PutGearConfig(ctx, gearservice.PutGearConfigRequestObject{
-		PublicKey: gearservice.PublicKey("peer-gear"),
-		Body: &gearservice.PutGearConfigJSONRequestBody{
-			Certifications: &[]gearservice.GearCertification{{
-				Type:      gearservice.GearCertificationType("license"),
-				Authority: gearservice.GearCertificationAuthority("ce"),
+	adminStable := adminservice.GearFirmwareChannel(stable)
+	putConfigResp, err := server.PutGearConfig(ctx, adminservice.PutGearConfigRequestObject{
+		PublicKey: adminservice.PublicKey("peer-gear"),
+		Body: &adminservice.PutGearConfigJSONRequestBody{
+			Certifications: &[]adminservice.GearCertification{{
+				Type:      adminservice.GearCertificationType("license"),
+				Authority: adminservice.GearCertificationAuthority("ce"),
 				Id:        certID,
 			}},
-			Firmware: &gearservice.FirmwareConfig{Channel: &stable},
+			Firmware: &adminservice.FirmwareConfig{Channel: &adminStable},
 		},
 	})
 	if err != nil {
 		t.Fatalf("PutGearConfig error: %v", err)
 	}
-	if _, ok := putConfigResp.(gearservice.PutGearConfig200JSONResponse); !ok {
+	if _, ok := putConfigResp.(adminservice.PutGearConfig200JSONResponse); !ok {
 		t.Fatalf("PutGearConfig response type = %T", putConfigResp)
 	}
 
-	getConfigResp, err := server.GetGearConfig(ctx, gearservice.GetGearConfigRequestObject{
-		PublicKey: gearservice.PublicKey("peer-gear"),
+	getConfigResp, err := server.GetGearConfig(ctx, adminservice.GetGearConfigRequestObject{
+		PublicKey: adminservice.PublicKey("peer-gear"),
 	})
 	if err != nil {
 		t.Fatalf("GetGearConfig error: %v", err)
 	}
-	cfg, ok := getConfigResp.(gearservice.GetGearConfig200JSONResponse)
+	cfg, ok := getConfigResp.(adminservice.GetGearConfig200JSONResponse)
 	if !ok {
 		t.Fatalf("GetGearConfig response type = %T", getConfigResp)
 	}
@@ -114,13 +116,13 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("GetGearConfig = %+v", cfg)
 	}
 
-	getInfoResp, err := server.GetGearInfo(ctx, gearservice.GetGearInfoRequestObject{
-		PublicKey: gearservice.PublicKey("peer-gear"),
+	getInfoResp, err := server.GetGearInfo(ctx, adminservice.GetGearInfoRequestObject{
+		PublicKey: adminservice.PublicKey("peer-gear"),
 	})
 	if err != nil {
 		t.Fatalf("GetGearInfo error: %v", err)
 	}
-	info, ok := getInfoResp.(gearservice.GetGearInfo200JSONResponse)
+	info, ok := getInfoResp.(adminservice.GetGearInfo200JSONResponse)
 	if !ok {
 		t.Fatalf("GetGearInfo response type = %T", getInfoResp)
 	}
@@ -128,14 +130,14 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("GetGearInfo = %+v", info)
 	}
 
-	byFirmwareResp, err := server.ListByFirmware(ctx, gearservice.ListByFirmwareRequestObject{
+	byFirmwareResp, err := server.ListByFirmware(ctx, adminservice.ListByFirmwareRequestObject{
 		Depot:   depot,
-		Channel: stable,
+		Channel: adminservice.GearFirmwareChannel(stable),
 	})
 	if err != nil {
 		t.Fatalf("ListByFirmware error: %v", err)
 	}
-	byFirmware, ok := byFirmwareResp.(gearservice.ListByFirmware200JSONResponse)
+	byFirmware, ok := byFirmwareResp.(adminservice.ListByFirmware200JSONResponse)
 	if !ok {
 		t.Fatalf("ListByFirmware response type = %T", byFirmwareResp)
 	}
@@ -143,11 +145,11 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("ListByFirmware items = %+v", byFirmware.Items)
 	}
 
-	resolveSNResp, err := server.ResolveBySN(ctx, gearservice.ResolveBySNRequestObject{Sn: sn})
+	resolveSNResp, err := server.ResolveBySN(ctx, adminservice.ResolveBySNRequestObject{Sn: sn})
 	if err != nil {
 		t.Fatalf("ResolveBySN error: %v", err)
 	}
-	resolvedSN, ok := resolveSNResp.(gearservice.ResolveBySN200JSONResponse)
+	resolvedSN, ok := resolveSNResp.(adminservice.ResolveBySN200JSONResponse)
 	if !ok {
 		t.Fatalf("ResolveBySN response type = %T", resolveSNResp)
 	}
@@ -155,11 +157,11 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("ResolveBySN = %+v", resolvedSN)
 	}
 
-	byLabelResp, err := server.ListByLabel(ctx, gearservice.ListByLabelRequestObject{Key: labelKey, Value: labelValue})
+	byLabelResp, err := server.ListByLabel(ctx, adminservice.ListByLabelRequestObject{Key: labelKey, Value: labelValue})
 	if err != nil {
 		t.Fatalf("ListByLabel error: %v", err)
 	}
-	byLabel, ok := byLabelResp.(gearservice.ListByLabel200JSONResponse)
+	byLabel, ok := byLabelResp.(adminservice.ListByLabel200JSONResponse)
 	if !ok {
 		t.Fatalf("ListByLabel response type = %T", byLabelResp)
 	}
@@ -167,14 +169,14 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("ListByLabel items = %+v", byLabel.Items)
 	}
 
-	resolveIMEIResp, err := server.ResolveByIMEI(ctx, gearservice.ResolveByIMEIRequestObject{
+	resolveIMEIResp, err := server.ResolveByIMEI(ctx, adminservice.ResolveByIMEIRequestObject{
 		Tac:    tac,
 		Serial: serial,
 	})
 	if err != nil {
 		t.Fatalf("ResolveByIMEI error: %v", err)
 	}
-	resolvedIMEI, ok := resolveIMEIResp.(gearservice.ResolveByIMEI200JSONResponse)
+	resolvedIMEI, ok := resolveIMEIResp.(adminservice.ResolveByIMEI200JSONResponse)
 	if !ok {
 		t.Fatalf("ResolveByIMEI response type = %T", resolveIMEIResp)
 	}
@@ -182,15 +184,15 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("ResolveByIMEI = %+v", resolvedIMEI)
 	}
 
-	byCertificationResp, err := server.ListByCertification(ctx, gearservice.ListByCertificationRequestObject{
-		Type:      gearservice.GearCertificationType("license"),
-		Authority: gearservice.GearCertificationAuthority("ce"),
+	byCertificationResp, err := server.ListByCertification(ctx, adminservice.ListByCertificationRequestObject{
+		Type:      adminservice.GearCertificationType("license"),
+		Authority: adminservice.GearCertificationAuthority("ce"),
 		Id:        certID,
 	})
 	if err != nil {
 		t.Fatalf("ListByCertification error: %v", err)
 	}
-	byCertification, ok := byCertificationResp.(gearservice.ListByCertification200JSONResponse)
+	byCertification, ok := byCertificationResp.(adminservice.ListByCertification200JSONResponse)
 	if !ok {
 		t.Fatalf("ListByCertification response type = %T", byCertificationResp)
 	}
@@ -198,46 +200,46 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("ListByCertification items = %+v", byCertification.Items)
 	}
 
-	approveResp, err := server.ApproveGear(ctx, gearservice.ApproveGearRequestObject{
-		PublicKey: gearservice.PublicKey("peer-gear"),
-		Body:      &gearservice.ApproveGearJSONRequestBody{Role: gearservice.GearRoleDevice},
+	approveResp, err := server.ApproveGear(ctx, adminservice.ApproveGearRequestObject{
+		PublicKey: adminservice.PublicKey("peer-gear"),
+		Body:      &adminservice.ApproveGearJSONRequestBody{Role: adminservice.GearRoleDevice},
 	})
 	if err != nil {
 		t.Fatalf("ApproveGear error: %v", err)
 	}
-	approved, ok := approveResp.(gearservice.ApproveGear200JSONResponse)
+	approved, ok := approveResp.(adminservice.ApproveGear200JSONResponse)
 	if !ok {
 		t.Fatalf("ApproveGear response type = %T", approveResp)
 	}
-	if approved.Role != gearservice.GearRoleDevice || approved.Status != gearservice.GearStatusActive {
+	if approved.Role != adminservice.GearRoleDevice || approved.Status != adminservice.GearStatusActive {
 		t.Fatalf("ApproveGear = %+v", approved)
 	}
 
-	blockResp, err := server.BlockGear(ctx, gearservice.BlockGearRequestObject{
-		PublicKey: gearservice.PublicKey("peer-gear"),
+	blockResp, err := server.BlockGear(ctx, adminservice.BlockGearRequestObject{
+		PublicKey: adminservice.PublicKey("peer-gear"),
 	})
 	if err != nil {
 		t.Fatalf("BlockGear error: %v", err)
 	}
-	blocked, ok := blockResp.(gearservice.BlockGear200JSONResponse)
+	blocked, ok := blockResp.(adminservice.BlockGear200JSONResponse)
 	if !ok {
 		t.Fatalf("BlockGear response type = %T", blockResp)
 	}
-	if blocked.Status != gearservice.GearStatusBlocked {
+	if blocked.Status != adminservice.GearStatusBlocked {
 		t.Fatalf("BlockGear = %+v", blocked)
 	}
 
-	deleteResp, err := server.DeleteGear(ctx, gearservice.DeleteGearRequestObject{
-		PublicKey: gearservice.PublicKey("peer-gear"),
+	deleteResp, err := server.DeleteGear(ctx, adminservice.DeleteGearRequestObject{
+		PublicKey: adminservice.PublicKey("peer-gear"),
 	})
 	if err != nil {
 		t.Fatalf("DeleteGear error: %v", err)
 	}
-	deleted, ok := deleteResp.(gearservice.DeleteGear200JSONResponse)
+	deleted, ok := deleteResp.(adminservice.DeleteGear200JSONResponse)
 	if !ok {
 		t.Fatalf("DeleteGear response type = %T", deleteResp)
 	}
-	if deleted.Role != gearservice.GearRoleUnspecified || deleted.Status != gearservice.GearStatusUnspecified || deleted.ApprovedAt != nil {
+	if deleted.Role != adminservice.GearRoleUnspecified || deleted.Status != adminservice.GearStatusUnspecified || deleted.ApprovedAt != nil {
 		t.Fatalf("DeleteGear = %+v", deleted)
 	}
 }
@@ -265,21 +267,22 @@ func TestServerRuntimeHandlers(t *testing.T) {
 		},
 	}
 
-	ctx := serverpublic.WithCallerPublicKey(context.Background(), "peer-3")
-	_, err := server.RegisterGear(ctx, serverpublic.RegisterGearRequestObject{
+	registerCtx := serverpublic.WithCallerPublicKey(context.Background(), "peer-3")
+	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-3")
+	_, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
 		Body: &serverpublic.RegisterGearJSONRequestBody{Device: serverpublic.DeviceInfo{}},
 	})
 	if err != nil {
 		t.Fatalf("RegisterGear error: %v", err)
 	}
 
-	getGearRuntimeResp, err := server.GetGearRuntime(ctx, gearservice.GetGearRuntimeRequestObject{
-		PublicKey: gearservice.PublicKey("peer-3"),
+	getGearRuntimeResp, err := server.GetGearRuntime(context.Background(), adminservice.GetGearRuntimeRequestObject{
+		PublicKey: adminservice.PublicKey("peer-3"),
 	})
 	if err != nil {
 		t.Fatalf("GetGearRuntime error: %v", err)
 	}
-	gearRuntime, ok := getGearRuntimeResp.(gearservice.GetGearRuntime200JSONResponse)
+	gearRuntime, ok := getGearRuntimeResp.(adminservice.GetGearRuntime200JSONResponse)
 	if !ok {
 		t.Fatalf("GetGearRuntime response type = %T", getGearRuntimeResp)
 	}
@@ -287,11 +290,11 @@ func TestServerRuntimeHandlers(t *testing.T) {
 		t.Fatalf("GetGearRuntime = %+v", gearRuntime)
 	}
 
-	getRuntimeResp, err := server.GetRuntime(ctx, serverpublic.GetRuntimeRequestObject{})
+	getRuntimeResp, err := server.GetRuntime(gearCtx, gearservice.GetRuntimeRequestObject{})
 	if err != nil {
 		t.Fatalf("GetRuntime error: %v", err)
 	}
-	publicRuntime, ok := getRuntimeResp.(serverpublic.GetRuntime200JSONResponse)
+	publicRuntime, ok := getRuntimeResp.(gearservice.GetRuntime200JSONResponse)
 	if !ok {
 		t.Fatalf("GetRuntime response type = %T", getRuntimeResp)
 	}
@@ -299,13 +302,13 @@ func TestServerRuntimeHandlers(t *testing.T) {
 		t.Fatalf("GetRuntime = %+v", publicRuntime)
 	}
 
-	refreshResp, err := server.RefreshGear(ctx, gearservice.RefreshGearRequestObject{
-		PublicKey: gearservice.PublicKey("peer-3"),
+	refreshResp, err := server.RefreshGear(context.Background(), adminservice.RefreshGearRequestObject{
+		PublicKey: adminservice.PublicKey("peer-3"),
 	})
 	if err != nil {
 		t.Fatalf("RefreshGear error: %v", err)
 	}
-	refreshed, ok := refreshResp.(gearservice.RefreshGear200JSONResponse)
+	refreshed, ok := refreshResp.(adminservice.RefreshGear200JSONResponse)
 	if !ok {
 		t.Fatalf("RefreshGear response type = %T", refreshResp)
 	}
@@ -323,7 +326,8 @@ func TestServerPublicHandlers(t *testing.T) {
 		ServerPublicKey:    "server-pk",
 	}
 
-	ctx := serverpublic.WithCallerPublicKey(context.Background(), "peer-1")
+	registerCtx := serverpublic.WithCallerPublicKey(context.Background(), "peer-1")
+	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-1")
 	token := "admin"
 	name := "gear-a"
 	sn := "sn-1"
@@ -331,7 +335,7 @@ func TestServerPublicHandlers(t *testing.T) {
 	labelKey := "region"
 	labelValue := "cn"
 
-	registerResp, err := server.RegisterGear(ctx, serverpublic.RegisterGearRequestObject{
+	registerResp, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
 		Body: &serverpublic.RegisterGearJSONRequestBody{
 			RegistrationToken: &token,
 			Device: serverpublic.DeviceInfo{
@@ -365,11 +369,11 @@ func TestServerPublicHandlers(t *testing.T) {
 		t.Fatalf("ApprovedAt = %v", registered.Registration.ApprovedAt)
 	}
 
-	getInfoResp, err := server.GetInfo(ctx, serverpublic.GetInfoRequestObject{})
+	getInfoResp, err := server.GetInfo(gearCtx, gearservice.GetInfoRequestObject{})
 	if err != nil {
 		t.Fatalf("GetInfo error: %v", err)
 	}
-	info, ok := getInfoResp.(serverpublic.GetInfo200JSONResponse)
+	info, ok := getInfoResp.(gearservice.GetInfo200JSONResponse)
 	if !ok {
 		t.Fatalf("GetInfo response type = %T", getInfoResp)
 	}
@@ -377,19 +381,19 @@ func TestServerPublicHandlers(t *testing.T) {
 		t.Fatalf("GetInfo sn = %v", info.Sn)
 	}
 
-	getRegistrationResp, err := server.GetRegistration(ctx, serverpublic.GetRegistrationRequestObject{})
+	getRegistrationResp, err := server.GetRegistration(gearCtx, gearservice.GetRegistrationRequestObject{})
 	if err != nil {
 		t.Fatalf("GetRegistration error: %v", err)
 	}
-	publicRegistration, ok := getRegistrationResp.(serverpublic.GetRegistration200JSONResponse)
+	publicRegistration, ok := getRegistrationResp.(gearservice.GetRegistration200JSONResponse)
 	if !ok {
 		t.Fatalf("GetRegistration response type = %T", getRegistrationResp)
 	}
-	if publicRegistration.Role != serverpublic.GearRole(gearservice.GearRoleAdmin) {
+	if publicRegistration.Role != gearservice.GearRole(gearservice.GearRoleAdmin) {
 		t.Fatalf("GetRegistration role = %q", publicRegistration.Role)
 	}
 
-	serverInfoResp, err := server.GetServerInfo(ctx, serverpublic.GetServerInfoRequestObject{})
+	serverInfoResp, err := server.GetServerInfo(registerCtx, serverpublic.GetServerInfoRequestObject{})
 	if err != nil {
 		t.Fatalf("GetServerInfo error: %v", err)
 	}
@@ -419,10 +423,11 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 		},
 	}
 
-	ctx := serverpublic.WithCallerPublicKey(context.Background(), "peer-public")
+	registerCtx := serverpublic.WithCallerPublicKey(context.Background(), "peer-public")
+	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-public")
 	sn := "sn-old"
 	depot := "depot-public"
-	_, err := server.RegisterGear(ctx, serverpublic.RegisterGearRequestObject{
+	_, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
 		Body: &serverpublic.RegisterGearJSONRequestBody{
 			Device: serverpublic.DeviceInfo{
 				Sn: &sn,
@@ -437,33 +442,34 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	}
 
 	stable := gearservice.GearFirmwareChannel("stable")
-	_, err = server.PutGearConfig(ctx, gearservice.PutGearConfigRequestObject{
-		PublicKey: gearservice.PublicKey("peer-public"),
-		Body: &gearservice.PutGearConfigJSONRequestBody{
-			Firmware: &gearservice.FirmwareConfig{Channel: &stable},
+	adminStable := adminservice.GearFirmwareChannel(stable)
+	_, err = server.PutGearConfig(context.Background(), adminservice.PutGearConfigRequestObject{
+		PublicKey: adminservice.PublicKey("peer-public"),
+		Body: &adminservice.PutGearConfigJSONRequestBody{
+			Firmware: &adminservice.FirmwareConfig{Channel: &adminStable},
 		},
 	})
 	if err != nil {
 		t.Fatalf("PutGearConfig error: %v", err)
 	}
 
-	getConfigResp, err := server.GetConfig(ctx, serverpublic.GetConfigRequestObject{})
+	getConfigResp, err := server.GetConfig(gearCtx, gearservice.GetConfigRequestObject{})
 	if err != nil {
 		t.Fatalf("GetConfig error: %v", err)
 	}
-	cfg, ok := getConfigResp.(serverpublic.GetConfig200JSONResponse)
+	cfg, ok := getConfigResp.(gearservice.GetConfig200JSONResponse)
 	if !ok {
 		t.Fatalf("GetConfig response type = %T", getConfigResp)
 	}
-	if cfg.Firmware == nil || cfg.Firmware.Channel == nil || *cfg.Firmware.Channel != serverpublic.GearFirmwareChannel(stable) {
+	if cfg.Firmware == nil || cfg.Firmware.Channel == nil || *cfg.Firmware.Channel != stable {
 		t.Fatalf("GetConfig = %+v", cfg)
 	}
 
 	newSN := "sn-new"
-	putInfoResp, err := server.PutInfo(ctx, serverpublic.PutInfoRequestObject{
-		Body: &serverpublic.PutInfoJSONRequestBody{
+	putInfoResp, err := server.PutInfo(gearCtx, gearservice.PutInfoRequestObject{
+		Body: &gearservice.PutInfoJSONRequestBody{
 			Sn: &newSN,
-			Hardware: &serverpublic.HardwareInfo{
+			Hardware: &gearservice.HardwareInfo{
 				Depot: &depot,
 			},
 		},
@@ -471,7 +477,7 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PutInfo error: %v", err)
 	}
-	putInfo, ok := putInfoResp.(serverpublic.PutInfo200JSONResponse)
+	putInfo, ok := putInfoResp.(gearservice.PutInfo200JSONResponse)
 	if !ok {
 		t.Fatalf("PutInfo response type = %T", putInfoResp)
 	}
@@ -479,11 +485,11 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 		t.Fatalf("PutInfo = %+v", putInfo)
 	}
 
-	getRuntimeResp, err := server.GetRuntime(ctx, serverpublic.GetRuntimeRequestObject{})
+	getRuntimeResp, err := server.GetRuntime(gearCtx, gearservice.GetRuntimeRequestObject{})
 	if err != nil {
 		t.Fatalf("GetRuntime error: %v", err)
 	}
-	publicRuntime, ok := getRuntimeResp.(serverpublic.GetRuntime200JSONResponse)
+	publicRuntime, ok := getRuntimeResp.(gearservice.GetRuntime200JSONResponse)
 	if !ok {
 		t.Fatalf("GetRuntime response type = %T", getRuntimeResp)
 	}

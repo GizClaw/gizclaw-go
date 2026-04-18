@@ -34,17 +34,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../packages/components/tabs";
 import { cn } from "../../packages/components/utils";
 import {
-  listDepots,
-  putChannel,
-  putDepotInfo,
-  releaseDepot,
-  rollbackDepot,
-  type Depot,
-  type DepotInfo as AdminDepotInfo,
-  type DepotRelease,
-} from "../../packages/adminservice";
-import { client as adminClient } from "../../packages/adminservice/client.gen";
-import {
   approveGear,
   blockGear,
   deleteGear,
@@ -52,17 +41,25 @@ import {
   getGearConfig,
   getGearInfo,
   getGearRuntime,
+  listDepots,
   listGears,
+  putChannel,
+  putDepotInfo,
   putGearConfig,
   refreshGear,
+  releaseDepot,
+  rollbackDepot,
+  type Depot,
+  type DepotInfo as AdminDepotInfo,
+  type DepotRelease,
   type Configuration,
   type DeviceInfo,
   type GearRole,
   type Registration,
   type RegistrationList,
   type Runtime,
-} from "../../packages/gearservice";
-import { client as gearClient } from "../../packages/gearservice/client.gen";
+} from "../../packages/adminservice";
+import { client as adminClient } from "../../packages/adminservice/client.gen";
 import { getServerInfo, type ServerInfo } from "../../packages/serverpublic";
 import { client as publicClient } from "../../packages/serverpublic/client.gen";
 
@@ -101,12 +98,6 @@ interface NoticeState {
 
 adminClient.setConfig({
   baseUrl: "/api/admin",
-  responseStyle: "fields",
-  throwOnError: false,
-});
-
-gearClient.setConfig({
-  baseUrl: "/api/gear",
   responseStyle: "fields",
   throwOnError: false,
 });

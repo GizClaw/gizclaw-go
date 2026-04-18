@@ -7,13 +7,13 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/spf13/cobra"
 )
 
 type gearConfigClient interface {
-	GetGearConfig(ctx context.Context, publicKey string) (gearservice.Configuration, error)
-	PutGearConfig(ctx context.Context, publicKey string, cfg gearservice.Configuration) (gearservice.Configuration, error)
+	GetGearConfig(ctx context.Context, publicKey string) (adminservice.Configuration, error)
+	PutGearConfig(ctx context.Context, publicKey string, cfg adminservice.Configuration) (adminservice.Configuration, error)
 	Close() error
 }
 
@@ -21,11 +21,11 @@ type gearConfigBridge struct {
 	c *gizclaw.Client
 }
 
-func (g *gearConfigBridge) GetGearConfig(ctx context.Context, publicKey string) (gearservice.Configuration, error) {
+func (g *gearConfigBridge) GetGearConfig(ctx context.Context, publicKey string) (adminservice.Configuration, error) {
 	return client.GetGearConfig(ctx, g.c, publicKey)
 }
 
-func (g *gearConfigBridge) PutGearConfig(ctx context.Context, publicKey string, cfg gearservice.Configuration) (gearservice.Configuration, error) {
+func (g *gearConfigBridge) PutGearConfig(ctx context.Context, publicKey string, cfg adminservice.Configuration) (adminservice.Configuration, error) {
 	return client.PutGearConfig(ctx, g.c, publicKey, cfg)
 }
 
@@ -128,7 +128,7 @@ func NewCmd() *cobra.Command {
 					return err
 				}
 				defer c.Close()
-				item, err := client.ApproveGear(context.Background(), c, args[0], gearservice.GearRole(args[1]))
+				item, err := client.ApproveGear(context.Background(), c, args[0], adminservice.GearRole(args[1]))
 				if err != nil {
 					return err
 				}
@@ -204,9 +204,9 @@ func NewCmd() *cobra.Command {
 					return err
 				}
 				if cfg.Firmware == nil {
-					cfg.Firmware = &gearservice.FirmwareConfig{}
+					cfg.Firmware = &adminservice.FirmwareConfig{}
 				}
-				channel := gearservice.GearFirmwareChannel(args[1])
+				channel := adminservice.GearFirmwareChannel(args[1])
 				cfg.Firmware.Channel = &channel
 
 				item, err := c.PutGearConfig(context.Background(), args[0], cfg)
@@ -277,7 +277,7 @@ func NewCmd() *cobra.Command {
 					return err
 				}
 				defer c.Close()
-				items, err := client.ListGearsByCertification(context.Background(), c, gearservice.GearCertificationType(args[0]), gearservice.GearCertificationAuthority(args[1]), args[2])
+				items, err := client.ListGearsByCertification(context.Background(), c, adminservice.GearCertificationType(args[0]), adminservice.GearCertificationAuthority(args[1]), args[2])
 				if err != nil {
 					return err
 				}
@@ -294,7 +294,7 @@ func NewCmd() *cobra.Command {
 					return err
 				}
 				defer c.Close()
-				items, err := client.ListGearsByFirmware(context.Background(), c, args[0], gearservice.GearFirmwareChannel(args[1]))
+				items, err := client.ListGearsByFirmware(context.Background(), c, args[0], adminservice.GearFirmwareChannel(args[1]))
 				if err != nil {
 					return err
 				}

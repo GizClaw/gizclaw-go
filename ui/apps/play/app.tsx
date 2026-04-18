@@ -9,8 +9,16 @@ import { Button } from "../../packages/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../packages/components/card";
 import { Skeleton } from "../../packages/components/skeleton";
 import { cn } from "../../packages/components/utils";
-import { getConfig, getInfo, getOta, getServerInfo } from "../../packages/serverpublic";
+import { getConfig, getInfo, getOta } from "../../packages/gearservice";
+import { client as gearClient } from "../../packages/gearservice/client.gen";
+import { getServerInfo } from "../../packages/serverpublic";
 import { client as publicClient } from "../../packages/serverpublic/client.gen";
+
+gearClient.setConfig({
+  baseUrl: "/api/gear",
+  responseStyle: "fields",
+  throwOnError: false,
+});
 
 publicClient.setConfig({
   baseUrl: "/api/public",
@@ -90,12 +98,12 @@ function App(): JSX.Element {
             <CardHeader className="gap-4">
               <div className="flex flex-wrap items-center gap-3">
                 <Badge>Play</Badge>
-                <Badge variant="secondary">Proxy API base: /api/public</Badge>
+                <Badge variant="secondary">Proxy API bases: /api/gear and /api/public</Badge>
               </div>
               <div className="space-y-2">
                 <CardTitle className="text-3xl font-semibold tracking-tight">GizClaw Play</CardTitle>
                 <CardDescription className="max-w-2xl text-base leading-7">
-                  A lightweight operator surface for probing the public device-facing endpoints through the local proxy.
+                  A lightweight operator surface for probing the current gear endpoints and server info through the local proxy.
                 </CardDescription>
               </div>
             </CardHeader>
@@ -108,7 +116,7 @@ function App(): JSX.Element {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <InfoRow label="Status" value={activeLabel ? `Loading ${activeLabel}` : "Idle"} />
-              <InfoRow label="Surface" value="Public endpoints" />
+              <InfoRow label="Surface" value="Gear and server endpoints" />
               <InfoRow label="Transport" value="Local reverse proxy" />
             </CardContent>
           </Card>
@@ -144,7 +152,7 @@ function App(): JSX.Element {
         <Card className="min-h-[26rem] border-border/70">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Response</CardTitle>
-            <CardDescription>Most recent payload returned by the selected public endpoint.</CardDescription>
+            <CardDescription>Most recent payload returned by the selected proxied endpoint.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {notice ? <NoticeBanner message={notice.message} tone={notice.tone} /> : null}
@@ -156,7 +164,7 @@ function App(): JSX.Element {
               </div>
             ) : output === "" ? (
               <EmptyState
-                description="Run one of the actions above to load a response from the proxied public API."
+                description="Run one of the actions above to load a response from the proxied API."
                 title="No response available"
               />
             ) : (

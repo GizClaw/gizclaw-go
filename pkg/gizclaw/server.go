@@ -255,8 +255,7 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 			GearsGearService:    gearsServer,
 		},
 		public: &serverPublic{
-			FirmwareServerPublic: firmwareServer,
-			GearsServerPublic:    gearsServer,
+			GearsServerPublic: gearsServer,
 		},
 	}
 	return nil

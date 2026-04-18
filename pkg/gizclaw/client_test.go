@@ -113,8 +113,7 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 			GearsGearService:    gearServer,
 		},
 		public: &serverPublic{
-			FirmwareServerPublic: firmwareServer,
-			GearsServerPublic:    gearServer,
+			GearsServerPublic: gearServer,
 		},
 	}
 
@@ -138,9 +137,9 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 		t.Fatalf("GET /api/public/server-info body = %s", string(body))
 	}
 
-	resp, body = mustProxyGET(t, proxy.URL+"/api/gear/gears")
+	resp, body = mustProxyGET(t, proxy.URL+"/api/gear/runtime")
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("GET /api/gear/gears status = %d body=%s", resp.StatusCode, string(body))
+		t.Fatalf("GET /api/gear/runtime status = %d body=%s", resp.StatusCode, string(body))
 	}
 
 	noRedirect := &http.Client{

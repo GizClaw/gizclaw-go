@@ -40,7 +40,6 @@ type gearAPIBundle struct {
 }
 
 type serverPublic struct {
-	firmware.FirmwareServerPublic
 	gear.GearsServerPublic
 }
 
@@ -133,6 +132,11 @@ func (s *GearService) serveGear(conn *giznet.Conn) error {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	app.Use(func(ctx *fiber.Ctx) error {
 		s.touchPeer(conn)
+		base := ctx.UserContext()
+		if base == nil {
+			base = context.Background()
+		}
+		ctx.SetUserContext(gearservice.WithCallerPublicKey(base, conn.PublicKey().String()))
 		return ctx.Next()
 	})
 	handler := gearservice.NewStrictHandler(s.gear, nil)

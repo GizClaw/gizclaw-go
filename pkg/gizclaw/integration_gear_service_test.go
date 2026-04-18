@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 )
 
@@ -48,7 +48,7 @@ func TestIntegrationGearServiceLifecycle(t *testing.T) {
 		t.Fatalf("ListGears returned %d items", len(items))
 	}
 
-	if _, err := approveGear(context.Background(), admin, deviceResult.Gear.PublicKey, gearservice.GearRoleDevice); err != nil {
+	if _, err := approveGear(context.Background(), admin, deviceResult.Gear.PublicKey, adminservice.GearRoleDevice); err != nil {
 		t.Fatalf("ApproveGear error: %v", err)
 	}
 	if _, err := getGear(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
@@ -60,14 +60,14 @@ func TestIntegrationGearServiceLifecycle(t *testing.T) {
 	if publicKey, err := resolveGearByIMEI(context.Background(), admin, "12345678", "0000001"); err != nil || publicKey != deviceResult.Gear.PublicKey {
 		t.Fatalf("ResolveGearByIMEI = %q, %v", publicKey, err)
 	}
-	if _, err := putGearConfig(context.Background(), admin, deviceResult.Gear.PublicKey, gearservice.Configuration{
-		Certifications: &[]gearservice.GearCertification{{
-			Type:      gearservice.GearCertificationType("certification"),
-			Authority: gearservice.GearCertificationAuthority("ce"),
+	if _, err := putGearConfig(context.Background(), admin, deviceResult.Gear.PublicKey, adminservice.Configuration{
+		Certifications: &[]adminservice.GearCertification{{
+			Type:      adminservice.GearCertificationType("certification"),
+			Authority: adminservice.GearCertificationAuthority("ce"),
 			Id:        "ce/001",
 		}},
-		Firmware: &gearservice.FirmwareConfig{Channel: func() *gearservice.GearFirmwareChannel {
-			ch := gearservice.GearFirmwareChannel("stable")
+		Firmware: &adminservice.FirmwareConfig{Channel: func() *adminservice.GearFirmwareChannel {
+			ch := adminservice.GearFirmwareChannel("stable")
 			return &ch
 		}()},
 	}); err != nil {
@@ -85,10 +85,10 @@ func TestIntegrationGearServiceLifecycle(t *testing.T) {
 	if _, err := listGearsByLabel(context.Background(), admin, "batch", "cn/east"); err != nil {
 		t.Fatalf("ListGearsByLabel error: %v", err)
 	}
-	if _, err := listGearsByCertification(context.Background(), admin, gearservice.GearCertificationType("certification"), gearservice.GearCertificationAuthority("ce"), "ce/001"); err != nil {
+	if _, err := listGearsByCertification(context.Background(), admin, adminservice.GearCertificationType("certification"), adminservice.GearCertificationAuthority("ce"), "ce/001"); err != nil {
 		t.Fatalf("ListGearsByCertification error: %v", err)
 	}
-	if _, err := listGearsByFirmware(context.Background(), admin, "demo-main", gearservice.GearFirmwareChannel("stable")); err != nil {
+	if _, err := listGearsByFirmware(context.Background(), admin, "demo-main", adminservice.GearFirmwareChannel("stable")); err != nil {
 		t.Fatalf("ListGearsByFirmware error: %v", err)
 	}
 	if _, err := blockGear(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {

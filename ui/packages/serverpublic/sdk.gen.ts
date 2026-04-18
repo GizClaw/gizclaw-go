@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DownloadFirmwareData, DownloadFirmwareErrors, DownloadFirmwareResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetInfoData, GetInfoErrors, GetInfoResponses, GetOtaData, GetOtaErrors, GetOtaResponses, GetRegistrationData, GetRegistrationErrors, GetRegistrationResponses, GetRuntimeData, GetRuntimeErrors, GetRuntimeResponses, GetServerInfoData, GetServerInfoErrors, GetServerInfoResponses, PutInfoData, PutInfoErrors, PutInfoResponses, RegisterGearData, RegisterGearErrors, RegisterGearResponses } from './types.gen';
+import type { GetServerInfoData, GetServerInfoErrors, GetServerInfoResponses, RegisterGearData, RegisterGearErrors, RegisterGearResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -24,38 +24,6 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 export const getServerInfo = <ThrowOnError extends boolean = false>(options?: Options<GetServerInfoData, ThrowOnError>) => (options?.client ?? client).get<GetServerInfoResponses, GetServerInfoErrors, ThrowOnError>({ url: '/server-info', ...options });
 
 /**
- * Get device info
- */
-export const getInfo = <ThrowOnError extends boolean = false>(options?: Options<GetInfoData, ThrowOnError>) => (options?.client ?? client).get<GetInfoResponses, GetInfoErrors, ThrowOnError>({ url: '/info', ...options });
-
-/**
- * Update device info
- */
-export const putInfo = <ThrowOnError extends boolean = false>(options: Options<PutInfoData, ThrowOnError>) => (options.client ?? client).put<PutInfoResponses, PutInfoErrors, ThrowOnError>({
-    url: '/info',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Get gear registration
- */
-export const getRegistration = <ThrowOnError extends boolean = false>(options?: Options<GetRegistrationData, ThrowOnError>) => (options?.client ?? client).get<GetRegistrationResponses, GetRegistrationErrors, ThrowOnError>({ url: '/registration', ...options });
-
-/**
- * Get runtime status
- */
-export const getRuntime = <ThrowOnError extends boolean = false>(options?: Options<GetRuntimeData, ThrowOnError>) => (options?.client ?? client).get<GetRuntimeResponses, GetRuntimeErrors, ThrowOnError>({ url: '/runtime', ...options });
-
-/**
- * Get configuration
- */
-export const getConfig = <ThrowOnError extends boolean = false>(options?: Options<GetConfigData, ThrowOnError>) => (options?.client ?? client).get<GetConfigResponses, GetConfigErrors, ThrowOnError>({ url: '/config', ...options });
-
-/**
  * Register a gear
  */
 export const registerGear = <ThrowOnError extends boolean = false>(options: Options<RegisterGearData, ThrowOnError>) => (options.client ?? client).post<RegisterGearResponses, RegisterGearErrors, ThrowOnError>({
@@ -66,13 +34,3 @@ export const registerGear = <ThrowOnError extends boolean = false>(options: Opti
         ...options.headers
     }
 });
-
-/**
- * Get OTA summary
- */
-export const getOta = <ThrowOnError extends boolean = false>(options?: Options<GetOtaData, ThrowOnError>) => (options?.client ?? client).get<GetOtaResponses, GetOtaErrors, ThrowOnError>({ url: '/ota', ...options });
-
-/**
- * Download a firmware file
- */
-export const downloadFirmware = <ThrowOnError extends boolean = false>(options: Options<DownloadFirmwareData, ThrowOnError>) => (options.client ?? client).get<DownloadFirmwareResponses, DownloadFirmwareErrors, ThrowOnError>({ url: '/download/firmware/{path}', ...options });

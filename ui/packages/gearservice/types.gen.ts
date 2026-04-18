@@ -174,409 +174,41 @@ export type ServerInfo = {
     build_commit: string;
 };
 
-/**
- * Gear public key
- */
-export type PublicKey = string;
-
-export type ListGearsData = {
+export type GetInfoData = {
     body?: never;
     path?: never;
     query?: never;
-    url: '/gears';
+    url: '/info';
 };
 
-export type ListGearsErrors = {
-    /**
-     * Internal error
-     */
-    500: ErrorResponse;
-};
-
-export type ListGearsError = ListGearsErrors[keyof ListGearsErrors];
-
-export type ListGearsResponses = {
-    /**
-     * Gear registration list
-     */
-    200: RegistrationList;
-};
-
-export type ListGearsResponse = ListGearsResponses[keyof ListGearsResponses];
-
-export type ResolveBySnData = {
-    body?: never;
-    path: {
-        sn: string;
-    };
-    query?: never;
-    url: '/gears/sn/{sn}';
-};
-
-export type ResolveBySnErrors = {
+export type GetInfoErrors = {
     /**
      * Gear not found
      */
     404: ErrorResponse;
 };
 
-export type ResolveBySnError = ResolveBySnErrors[keyof ResolveBySnErrors];
+export type GetInfoError = GetInfoErrors[keyof GetInfoErrors];
 
-export type ResolveBySnResponses = {
-    /**
-     * Resolved public key
-     */
-    200: PublicKeyResponse;
-};
-
-export type ResolveBySnResponse = ResolveBySnResponses[keyof ResolveBySnResponses];
-
-export type ResolveByImeiData = {
-    body?: never;
-    path: {
-        tac: string;
-        serial: string;
-    };
-    query?: never;
-    url: '/gears/imei/{tac}/{serial}';
-};
-
-export type ResolveByImeiErrors = {
-    /**
-     * Gear not found
-     */
-    404: ErrorResponse;
-};
-
-export type ResolveByImeiError = ResolveByImeiErrors[keyof ResolveByImeiErrors];
-
-export type ResolveByImeiResponses = {
-    /**
-     * Resolved public key
-     */
-    200: PublicKeyResponse;
-};
-
-export type ResolveByImeiResponse = ResolveByImeiResponses[keyof ResolveByImeiResponses];
-
-export type ListByLabelData = {
-    body?: never;
-    path: {
-        key: string;
-        value: string;
-    };
-    query?: never;
-    url: '/gears/label/{key}/{value}';
-};
-
-export type ListByLabelErrors = {
-    /**
-     * Internal error
-     */
-    500: ErrorResponse;
-};
-
-export type ListByLabelError = ListByLabelErrors[keyof ListByLabelErrors];
-
-export type ListByLabelResponses = {
-    /**
-     * Matched gears
-     */
-    200: RegistrationList;
-};
-
-export type ListByLabelResponse = ListByLabelResponses[keyof ListByLabelResponses];
-
-export type ListByCertificationData = {
-    body?: never;
-    path: {
-        type: GearCertificationType;
-        authority: GearCertificationAuthority;
-        id: string;
-    };
-    query?: never;
-    url: '/gears/certification/{type}/{authority}/{id}';
-};
-
-export type ListByCertificationErrors = {
-    /**
-     * Internal error
-     */
-    500: ErrorResponse;
-};
-
-export type ListByCertificationError = ListByCertificationErrors[keyof ListByCertificationErrors];
-
-export type ListByCertificationResponses = {
-    /**
-     * Matched gears
-     */
-    200: RegistrationList;
-};
-
-export type ListByCertificationResponse = ListByCertificationResponses[keyof ListByCertificationResponses];
-
-export type ListByFirmwareData = {
-    body?: never;
-    path: {
-        depot: string;
-        channel: GearFirmwareChannel;
-    };
-    query?: never;
-    url: '/gears/firmware/{depot}/{channel}';
-};
-
-export type ListByFirmwareErrors = {
-    /**
-     * Internal error
-     */
-    500: ErrorResponse;
-};
-
-export type ListByFirmwareError = ListByFirmwareErrors[keyof ListByFirmwareErrors];
-
-export type ListByFirmwareResponses = {
-    /**
-     * Matched gears
-     */
-    200: RegistrationList;
-};
-
-export type ListByFirmwareResponse = ListByFirmwareResponses[keyof ListByFirmwareResponses];
-
-export type DeleteGearData = {
-    body?: never;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
-    query?: never;
-    url: '/gears/{publicKey}';
-};
-
-export type DeleteGearErrors = {
-    /**
-     * Gear not found
-     */
-    404: ErrorResponse;
-};
-
-export type DeleteGearError = DeleteGearErrors[keyof DeleteGearErrors];
-
-export type DeleteGearResponses = {
-    /**
-     * Deleted gear registration
-     */
-    200: Registration;
-};
-
-export type DeleteGearResponse = DeleteGearResponses[keyof DeleteGearResponses];
-
-export type GetGearData = {
-    body?: never;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
-    query?: never;
-    url: '/gears/{publicKey}';
-};
-
-export type GetGearErrors = {
-    /**
-     * Gear not found
-     */
-    404: ErrorResponse;
-};
-
-export type GetGearError = GetGearErrors[keyof GetGearErrors];
-
-export type GetGearResponses = {
-    /**
-     * Gear registration
-     */
-    200: Registration;
-};
-
-export type GetGearResponse = GetGearResponses[keyof GetGearResponses];
-
-export type ApproveGearData = {
-    body: ApproveRequest;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
-    query?: never;
-    url: '/gears/{publicKey}/@approve';
-};
-
-export type ApproveGearErrors = {
-    /**
-     * Invalid role
-     */
-    400: ErrorResponse;
-};
-
-export type ApproveGearError = ApproveGearErrors[keyof ApproveGearErrors];
-
-export type ApproveGearResponses = {
-    /**
-     * Approved gear registration
-     */
-    200: Registration;
-};
-
-export type ApproveGearResponse = ApproveGearResponses[keyof ApproveGearResponses];
-
-export type BlockGearData = {
-    body?: never;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
-    query?: never;
-    url: '/gears/{publicKey}/@block';
-};
-
-export type BlockGearErrors = {
-    /**
-     * Gear not found
-     */
-    404: ErrorResponse;
-};
-
-export type BlockGearError = BlockGearErrors[keyof BlockGearErrors];
-
-export type BlockGearResponses = {
-    /**
-     * Blocked gear registration
-     */
-    200: Registration;
-};
-
-export type BlockGearResponse = BlockGearResponses[keyof BlockGearResponses];
-
-export type RefreshGearData = {
-    body?: never;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
-    query?: never;
-    url: '/gears/{publicKey}/@refresh';
-};
-
-export type RefreshGearErrors = {
-    /**
-     * Gear not found
-     */
-    404: ErrorResponse;
-    /**
-     * Device offline
-     */
-    409: ErrorResponse;
-    /**
-     * Device refresh failed
-     */
-    502: ErrorResponse;
-};
-
-export type RefreshGearError = RefreshGearErrors[keyof RefreshGearErrors];
-
-export type RefreshGearResponses = {
-    /**
-     * Refresh result
-     */
-    200: RefreshResult;
-};
-
-export type RefreshGearResponse = RefreshGearResponses[keyof RefreshGearResponses];
-
-export type GetGearInfoData = {
-    body?: never;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
-    query?: never;
-    url: '/gears/{publicKey}/info';
-};
-
-export type GetGearInfoErrors = {
-    /**
-     * Gear not found
-     */
-    404: ErrorResponse;
-};
-
-export type GetGearInfoError = GetGearInfoErrors[keyof GetGearInfoErrors];
-
-export type GetGearInfoResponses = {
+export type GetInfoResponses = {
     /**
      * Device info
      */
     200: DeviceInfo;
 };
 
-export type GetGearInfoResponse = GetGearInfoResponses[keyof GetGearInfoResponses];
+export type GetInfoResponse = GetInfoResponses[keyof GetInfoResponses];
 
-export type GetGearConfigData = {
-    body?: never;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
+export type PutInfoData = {
+    body: DeviceInfo;
+    path?: never;
     query?: never;
-    url: '/gears/{publicKey}/config';
+    url: '/info';
 };
 
-export type GetGearConfigErrors = {
+export type PutInfoErrors = {
     /**
-     * Gear not found
-     */
-    404: ErrorResponse;
-};
-
-export type GetGearConfigError = GetGearConfigErrors[keyof GetGearConfigErrors];
-
-export type GetGearConfigResponses = {
-    /**
-     * Configuration
-     */
-    200: Configuration;
-};
-
-export type GetGearConfigResponse = GetGearConfigResponses[keyof GetGearConfigResponses];
-
-export type PutGearConfigData = {
-    body: Configuration;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
-    query?: never;
-    url: '/gears/{publicKey}/config';
-};
-
-export type PutGearConfigErrors = {
-    /**
-     * Invalid params
+     * Invalid device info
      */
     400: ErrorResponse;
     /**
@@ -585,64 +217,147 @@ export type PutGearConfigErrors = {
     404: ErrorResponse;
 };
 
-export type PutGearConfigError = PutGearConfigErrors[keyof PutGearConfigErrors];
+export type PutInfoError = PutInfoErrors[keyof PutInfoErrors];
 
-export type PutGearConfigResponses = {
+export type PutInfoResponses = {
     /**
-     * Updated configuration
+     * Updated device info
      */
-    200: Configuration;
+    200: DeviceInfo;
 };
 
-export type PutGearConfigResponse = PutGearConfigResponses[keyof PutGearConfigResponses];
+export type PutInfoResponse = PutInfoResponses[keyof PutInfoResponses];
 
-export type GetGearRuntimeData = {
+export type GetRegistrationData = {
     body?: never;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
+    path?: never;
     query?: never;
-    url: '/gears/{publicKey}/runtime';
+    url: '/registration';
 };
 
-export type GetGearRuntimeResponses = {
+export type GetRegistrationErrors = {
+    /**
+     * Gear not found
+     */
+    404: ErrorResponse;
+};
+
+export type GetRegistrationError = GetRegistrationErrors[keyof GetRegistrationErrors];
+
+export type GetRegistrationResponses = {
+    /**
+     * Registration
+     */
+    200: Registration;
+};
+
+export type GetRegistrationResponse = GetRegistrationResponses[keyof GetRegistrationResponses];
+
+export type GetRuntimeData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/runtime';
+};
+
+export type GetRuntimeErrors = {
+    /**
+     * Invalid params
+     */
+    400: ErrorResponse;
+};
+
+export type GetRuntimeError = GetRuntimeErrors[keyof GetRuntimeErrors];
+
+export type GetRuntimeResponses = {
     /**
      * Runtime status
      */
     200: Runtime;
 };
 
-export type GetGearRuntimeResponse = GetGearRuntimeResponses[keyof GetGearRuntimeResponses];
+export type GetRuntimeResponse = GetRuntimeResponses[keyof GetRuntimeResponses];
 
-export type GetGearOtaData = {
+export type GetConfigData = {
     body?: never;
-    path: {
-        /**
-         * Gear public key
-         */
-        publicKey: string;
-    };
+    path?: never;
     query?: never;
-    url: '/gears/{publicKey}/ota';
+    url: '/config';
 };
 
-export type GetGearOtaErrors = {
+export type GetConfigErrors = {
     /**
-     * Gear or firmware not found
+     * Gear not found
      */
     404: ErrorResponse;
 };
 
-export type GetGearOtaError = GetGearOtaErrors[keyof GetGearOtaErrors];
+export type GetConfigError = GetConfigErrors[keyof GetConfigErrors];
 
-export type GetGearOtaResponses = {
+export type GetConfigResponses = {
+    /**
+     * Configuration
+     */
+    200: Configuration;
+};
+
+export type GetConfigResponse = GetConfigResponses[keyof GetConfigResponses];
+
+export type GetOtaData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/ota';
+};
+
+export type GetOtaErrors = {
+    /**
+     * OTA not available
+     */
+    404: ErrorResponse;
+};
+
+export type GetOtaError = GetOtaErrors[keyof GetOtaErrors];
+
+export type GetOtaResponses = {
     /**
      * OTA summary
      */
     200: OtaSummary;
 };
 
-export type GetGearOtaResponse = GetGearOtaResponses[keyof GetGearOtaResponses];
+export type GetOtaResponse = GetOtaResponses[keyof GetOtaResponses];
+
+export type DownloadFirmwareData = {
+    body?: never;
+    path: {
+        /**
+         * Percent-encoded firmware file path
+         */
+        path: string;
+    };
+    query?: never;
+    url: '/download/firmware/{path}';
+};
+
+export type DownloadFirmwareErrors = {
+    /**
+     * Invalid params
+     */
+    400: ErrorResponse;
+    /**
+     * Firmware file not found
+     */
+    404: ErrorResponse;
+};
+
+export type DownloadFirmwareError = DownloadFirmwareErrors[keyof DownloadFirmwareErrors];
+
+export type DownloadFirmwareResponses = {
+    /**
+     * Firmware file
+     */
+    200: Blob | File;
+};
+
+export type DownloadFirmwareResponse = DownloadFirmwareResponses[keyof DownloadFirmwareResponses];
