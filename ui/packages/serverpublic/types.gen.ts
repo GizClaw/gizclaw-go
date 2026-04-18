@@ -4,159 +4,6 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
-export type Channel = string;
-
-export type Depot = {
-    name: string;
-    info: DepotInfo;
-    rollback: DepotRelease;
-    stable: DepotRelease;
-    beta: DepotRelease;
-    testing: DepotRelease;
-};
-
-export type DepotList = {
-    items: Array<Depot>;
-};
-
-export type DepotInfo = {
-    files?: Array<DepotInfoFile>;
-};
-
-export type DepotInfoFile = {
-    path: string;
-};
-
-export type DepotRelease = {
-    firmware_semver: string;
-    channel?: string;
-    files?: Array<DepotFile>;
-};
-
-export type DepotFile = {
-    path: string;
-    sha256: string;
-    md5: string;
-};
-
-export type GearRole = 'unspecified' | 'admin' | 'peer' | 'device';
-
-export type GearStatus = 'unspecified' | 'active' | 'blocked';
-
-export type GearFirmwareChannel = string;
-
-export type GearCertificationType = 'license' | 'certification';
-
-export type GearCertificationAuthority = 'unknown' | 'ccc' | 'ce' | 'fcc' | 'miit' | 'srrc' | 'rohs' | 'internal';
-
-export type GearImei = {
-    name?: string;
-    tac: string;
-    serial: string;
-};
-
-export type GearLabel = {
-    key: string;
-    value: string;
-};
-
-export type GearCertification = {
-    type: GearCertificationType;
-    authority: GearCertificationAuthority;
-    id: string;
-    authority_name?: string;
-};
-
-export type HardwareInfo = {
-    manufacturer?: string;
-    model?: string;
-    hardware_revision?: string;
-    depot?: string;
-    firmware_semver?: string;
-    imeis?: Array<GearImei>;
-    labels?: Array<GearLabel>;
-};
-
-export type DeviceInfo = {
-    name?: string;
-    sn?: string;
-    hardware?: HardwareInfo;
-};
-
-export type FirmwareConfig = {
-    channel?: GearFirmwareChannel;
-};
-
-export type Configuration = {
-    certifications?: Array<GearCertification>;
-    firmware?: FirmwareConfig;
-};
-
-export type Registration = {
-    public_key: string;
-    role: GearRole;
-    status: GearStatus;
-    auto_registered?: boolean;
-    created_at: string;
-    updated_at: string;
-    approved_at?: string;
-};
-
-export type RegistrationList = {
-    items: Array<Registration>;
-};
-
-export type Runtime = {
-    online: boolean;
-    last_seen_at: string;
-    last_addr?: string;
-};
-
-export type RefreshResult = {
-    gear: Gear;
-    updated_fields?: Array<string>;
-    errors?: Array<string>;
-};
-
-export type Gear = {
-    public_key: string;
-    role: GearRole;
-    status: GearStatus;
-    device: DeviceInfo;
-    configuration: Configuration;
-    auto_registered?: boolean;
-    created_at: string;
-    updated_at: string;
-    approved_at?: string;
-};
-
-export type OtaSummary = {
-    depot: string;
-    channel: string;
-    firmware_semver: string;
-    files: Array<DepotFile>;
-};
-
-export type PublicKeyResponse = {
-    public_key: string;
-};
-
-export type ApproveRequest = {
-    role: GearRole;
-};
-
-export type ErrorResponse = {
-    error: ErrorPayload;
-};
-
-export type ErrorPayload = {
-    code: string;
-    message: string;
-    details?: {
-        [key: string]: unknown;
-    };
-};
-
 export type RegistrationRequest = {
     public_key: string;
     device: DeviceInfo;
@@ -172,6 +19,93 @@ export type ServerInfo = {
     public_key: string;
     server_time: number;
     build_commit: string;
+};
+
+export type Configuration = {
+    certifications?: Array<GearCertification>;
+    firmware?: FirmwareConfig;
+};
+
+export type DeviceInfo = {
+    name?: string;
+    sn?: string;
+    hardware?: HardwareInfo;
+};
+
+export type ErrorPayload = {
+    code: string;
+    message: string;
+    details?: {
+        [key: string]: unknown;
+    };
+};
+
+export type ErrorResponse = {
+    error: ErrorPayload;
+};
+
+export type FirmwareConfig = {
+    channel?: GearFirmwareChannel;
+};
+
+export type Gear = {
+    public_key: string;
+    role: GearRole;
+    status: GearStatus;
+    device: DeviceInfo;
+    configuration: Configuration;
+    auto_registered?: boolean;
+    created_at: string;
+    updated_at: string;
+    approved_at?: string;
+};
+
+export type GearCertification = {
+    type: GearCertificationType;
+    authority: GearCertificationAuthority;
+    id: string;
+    authority_name?: string;
+};
+
+export type GearCertificationAuthority = 'unknown' | 'ccc' | 'ce' | 'fcc' | 'miit' | 'srrc' | 'rohs' | 'internal';
+
+export type GearCertificationType = 'license' | 'certification';
+
+export type GearFirmwareChannel = string;
+
+export type GearImei = {
+    name?: string;
+    tac: string;
+    serial: string;
+};
+
+export type GearLabel = {
+    key: string;
+    value: string;
+};
+
+export type GearRole = 'unspecified' | 'admin' | 'peer' | 'device';
+
+export type GearStatus = 'unspecified' | 'active' | 'blocked';
+
+export type HardwareInfo = {
+    manufacturer?: string;
+    model?: string;
+    hardware_revision?: string;
+    depot?: string;
+    firmware_semver?: string;
+    imeis?: Array<GearImei>;
+    labels?: Array<GearLabel>;
+};
+
+export type Registration = {
+    public_key: string;
+    role: GearRole;
+    status: GearStatus;
+    auto_registered?: boolean;
+    created_at: string;
+    updated_at: string;
+    approved_at?: string;
 };
 
 export type GetServerInfoData = {

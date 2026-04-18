@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
@@ -12,17 +14,17 @@ import (
 )
 
 type stubPeerManager struct {
-	runtime       gearservice.Runtime
-	refreshResult gearservice.RefreshResult
+	runtime       apitypes.Runtime
+	refreshResult adminservice.RefreshResult
 	refreshOnline bool
 	refreshErr    error
 }
 
-func (m stubPeerManager) PeerRuntime(context.Context, string) gearservice.Runtime {
+func (m stubPeerManager) PeerRuntime(context.Context, string) apitypes.Runtime {
 	return m.runtime
 }
 
-func (m stubPeerManager) RefreshGear(context.Context, string) (gearservice.RefreshResult, bool, error) {
+func (m stubPeerManager) RefreshGear(context.Context, string) (adminservice.RefreshResult, bool, error) {
 	return m.refreshResult, m.refreshOnline, m.refreshErr
 }
 
@@ -42,12 +44,12 @@ func TestServerGearserviceHandlers(t *testing.T) {
 
 	_, err := server.RegisterGear(ctx, serverpublic.RegisterGearRequestObject{
 		Body: &serverpublic.RegisterGearJSONRequestBody{
-			Device: serverpublic.DeviceInfo{
+			Device: apitypes.DeviceInfo{
 				Sn: &sn,
-				Hardware: &serverpublic.HardwareInfo{
+				Hardware: &apitypes.HardwareInfo{
 					Depot:  &depot,
-					Imeis:  &[]serverpublic.GearIMEI{{Tac: tac, Serial: serial}},
-					Labels: &[]serverpublic.GearLabel{{Key: labelKey, Value: labelValue}},
+					Imeis:  &[]apitypes.GearIMEI{{Tac: tac, Serial: serial}},
+					Labels: &[]apitypes.GearLabel{{Key: labelKey, Value: labelValue}},
 				},
 			},
 		},
@@ -82,17 +84,17 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("ListGears items = %+v", listed.Items)
 	}
 
-	stable := gearservice.GearFirmwareChannel("stable")
-	adminStable := adminservice.GearFirmwareChannel(stable)
+	stable := apitypes.GearFirmwareChannel("stable")
+	adminStable := apitypes.GearFirmwareChannel(stable)
 	putConfigResp, err := server.PutGearConfig(ctx, adminservice.PutGearConfigRequestObject{
 		PublicKey: adminservice.PublicKey("peer-gear"),
 		Body: &adminservice.PutGearConfigJSONRequestBody{
-			Certifications: &[]adminservice.GearCertification{{
-				Type:      adminservice.GearCertificationType("license"),
-				Authority: adminservice.GearCertificationAuthority("ce"),
+			Certifications: &[]apitypes.GearCertification{{
+				Type:      apitypes.GearCertificationType("license"),
+				Authority: apitypes.GearCertificationAuthority("ce"),
 				Id:        certID,
 			}},
-			Firmware: &adminservice.FirmwareConfig{Channel: &adminStable},
+			Firmware: &apitypes.FirmwareConfig{Channel: &adminStable},
 		},
 	})
 	if err != nil {
@@ -132,7 +134,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 
 	byFirmwareResp, err := server.ListByFirmware(ctx, adminservice.ListByFirmwareRequestObject{
 		Depot:   depot,
-		Channel: adminservice.GearFirmwareChannel(stable),
+		Channel: apitypes.GearFirmwareChannel(stable),
 	})
 	if err != nil {
 		t.Fatalf("ListByFirmware error: %v", err)
@@ -185,8 +187,8 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	byCertificationResp, err := server.ListByCertification(ctx, adminservice.ListByCertificationRequestObject{
-		Type:      adminservice.GearCertificationType("license"),
-		Authority: adminservice.GearCertificationAuthority("ce"),
+		Type:      apitypes.GearCertificationType("license"),
+		Authority: apitypes.GearCertificationAuthority("ce"),
 		Id:        certID,
 	})
 	if err != nil {
@@ -202,7 +204,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 
 	approveResp, err := server.ApproveGear(ctx, adminservice.ApproveGearRequestObject{
 		PublicKey: adminservice.PublicKey("peer-gear"),
-		Body:      &adminservice.ApproveGearJSONRequestBody{Role: adminservice.GearRoleDevice},
+		Body:      &adminservice.ApproveGearJSONRequestBody{Role: apitypes.GearRoleDevice},
 	})
 	if err != nil {
 		t.Fatalf("ApproveGear error: %v", err)
@@ -211,7 +213,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("ApproveGear response type = %T", approveResp)
 	}
-	if approved.Role != adminservice.GearRoleDevice || approved.Status != adminservice.GearStatusActive {
+	if approved.Role != apitypes.GearRoleDevice || approved.Status != apitypes.GearStatusActive {
 		t.Fatalf("ApproveGear = %+v", approved)
 	}
 
@@ -225,7 +227,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("BlockGear response type = %T", blockResp)
 	}
-	if blocked.Status != adminservice.GearStatusBlocked {
+	if blocked.Status != apitypes.GearStatusBlocked {
 		t.Fatalf("BlockGear = %+v", blocked)
 	}
 
@@ -239,7 +241,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("DeleteGear response type = %T", deleteResp)
 	}
-	if deleted.Role != adminservice.GearRoleUnspecified || deleted.Status != adminservice.GearStatusUnspecified || deleted.ApprovedAt != nil {
+	if deleted.Role != apitypes.GearRoleUnspecified || deleted.Status != apitypes.GearStatusUnspecified || deleted.ApprovedAt != nil {
 		t.Fatalf("DeleteGear = %+v", deleted)
 	}
 }
@@ -250,16 +252,16 @@ func TestServerRuntimeHandlers(t *testing.T) {
 	server := &Server{
 		Store: kv.NewMemory(nil),
 		PeerManager: stubPeerManager{
-			runtime: gearservice.Runtime{
+			runtime: apitypes.Runtime{
 				LastAddr:   &runtimeAddr,
 				LastSeenAt: now,
 				Online:     true,
 			},
-			refreshResult: gearservice.RefreshResult{
-				Gear: gearservice.Gear{
+			refreshResult: adminservice.RefreshResult{
+				Gear: apitypes.Gear{
 					PublicKey: "peer-3",
-					Role:      gearservice.GearRolePeer,
-					Status:    gearservice.GearStatusActive,
+					Role:      apitypes.GearRolePeer,
+					Status:    apitypes.GearStatusActive,
 				},
 				UpdatedFields: &[]string{"device.name"},
 			},
@@ -270,7 +272,7 @@ func TestServerRuntimeHandlers(t *testing.T) {
 	registerCtx := serverpublic.WithCallerPublicKey(context.Background(), "peer-3")
 	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-3")
 	_, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
-		Body: &serverpublic.RegisterGearJSONRequestBody{Device: serverpublic.DeviceInfo{}},
+		Body: &serverpublic.RegisterGearJSONRequestBody{Device: apitypes.DeviceInfo{}},
 	})
 	if err != nil {
 		t.Fatalf("RegisterGear error: %v", err)
@@ -321,7 +323,7 @@ func TestServerPublicHandlers(t *testing.T) {
 	before := time.Now()
 	server := &Server{
 		Store:              kv.NewMemory(nil),
-		RegistrationTokens: map[string]gearservice.GearRole{"admin": gearservice.GearRoleAdmin},
+		RegistrationTokens: map[string]apitypes.GearRole{"admin": apitypes.GearRoleAdmin},
 		BuildCommit:        "deadbeef",
 		ServerPublicKey:    "server-pk",
 	}
@@ -338,12 +340,12 @@ func TestServerPublicHandlers(t *testing.T) {
 	registerResp, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
 		Body: &serverpublic.RegisterGearJSONRequestBody{
 			RegistrationToken: &token,
-			Device: serverpublic.DeviceInfo{
+			Device: apitypes.DeviceInfo{
 				Name: &name,
 				Sn:   &sn,
-				Hardware: &serverpublic.HardwareInfo{
+				Hardware: &apitypes.HardwareInfo{
 					Depot:  &depot,
-					Labels: &[]serverpublic.GearLabel{{Key: labelKey, Value: labelValue}},
+					Labels: &[]apitypes.GearLabel{{Key: labelKey, Value: labelValue}},
 				},
 			},
 		},
@@ -359,10 +361,10 @@ func TestServerPublicHandlers(t *testing.T) {
 	if registered.Registration.PublicKey != "peer-1" {
 		t.Fatalf("PublicKey = %q", registered.Registration.PublicKey)
 	}
-	if registered.Registration.Role != serverpublic.GearRole(gearservice.GearRoleAdmin) {
+	if registered.Registration.Role != apitypes.GearRole(apitypes.GearRoleAdmin) {
 		t.Fatalf("Role = %q", registered.Registration.Role)
 	}
-	if registered.Registration.Status != serverpublic.GearStatus(gearservice.GearStatusActive) {
+	if registered.Registration.Status != apitypes.GearStatus(apitypes.GearStatusActive) {
 		t.Fatalf("Status = %q", registered.Registration.Status)
 	}
 	if registered.Registration.ApprovedAt == nil || registered.Registration.ApprovedAt.Before(before) || registered.Registration.ApprovedAt.After(time.Now().Add(time.Second)) {
@@ -389,7 +391,7 @@ func TestServerPublicHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetRegistration response type = %T", getRegistrationResp)
 	}
-	if publicRegistration.Role != gearservice.GearRole(gearservice.GearRoleAdmin) {
+	if publicRegistration.Role != apitypes.GearRole(apitypes.GearRoleAdmin) {
 		t.Fatalf("GetRegistration role = %q", publicRegistration.Role)
 	}
 
@@ -415,7 +417,7 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	server := &Server{
 		Store: kv.NewMemory(nil),
 		PeerManager: stubPeerManager{
-			runtime: gearservice.Runtime{
+			runtime: apitypes.Runtime{
 				LastAddr:   &runtimeAddr,
 				LastSeenAt: now,
 				Online:     true,
@@ -429,9 +431,9 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	depot := "depot-public"
 	_, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
 		Body: &serverpublic.RegisterGearJSONRequestBody{
-			Device: serverpublic.DeviceInfo{
+			Device: apitypes.DeviceInfo{
 				Sn: &sn,
-				Hardware: &serverpublic.HardwareInfo{
+				Hardware: &apitypes.HardwareInfo{
 					Depot: &depot,
 				},
 			},
@@ -441,12 +443,12 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 		t.Fatalf("RegisterGear error: %v", err)
 	}
 
-	stable := gearservice.GearFirmwareChannel("stable")
-	adminStable := adminservice.GearFirmwareChannel(stable)
+	stable := apitypes.GearFirmwareChannel("stable")
+	adminStable := apitypes.GearFirmwareChannel(stable)
 	_, err = server.PutGearConfig(context.Background(), adminservice.PutGearConfigRequestObject{
 		PublicKey: adminservice.PublicKey("peer-public"),
 		Body: &adminservice.PutGearConfigJSONRequestBody{
-			Firmware: &adminservice.FirmwareConfig{Channel: &adminStable},
+			Firmware: &apitypes.FirmwareConfig{Channel: &adminStable},
 		},
 	})
 	if err != nil {
@@ -469,7 +471,7 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	putInfoResp, err := server.PutInfo(gearCtx, gearservice.PutInfoRequestObject{
 		Body: &gearservice.PutInfoJSONRequestBody{
 			Sn: &newSN,
-			Hardware: &gearservice.HardwareInfo{
+			Hardware: &apitypes.HardwareInfo{
 				Depot: &depot,
 			},
 		},

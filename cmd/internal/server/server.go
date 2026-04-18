@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 )
 
 var BuildCommit = "dev"
@@ -48,11 +49,11 @@ func New(cfg Config) (*gizclaw.Server, error) {
 	}, nil
 }
 
-func registrationTokenRoles(tokens map[string]RegistrationTokenConfig) map[string]gearservice.GearRole {
+func registrationTokenRoles(tokens map[string]RegistrationTokenConfig) map[string]apitypes.GearRole {
 	if len(tokens) == 0 {
 		return nil
 	}
-	out := make(map[string]gearservice.GearRole, len(tokens))
+	out := make(map[string]apitypes.GearRole, len(tokens))
 	for name, token := range tokens {
 		out[name] = token.Role
 	}

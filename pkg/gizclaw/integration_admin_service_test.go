@@ -7,8 +7,10 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 )
 
 func TestIntegrationAdminServiceFirmwareLifecycle(t *testing.T) {
@@ -16,7 +18,7 @@ func TestIntegrationAdminServiceFirmwareLifecycle(t *testing.T) {
 
 	admin := newTestClient(t, ts)
 	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            serverpublic.DeviceInfo{Name: strPtr("admin")},
+		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
 		RegistrationToken: strPtr("admin_default"),
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
@@ -34,7 +36,7 @@ func TestIntegrationAdminServiceFirmwareLifecycle(t *testing.T) {
 	tarData := buildReleaseTar(t, adminservice.DepotRelease{
 		FirmwareSemver: "1.0.0",
 		Channel:        strPtr("stable"),
-		Files: &[]adminservice.DepotFile{{
+		Files: &[]apitypes.DepotFile{{
 			Path:   "firmware.bin",
 			Sha256: hex.EncodeToString(sum256[:]),
 			Md5:    hex.EncodeToString(sumMD5[:]),
@@ -47,7 +49,7 @@ func TestIntegrationAdminServiceFirmwareLifecycle(t *testing.T) {
 	if _, err := uploadFirmware(context.Background(), admin, "demo-main", adminservice.Channel("beta"), buildReleaseTar(t, adminservice.DepotRelease{
 		FirmwareSemver: "1.1.0",
 		Channel:        strPtr("beta"),
-		Files: &[]adminservice.DepotFile{{
+		Files: &[]apitypes.DepotFile{{
 			Path:   "firmware.bin",
 			Sha256: hex.EncodeToString(sum256[:]),
 			Md5:    hex.EncodeToString(sumMD5[:]),
@@ -58,7 +60,7 @@ func TestIntegrationAdminServiceFirmwareLifecycle(t *testing.T) {
 	if _, err := uploadFirmware(context.Background(), admin, "demo-main", adminservice.Channel("testing"), buildReleaseTar(t, adminservice.DepotRelease{
 		FirmwareSemver: "1.2.0",
 		Channel:        strPtr("testing"),
-		Files: &[]adminservice.DepotFile{{
+		Files: &[]apitypes.DepotFile{{
 			Path:   "firmware.bin",
 			Sha256: hex.EncodeToString(sum256[:]),
 			Md5:    hex.EncodeToString(sumMD5[:]),

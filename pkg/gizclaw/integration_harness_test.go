@@ -15,10 +15,11 @@ import (
 	"testing"
 	"time"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/integration/testutil"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
@@ -48,9 +49,9 @@ func startTestServer(t *testing.T) *testServer {
 	srv := &gizclaw.Server{
 		KeyPair:   keyPair,
 		GearStore: kv.NewMemory(nil),
-		RegistrationTokens: map[string]gearservice.GearRole{
-			"admin_default":  gearservice.GearRoleAdmin,
-			"device_default": gearservice.GearRoleDevice,
+		RegistrationTokens: map[string]apitypes.GearRole{
+			"admin_default":  apitypes.GearRoleAdmin,
+			"device_default": apitypes.GearRoleDevice,
 		},
 		DepotStore: depotstore.Dir(firmwareRoot),
 	}
@@ -196,98 +197,98 @@ func getServerInfo(ctx context.Context, c *gizclaw.Client) (serverpublic.ServerI
 	return serverpublic.ServerInfo{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400)
 }
 
-func getInfo(ctx context.Context, c *gizclaw.Client) (gearservice.DeviceInfo, error) {
+func getInfo(ctx context.Context, c *gizclaw.Client) (apitypes.DeviceInfo, error) {
 	api, err := c.GearServiceClient()
 	if err != nil {
-		return gearservice.DeviceInfo{}, err
+		return apitypes.DeviceInfo{}, err
 	}
 	resp, err := api.GetInfoWithResponse(ctx)
 	if err != nil {
-		return gearservice.DeviceInfo{}, err
+		return apitypes.DeviceInfo{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return gearservice.DeviceInfo{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.DeviceInfo{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func putInfo(ctx context.Context, c *gizclaw.Client, info gearservice.DeviceInfo) (gearservice.DeviceInfo, error) {
+func putInfo(ctx context.Context, c *gizclaw.Client, info apitypes.DeviceInfo) (apitypes.DeviceInfo, error) {
 	api, err := c.GearServiceClient()
 	if err != nil {
-		return gearservice.DeviceInfo{}, err
+		return apitypes.DeviceInfo{}, err
 	}
 	resp, err := api.PutInfoWithResponse(ctx, info)
 	if err != nil {
-		return gearservice.DeviceInfo{}, err
+		return apitypes.DeviceInfo{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return gearservice.DeviceInfo{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404)
+	return apitypes.DeviceInfo{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404)
 }
 
-func getRuntime(ctx context.Context, c *gizclaw.Client) (gearservice.Runtime, error) {
+func getRuntime(ctx context.Context, c *gizclaw.Client) (apitypes.Runtime, error) {
 	api, err := c.GearServiceClient()
 	if err != nil {
-		return gearservice.Runtime{}, err
+		return apitypes.Runtime{}, err
 	}
 	resp, err := api.GetRuntimeWithResponse(ctx)
 	if err != nil {
-		return gearservice.Runtime{}, err
+		return apitypes.Runtime{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return gearservice.Runtime{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400)
+	return apitypes.Runtime{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400)
 }
 
-func getRegistration(ctx context.Context, c *gizclaw.Client) (gearservice.Registration, error) {
+func getRegistration(ctx context.Context, c *gizclaw.Client) (apitypes.Registration, error) {
 	api, err := c.GearServiceClient()
 	if err != nil {
-		return gearservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	resp, err := api.GetRegistrationWithResponse(ctx)
 	if err != nil {
-		return gearservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return gearservice.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func getConfig(ctx context.Context, c *gizclaw.Client) (gearservice.Configuration, error) {
+func getConfig(ctx context.Context, c *gizclaw.Client) (apitypes.Configuration, error) {
 	api, err := c.GearServiceClient()
 	if err != nil {
-		return gearservice.Configuration{}, err
+		return apitypes.Configuration{}, err
 	}
 	resp, err := api.GetConfigWithResponse(ctx)
 	if err != nil {
-		return gearservice.Configuration{}, err
+		return apitypes.Configuration{}, err
 	}
 	if resp.JSON200 != nil {
 		cfg := *resp.JSON200
 		if cfg.Firmware == nil {
-			cfg.Firmware = &gearservice.FirmwareConfig{}
+			cfg.Firmware = &apitypes.FirmwareConfig{}
 		}
 		return cfg, nil
 	}
-	return gearservice.Configuration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.Configuration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func getOTA(ctx context.Context, c *gizclaw.Client) (gearservice.OTASummary, error) {
+func getOTA(ctx context.Context, c *gizclaw.Client) (apitypes.OTASummary, error) {
 	api, err := c.GearServiceClient()
 	if err != nil {
-		return gearservice.OTASummary{}, err
+		return apitypes.OTASummary{}, err
 	}
 	resp, err := api.GetOTAWithResponse(ctx)
 	if err != nil {
-		return gearservice.OTASummary{}, err
+		return apitypes.OTASummary{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return gearservice.OTASummary{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.OTASummary{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
 func downloadFirmware(ctx context.Context, c *gizclaw.Client, path string) ([]byte, http.Header, error) {
@@ -434,7 +435,7 @@ func rollbackFirmware(ctx context.Context, c *gizclaw.Client, depot string) (adm
 	return adminservice.Depot{}, responseError(resp.StatusCode, body)
 }
 
-func listGears(ctx context.Context, c *gizclaw.Client) ([]adminservice.Registration, error) {
+func listGears(ctx context.Context, c *gizclaw.Client) ([]apitypes.Registration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return nil, err
@@ -449,19 +450,19 @@ func listGears(ctx context.Context, c *gizclaw.Client) ([]adminservice.Registrat
 	return nil, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
 }
 
-func getGear(ctx context.Context, c *gizclaw.Client, publicKey string) (adminservice.Registration, error) {
+func getGear(ctx context.Context, c *gizclaw.Client, publicKey string) (apitypes.Registration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return adminservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	resp, err := api.GetGearWithResponse(ctx, publicKey)
 	if err != nil {
-		return adminservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return adminservice.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
 func resolveGearBySN(ctx context.Context, c *gizclaw.Client, sn string) (string, error) {
@@ -494,97 +495,97 @@ func resolveGearByIMEI(ctx context.Context, c *gizclaw.Client, tac, serial strin
 	return "", responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func approveGear(ctx context.Context, c *gizclaw.Client, publicKey string, role adminservice.GearRole) (adminservice.Registration, error) {
+func approveGear(ctx context.Context, c *gizclaw.Client, publicKey string, role apitypes.GearRole) (apitypes.Registration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return adminservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	resp, err := api.ApproveGearWithResponse(ctx, publicKey, adminservice.ApproveRequest{Role: role})
 	if err != nil {
-		return adminservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return adminservice.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400)
+	return apitypes.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400)
 }
 
-func blockGear(ctx context.Context, c *gizclaw.Client, publicKey string) (adminservice.Registration, error) {
+func blockGear(ctx context.Context, c *gizclaw.Client, publicKey string) (apitypes.Registration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return adminservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	resp, err := api.BlockGearWithResponse(ctx, publicKey)
 	if err != nil {
-		return adminservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return adminservice.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func getGearInfo(ctx context.Context, c *gizclaw.Client, publicKey string) (adminservice.DeviceInfo, error) {
+func getGearInfo(ctx context.Context, c *gizclaw.Client, publicKey string) (apitypes.DeviceInfo, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return adminservice.DeviceInfo{}, err
+		return apitypes.DeviceInfo{}, err
 	}
 	resp, err := api.GetGearInfoWithResponse(ctx, publicKey)
 	if err != nil {
-		return adminservice.DeviceInfo{}, err
+		return apitypes.DeviceInfo{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return adminservice.DeviceInfo{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.DeviceInfo{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func getGearConfig(ctx context.Context, c *gizclaw.Client, publicKey string) (adminservice.Configuration, error) {
+func getGearConfig(ctx context.Context, c *gizclaw.Client, publicKey string) (apitypes.Configuration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return adminservice.Configuration{}, err
+		return apitypes.Configuration{}, err
 	}
 	resp, err := api.GetGearConfigWithResponse(ctx, publicKey)
 	if err != nil {
-		return adminservice.Configuration{}, err
+		return apitypes.Configuration{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return adminservice.Configuration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.Configuration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func putGearConfig(ctx context.Context, c *gizclaw.Client, publicKey string, cfg adminservice.Configuration) (adminservice.Configuration, error) {
+func putGearConfig(ctx context.Context, c *gizclaw.Client, publicKey string, cfg apitypes.Configuration) (apitypes.Configuration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return adminservice.Configuration{}, err
+		return apitypes.Configuration{}, err
 	}
 	resp, err := api.PutGearConfigWithResponse(ctx, publicKey, cfg)
 	if err != nil {
-		return adminservice.Configuration{}, err
+		return apitypes.Configuration{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return adminservice.Configuration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404)
+	return apitypes.Configuration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404)
 }
 
-func getGearRuntime(ctx context.Context, c *gizclaw.Client, publicKey string) (adminservice.Runtime, error) {
+func getGearRuntime(ctx context.Context, c *gizclaw.Client, publicKey string) (apitypes.Runtime, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return adminservice.Runtime{}, err
+		return apitypes.Runtime{}, err
 	}
 	resp, err := api.GetGearRuntimeWithResponse(ctx, publicKey)
 	if err != nil {
-		return adminservice.Runtime{}, err
+		return apitypes.Runtime{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return adminservice.Runtime{}, responseError(resp.StatusCode(), resp.Body)
+	return apitypes.Runtime{}, responseError(resp.StatusCode(), resp.Body)
 }
 
-func listGearsByLabel(ctx context.Context, c *gizclaw.Client, key, value string) ([]adminservice.Registration, error) {
+func listGearsByLabel(ctx context.Context, c *gizclaw.Client, key, value string) ([]apitypes.Registration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return nil, err
@@ -599,7 +600,7 @@ func listGearsByLabel(ctx context.Context, c *gizclaw.Client, key, value string)
 	return nil, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
 }
 
-func listGearsByCertification(ctx context.Context, c *gizclaw.Client, pType adminservice.GearCertificationType, authority adminservice.GearCertificationAuthority, id string) ([]adminservice.Registration, error) {
+func listGearsByCertification(ctx context.Context, c *gizclaw.Client, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string) ([]apitypes.Registration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return nil, err
@@ -614,7 +615,7 @@ func listGearsByCertification(ctx context.Context, c *gizclaw.Client, pType admi
 	return nil, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
 }
 
-func listGearsByFirmware(ctx context.Context, c *gizclaw.Client, depot string, channel adminservice.GearFirmwareChannel) ([]adminservice.Registration, error) {
+func listGearsByFirmware(ctx context.Context, c *gizclaw.Client, depot string, channel apitypes.GearFirmwareChannel) ([]apitypes.Registration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return nil, err
@@ -629,19 +630,19 @@ func listGearsByFirmware(ctx context.Context, c *gizclaw.Client, depot string, c
 	return nil, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
 }
 
-func deleteGear(ctx context.Context, c *gizclaw.Client, publicKey string) (adminservice.Registration, error) {
+func deleteGear(ctx context.Context, c *gizclaw.Client, publicKey string) (apitypes.Registration, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return adminservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	resp, err := api.DeleteGearWithResponse(ctx, publicKey)
 	if err != nil {
-		return adminservice.Registration{}, err
+		return apitypes.Registration{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return adminservice.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
+	return apitypes.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
 func refreshGear(ctx context.Context, c *gizclaw.Client, publicKey string) (adminservice.RefreshResult, error) {
@@ -693,15 +694,7 @@ func writeTarFile(t *testing.T, tw *tar.Writer, name string, data []byte) {
 func responseError(status int, body []byte, errs ...interface{}) error {
 	for _, errResp := range errs {
 		switch e := errResp.(type) {
-		case *adminservice.ErrorResponse:
-			if e != nil {
-				return fmt.Errorf("%s: %s", e.Error.Code, e.Error.Message)
-			}
-		case *gearservice.ErrorResponse:
-			if e != nil {
-				return fmt.Errorf("%s: %s", e.Error.Code, e.Error.Message)
-			}
-		case *serverpublic.ErrorResponse:
+		case *apitypes.ErrorResponse:
 			if e != nil {
 				return fmt.Errorf("%s: %s", e.Error.Code, e.Error.Message)
 			}

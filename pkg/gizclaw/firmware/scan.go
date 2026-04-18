@@ -8,8 +8,9 @@ import (
 	"sort"
 	"strings"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 )
 
 func (s *Server) scanDepotNames() ([]string, error) {
@@ -116,24 +117,24 @@ func (s *Server) scanRelease(depot string, channel Channel) (adminservice.DepotR
 	return normalizeDepotRelease(release), nil
 }
 
-func (s *Server) resolveOTA(depotName string, channel Channel) (gearservice.OTASummary, error) {
+func (s *Server) resolveOTA(depotName string, channel Channel) (apitypes.OTASummary, error) {
 	depot, err := s.scanDepot(depotName)
 	if err != nil {
-		return gearservice.OTASummary{}, err
+		return apitypes.OTASummary{}, err
 	}
 	release, ok := depotRelease(depot, channel)
 	if !ok {
-		return gearservice.OTASummary{}, errFirmwareNotFound
+		return apitypes.OTASummary{}, errFirmwareNotFound
 	}
-	files := make([]gearservice.DepotFile, 0, len(releaseFiles(release)))
+	files := make([]apitypes.DepotFile, 0, len(releaseFiles(release)))
 	for _, file := range releaseFiles(release) {
-		files = append(files, gearservice.DepotFile{
+		files = append(files, apitypes.DepotFile{
 			Md5:    file.Md5,
 			Path:   file.Path,
 			Sha256: file.Sha256,
 		})
 	}
-	return gearservice.OTASummary{
+	return apitypes.OTASummary{
 		Channel:        string(channel),
 		Depot:          depotName,
 		Files:          files,

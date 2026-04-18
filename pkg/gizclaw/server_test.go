@@ -6,7 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
@@ -120,12 +121,12 @@ func TestResolveGearTarget(t *testing.T) {
 	store := kv.NewMemory(nil)
 	gearsServer := &gear.Server{Store: store}
 
-	saveGear := func(t *testing.T, publicKey string, device gearservice.DeviceInfo, config gearservice.Configuration) {
+	saveGear := func(t *testing.T, publicKey string, device apitypes.DeviceInfo, config apitypes.Configuration) {
 		t.Helper()
-		if _, err := gearsServer.SaveGear(ctx, gearservice.Gear{
+		if _, err := gearsServer.SaveGear(ctx, apitypes.Gear{
 			PublicKey:     publicKey,
-			Role:          gearservice.GearRoleDevice,
-			Status:        gearservice.GearStatusActive,
+			Role:          apitypes.GearRoleDevice,
+			Status:        apitypes.GearStatusActive,
 			Device:        device,
 			Configuration: config,
 		}); err != nil {
@@ -133,9 +134,9 @@ func TestResolveGearTarget(t *testing.T) {
 		}
 	}
 
-	saveGear(t, "missing-depot", gearservice.DeviceInfo{}, gearservice.Configuration{
-		Firmware: &gearservice.FirmwareConfig{Channel: func() *gearservice.GearFirmwareChannel {
-			ch := gearservice.GearFirmwareChannel("stable")
+	saveGear(t, "missing-depot", apitypes.DeviceInfo{}, apitypes.Configuration{
+		Firmware: &apitypes.FirmwareConfig{Channel: func() *apitypes.GearFirmwareChannel {
+			ch := apitypes.GearFirmwareChannel("stable")
 			return &ch
 		}()},
 	})
@@ -143,9 +144,9 @@ func TestResolveGearTarget(t *testing.T) {
 		t.Fatalf("resolveGearTarget(missing depot) err = %v", err)
 	}
 
-	saveGear(t, "missing-channel", gearservice.DeviceInfo{
-		Hardware: &gearservice.HardwareInfo{Depot: func() *string { v := "demo-main"; return &v }()},
-	}, gearservice.Configuration{})
+	saveGear(t, "missing-channel", apitypes.DeviceInfo{
+		Hardware: &apitypes.HardwareInfo{Depot: func() *string { v := "demo-main"; return &v }()},
+	}, apitypes.Configuration{})
 	if _, _, err := resolveGearTarget(ctx, gearsServer, "missing-channel"); err == nil || !strings.Contains(err.Error(), "missing channel") {
 		t.Fatalf("resolveGearTarget(missing channel) err = %v", err)
 	}
@@ -154,11 +155,11 @@ func TestResolveGearTarget(t *testing.T) {
 		t.Fatalf("resolveGearTarget(missing gear) err = %v", err)
 	}
 
-	saveGear(t, "valid", gearservice.DeviceInfo{
-		Hardware: &gearservice.HardwareInfo{Depot: func() *string { v := "demo-main"; return &v }()},
-	}, gearservice.Configuration{
-		Firmware: &gearservice.FirmwareConfig{Channel: func() *gearservice.GearFirmwareChannel {
-			ch := gearservice.GearFirmwareChannel("stable")
+	saveGear(t, "valid", apitypes.DeviceInfo{
+		Hardware: &apitypes.HardwareInfo{Depot: func() *string { v := "demo-main"; return &v }()},
+	}, apitypes.Configuration{
+		Firmware: &apitypes.FirmwareConfig{Channel: func() *apitypes.GearFirmwareChannel {
+			ch := apitypes.GearFirmwareChannel("stable")
 			return &ch
 		}()},
 	})

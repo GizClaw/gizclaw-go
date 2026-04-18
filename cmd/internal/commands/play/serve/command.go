@@ -6,8 +6,9 @@ import (
 	"os/signal"
 	"syscall"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/spf13/cobra"
 )
 
@@ -31,10 +32,10 @@ func NewCmd() *cobra.Command {
 			}
 			defer c.Close()
 
-			c.Device = gearservice.DeviceInfo{
+			c.Device = apitypes.DeviceInfo{
 				Name: optionalString(name),
 				Sn:   optionalString(sn),
-				Hardware: &gearservice.HardwareInfo{
+				Hardware: &apitypes.HardwareInfo{
 					Manufacturer:     optionalString(manufacturer),
 					Model:            optionalString(model),
 					HardwareRevision: optionalString(hardwareRevision),

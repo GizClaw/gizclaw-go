@@ -3,23 +3,23 @@ package gear
 import (
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
 func TestValidateGear(t *testing.T) {
-	roleErr := validateGear(gearservice.Gear{
+	roleErr := validateGear(apitypes.Gear{
 		PublicKey: "x",
-		Role:      gearservice.GearRole("bad"),
-		Status:    gearservice.GearStatusActive,
+		Role:      apitypes.GearRole("bad"),
+		Status:    apitypes.GearStatusActive,
 	})
 	if roleErr == nil {
 		t.Fatal("validateGear should fail on invalid role")
 	}
 
-	statusErr := validateGear(gearservice.Gear{
+	statusErr := validateGear(apitypes.Gear{
 		PublicKey: "x",
-		Role:      gearservice.GearRolePeer,
-		Status:    gearservice.GearStatus("bad"),
+		Role:      apitypes.GearRolePeer,
+		Status:    apitypes.GearStatus("bad"),
 	})
 	if statusErr == nil {
 		t.Fatal("validateGear should fail on invalid status")
@@ -27,16 +27,16 @@ func TestValidateGear(t *testing.T) {
 }
 
 func TestValidateConfiguration(t *testing.T) {
-	invalid := gearservice.GearFirmwareChannel("weird")
-	if err := validateConfiguration(gearservice.Configuration{
-		Firmware: &gearservice.FirmwareConfig{Channel: &invalid},
+	invalid := apitypes.GearFirmwareChannel("weird")
+	if err := validateConfiguration(apitypes.Configuration{
+		Firmware: &apitypes.FirmwareConfig{Channel: &invalid},
 	}); err == nil {
 		t.Fatal("validateConfiguration should reject invalid channel")
 	}
 
-	stable := gearservice.GearFirmwareChannel("stable")
-	if err := validateConfiguration(gearservice.Configuration{
-		Firmware: &gearservice.FirmwareConfig{Channel: &stable},
+	stable := apitypes.GearFirmwareChannel("stable")
+	if err := validateConfiguration(apitypes.Configuration{
+		Firmware: &apitypes.FirmwareConfig{Channel: &stable},
 	}); err != nil {
 		t.Fatalf("validateConfiguration stable err = %v", err)
 	}

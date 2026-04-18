@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/spf13/cobra"
@@ -39,10 +41,10 @@ func NewCmd() *cobra.Command {
 	var firmwareSemver string
 	var token string
 	cmd.PreRun = func(cmd *cobra.Command, args []string) {
-		req.Device = serverpublic.DeviceInfo{
+		req.Device = apitypes.DeviceInfo{
 			Name: optionalString(name),
 			Sn:   optionalString(sn),
-			Hardware: &serverpublic.HardwareInfo{
+			Hardware: &apitypes.HardwareInfo{
 				Manufacturer:     optionalString(manufacturer),
 				Model:            optionalString(model),
 				HardwareRevision: optionalString(hardwareRevision),

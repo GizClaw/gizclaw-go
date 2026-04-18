@@ -9,7 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/peerpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -85,34 +87,34 @@ func (m *Manager) ActivePeer(publicKey string) (*giznet.Conn, bool) {
 	return state.conn, true
 }
 
-func (m *Manager) PeerRuntime(_ context.Context, publicKey string) gearservice.Runtime {
+func (m *Manager) PeerRuntime(_ context.Context, publicKey string) apitypes.Runtime {
 	m.activePeersMu.RLock()
 	defer m.activePeersMu.RUnlock()
 	state, ok := m.activePeers[publicKey]
 	if !ok {
-		return gearservice.Runtime{}
+		return apitypes.Runtime{}
 	}
-	return gearservice.Runtime{
+	return apitypes.Runtime{
 		Online:     state.online,
 		LastSeenAt: state.lastSeenAt,
 	}
 }
 
-func (m *Manager) RefreshGear(ctx context.Context, publicKey string) (gearservice.RefreshResult, bool, error) {
+func (m *Manager) RefreshGear(ctx context.Context, publicKey string) (adminservice.RefreshResult, bool, error) {
 	if m.Gears == nil {
-		return gearservice.RefreshResult{}, false, errors.New("gizclaw: gears service not configured")
+		return adminservice.RefreshResult{}, false, errors.New("gizclaw: gears service not configured")
 	}
 	gear, err := m.Gears.LoadGear(ctx, publicKey)
 	if err != nil {
-		return gearservice.RefreshResult{}, false, err
+		return adminservice.RefreshResult{}, false, err
 	}
 	conn, ok := m.ActivePeer(publicKey)
 	if !ok {
-		return gearservice.RefreshResult{}, false, ErrDeviceOffline
+		return adminservice.RefreshResult{}, false, ErrDeviceOffline
 	}
 	client, err := m.peerPublicClientForConn(publicKey, conn)
 	if err != nil {
-		return gearservice.RefreshResult{}, true, err
+		return adminservice.RefreshResult{}, true, err
 	}
 
 	next, updatedFields, errs, err := m.refreshGearFromPeer(ctx, client, gear)
@@ -122,13 +124,13 @@ func (m *Manager) RefreshGear(ctx context.Context, publicKey string) (gearservic
 			m.MarkPeerOffline(publicKey, conn)
 			online = false
 		}
-		return gearservice.RefreshResult{
+		return adminservice.RefreshResult{
 			Gear:   gear,
 			Errors: optionalStrings(errs),
 		}, online, err
 	}
 	if len(updatedFields) == 0 {
-		return gearservice.RefreshResult{
+		return adminservice.RefreshResult{
 			Gear:          next,
 			Errors:        optionalStrings(errs),
 			UpdatedFields: nil,
@@ -136,13 +138,13 @@ func (m *Manager) RefreshGear(ctx context.Context, publicKey string) (gearservic
 	}
 	saved, err := m.Gears.SaveGear(ctx, next)
 	if err != nil {
-		return gearservice.RefreshResult{
+		return adminservice.RefreshResult{
 			Gear:          next,
 			Errors:        optionalStrings(errs),
 			UpdatedFields: optionalStrings(updatedFields),
 		}, true, err
 	}
-	return gearservice.RefreshResult{
+	return adminservice.RefreshResult{
 		Gear:          saved,
 		Errors:        optionalStrings(errs),
 		UpdatedFields: optionalStrings(updatedFields),
@@ -183,7 +185,7 @@ func (m *Manager) peerPublicClientForConn(publicKey string, conn *giznet.Conn) (
 	return peerClient, nil
 }
 
-func (m *Manager) refreshGearFromPeer(ctx context.Context, client *peerpublic.ClientWithResponses, gear gearservice.Gear) (gearservice.Gear, []string, []string, error) {
+func (m *Manager) refreshGearFromPeer(ctx context.Context, client *peerpublic.ClientWithResponses, gear apitypes.Gear) (apitypes.Gear, []string, []string, error) {
 	var (
 		errs          []string
 		updatedFields []string
@@ -248,7 +250,7 @@ func isPeerDisconnectedError(err error) bool {
 		strings.Contains(msg, "closed network connection")
 }
 
-func applyPeerRefreshInfo(gear *gearservice.Gear, info peerpublic.RefreshInfo, updatedFields *[]string) {
+func applyPeerRefreshInfo(gear *apitypes.Gear, info peerpublic.RefreshInfo, updatedFields *[]string) {
 	if gear == nil {
 		return
 	}
@@ -279,7 +281,7 @@ func applyPeerRefreshInfo(gear *gearservice.Gear, info peerpublic.RefreshInfo, u
 	}
 }
 
-func applyPeerRefreshIdentifiers(gear *gearservice.Gear, identifiers peerpublic.RefreshIdentifiers, updatedFields *[]string) {
+func applyPeerRefreshIdentifiers(gear *apitypes.Gear, identifiers peerpublic.RefreshIdentifiers, updatedFields *[]string) {
 	if gear == nil {
 		return
 	}
@@ -305,7 +307,7 @@ func applyPeerRefreshIdentifiers(gear *gearservice.Gear, identifiers peerpublic.
 	}
 }
 
-func applyPeerRefreshVersion(gear *gearservice.Gear, version peerpublic.RefreshVersion, updatedFields *[]string) {
+func applyPeerRefreshVersion(gear *apitypes.Gear, version peerpublic.RefreshVersion, updatedFields *[]string) {
 	if gear == nil {
 		return
 	}
@@ -325,17 +327,17 @@ func applyPeerRefreshVersion(gear *gearservice.Gear, version peerpublic.RefreshV
 	}
 }
 
-func ensureGearHardware(device *gearservice.DeviceInfo) *gearservice.HardwareInfo {
+func ensureGearHardware(device *apitypes.DeviceInfo) *apitypes.HardwareInfo {
 	if device.Hardware == nil {
-		device.Hardware = &gearservice.HardwareInfo{}
+		device.Hardware = &apitypes.HardwareInfo{}
 	}
 	return device.Hardware
 }
 
-func toGearIMEIs(in []peerpublic.GearIMEI) []gearservice.GearIMEI {
-	out := make([]gearservice.GearIMEI, 0, len(in))
+func toGearIMEIs(in []peerpublic.GearIMEI) []apitypes.GearIMEI {
+	out := make([]apitypes.GearIMEI, 0, len(in))
 	for _, item := range in {
-		out = append(out, gearservice.GearIMEI{
+		out = append(out, apitypes.GearIMEI{
 			Name:   item.Name,
 			Tac:    item.Tac,
 			Serial: item.Serial,
@@ -344,10 +346,10 @@ func toGearIMEIs(in []peerpublic.GearIMEI) []gearservice.GearIMEI {
 	return out
 }
 
-func toGearLabels(in []peerpublic.GearLabel) []gearservice.GearLabel {
-	out := make([]gearservice.GearLabel, 0, len(in))
+func toGearLabels(in []peerpublic.GearLabel) []apitypes.GearLabel {
+	out := make([]apitypes.GearLabel, 0, len(in))
 	for _, item := range in {
-		out = append(out, gearservice.GearLabel{
+		out = append(out, apitypes.GearLabel{
 			Key:   item.Key,
 			Value: item.Value,
 		})
@@ -374,7 +376,7 @@ func equalStringPtr(left, right *string) bool {
 	}
 }
 
-func equalGearIMEISlice(current *[]gearservice.GearIMEI, next []gearservice.GearIMEI) bool {
+func equalGearIMEISlice(current *[]apitypes.GearIMEI, next []apitypes.GearIMEI) bool {
 	if current == nil {
 		return len(next) == 0
 	}
@@ -391,7 +393,7 @@ func equalGearIMEISlice(current *[]gearservice.GearIMEI, next []gearservice.Gear
 	return true
 }
 
-func equalGearLabelSlice(current *[]gearservice.GearLabel, next []gearservice.GearLabel) bool {
+func equalGearLabelSlice(current *[]apitypes.GearLabel, next []apitypes.GearLabel) bool {
 	if current == nil {
 		return len(next) == 0
 	}

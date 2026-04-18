@@ -52,7 +52,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -88,7 +88,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -132,7 +132,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -142,7 +142,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -152,7 +152,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -188,7 +188,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -198,7 +198,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -208,7 +208,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -244,7 +244,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -254,7 +254,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -264,7 +264,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -303,7 +303,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -351,7 +351,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -382,7 +382,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -423,7 +423,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -472,7 +472,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -521,7 +521,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -542,7 +542,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/GearCertificationType"
+              "$ref": "./types.json#/components/schemas/GearCertificationType"
             }
           },
           {
@@ -550,7 +550,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/GearCertificationAuthority"
+              "$ref": "./types.json#/components/schemas/GearCertificationAuthority"
             }
           },
           {
@@ -578,7 +578,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -607,7 +607,7 @@
             "in": "path",
             "required": true,
             "schema": {
-              "$ref": "#/components/schemas/GearFirmwareChannel"
+              "$ref": "./types.json#/components/schemas/GearFirmwareChannel"
             }
           }
         ],
@@ -627,7 +627,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -653,7 +653,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Registration"
+                  "$ref": "./types.json#/components/schemas/Registration"
                 }
               }
             }
@@ -663,7 +663,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -687,7 +687,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Registration"
+                  "$ref": "./types.json#/components/schemas/Registration"
                 }
               }
             }
@@ -697,7 +697,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -733,7 +733,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Registration"
+                  "$ref": "./types.json#/components/schemas/Registration"
                 }
               }
             }
@@ -743,7 +743,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -769,7 +769,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Registration"
+                  "$ref": "./types.json#/components/schemas/Registration"
                 }
               }
             }
@@ -779,7 +779,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -815,7 +815,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -825,7 +825,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -835,7 +835,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -861,7 +861,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DeviceInfo"
+                  "$ref": "./types.json#/components/schemas/DeviceInfo"
                 }
               }
             }
@@ -871,7 +871,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -897,7 +897,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Configuration"
+                  "$ref": "./types.json#/components/schemas/Configuration"
                 }
               }
             }
@@ -907,7 +907,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -930,7 +930,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Configuration"
+                "$ref": "./types.json#/components/schemas/Configuration"
               }
             }
           }
@@ -941,7 +941,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Configuration"
+                  "$ref": "./types.json#/components/schemas/Configuration"
                 }
               }
             }
@@ -951,7 +951,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -961,7 +961,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -987,7 +987,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Runtime"
+                  "$ref": "./types.json#/components/schemas/Runtime"
                 }
               }
             }
@@ -1013,7 +1013,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OTASummary"
+                  "$ref": "./types.json#/components/schemas/OTASummary"
                 }
               }
             }
@@ -1023,7 +1023,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -1148,256 +1148,8 @@
           "files": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/DepotFile"
+              "$ref": "./types.json#/components/schemas/DepotFile"
             }
-          }
-        }
-      },
-      "DepotFile": {
-        "type": "object",
-        "required": [
-          "path",
-          "sha256",
-          "md5"
-        ],
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "sha256": {
-            "type": "string"
-          },
-          "md5": {
-            "type": "string"
-          }
-        }
-      },
-      "ErrorResponse": {
-        "type": "object",
-        "required": [
-          "error"
-        ],
-        "properties": {
-          "error": {
-            "$ref": "#/components/schemas/ErrorPayload"
-          }
-        }
-      },
-      "ErrorPayload": {
-        "type": "object",
-        "required": [
-          "code",
-          "message"
-        ],
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
-      },
-      "GearRole": {
-        "type": "string",
-        "enum": [
-          "unspecified",
-          "admin",
-          "peer",
-          "device"
-        ]
-      },
-      "GearStatus": {
-        "type": "string",
-        "enum": [
-          "unspecified",
-          "active",
-          "blocked"
-        ]
-      },
-      "GearFirmwareChannel": {
-        "type": "string"
-      },
-      "GearCertificationType": {
-        "type": "string",
-        "enum": [
-          "license",
-          "certification"
-        ]
-      },
-      "GearCertificationAuthority": {
-        "type": "string",
-        "enum": [
-          "unknown",
-          "ccc",
-          "ce",
-          "fcc",
-          "miit",
-          "srrc",
-          "rohs",
-          "internal"
-        ]
-      },
-      "GearIMEI": {
-        "type": "object",
-        "required": [
-          "tac",
-          "serial"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "tac": {
-            "type": "string"
-          },
-          "serial": {
-            "type": "string"
-          }
-        }
-      },
-      "GearLabel": {
-        "type": "object",
-        "required": [
-          "key",
-          "value"
-        ],
-        "properties": {
-          "key": {
-            "type": "string"
-          },
-          "value": {
-            "type": "string"
-          }
-        }
-      },
-      "GearCertification": {
-        "type": "object",
-        "required": [
-          "type",
-          "authority",
-          "id"
-        ],
-        "properties": {
-          "type": {
-            "$ref": "#/components/schemas/GearCertificationType"
-          },
-          "authority": {
-            "$ref": "#/components/schemas/GearCertificationAuthority"
-          },
-          "id": {
-            "type": "string"
-          },
-          "authority_name": {
-            "type": "string"
-          }
-        }
-      },
-      "HardwareInfo": {
-        "type": "object",
-        "properties": {
-          "manufacturer": {
-            "type": "string"
-          },
-          "model": {
-            "type": "string"
-          },
-          "hardware_revision": {
-            "type": "string"
-          },
-          "depot": {
-            "type": "string"
-          },
-          "firmware_semver": {
-            "type": "string"
-          },
-          "imeis": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GearIMEI"
-            }
-          },
-          "labels": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GearLabel"
-            }
-          }
-        }
-      },
-      "DeviceInfo": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "sn": {
-            "type": "string"
-          },
-          "hardware": {
-            "$ref": "#/components/schemas/HardwareInfo"
-          }
-        }
-      },
-      "FirmwareConfig": {
-        "type": "object",
-        "properties": {
-          "channel": {
-            "$ref": "#/components/schemas/GearFirmwareChannel"
-          }
-        }
-      },
-      "Configuration": {
-        "type": "object",
-        "properties": {
-          "certifications": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GearCertification"
-            }
-          },
-          "firmware": {
-            "$ref": "#/components/schemas/FirmwareConfig"
-          }
-        }
-      },
-      "Registration": {
-        "type": "object",
-        "required": [
-          "public_key",
-          "role",
-          "status",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "public_key": {
-            "type": "string"
-          },
-          "role": {
-            "$ref": "#/components/schemas/GearRole"
-          },
-          "status": {
-            "$ref": "#/components/schemas/GearStatus"
-          },
-          "auto_registered": {
-            "type": "boolean"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "approved_at": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       },
@@ -1410,27 +1162,8 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Registration"
+              "$ref": "./types.json#/components/schemas/Registration"
             }
-          }
-        }
-      },
-      "Runtime": {
-        "type": "object",
-        "required": [
-          "online",
-          "last_seen_at"
-        ],
-        "properties": {
-          "online": {
-            "type": "boolean"
-          },
-          "last_seen_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "last_addr": {
-            "type": "string"
           }
         }
       },
@@ -1441,7 +1174,7 @@
         ],
         "properties": {
           "gear": {
-            "$ref": "#/components/schemas/Gear"
+            "$ref": "./types.json#/components/schemas/Gear"
           },
           "updated_fields": {
             "type": "array",
@@ -1453,76 +1186,6 @@
             "type": "array",
             "items": {
               "type": "string"
-            }
-          }
-        }
-      },
-      "Gear": {
-        "type": "object",
-        "required": [
-          "public_key",
-          "role",
-          "status",
-          "device",
-          "configuration",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "public_key": {
-            "type": "string"
-          },
-          "role": {
-            "$ref": "#/components/schemas/GearRole"
-          },
-          "status": {
-            "$ref": "#/components/schemas/GearStatus"
-          },
-          "device": {
-            "$ref": "#/components/schemas/DeviceInfo"
-          },
-          "configuration": {
-            "$ref": "#/components/schemas/Configuration"
-          },
-          "auto_registered": {
-            "type": "boolean"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "approved_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "OTASummary": {
-        "type": "object",
-        "required": [
-          "depot",
-          "channel",
-          "firmware_semver",
-          "files"
-        ],
-        "properties": {
-          "depot": {
-            "type": "string"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "firmware_semver": {
-            "type": "string"
-          },
-          "files": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DepotFile"
             }
           }
         }
@@ -1545,60 +1208,7 @@
         ],
         "properties": {
           "role": {
-            "$ref": "#/components/schemas/GearRole"
-          }
-        }
-      },
-      "RegistrationRequest": {
-        "type": "object",
-        "required": [
-          "public_key",
-          "device"
-        ],
-        "properties": {
-          "public_key": {
-            "type": "string"
-          },
-          "device": {
-            "$ref": "#/components/schemas/DeviceInfo"
-          },
-          "registration_token": {
-            "type": "string"
-          }
-        }
-      },
-      "RegistrationResult": {
-        "type": "object",
-        "required": [
-          "gear",
-          "registration"
-        ],
-        "properties": {
-          "gear": {
-            "$ref": "#/components/schemas/Gear"
-          },
-          "registration": {
-            "$ref": "#/components/schemas/Registration"
-          }
-        }
-      },
-      "ServerInfo": {
-        "type": "object",
-        "required": [
-          "public_key",
-          "server_time",
-          "build_commit"
-        ],
-        "properties": {
-          "public_key": {
-            "type": "string"
-          },
-          "server_time": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "build_commit": {
-            "type": "string"
+            "$ref": "./types.json#/components/schemas/GearRole"
           }
         }
       }

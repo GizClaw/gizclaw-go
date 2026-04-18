@@ -3,7 +3,8 @@ package gizclaw
 import (
 	"context"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
@@ -28,7 +29,7 @@ func (p GearsSecurityPolicy) AllowPeerService(publicKey giznet.PublicKey, servic
 	}
 	switch service {
 	case ServiceAdmin, ServiceGear:
-		return gear.Role == gearservice.GearRoleAdmin && gear.Status == gearservice.GearStatusActive
+		return gear.Role == apitypes.GearRoleAdmin && gear.Status == apitypes.GearStatusActive
 	default:
 		return false
 	}

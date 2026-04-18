@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 )
 
@@ -63,7 +65,7 @@ func TestNormalizeDepotHelpers(t *testing.T) {
 
 	release := adminservice.DepotRelease{
 		FirmwareSemver: "1.0.0",
-		Files: &[]adminservice.DepotFile{
+		Files: &[]apitypes.DepotFile{
 			{Path: "b.bin"},
 			{Path: "a.bin"},
 		},
@@ -164,7 +166,7 @@ func TestInfoAndManifestParsing(t *testing.T) {
 		t.Fatal("validateRelease() expected invalid semver error")
 	}
 	badRelease = release
-	badRelease.Files = &[]adminservice.DepotFile{{Path: "dup"}, {Path: "dup"}}
+	badRelease.Files = &[]apitypes.DepotFile{{Path: "dup"}, {Path: "dup"}}
 	if err := validateRelease(badRelease); err == nil {
 		t.Fatal("validateRelease() expected duplicate path error")
 	}

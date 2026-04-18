@@ -1,0 +1,5 @@
+package: apitypes
+generate:
+  models: true
+output-options:
+  skip-prune: true

@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
 func TestIndexDedupeHelpers(t *testing.T) {
-	imeis := dedupeIMEIs([]gearservice.GearIMEI{
+	imeis := dedupeIMEIs([]apitypes.GearIMEI{
 		{Tac: "2", Serial: "b"},
 		{Tac: "1", Serial: "a"},
 		{Tac: "1", Serial: "a"},
@@ -18,7 +18,7 @@ func TestIndexDedupeHelpers(t *testing.T) {
 		t.Fatalf("dedupeIMEIs = %+v", imeis)
 	}
 
-	labels := dedupeLabels([]gearservice.GearLabel{
+	labels := dedupeLabels([]apitypes.GearLabel{
 		{Key: "b", Value: "2"},
 		{Key: "a", Value: "1"},
 		{Key: "a", Value: "1"},
@@ -28,7 +28,7 @@ func TestIndexDedupeHelpers(t *testing.T) {
 		t.Fatalf("dedupeLabels = %+v", labels)
 	}
 
-	certs := dedupeCertifications([]gearservice.GearCertification{
+	certs := dedupeCertifications([]apitypes.GearCertification{
 		{Type: "license", Authority: "ce", Id: "2"},
 		{Type: "license", Authority: "ce", Id: "1"},
 		{Type: "license", Authority: "ce", Id: "1"},
@@ -40,30 +40,30 @@ func TestIndexDedupeHelpers(t *testing.T) {
 }
 
 func TestIndexEntriesAndKeys(t *testing.T) {
-	stable := gearservice.GearFirmwareChannel("stable")
+	stable := apitypes.GearFirmwareChannel("stable")
 	sn := "sn-index"
 	depot := "depot-index"
-	gear := gearservice.Gear{
+	gear := apitypes.Gear{
 		PublicKey: "peer-index",
-		Role:      gearservice.GearRolePeer,
-		Status:    gearservice.GearStatusActive,
+		Role:      apitypes.GearRolePeer,
+		Status:    apitypes.GearStatusActive,
 		CreatedAt: time.Unix(1, 0),
 		UpdatedAt: time.Unix(2, 0),
-		Device: gearservice.DeviceInfo{
+		Device: apitypes.DeviceInfo{
 			Sn: &sn,
-			Hardware: &gearservice.HardwareInfo{
+			Hardware: &apitypes.HardwareInfo{
 				Depot:  &depot,
-				Imeis:  &[]gearservice.GearIMEI{{Tac: "123", Serial: "456"}},
-				Labels: &[]gearservice.GearLabel{{Key: "site", Value: "lab"}},
+				Imeis:  &[]apitypes.GearIMEI{{Tac: "123", Serial: "456"}},
+				Labels: &[]apitypes.GearLabel{{Key: "site", Value: "lab"}},
 			},
 		},
-		Configuration: gearservice.Configuration{
-			Certifications: &[]gearservice.GearCertification{{
-				Type:      gearservice.GearCertificationType("license"),
-				Authority: gearservice.GearCertificationAuthority("ce"),
+		Configuration: apitypes.Configuration{
+			Certifications: &[]apitypes.GearCertification{{
+				Type:      apitypes.GearCertificationType("license"),
+				Authority: apitypes.GearCertificationAuthority("ce"),
 				Id:        "cert-1",
 			}},
-			Firmware: &gearservice.FirmwareConfig{Channel: &stable},
+			Firmware: &apitypes.FirmwareConfig{Channel: &stable},
 		},
 	}
 

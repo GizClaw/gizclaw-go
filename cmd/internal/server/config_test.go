@@ -7,9 +7,10 @@ import (
 	"strings"
 	"testing"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -33,7 +34,7 @@ func TestNewWithPreparedConfig(t *testing.T) {
 		Gears: GearsConfig{
 			Store: "mem",
 			RegistrationTokens: map[string]RegistrationTokenConfig{
-				"admin_default": {Role: gearservice.GearRoleAdmin},
+				"admin_default": {Role: apitypes.GearRoleAdmin},
 			},
 		},
 		Depots: DepotsConfig{Store: "fw"},
@@ -85,7 +86,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		Gears: GearsConfig{
 			Store: "runtime-gears",
 			RegistrationTokens: map[string]RegistrationTokenConfig{
-				"runtime": {Role: gearservice.GearRoleAdmin},
+				"runtime": {Role: apitypes.GearRoleAdmin},
 			},
 		},
 		Depots: DepotsConfig{Store: "runtime-depots"},
@@ -98,7 +99,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		Gears: GearsConfig{
 			Store: "file-gears",
 			RegistrationTokens: map[string]RegistrationTokenConfig{
-				"file": {Role: gearservice.GearRoleAdmin},
+				"file": {Role: apitypes.GearRoleAdmin},
 			},
 		},
 		Depots: DepotsConfig{Store: "file-depots"},
@@ -114,7 +115,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	if merged.Gears.Store != "runtime-gears" {
 		t.Fatalf("Gears.Store = %q", merged.Gears.Store)
 	}
-	if len(merged.Gears.RegistrationTokens) != 1 || merged.Gears.RegistrationTokens["runtime"].Role != gearservice.GearRoleAdmin {
+	if len(merged.Gears.RegistrationTokens) != 1 || merged.Gears.RegistrationTokens["runtime"].Role != apitypes.GearRoleAdmin {
 		t.Fatalf("RegistrationTokens = %+v", merged.Gears.RegistrationTokens)
 	}
 	if merged.Depots.Store != "runtime-depots" {
@@ -211,12 +212,12 @@ func TestSecurityPolicyAllowsAdminServicesForActiveAdmin(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 	service := &gear.Server{Store: kv.NewMemory(nil)}
-	if _, err := service.SaveGear(context.Background(), gearservice.Gear{
+	if _, err := service.SaveGear(context.Background(), apitypes.Gear{
 		PublicKey:     keyPair.Public.String(),
-		Role:          gearservice.GearRoleAdmin,
-		Status:        gearservice.GearStatusActive,
-		Device:        gearservice.DeviceInfo{},
-		Configuration: gearservice.Configuration{},
+		Role:          apitypes.GearRoleAdmin,
+		Status:        apitypes.GearStatusActive,
+		Device:        apitypes.DeviceInfo{},
+		Configuration: apitypes.Configuration{},
 	}); err != nil {
 		t.Fatalf("SaveGear error = %v", err)
 	}

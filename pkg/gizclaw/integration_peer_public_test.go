@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+
 	"github.com/GizClaw/gizclaw-go/integration/testutil"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 )
 
 func TestIntegrationPeerPublicRefresh(t *testing.T) {
@@ -20,7 +21,7 @@ func TestIntegrationPeerPublicRefresh(t *testing.T) {
 
 	admin := newTestClient(t, ts)
 	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            serverpublic.DeviceInfo{Name: strPtr("admin")},
+		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
 		RegistrationToken: strPtr("admin_default"),
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
@@ -28,15 +29,15 @@ func TestIntegrationPeerPublicRefresh(t *testing.T) {
 
 	device := newTestClient(t, ts)
 	deviceResult, err := register(context.Background(), device, serverpublic.RegistrationRequest{
-		Device:            serverpublic.DeviceInfo{Name: strPtr("device")},
+		Device:            apitypes.DeviceInfo{Name: strPtr("device")},
 		RegistrationToken: strPtr("device_default"),
 	})
 	if err != nil {
 		t.Fatalf("device register error: %v", err)
 	}
 
-	device.Device = gearservice.DeviceInfo{
-		Hardware: &gearservice.HardwareInfo{
+	device.Device = apitypes.DeviceInfo{
+		Hardware: &apitypes.HardwareInfo{
 			Manufacturer:   strPtr("Acme"),
 			Model:          strPtr("M1"),
 			Depot:          strPtr("demo"),
@@ -59,7 +60,7 @@ func TestIntegrationPeerPublicRefreshReportsOfflineWhenDeviceDisconnected(t *tes
 
 	admin := newTestClient(t, ts)
 	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            serverpublic.DeviceInfo{Name: strPtr("admin")},
+		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
 		RegistrationToken: strPtr("admin_default"),
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
@@ -67,7 +68,7 @@ func TestIntegrationPeerPublicRefreshReportsOfflineWhenDeviceDisconnected(t *tes
 
 	device := newTestClient(t, ts)
 	deviceResult, err := register(context.Background(), device, serverpublic.RegistrationRequest{
-		Device:            serverpublic.DeviceInfo{Name: strPtr("device")},
+		Device:            apitypes.DeviceInfo{Name: strPtr("device")},
 		RegistrationToken: strPtr("device_default"),
 	})
 	if err != nil {

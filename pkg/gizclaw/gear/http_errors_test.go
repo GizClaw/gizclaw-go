@@ -3,9 +3,8 @@ package gear
 import (
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/valyala/fasthttp"
 )
@@ -62,8 +61,8 @@ func TestHTTPErrorHelpersAndVisitors(t *testing.T) {
 	})
 
 	var (
-		_ adminservice.ErrorResponse
-		_ gearservice.ErrorResponse
-		_ serverpublic.ErrorResponse
+		_ apitypes.ErrorResponse
+		_ apitypes.ErrorResponse
+		_ apitypes.ErrorResponse
 	)
 }

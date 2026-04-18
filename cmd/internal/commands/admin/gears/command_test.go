@@ -6,19 +6,19 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
 func TestPutConfigMergesExistingConfig(t *testing.T) {
 	original := openGearConfigClient
 	fake := &fakeGearConfigClient{
-		getCfg: gearservice.Configuration{
-			Certifications: &[]gearservice.GearCertification{{
-				Type:      gearservice.GearCertificationType("certification"),
-				Authority: gearservice.GearCertificationAuthority("ce"),
+		getCfg: apitypes.Configuration{
+			Certifications: &[]apitypes.GearCertification{{
+				Type:      apitypes.GearCertificationType("certification"),
+				Authority: apitypes.GearCertificationAuthority("ce"),
 				Id:        "ce-001",
 			}},
-			Firmware: &gearservice.FirmwareConfig{Channel: ptrChannel("beta")},
+			Firmware: &apitypes.FirmwareConfig{Channel: ptrChannel("beta")},
 		},
 	}
 	openGearConfigClient = func(string) (gearConfigClient, error) {
@@ -41,7 +41,7 @@ func TestPutConfigMergesExistingConfig(t *testing.T) {
 		t.Fatalf("certifications lost: %+v", fake.putCfg.Certifications)
 	}
 
-	var got gearservice.Configuration
+	var got apitypes.Configuration
 	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
 		t.Fatalf("decode output: %v", err)
 	}
@@ -54,22 +54,22 @@ func TestPutConfigMergesExistingConfig(t *testing.T) {
 }
 
 type fakeGearConfigClient struct {
-	getCfg gearservice.Configuration
-	putCfg gearservice.Configuration
+	getCfg apitypes.Configuration
+	putCfg apitypes.Configuration
 }
 
-func (f *fakeGearConfigClient) GetGearConfig(context.Context, string) (gearservice.Configuration, error) {
+func (f *fakeGearConfigClient) GetGearConfig(context.Context, string) (apitypes.Configuration, error) {
 	return f.getCfg, nil
 }
 
-func (f *fakeGearConfigClient) PutGearConfig(_ context.Context, _ string, cfg gearservice.Configuration) (gearservice.Configuration, error) {
+func (f *fakeGearConfigClient) PutGearConfig(_ context.Context, _ string, cfg apitypes.Configuration) (apitypes.Configuration, error) {
 	f.putCfg = cfg
 	return cfg, nil
 }
 
 func (f *fakeGearConfigClient) Close() error { return nil }
 
-func ptrChannel(value string) *gearservice.GearFirmwareChannel {
-	channel := gearservice.GearFirmwareChannel(value)
+func ptrChannel(value string) *apitypes.GearFirmwareChannel {
+	channel := apitypes.GearFirmwareChannel(value)
 	return &channel
 }

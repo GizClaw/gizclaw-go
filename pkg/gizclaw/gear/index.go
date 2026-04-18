@@ -4,55 +4,56 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
-func firmwareChannel(cfg gearservice.Configuration) string {
+func firmwareChannel(cfg apitypes.Configuration) string {
 	if cfg.Firmware == nil || cfg.Firmware.Channel == nil {
 		return ""
 	}
 	return string(*cfg.Firmware.Channel)
 }
 
-func gearSN(gear gearservice.Gear) string {
+func gearSN(gear apitypes.Gear) string {
 	if gear.Device.Sn == nil {
 		return ""
 	}
 	return *gear.Device.Sn
 }
 
-func gearDepot(gear gearservice.Gear) string {
+func gearDepot(gear apitypes.Gear) string {
 	if gear.Device.Hardware == nil || gear.Device.Hardware.Depot == nil {
 		return ""
 	}
 	return *gear.Device.Hardware.Depot
 }
 
-func gearIMEIs(gear gearservice.Gear) []gearservice.GearIMEI {
+func gearIMEIs(gear apitypes.Gear) []apitypes.GearIMEI {
 	if gear.Device.Hardware == nil || gear.Device.Hardware.Imeis == nil {
 		return nil
 	}
 	return *gear.Device.Hardware.Imeis
 }
 
-func gearLabels(gear gearservice.Gear) []gearservice.GearLabel {
+func gearLabels(gear apitypes.Gear) []apitypes.GearLabel {
 	if gear.Device.Hardware == nil || gear.Device.Hardware.Labels == nil {
 		return nil
 	}
 	return *gear.Device.Hardware.Labels
 }
 
-func gearCertifications(gear gearservice.Gear) []gearservice.GearCertification {
+func gearCertifications(gear apitypes.Gear) []apitypes.GearCertification {
 	if gear.Configuration.Certifications == nil {
 		return nil
 	}
 	return *gear.Configuration.Certifications
 }
 
-func dedupeIMEIs(items []gearservice.GearIMEI) []gearservice.GearIMEI {
+func dedupeIMEIs(items []apitypes.GearIMEI) []apitypes.GearIMEI {
 	seen := make(map[[2]string]struct{}, len(items))
-	out := make([]gearservice.GearIMEI, 0, len(items))
+	out := make([]apitypes.GearIMEI, 0, len(items))
 	for _, item := range items {
 		if item.Tac == "" || item.Serial == "" {
 			continue
@@ -73,9 +74,9 @@ func dedupeIMEIs(items []gearservice.GearIMEI) []gearservice.GearIMEI {
 	return out
 }
 
-func dedupeLabels(items []gearservice.GearLabel) []gearservice.GearLabel {
+func dedupeLabels(items []apitypes.GearLabel) []apitypes.GearLabel {
 	seen := make(map[[2]string]struct{}, len(items))
-	out := make([]gearservice.GearLabel, 0, len(items))
+	out := make([]apitypes.GearLabel, 0, len(items))
 	for _, item := range items {
 		if item.Key == "" || item.Value == "" {
 			continue
@@ -96,9 +97,9 @@ func dedupeLabels(items []gearservice.GearLabel) []gearservice.GearLabel {
 	return out
 }
 
-func dedupeCertifications(items []gearservice.GearCertification) []gearservice.GearCertification {
+func dedupeCertifications(items []apitypes.GearCertification) []apitypes.GearCertification {
 	seen := make(map[[3]string]struct{}, len(items))
-	out := make([]gearservice.GearCertification, 0, len(items))
+	out := make([]apitypes.GearCertification, 0, len(items))
 	for _, item := range items {
 		if item.Type == "" || item.Authority == "" || item.Id == "" {
 			continue
@@ -140,11 +141,11 @@ func imeiKey(tac, serial string) kv.Key {
 	return append(append(kv.Key{}, gearsRoot...), "by-imei", escapeIndexSegment(tac), escapeIndexSegment(serial))
 }
 
-func certificationPrefix(certType gearservice.GearCertificationType, authority gearservice.GearCertificationAuthority, id string) kv.Key {
+func certificationPrefix(certType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string) kv.Key {
 	return append(append(kv.Key{}, gearsRoot...), "by-certification", string(certType), string(authority), escapeIndexSegment(id))
 }
 
-func certificationKey(item gearservice.GearCertification, publicKey string) kv.Key {
+func certificationKey(item apitypes.GearCertification, publicKey string) kv.Key {
 	return append(certificationPrefix(item.Type, item.Authority, item.Id), publicKey)
 }
 
@@ -152,35 +153,35 @@ func labelPrefix(key, value string) kv.Key {
 	return append(append(kv.Key{}, gearsRoot...), "by-label", escapeIndexSegment(key), escapeIndexSegment(value))
 }
 
-func labelKey(item gearservice.GearLabel, publicKey string) kv.Key {
+func labelKey(item apitypes.GearLabel, publicKey string) kv.Key {
 	return append(labelPrefix(item.Key, item.Value), publicKey)
 }
 
-func firmwarePrefix(depot string, channel gearservice.GearFirmwareChannel) kv.Key {
+func firmwarePrefix(depot string, channel apitypes.GearFirmwareChannel) kv.Key {
 	return append(append(kv.Key{}, gearsRoot...), "by-firmware-depot", escapeIndexSegment(depot), string(channel))
 }
 
-func firmwareKey(depot string, channel gearservice.GearFirmwareChannel, publicKey string) kv.Key {
+func firmwareKey(depot string, channel apitypes.GearFirmwareChannel, publicKey string) kv.Key {
 	return append(firmwarePrefix(depot, channel), publicKey)
 }
 
-func rolePrefix(role gearservice.GearRole) kv.Key {
+func rolePrefix(role apitypes.GearRole) kv.Key {
 	return append(append(kv.Key{}, gearsRoot...), "by-role", string(role))
 }
 
-func roleKey(role gearservice.GearRole, publicKey string) kv.Key {
+func roleKey(role apitypes.GearRole, publicKey string) kv.Key {
 	return append(rolePrefix(role), publicKey)
 }
 
-func statusPrefix(status gearservice.GearStatus) kv.Key {
+func statusPrefix(status apitypes.GearStatus) kv.Key {
 	return append(append(kv.Key{}, gearsRoot...), "by-status", string(status))
 }
 
-func statusKey(status gearservice.GearStatus, publicKey string) kv.Key {
+func statusKey(status apitypes.GearStatus, publicKey string) kv.Key {
 	return append(statusPrefix(status), publicKey)
 }
 
-func indexEntries(gear gearservice.Gear) []kv.Entry {
+func indexEntries(gear apitypes.Gear) []kv.Entry {
 	publicKey := gear.PublicKey
 	entries := make([]kv.Entry, 0, 2+len(gearIMEIs(gear))+len(gearCertifications(gear))+len(gearLabels(gear)))
 	if sn := gearSN(gear); sn != "" {
@@ -210,7 +211,7 @@ func indexEntries(gear gearservice.Gear) []kv.Entry {
 	return entries
 }
 
-func indexKeys(gear gearservice.Gear) []kv.Key {
+func indexKeys(gear apitypes.Gear) []kv.Key {
 	publicKey := gear.PublicKey
 	keys := make([]kv.Key, 0, 2+len(gearIMEIs(gear))+len(gearCertifications(gear))+len(gearLabels(gear)))
 	if sn := gearSN(gear); sn != "" {

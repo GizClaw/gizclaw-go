@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/goccy/go-yaml"
 )
@@ -24,7 +25,7 @@ type GearsConfig struct {
 }
 
 type RegistrationTokenConfig struct {
-	Role gearservice.GearRole `yaml:"role"`
+	Role apitypes.GearRole `yaml:"role"`
 }
 
 type DepotsConfig struct {

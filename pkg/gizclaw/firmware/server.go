@@ -11,6 +11,8 @@ import (
 	"path"
 	"sync"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
@@ -221,7 +223,7 @@ func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTA
 	if err != nil {
 		return adminservice.GetGearOTA404JSONResponse(adminError("FIRMWARE_NOT_FOUND", err.Error())), nil
 	}
-	out, err := convertViaJSON[adminservice.OTASummary](ota)
+	out, err := convertViaJSON[apitypes.OTASummary](ota)
 	if err != nil {
 		return getGearOTA500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
 	}
@@ -332,15 +334,15 @@ func (s *Server) resolveOTAFile(depotName string, channel Channel, relativePath 
 	return file, info.Size(), headers, nil
 }
 
-func adminError(code, message string) adminservice.ErrorResponse {
-	return adminservice.ErrorResponse{Error: adminservice.ErrorPayload{Code: code, Message: message}}
+func adminError(code, message string) apitypes.ErrorResponse {
+	return apitypes.ErrorResponse{Error: apitypes.ErrorPayload{Code: code, Message: message}}
 }
 
-func gearError(code, message string) gearservice.ErrorResponse {
-	return gearservice.ErrorResponse{Error: gearservice.ErrorPayload{Code: code, Message: message}}
+func gearError(code, message string) apitypes.ErrorResponse {
+	return apitypes.ErrorResponse{Error: apitypes.ErrorPayload{Code: code, Message: message}}
 }
 
-type getGearOTA500JSONResponse adminservice.ErrorResponse
+type getGearOTA500JSONResponse apitypes.ErrorResponse
 
 func (response getGearOTA500JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -348,7 +350,7 @@ func (response getGearOTA500JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type downloadFirmware500JSONResponse gearservice.ErrorResponse
+type downloadFirmware500JSONResponse apitypes.ErrorResponse
 
 func (response downloadFirmware500JSONResponse) VisitDownloadFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")

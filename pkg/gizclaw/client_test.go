@@ -10,7 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpc"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
@@ -199,22 +200,22 @@ func TestClientAccessorsAndConversions(t *testing.T) {
 	}
 
 	name := "main"
-	device := gearservice.DeviceInfo{
+	device := apitypes.DeviceInfo{
 		Sn: func() *string {
 			v := "sn-1"
 			return &v
 		}(),
-		Hardware: &gearservice.HardwareInfo{
+		Hardware: &apitypes.HardwareInfo{
 			Manufacturer:   func() *string { v := "Acme"; return &v }(),
 			Model:          func() *string { v := "M1"; return &v }(),
 			Depot:          func() *string { v := "demo-main"; return &v }(),
 			FirmwareSemver: func() *string { v := "1.2.3"; return &v }(),
-			Imeis: &[]gearservice.GearIMEI{{
+			Imeis: &[]apitypes.GearIMEI{{
 				Name:   &name,
 				Tac:    "12345678",
 				Serial: "0000001",
 			}},
-			Labels: &[]gearservice.GearLabel{{
+			Labels: &[]apitypes.GearLabel{{
 				Key:   "batch",
 				Value: "cn-east",
 			}},
@@ -242,12 +243,12 @@ func TestClientAccessorsAndConversions(t *testing.T) {
 		t.Fatalf("gearDeviceToPeerRefreshVersion() = %+v", version)
 	}
 
-	imei := gearToPeerGearIMEI(gearservice.GearIMEI{Name: &name, Tac: "87654321", Serial: "0000009"})
+	imei := gearToPeerGearIMEI(apitypes.GearIMEI{Name: &name, Tac: "87654321", Serial: "0000009"})
 	if imei.Name == nil || *imei.Name != "main" || imei.Tac != "87654321" || imei.Serial != "0000009" {
 		t.Fatalf("gearToPeerGearIMEI() = %+v", imei)
 	}
 
-	label := gearToPeerGearLabel(gearservice.GearLabel{Key: "batch", Value: "cn-west"})
+	label := gearToPeerGearLabel(apitypes.GearLabel{Key: "batch", Value: "cn-west"})
 	if label.Key != "batch" || label.Value != "cn-west" {
 		t.Fatalf("gearToPeerGearLabel() = %+v", label)
 	}

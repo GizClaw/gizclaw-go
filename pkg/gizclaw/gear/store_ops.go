@@ -9,30 +9,36 @@ import (
 	"strings"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
-func (s *Server) register(ctx context.Context, request gearservice.RegistrationRequest) (gearservice.RegistrationResult, error) {
+func (s *Server) register(ctx context.Context, request serverpublic.RegistrationRequest) (apitypes.Gear, error) {
 	publicKey := normalizePublicKey(request.PublicKey)
 	if publicKey == "" {
-		return gearservice.RegistrationResult{}, fmt.Errorf("gear: empty public key")
+		return apitypes.Gear{}, fmt.Errorf("gear: empty public key")
 	}
 	exists, err := s.exists(ctx, publicKey)
 	if err != nil {
-		return gearservice.RegistrationResult{}, err
+		return apitypes.Gear{}, err
 	}
 	if exists {
-		return gearservice.RegistrationResult{}, ErrGearAlreadyExists
+		return apitypes.Gear{}, ErrGearAlreadyExists
 	}
 
 	autoRegistered := true
-	gear := gearservice.Gear{
+	device, err := convertViaJSON[apitypes.DeviceInfo](request.Device)
+	if err != nil {
+		return apitypes.Gear{}, err
+	}
+	gear := apitypes.Gear{
 		PublicKey:      publicKey,
-		Role:           gearservice.GearRoleUnspecified,
-		Status:         gearservice.GearStatusUnspecified,
-		Device:         request.Device,
-		Configuration:  gearservice.Configuration{},
+		Role:           apitypes.GearRoleUnspecified,
+		Status:         apitypes.GearStatusUnspecified,
+		Device:         device,
+		Configuration:  apitypes.Configuration{},
 		AutoRegistered: &autoRegistered,
 	}
 
@@ -41,107 +47,104 @@ func (s *Server) register(ctx context.Context, request gearservice.RegistrationR
 		if tokenName != "" {
 			role, ok := s.RegistrationTokens[tokenName]
 			if !ok {
-				return gearservice.RegistrationResult{}, fmt.Errorf("gear: unknown registration token")
+				return apitypes.Gear{}, fmt.Errorf("gear: unknown registration token")
 			}
 			approvedAt := time.Now()
-			gear.Role = role
-			gear.Status = gearservice.GearStatusActive
+			gear.Role = apitypes.GearRole(role)
+			gear.Status = apitypes.GearStatusActive
 			gear.ApprovedAt = &approvedAt
 		}
 	}
 
 	created, err := s.create(ctx, gear)
 	if err != nil {
-		return gearservice.RegistrationResult{}, err
+		return apitypes.Gear{}, err
 	}
-	return gearservice.RegistrationResult{
-		Gear:         created,
-		Registration: toGearRegistration(created),
-	}, nil
+	return created, nil
 }
 
-func (s *Server) putInfo(ctx context.Context, publicKey string, info gearservice.DeviceInfo) (gearservice.Gear, error) {
+func (s *Server) putInfo(ctx context.Context, publicKey string, info apitypes.DeviceInfo) (apitypes.Gear, error) {
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 	gear.Device = info
 	return s.put(ctx, gear)
 }
 
 // LoadGear returns the stored gear record for a public key.
-func (s *Server) LoadGear(ctx context.Context, publicKey string) (gearservice.Gear, error) {
+func (s *Server) LoadGear(ctx context.Context, publicKey string) (apitypes.Gear, error) {
 	return s.get(ctx, publicKey)
 }
 
 // SaveGear stores a full gear record and returns the persisted value.
-func (s *Server) SaveGear(ctx context.Context, gear gearservice.Gear) (gearservice.Gear, error) {
+func (s *Server) SaveGear(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, error) {
 	return s.put(ctx, gear)
 }
 
-func (s *Server) putConfig(ctx context.Context, publicKey string, cfg gearservice.Configuration) (gearservice.Gear, error) {
+func (s *Server) putConfig(ctx context.Context, publicKey string, cfg apitypes.Configuration) (apitypes.Gear, error) {
 	if err := validateConfiguration(cfg); err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 	gear.Configuration = cfg
 	return s.put(ctx, gear)
 }
 
-func (s *Server) approve(ctx context.Context, publicKey string, role gearservice.GearRole) (gearservice.Gear, error) {
-	if role == gearservice.GearRoleUnspecified || !role.Valid() {
-		return gearservice.Gear{}, fmt.Errorf("gear: invalid role %q", role)
+func (s *Server) approve(ctx context.Context, publicKey string, role apitypes.GearRole) (apitypes.Gear, error) {
+	if role == apitypes.GearRoleUnspecified || !role.Valid() {
+		return apitypes.Gear{}, fmt.Errorf("gear: invalid role %q", role)
 	}
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 	approvedAt := time.Now()
 	gear.Role = role
-	gear.Status = gearservice.GearStatusActive
+	gear.Status = apitypes.GearStatusActive
 	gear.ApprovedAt = &approvedAt
 	return s.put(ctx, gear)
 }
 
-func (s *Server) block(ctx context.Context, publicKey string) (gearservice.Gear, error) {
+func (s *Server) block(ctx context.Context, publicKey string) (apitypes.Gear, error) {
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
-	gear.Status = gearservice.GearStatusBlocked
+	gear.Status = apitypes.GearStatusBlocked
 	return s.put(ctx, gear)
 }
 
-func (s *Server) delete(ctx context.Context, publicKey string) (gearservice.Gear, error) {
+func (s *Server) delete(ctx context.Context, publicKey string) (apitypes.Gear, error) {
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
-	gear.Role = gearservice.GearRoleUnspecified
-	gear.Status = gearservice.GearStatusUnspecified
+	gear.Role = apitypes.GearRoleUnspecified
+	gear.Status = apitypes.GearStatusUnspecified
 	gear.ApprovedAt = nil
 	return s.put(ctx, gear)
 }
 
-func (s *Server) get(ctx context.Context, publicKey string) (gearservice.Gear, error) {
+func (s *Server) get(ctx context.Context, publicKey string) (apitypes.Gear, error) {
 	store, err := s.store()
 	if err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 	publicKey = normalizePublicKey(publicKey)
 	data, err := store.Get(ctx, gearKey(publicKey))
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return gearservice.Gear{}, ErrGearNotFound
+			return apitypes.Gear{}, ErrGearNotFound
 		}
-		return gearservice.Gear{}, fmt.Errorf("gear: get %s: %w", publicKey, err)
+		return apitypes.Gear{}, fmt.Errorf("gear: get %s: %w", publicKey, err)
 	}
-	var gear gearservice.Gear
+	var gear apitypes.Gear
 	if err := json.Unmarshal(data, &gear); err != nil {
-		return gearservice.Gear{}, fmt.Errorf("gear: decode %s: %w", publicKey, err)
+		return apitypes.Gear{}, fmt.Errorf("gear: decode %s: %w", publicKey, err)
 	}
 	return gear, nil
 }
@@ -157,32 +160,32 @@ func (s *Server) exists(ctx context.Context, publicKey string) (bool, error) {
 	return false, err
 }
 
-func (s *Server) create(ctx context.Context, gear gearservice.Gear) (gearservice.Gear, error) {
+func (s *Server) create(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, error) {
 	if err := validateGear(gear); err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, err := s.get(ctx, gear.PublicKey); err == nil {
-		return gearservice.Gear{}, ErrGearAlreadyExists
+		return apitypes.Gear{}, ErrGearAlreadyExists
 	} else if !errors.Is(err, ErrGearNotFound) {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 
 	now := time.Now()
 	gear.CreatedAt = now
 	gear.UpdatedAt = now
 	if err := s.writeGearLocked(ctx, gear, nil); err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 	return s.get(ctx, gear.PublicKey)
 }
 
-func (s *Server) put(ctx context.Context, gear gearservice.Gear) (gearservice.Gear, error) {
+func (s *Server) put(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, error) {
 	if err := validateGear(gear); err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 
 	s.mu.Lock()
@@ -190,7 +193,7 @@ func (s *Server) put(ctx context.Context, gear gearservice.Gear) (gearservice.Ge
 
 	old, err := s.get(ctx, gear.PublicKey)
 	if err != nil && !errors.Is(err, ErrGearNotFound) {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 	if gear.CreatedAt.IsZero() {
 		if errors.Is(err, ErrGearNotFound) {
@@ -201,22 +204,22 @@ func (s *Server) put(ctx context.Context, gear gearservice.Gear) (gearservice.Ge
 	}
 	gear.UpdatedAt = time.Now()
 	if err := s.writeGearLocked(ctx, gear, optionalGear(old, err)); err != nil {
-		return gearservice.Gear{}, err
+		return apitypes.Gear{}, err
 	}
 	return s.get(ctx, gear.PublicKey)
 }
 
-func (s *Server) list(ctx context.Context) ([]gearservice.Gear, error) {
+func (s *Server) list(ctx context.Context) ([]apitypes.Gear, error) {
 	store, err := s.store()
 	if err != nil {
 		return nil, err
 	}
-	items := make([]gearservice.Gear, 0)
+	items := make([]apitypes.Gear, 0)
 	for entry, err := range store.List(ctx, gearsPrefix()) {
 		if err != nil {
 			return nil, fmt.Errorf("gear: list: %w", err)
 		}
-		var gear gearservice.Gear
+		var gear apitypes.Gear
 		if err := json.Unmarshal(entry.Value, &gear); err != nil {
 			return nil, fmt.Errorf("gear: decode list %s: %w", entry.Key.String(), err)
 		}
@@ -239,19 +242,19 @@ func (s *Server) resolveByIMEI(ctx context.Context, tac, serial string) (string,
 	return s.resolveSingle(ctx, imeiKey(tac, serial), ErrGearNotFound)
 }
 
-func (s *Server) listByLabel(ctx context.Context, key, value string) ([]gearservice.Gear, error) {
+func (s *Server) listByLabel(ctx context.Context, key, value string) ([]apitypes.Gear, error) {
 	return s.listByReferencePrefix(ctx, labelPrefix(key, value))
 }
 
-func (s *Server) listByCertification(ctx context.Context, certType gearservice.GearCertificationType, authority gearservice.GearCertificationAuthority, id string) ([]gearservice.Gear, error) {
+func (s *Server) listByCertification(ctx context.Context, certType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string) ([]apitypes.Gear, error) {
 	return s.listByReferencePrefix(ctx, certificationPrefix(certType, authority, id))
 }
 
-func (s *Server) listByFirmware(ctx context.Context, depot string, channel gearservice.GearFirmwareChannel) ([]gearservice.Gear, error) {
+func (s *Server) listByFirmware(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel) ([]apitypes.Gear, error) {
 	return s.listByReferencePrefix(ctx, firmwarePrefix(depot, channel))
 }
 
-func (s *Server) writeGearLocked(ctx context.Context, gear gearservice.Gear, previous *gearservice.Gear) error {
+func (s *Server) writeGearLocked(ctx context.Context, gear apitypes.Gear, previous *apitypes.Gear) error {
 	store, err := s.store()
 	if err != nil {
 		return err
@@ -295,7 +298,7 @@ func (s *Server) resolveSingle(ctx context.Context, key kv.Key, notFound error) 
 	return string(data), nil
 }
 
-func (s *Server) listByReferencePrefix(ctx context.Context, prefix kv.Key) ([]gearservice.Gear, error) {
+func (s *Server) listByReferencePrefix(ctx context.Context, prefix kv.Key) ([]apitypes.Gear, error) {
 	store, err := s.store()
 	if err != nil {
 		return nil, err
@@ -312,7 +315,7 @@ func (s *Server) listByReferencePrefix(ctx context.Context, prefix kv.Key) ([]ge
 	}
 	sort.Strings(publicKeys)
 
-	items := make([]gearservice.Gear, 0, len(publicKeys))
+	items := make([]apitypes.Gear, 0, len(publicKeys))
 	seen := make(map[string]struct{}, len(publicKeys))
 	for _, publicKey := range publicKeys {
 		if _, ok := seen[publicKey]; ok {
@@ -338,14 +341,14 @@ func (s *Server) store() (kv.Store, error) {
 	return s.Store, nil
 }
 
-func (s *Server) peerRuntime(ctx context.Context, publicKey string) gearservice.Runtime {
+func (s *Server) peerRuntime(ctx context.Context, publicKey string) apitypes.Runtime {
 	if s.PeerManager == nil {
-		return gearservice.Runtime{}
+		return apitypes.Runtime{}
 	}
 	return s.PeerManager.PeerRuntime(ctx, publicKey)
 }
 
-func optionalGear(gear gearservice.Gear, err error) *gearservice.Gear {
+func optionalGear(gear apitypes.Gear, err error) *apitypes.Gear {
 	if err != nil {
 		return nil
 	}

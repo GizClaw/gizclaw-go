@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
-func validateGear(gear gearservice.Gear) error {
+func validateGear(gear apitypes.Gear) error {
 	gear.PublicKey = normalizePublicKey(gear.PublicKey)
 	if gear.PublicKey == "" {
 		return fmt.Errorf("gear: empty public key")
@@ -21,7 +21,7 @@ func validateGear(gear gearservice.Gear) error {
 	return validateConfiguration(gear.Configuration)
 }
 
-func validateConfiguration(cfg gearservice.Configuration) error {
+func validateConfiguration(cfg apitypes.Configuration) error {
 	channel := firmwareChannel(cfg)
 	if channel == "" {
 		return nil

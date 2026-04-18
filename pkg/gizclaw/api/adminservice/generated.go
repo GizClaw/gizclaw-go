@@ -12,124 +12,19 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for GearCertificationAuthority.
-const (
-	Ccc      GearCertificationAuthority = "ccc"
-	Ce       GearCertificationAuthority = "ce"
-	Fcc      GearCertificationAuthority = "fcc"
-	Internal GearCertificationAuthority = "internal"
-	Miit     GearCertificationAuthority = "miit"
-	Rohs     GearCertificationAuthority = "rohs"
-	Srrc     GearCertificationAuthority = "srrc"
-	Unknown  GearCertificationAuthority = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the GearCertificationAuthority enum.
-func (e GearCertificationAuthority) Valid() bool {
-	switch e {
-	case Ccc:
-		return true
-	case Ce:
-		return true
-	case Fcc:
-		return true
-	case Internal:
-		return true
-	case Miit:
-		return true
-	case Rohs:
-		return true
-	case Srrc:
-		return true
-	case Unknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearCertificationType.
-const (
-	Certification GearCertificationType = "certification"
-	License       GearCertificationType = "license"
-)
-
-// Valid indicates whether the value is a known member of the GearCertificationType enum.
-func (e GearCertificationType) Valid() bool {
-	switch e {
-	case Certification:
-		return true
-	case License:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearRole.
-const (
-	GearRoleAdmin       GearRole = "admin"
-	GearRoleDevice      GearRole = "device"
-	GearRolePeer        GearRole = "peer"
-	GearRoleUnspecified GearRole = "unspecified"
-)
-
-// Valid indicates whether the value is a known member of the GearRole enum.
-func (e GearRole) Valid() bool {
-	switch e {
-	case GearRoleAdmin:
-		return true
-	case GearRoleDevice:
-		return true
-	case GearRolePeer:
-		return true
-	case GearRoleUnspecified:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearStatus.
-const (
-	GearStatusActive      GearStatus = "active"
-	GearStatusBlocked     GearStatus = "blocked"
-	GearStatusUnspecified GearStatus = "unspecified"
-)
-
-// Valid indicates whether the value is a known member of the GearStatus enum.
-func (e GearStatus) Valid() bool {
-	switch e {
-	case GearStatusActive:
-		return true
-	case GearStatusBlocked:
-		return true
-	case GearStatusUnspecified:
-		return true
-	default:
-		return false
-	}
-}
-
 // ApproveRequest defines model for ApproveRequest.
 type ApproveRequest struct {
-	Role GearRole `json:"role"`
+	Role apitypes.GearRole `json:"role"`
 }
 
 // Channel defines model for Channel.
 type Channel = string
-
-// Configuration defines model for Configuration.
-type Configuration struct {
-	Certifications *[]GearCertification `json:"certifications,omitempty"`
-	Firmware       *FirmwareConfig      `json:"firmware,omitempty"`
-}
 
 // Depot defines model for Depot.
 type Depot struct {
@@ -139,13 +34,6 @@ type Depot struct {
 	Rollback DepotRelease `json:"rollback"`
 	Stable   DepotRelease `json:"stable"`
 	Testing  DepotRelease `json:"testing"`
-}
-
-// DepotFile defines model for DepotFile.
-type DepotFile struct {
-	Md5    string `json:"md5"`
-	Path   string `json:"path"`
-	Sha256 string `json:"sha256"`
 }
 
 // DepotInfo defines model for DepotInfo.
@@ -165,101 +53,9 @@ type DepotList struct {
 
 // DepotRelease defines model for DepotRelease.
 type DepotRelease struct {
-	Channel        *string      `json:"channel,omitempty"`
-	Files          *[]DepotFile `json:"files,omitempty"`
-	FirmwareSemver string       `json:"firmware_semver"`
-}
-
-// DeviceInfo defines model for DeviceInfo.
-type DeviceInfo struct {
-	Hardware *HardwareInfo `json:"hardware,omitempty"`
-	Name     *string       `json:"name,omitempty"`
-	Sn       *string       `json:"sn,omitempty"`
-}
-
-// ErrorPayload defines model for ErrorPayload.
-type ErrorPayload struct {
-	Code    string                  `json:"code"`
-	Details *map[string]interface{} `json:"details,omitempty"`
-	Message string                  `json:"message"`
-}
-
-// ErrorResponse defines model for ErrorResponse.
-type ErrorResponse struct {
-	Error ErrorPayload `json:"error"`
-}
-
-// FirmwareConfig defines model for FirmwareConfig.
-type FirmwareConfig struct {
-	Channel *GearFirmwareChannel `json:"channel,omitempty"`
-}
-
-// Gear defines model for Gear.
-type Gear struct {
-	ApprovedAt     *time.Time    `json:"approved_at,omitempty"`
-	AutoRegistered *bool         `json:"auto_registered,omitempty"`
-	Configuration  Configuration `json:"configuration"`
-	CreatedAt      time.Time     `json:"created_at"`
-	Device         DeviceInfo    `json:"device"`
-	PublicKey      string        `json:"public_key"`
-	Role           GearRole      `json:"role"`
-	Status         GearStatus    `json:"status"`
-	UpdatedAt      time.Time     `json:"updated_at"`
-}
-
-// GearCertification defines model for GearCertification.
-type GearCertification struct {
-	Authority     GearCertificationAuthority `json:"authority"`
-	AuthorityName *string                    `json:"authority_name,omitempty"`
-	Id            string                     `json:"id"`
-	Type          GearCertificationType      `json:"type"`
-}
-
-// GearCertificationAuthority defines model for GearCertificationAuthority.
-type GearCertificationAuthority string
-
-// GearCertificationType defines model for GearCertificationType.
-type GearCertificationType string
-
-// GearFirmwareChannel defines model for GearFirmwareChannel.
-type GearFirmwareChannel = string
-
-// GearIMEI defines model for GearIMEI.
-type GearIMEI struct {
-	Name   *string `json:"name,omitempty"`
-	Serial string  `json:"serial"`
-	Tac    string  `json:"tac"`
-}
-
-// GearLabel defines model for GearLabel.
-type GearLabel struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-// GearRole defines model for GearRole.
-type GearRole string
-
-// GearStatus defines model for GearStatus.
-type GearStatus string
-
-// HardwareInfo defines model for HardwareInfo.
-type HardwareInfo struct {
-	Depot            *string      `json:"depot,omitempty"`
-	FirmwareSemver   *string      `json:"firmware_semver,omitempty"`
-	HardwareRevision *string      `json:"hardware_revision,omitempty"`
-	Imeis            *[]GearIMEI  `json:"imeis,omitempty"`
-	Labels           *[]GearLabel `json:"labels,omitempty"`
-	Manufacturer     *string      `json:"manufacturer,omitempty"`
-	Model            *string      `json:"model,omitempty"`
-}
-
-// OTASummary defines model for OTASummary.
-type OTASummary struct {
-	Channel        string      `json:"channel"`
-	Depot          string      `json:"depot"`
-	Files          []DepotFile `json:"files"`
-	FirmwareSemver string      `json:"firmware_semver"`
+	Channel        *string               `json:"channel,omitempty"`
+	Files          *[]apitypes.DepotFile `json:"files,omitempty"`
+	FirmwareSemver string                `json:"firmware_semver"`
 }
 
 // PublicKeyResponse defines model for PublicKeyResponse.
@@ -269,52 +65,14 @@ type PublicKeyResponse struct {
 
 // RefreshResult defines model for RefreshResult.
 type RefreshResult struct {
-	Errors        *[]string `json:"errors,omitempty"`
-	Gear          Gear      `json:"gear"`
-	UpdatedFields *[]string `json:"updated_fields,omitempty"`
-}
-
-// Registration defines model for Registration.
-type Registration struct {
-	ApprovedAt     *time.Time `json:"approved_at,omitempty"`
-	AutoRegistered *bool      `json:"auto_registered,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	PublicKey      string     `json:"public_key"`
-	Role           GearRole   `json:"role"`
-	Status         GearStatus `json:"status"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	Errors        *[]string     `json:"errors,omitempty"`
+	Gear          apitypes.Gear `json:"gear"`
+	UpdatedFields *[]string     `json:"updated_fields,omitempty"`
 }
 
 // RegistrationList defines model for RegistrationList.
 type RegistrationList struct {
-	Items []Registration `json:"items"`
-}
-
-// RegistrationRequest defines model for RegistrationRequest.
-type RegistrationRequest struct {
-	Device            DeviceInfo `json:"device"`
-	PublicKey         string     `json:"public_key"`
-	RegistrationToken *string    `json:"registration_token,omitempty"`
-}
-
-// RegistrationResult defines model for RegistrationResult.
-type RegistrationResult struct {
-	Gear         Gear         `json:"gear"`
-	Registration Registration `json:"registration"`
-}
-
-// Runtime defines model for Runtime.
-type Runtime struct {
-	LastAddr   *string   `json:"last_addr,omitempty"`
-	LastSeenAt time.Time `json:"last_seen_at"`
-	Online     bool      `json:"online"`
-}
-
-// ServerInfo defines model for ServerInfo.
-type ServerInfo struct {
-	BuildCommit string `json:"build_commit"`
-	PublicKey   string `json:"public_key"`
-	ServerTime  int64  `json:"server_time"`
+	Items []apitypes.Registration `json:"items"`
 }
 
 // DepotName defines model for depotName.
@@ -330,7 +88,7 @@ type PutDepotInfoJSONRequestBody = DepotInfo
 type ApproveGearJSONRequestBody = ApproveRequest
 
 // PutGearConfigJSONRequestBody defines body for PutGearConfig for application/json ContentType.
-type PutGearConfigJSONRequestBody = Configuration
+type PutGearConfigJSONRequestBody = apitypes.Configuration
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -432,10 +190,10 @@ type ClientInterface interface {
 	ListGears(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListByCertification request
-	ListByCertification(ctx context.Context, pType GearCertificationType, authority GearCertificationAuthority, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListByCertification(ctx context.Context, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListByFirmware request
-	ListByFirmware(ctx context.Context, depot string, channel GearFirmwareChannel, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListByFirmware(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ResolveByIMEI request
 	ResolveByIMEI(ctx context.Context, tac string, serial string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -589,7 +347,7 @@ func (c *Client) ListGears(ctx context.Context, reqEditors ...RequestEditorFn) (
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListByCertification(ctx context.Context, pType GearCertificationType, authority GearCertificationAuthority, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ListByCertification(ctx context.Context, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListByCertificationRequest(c.Server, pType, authority, id)
 	if err != nil {
 		return nil, err
@@ -601,7 +359,7 @@ func (c *Client) ListByCertification(ctx context.Context, pType GearCertificatio
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListByFirmware(ctx context.Context, depot string, channel GearFirmwareChannel, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ListByFirmware(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListByFirmwareRequest(c.Server, depot, channel)
 	if err != nil {
 		return nil, err
@@ -1081,7 +839,7 @@ func NewListGearsRequest(server string) (*http.Request, error) {
 }
 
 // NewListByCertificationRequest generates requests for ListByCertification
-func NewListByCertificationRequest(server string, pType GearCertificationType, authority GearCertificationAuthority, id string) (*http.Request, error) {
+func NewListByCertificationRequest(server string, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1129,7 +887,7 @@ func NewListByCertificationRequest(server string, pType GearCertificationType, a
 }
 
 // NewListByFirmwareRequest generates requests for ListByFirmware
-func NewListByFirmwareRequest(server string, depot string, channel GearFirmwareChannel) (*http.Request, error) {
+func NewListByFirmwareRequest(server string, depot string, channel apitypes.GearFirmwareChannel) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1721,10 +1479,10 @@ type ClientWithResponsesInterface interface {
 	ListGearsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListGearsResponse, error)
 
 	// ListByCertificationWithResponse request
-	ListByCertificationWithResponse(ctx context.Context, pType GearCertificationType, authority GearCertificationAuthority, id string, reqEditors ...RequestEditorFn) (*ListByCertificationResponse, error)
+	ListByCertificationWithResponse(ctx context.Context, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, reqEditors ...RequestEditorFn) (*ListByCertificationResponse, error)
 
 	// ListByFirmwareWithResponse request
-	ListByFirmwareWithResponse(ctx context.Context, depot string, channel GearFirmwareChannel, reqEditors ...RequestEditorFn) (*ListByFirmwareResponse, error)
+	ListByFirmwareWithResponse(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, reqEditors ...RequestEditorFn) (*ListByFirmwareResponse, error)
 
 	// ResolveByIMEIWithResponse request
 	ResolveByIMEIWithResponse(ctx context.Context, tac string, serial string, reqEditors ...RequestEditorFn) (*ResolveByIMEIResponse, error)
@@ -1774,7 +1532,7 @@ type ListDepotsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *DepotList
-	JSON500      *ErrorResponse
+	JSON500      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1797,7 +1555,7 @@ type GetDepotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Depot
-	JSON404      *ErrorResponse
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1820,9 +1578,9 @@ type PutDepotInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Depot
-	JSON400      *ErrorResponse
-	JSON409      *ErrorResponse
-	JSON500      *ErrorResponse
+	JSON400      *apitypes.ErrorResponse
+	JSON409      *apitypes.ErrorResponse
+	JSON500      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1845,9 +1603,9 @@ type ReleaseDepotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Depot
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
-	JSON500      *ErrorResponse
+	JSON404      *apitypes.ErrorResponse
+	JSON409      *apitypes.ErrorResponse
+	JSON500      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1870,9 +1628,9 @@ type RollbackDepotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *Depot
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
-	JSON500      *ErrorResponse
+	JSON404      *apitypes.ErrorResponse
+	JSON409      *apitypes.ErrorResponse
+	JSON500      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1895,7 +1653,7 @@ type GetChannelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *DepotRelease
-	JSON404      *ErrorResponse
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1918,7 +1676,7 @@ type PutChannelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *DepotRelease
-	JSON409      *ErrorResponse
+	JSON409      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1941,7 +1699,7 @@ type ListGearsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationList
-	JSON500      *ErrorResponse
+	JSON500      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1964,7 +1722,7 @@ type ListByCertificationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationList
-	JSON500      *ErrorResponse
+	JSON500      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1987,7 +1745,7 @@ type ListByFirmwareResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationList
-	JSON500      *ErrorResponse
+	JSON500      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2010,7 +1768,7 @@ type ResolveByIMEIResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *PublicKeyResponse
-	JSON404      *ErrorResponse
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2033,7 +1791,7 @@ type ListByLabelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationList
-	JSON500      *ErrorResponse
+	JSON500      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2056,7 +1814,7 @@ type ResolveBySNResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *PublicKeyResponse
-	JSON404      *ErrorResponse
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2078,8 +1836,8 @@ func (r ResolveBySNResponse) StatusCode() int {
 type DeleteGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Registration
-	JSON404      *ErrorResponse
+	JSON200      *apitypes.Registration
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2101,8 +1859,8 @@ func (r DeleteGearResponse) StatusCode() int {
 type GetGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Registration
-	JSON404      *ErrorResponse
+	JSON200      *apitypes.Registration
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2124,8 +1882,8 @@ func (r GetGearResponse) StatusCode() int {
 type ApproveGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Registration
-	JSON400      *ErrorResponse
+	JSON200      *apitypes.Registration
+	JSON400      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2147,8 +1905,8 @@ func (r ApproveGearResponse) StatusCode() int {
 type BlockGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Registration
-	JSON404      *ErrorResponse
+	JSON200      *apitypes.Registration
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2171,9 +1929,9 @@ type RefreshGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RefreshResult
-	JSON404      *ErrorResponse
-	JSON409      *ErrorResponse
-	JSON502      *ErrorResponse
+	JSON404      *apitypes.ErrorResponse
+	JSON409      *apitypes.ErrorResponse
+	JSON502      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2195,8 +1953,8 @@ func (r RefreshGearResponse) StatusCode() int {
 type GetGearConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Configuration
-	JSON404      *ErrorResponse
+	JSON200      *apitypes.Configuration
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2218,9 +1976,9 @@ func (r GetGearConfigResponse) StatusCode() int {
 type PutGearConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Configuration
-	JSON400      *ErrorResponse
-	JSON404      *ErrorResponse
+	JSON200      *apitypes.Configuration
+	JSON400      *apitypes.ErrorResponse
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2242,8 +2000,8 @@ func (r PutGearConfigResponse) StatusCode() int {
 type GetGearInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *DeviceInfo
-	JSON404      *ErrorResponse
+	JSON200      *apitypes.DeviceInfo
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2265,8 +2023,8 @@ func (r GetGearInfoResponse) StatusCode() int {
 type GetGearOTAResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *OTASummary
-	JSON404      *ErrorResponse
+	JSON200      *apitypes.OTASummary
+	JSON404      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -2288,7 +2046,7 @@ func (r GetGearOTAResponse) StatusCode() int {
 type GetGearRuntimeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *Runtime
+	JSON200      *apitypes.Runtime
 }
 
 // Status returns HTTPResponse.Status
@@ -2388,7 +2146,7 @@ func (c *ClientWithResponses) ListGearsWithResponse(ctx context.Context, reqEdit
 }
 
 // ListByCertificationWithResponse request returning *ListByCertificationResponse
-func (c *ClientWithResponses) ListByCertificationWithResponse(ctx context.Context, pType GearCertificationType, authority GearCertificationAuthority, id string, reqEditors ...RequestEditorFn) (*ListByCertificationResponse, error) {
+func (c *ClientWithResponses) ListByCertificationWithResponse(ctx context.Context, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, reqEditors ...RequestEditorFn) (*ListByCertificationResponse, error) {
 	rsp, err := c.ListByCertification(ctx, pType, authority, id, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2397,7 +2155,7 @@ func (c *ClientWithResponses) ListByCertificationWithResponse(ctx context.Contex
 }
 
 // ListByFirmwareWithResponse request returning *ListByFirmwareResponse
-func (c *ClientWithResponses) ListByFirmwareWithResponse(ctx context.Context, depot string, channel GearFirmwareChannel, reqEditors ...RequestEditorFn) (*ListByFirmwareResponse, error) {
+func (c *ClientWithResponses) ListByFirmwareWithResponse(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, reqEditors ...RequestEditorFn) (*ListByFirmwareResponse, error) {
 	rsp, err := c.ListByFirmware(ctx, depot, channel, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2560,7 +2318,7 @@ func ParseListDepotsResponse(rsp *http.Response) (*ListDepotsResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2593,7 +2351,7 @@ func ParseGetDepotResponse(rsp *http.Response) (*GetDepotResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2626,21 +2384,21 @@ func ParsePutDepotInfoResponse(rsp *http.Response) (*PutDepotInfoResponse, error
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2673,21 +2431,21 @@ func ParseReleaseDepotResponse(rsp *http.Response) (*ReleaseDepotResponse, error
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2720,21 +2478,21 @@ func ParseRollbackDepotResponse(rsp *http.Response) (*RollbackDepotResponse, err
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2767,7 +2525,7 @@ func ParseGetChannelResponse(rsp *http.Response) (*GetChannelResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2800,7 +2558,7 @@ func ParsePutChannelResponse(rsp *http.Response) (*PutChannelResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2833,7 +2591,7 @@ func ParseListGearsResponse(rsp *http.Response) (*ListGearsResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2866,7 +2624,7 @@ func ParseListByCertificationResponse(rsp *http.Response) (*ListByCertificationR
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2899,7 +2657,7 @@ func ParseListByFirmwareResponse(rsp *http.Response) (*ListByFirmwareResponse, e
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2932,7 +2690,7 @@ func ParseResolveByIMEIResponse(rsp *http.Response) (*ResolveByIMEIResponse, err
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2965,7 +2723,7 @@ func ParseListByLabelResponse(rsp *http.Response) (*ListByLabelResponse, error) 
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2998,7 +2756,7 @@ func ParseResolveBySNResponse(rsp *http.Response) (*ResolveBySNResponse, error) 
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3024,14 +2782,14 @@ func ParseDeleteGearResponse(rsp *http.Response) (*DeleteGearResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Registration
+		var dest apitypes.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3057,14 +2815,14 @@ func ParseGetGearResponse(rsp *http.Response) (*GetGearResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Registration
+		var dest apitypes.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3090,14 +2848,14 @@ func ParseApproveGearResponse(rsp *http.Response) (*ApproveGearResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Registration
+		var dest apitypes.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3123,14 +2881,14 @@ func ParseBlockGearResponse(rsp *http.Response) (*BlockGearResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Registration
+		var dest apitypes.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3163,21 +2921,21 @@ func ParseRefreshGearResponse(rsp *http.Response) (*RefreshGearResponse, error) 
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3203,14 +2961,14 @@ func ParseGetGearConfigResponse(rsp *http.Response) (*GetGearConfigResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Configuration
+		var dest apitypes.Configuration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3236,21 +2994,21 @@ func ParsePutGearConfigResponse(rsp *http.Response) (*PutGearConfigResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Configuration
+		var dest apitypes.Configuration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3276,14 +3034,14 @@ func ParseGetGearInfoResponse(rsp *http.Response) (*GetGearInfoResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest DeviceInfo
+		var dest apitypes.DeviceInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3309,14 +3067,14 @@ func ParseGetGearOTAResponse(rsp *http.Response) (*GetGearOTAResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest OTASummary
+		var dest apitypes.OTASummary
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3342,7 +3100,7 @@ func ParseGetGearRuntimeResponse(rsp *http.Response) (*GetGearRuntimeResponse, e
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest Runtime
+		var dest apitypes.Runtime
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3381,10 +3139,10 @@ type ServerInterface interface {
 	ListGears(c *fiber.Ctx) error
 	// List gears by certification
 	// (GET /gears/certification/{type}/{authority}/{id})
-	ListByCertification(c *fiber.Ctx, pType GearCertificationType, authority GearCertificationAuthority, id string) error
+	ListByCertification(c *fiber.Ctx, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string) error
 	// List gears by firmware depot and channel
 	// (GET /gears/firmware/{depot}/{channel})
-	ListByFirmware(c *fiber.Ctx, depot string, channel GearFirmwareChannel) error
+	ListByFirmware(c *fiber.Ctx, depot string, channel apitypes.GearFirmwareChannel) error
 	// Resolve gear public key by IMEI
 	// (GET /gears/imei/{tac}/{serial})
 	ResolveByIMEI(c *fiber.Ctx, tac string, serial string) error
@@ -3563,7 +3321,7 @@ func (siw *ServerInterfaceWrapper) ListByCertification(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "type" -------------
-	var pType GearCertificationType
+	var pType apitypes.GearCertificationType
 
 	err = runtime.BindStyledParameterWithOptions("simple", "type", c.Params("type"), &pType, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -3571,7 +3329,7 @@ func (siw *ServerInterfaceWrapper) ListByCertification(c *fiber.Ctx) error {
 	}
 
 	// ------------- Path parameter "authority" -------------
-	var authority GearCertificationAuthority
+	var authority apitypes.GearCertificationAuthority
 
 	err = runtime.BindStyledParameterWithOptions("simple", "authority", c.Params("authority"), &authority, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -3603,7 +3361,7 @@ func (siw *ServerInterfaceWrapper) ListByFirmware(c *fiber.Ctx) error {
 	}
 
 	// ------------- Path parameter "channel" -------------
-	var channel GearFirmwareChannel
+	var channel apitypes.GearFirmwareChannel
 
 	err = runtime.BindStyledParameterWithOptions("simple", "channel", c.Params("channel"), &channel, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -3922,7 +3680,7 @@ func (response ListDepots200JSONResponse) VisitListDepotsResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type ListDepots500JSONResponse ErrorResponse
+type ListDepots500JSONResponse apitypes.ErrorResponse
 
 func (response ListDepots500JSONResponse) VisitListDepotsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -3948,7 +3706,7 @@ func (response GetDepot200JSONResponse) VisitGetDepotResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
-type GetDepot404JSONResponse ErrorResponse
+type GetDepot404JSONResponse apitypes.ErrorResponse
 
 func (response GetDepot404JSONResponse) VisitGetDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -3975,7 +3733,7 @@ func (response PutDepotInfo200JSONResponse) VisitPutDepotInfoResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type PutDepotInfo400JSONResponse ErrorResponse
+type PutDepotInfo400JSONResponse apitypes.ErrorResponse
 
 func (response PutDepotInfo400JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -3984,7 +3742,7 @@ func (response PutDepotInfo400JSONResponse) VisitPutDepotInfoResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type PutDepotInfo409JSONResponse ErrorResponse
+type PutDepotInfo409JSONResponse apitypes.ErrorResponse
 
 func (response PutDepotInfo409JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -3993,7 +3751,7 @@ func (response PutDepotInfo409JSONResponse) VisitPutDepotInfoResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type PutDepotInfo500JSONResponse ErrorResponse
+type PutDepotInfo500JSONResponse apitypes.ErrorResponse
 
 func (response PutDepotInfo500JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4019,7 +3777,7 @@ func (response ReleaseDepot200JSONResponse) VisitReleaseDepotResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepot404JSONResponse ErrorResponse
+type ReleaseDepot404JSONResponse apitypes.ErrorResponse
 
 func (response ReleaseDepot404JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4028,7 +3786,7 @@ func (response ReleaseDepot404JSONResponse) VisitReleaseDepotResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepot409JSONResponse ErrorResponse
+type ReleaseDepot409JSONResponse apitypes.ErrorResponse
 
 func (response ReleaseDepot409JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4037,7 +3795,7 @@ func (response ReleaseDepot409JSONResponse) VisitReleaseDepotResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepot500JSONResponse ErrorResponse
+type ReleaseDepot500JSONResponse apitypes.ErrorResponse
 
 func (response ReleaseDepot500JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4063,7 +3821,7 @@ func (response RollbackDepot200JSONResponse) VisitRollbackDepotResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type RollbackDepot404JSONResponse ErrorResponse
+type RollbackDepot404JSONResponse apitypes.ErrorResponse
 
 func (response RollbackDepot404JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4072,7 +3830,7 @@ func (response RollbackDepot404JSONResponse) VisitRollbackDepotResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type RollbackDepot409JSONResponse ErrorResponse
+type RollbackDepot409JSONResponse apitypes.ErrorResponse
 
 func (response RollbackDepot409JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4081,7 +3839,7 @@ func (response RollbackDepot409JSONResponse) VisitRollbackDepotResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type RollbackDepot500JSONResponse ErrorResponse
+type RollbackDepot500JSONResponse apitypes.ErrorResponse
 
 func (response RollbackDepot500JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4108,7 +3866,7 @@ func (response GetChannel200JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type GetChannel404JSONResponse ErrorResponse
+type GetChannel404JSONResponse apitypes.ErrorResponse
 
 func (response GetChannel404JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4136,7 +3894,7 @@ func (response PutChannel200JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type PutChannel409JSONResponse ErrorResponse
+type PutChannel409JSONResponse apitypes.ErrorResponse
 
 func (response PutChannel409JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4161,7 +3919,7 @@ func (response ListGears200JSONResponse) VisitListGearsResponse(ctx *fiber.Ctx) 
 	return ctx.JSON(&response)
 }
 
-type ListGears500JSONResponse ErrorResponse
+type ListGears500JSONResponse apitypes.ErrorResponse
 
 func (response ListGears500JSONResponse) VisitListGearsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4171,9 +3929,9 @@ func (response ListGears500JSONResponse) VisitListGearsResponse(ctx *fiber.Ctx) 
 }
 
 type ListByCertificationRequestObject struct {
-	Type      GearCertificationType      `json:"type"`
-	Authority GearCertificationAuthority `json:"authority"`
-	Id        string                     `json:"id"`
+	Type      apitypes.GearCertificationType      `json:"type"`
+	Authority apitypes.GearCertificationAuthority `json:"authority"`
+	Id        string                              `json:"id"`
 }
 
 type ListByCertificationResponseObject interface {
@@ -4189,7 +3947,7 @@ func (response ListByCertification200JSONResponse) VisitListByCertificationRespo
 	return ctx.JSON(&response)
 }
 
-type ListByCertification500JSONResponse ErrorResponse
+type ListByCertification500JSONResponse apitypes.ErrorResponse
 
 func (response ListByCertification500JSONResponse) VisitListByCertificationResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4199,8 +3957,8 @@ func (response ListByCertification500JSONResponse) VisitListByCertificationRespo
 }
 
 type ListByFirmwareRequestObject struct {
-	Depot   string              `json:"depot"`
-	Channel GearFirmwareChannel `json:"channel"`
+	Depot   string                       `json:"depot"`
+	Channel apitypes.GearFirmwareChannel `json:"channel"`
 }
 
 type ListByFirmwareResponseObject interface {
@@ -4216,7 +3974,7 @@ func (response ListByFirmware200JSONResponse) VisitListByFirmwareResponse(ctx *f
 	return ctx.JSON(&response)
 }
 
-type ListByFirmware500JSONResponse ErrorResponse
+type ListByFirmware500JSONResponse apitypes.ErrorResponse
 
 func (response ListByFirmware500JSONResponse) VisitListByFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4243,7 +4001,7 @@ func (response ResolveByIMEI200JSONResponse) VisitResolveByIMEIResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type ResolveByIMEI404JSONResponse ErrorResponse
+type ResolveByIMEI404JSONResponse apitypes.ErrorResponse
 
 func (response ResolveByIMEI404JSONResponse) VisitResolveByIMEIResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4270,7 +4028,7 @@ func (response ListByLabel200JSONResponse) VisitListByLabelResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type ListByLabel500JSONResponse ErrorResponse
+type ListByLabel500JSONResponse apitypes.ErrorResponse
 
 func (response ListByLabel500JSONResponse) VisitListByLabelResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4296,7 +4054,7 @@ func (response ResolveBySN200JSONResponse) VisitResolveBySNResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type ResolveBySN404JSONResponse ErrorResponse
+type ResolveBySN404JSONResponse apitypes.ErrorResponse
 
 func (response ResolveBySN404JSONResponse) VisitResolveBySNResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4313,7 +4071,7 @@ type DeleteGearResponseObject interface {
 	VisitDeleteGearResponse(ctx *fiber.Ctx) error
 }
 
-type DeleteGear200JSONResponse Registration
+type DeleteGear200JSONResponse apitypes.Registration
 
 func (response DeleteGear200JSONResponse) VisitDeleteGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4322,7 +4080,7 @@ func (response DeleteGear200JSONResponse) VisitDeleteGearResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type DeleteGear404JSONResponse ErrorResponse
+type DeleteGear404JSONResponse apitypes.ErrorResponse
 
 func (response DeleteGear404JSONResponse) VisitDeleteGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4339,7 +4097,7 @@ type GetGearResponseObject interface {
 	VisitGetGearResponse(ctx *fiber.Ctx) error
 }
 
-type GetGear200JSONResponse Registration
+type GetGear200JSONResponse apitypes.Registration
 
 func (response GetGear200JSONResponse) VisitGetGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4348,7 +4106,7 @@ func (response GetGear200JSONResponse) VisitGetGearResponse(ctx *fiber.Ctx) erro
 	return ctx.JSON(&response)
 }
 
-type GetGear404JSONResponse ErrorResponse
+type GetGear404JSONResponse apitypes.ErrorResponse
 
 func (response GetGear404JSONResponse) VisitGetGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4366,7 +4124,7 @@ type ApproveGearResponseObject interface {
 	VisitApproveGearResponse(ctx *fiber.Ctx) error
 }
 
-type ApproveGear200JSONResponse Registration
+type ApproveGear200JSONResponse apitypes.Registration
 
 func (response ApproveGear200JSONResponse) VisitApproveGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4375,7 +4133,7 @@ func (response ApproveGear200JSONResponse) VisitApproveGearResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type ApproveGear400JSONResponse ErrorResponse
+type ApproveGear400JSONResponse apitypes.ErrorResponse
 
 func (response ApproveGear400JSONResponse) VisitApproveGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4392,7 +4150,7 @@ type BlockGearResponseObject interface {
 	VisitBlockGearResponse(ctx *fiber.Ctx) error
 }
 
-type BlockGear200JSONResponse Registration
+type BlockGear200JSONResponse apitypes.Registration
 
 func (response BlockGear200JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4401,7 +4159,7 @@ func (response BlockGear200JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) 
 	return ctx.JSON(&response)
 }
 
-type BlockGear404JSONResponse ErrorResponse
+type BlockGear404JSONResponse apitypes.ErrorResponse
 
 func (response BlockGear404JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4427,7 +4185,7 @@ func (response RefreshGear200JSONResponse) VisitRefreshGearResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type RefreshGear404JSONResponse ErrorResponse
+type RefreshGear404JSONResponse apitypes.ErrorResponse
 
 func (response RefreshGear404JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4436,7 +4194,7 @@ func (response RefreshGear404JSONResponse) VisitRefreshGearResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type RefreshGear409JSONResponse ErrorResponse
+type RefreshGear409JSONResponse apitypes.ErrorResponse
 
 func (response RefreshGear409JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4445,7 +4203,7 @@ func (response RefreshGear409JSONResponse) VisitRefreshGearResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type RefreshGear502JSONResponse ErrorResponse
+type RefreshGear502JSONResponse apitypes.ErrorResponse
 
 func (response RefreshGear502JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4462,7 +4220,7 @@ type GetGearConfigResponseObject interface {
 	VisitGetGearConfigResponse(ctx *fiber.Ctx) error
 }
 
-type GetGearConfig200JSONResponse Configuration
+type GetGearConfig200JSONResponse apitypes.Configuration
 
 func (response GetGearConfig200JSONResponse) VisitGetGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4471,7 +4229,7 @@ func (response GetGearConfig200JSONResponse) VisitGetGearConfigResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type GetGearConfig404JSONResponse ErrorResponse
+type GetGearConfig404JSONResponse apitypes.ErrorResponse
 
 func (response GetGearConfig404JSONResponse) VisitGetGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4489,7 +4247,7 @@ type PutGearConfigResponseObject interface {
 	VisitPutGearConfigResponse(ctx *fiber.Ctx) error
 }
 
-type PutGearConfig200JSONResponse Configuration
+type PutGearConfig200JSONResponse apitypes.Configuration
 
 func (response PutGearConfig200JSONResponse) VisitPutGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4498,7 +4256,7 @@ func (response PutGearConfig200JSONResponse) VisitPutGearConfigResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type PutGearConfig400JSONResponse ErrorResponse
+type PutGearConfig400JSONResponse apitypes.ErrorResponse
 
 func (response PutGearConfig400JSONResponse) VisitPutGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4507,7 +4265,7 @@ func (response PutGearConfig400JSONResponse) VisitPutGearConfigResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type PutGearConfig404JSONResponse ErrorResponse
+type PutGearConfig404JSONResponse apitypes.ErrorResponse
 
 func (response PutGearConfig404JSONResponse) VisitPutGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4524,7 +4282,7 @@ type GetGearInfoResponseObject interface {
 	VisitGetGearInfoResponse(ctx *fiber.Ctx) error
 }
 
-type GetGearInfo200JSONResponse DeviceInfo
+type GetGearInfo200JSONResponse apitypes.DeviceInfo
 
 func (response GetGearInfo200JSONResponse) VisitGetGearInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4533,7 +4291,7 @@ func (response GetGearInfo200JSONResponse) VisitGetGearInfoResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type GetGearInfo404JSONResponse ErrorResponse
+type GetGearInfo404JSONResponse apitypes.ErrorResponse
 
 func (response GetGearInfo404JSONResponse) VisitGetGearInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4550,7 +4308,7 @@ type GetGearOTAResponseObject interface {
 	VisitGetGearOTAResponse(ctx *fiber.Ctx) error
 }
 
-type GetGearOTA200JSONResponse OTASummary
+type GetGearOTA200JSONResponse apitypes.OTASummary
 
 func (response GetGearOTA200JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4559,7 +4317,7 @@ func (response GetGearOTA200JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type GetGearOTA404JSONResponse ErrorResponse
+type GetGearOTA404JSONResponse apitypes.ErrorResponse
 
 func (response GetGearOTA404JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4576,7 +4334,7 @@ type GetGearRuntimeResponseObject interface {
 	VisitGetGearRuntimeResponse(ctx *fiber.Ctx) error
 }
 
-type GetGearRuntime200JSONResponse Runtime
+type GetGearRuntime200JSONResponse apitypes.Runtime
 
 func (response GetGearRuntime200JSONResponse) VisitGetGearRuntimeResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -4894,7 +4652,7 @@ func (sh *strictHandler) ListGears(ctx *fiber.Ctx) error {
 }
 
 // ListByCertification operation middleware
-func (sh *strictHandler) ListByCertification(ctx *fiber.Ctx, pType GearCertificationType, authority GearCertificationAuthority, id string) error {
+func (sh *strictHandler) ListByCertification(ctx *fiber.Ctx, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string) error {
 	var request ListByCertificationRequestObject
 
 	request.Type = pType
@@ -4923,7 +4681,7 @@ func (sh *strictHandler) ListByCertification(ctx *fiber.Ctx, pType GearCertifica
 }
 
 // ListByFirmware operation middleware
-func (sh *strictHandler) ListByFirmware(ctx *fiber.Ctx, depot string, channel GearFirmwareChannel) error {
+func (sh *strictHandler) ListByFirmware(ctx *fiber.Ctx, depot string, channel apitypes.GearFirmwareChannel) error {
 	var request ListByFirmwareRequestObject
 
 	request.Depot = depot

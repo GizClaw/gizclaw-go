@@ -7,7 +7,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -39,7 +40,7 @@ type Server struct {
 	KeyPair *giznet.KeyPair
 
 	GearStore          kv.Store
-	RegistrationTokens map[string]gearservice.GearRole
+	RegistrationTokens map[string]apitypes.GearRole
 	BuildCommit        string
 	ServerPublicKey    string
 	DepotStore         depotstore.Store

@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -17,12 +18,12 @@ func TestGearsSecurityPolicyAllowsAdminServicesForActiveAdmin(t *testing.T) {
 	}
 
 	service := &gear.Server{Store: kv.NewMemory(nil)}
-	if _, err := service.SaveGear(context.Background(), gearservice.Gear{
+	if _, err := service.SaveGear(context.Background(), apitypes.Gear{
 		PublicKey:     keyPair.Public.String(),
-		Role:          gearservice.GearRoleAdmin,
-		Status:        gearservice.GearStatusActive,
-		Device:        gearservice.DeviceInfo{},
-		Configuration: gearservice.Configuration{},
+		Role:          apitypes.GearRoleAdmin,
+		Status:        apitypes.GearStatusActive,
+		Device:        apitypes.DeviceInfo{},
+		Configuration: apitypes.Configuration{},
 	}); err != nil {
 		t.Fatalf("SaveGear error = %v", err)
 	}
@@ -63,12 +64,12 @@ func TestGearsSecurityPolicyDeniesAdminServicesForBlockedAdmin(t *testing.T) {
 
 	service := &gear.Server{Store: kv.NewMemory(nil)}
 	ctx := context.Background()
-	if _, err := service.SaveGear(ctx, gearservice.Gear{
+	if _, err := service.SaveGear(ctx, apitypes.Gear{
 		PublicKey:     keyPair.Public.String(),
-		Role:          gearservice.GearRoleAdmin,
-		Status:        gearservice.GearStatusBlocked,
-		Device:        gearservice.DeviceInfo{},
-		Configuration: gearservice.Configuration{},
+		Role:          apitypes.GearRoleAdmin,
+		Status:        apitypes.GearStatusBlocked,
+		Device:        apitypes.DeviceInfo{},
+		Configuration: apitypes.Configuration{},
 	}); err != nil {
 		t.Fatalf("SaveGear error = %v", err)
 	}

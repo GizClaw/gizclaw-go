@@ -8,8 +8,9 @@ import (
 	"runtime"
 	"testing"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 )
 
@@ -25,10 +26,10 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	}
 
 	result, err := register(context.Background(), device, serverpublic.RegistrationRequest{
-		Device: serverpublic.DeviceInfo{
+		Device: apitypes.DeviceInfo{
 			Name: strPtr("demo-device"),
 			Sn:   strPtr("sn-001"),
-			Hardware: &serverpublic.HardwareInfo{
+			Hardware: &apitypes.HardwareInfo{
 				Manufacturer: strPtr("Acme"),
 				Model:        strPtr("M1"),
 			},
@@ -54,17 +55,17 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetRegistration error: %v", err)
 	}
-	if registration.Role != gearservice.GearRoleDevice {
+	if registration.Role != apitypes.GearRoleDevice {
 		t.Fatalf("role = %q", registration.Role)
 	}
 
 	if _, err := getServerInfo(context.Background(), device); err != nil {
 		t.Fatalf("GetServerInfo error: %v", err)
 	}
-	if _, err := putInfo(context.Background(), device, gearservice.DeviceInfo{
+	if _, err := putInfo(context.Background(), device, apitypes.DeviceInfo{
 		Name: strPtr("demo-device-2"),
 		Sn:   strPtr("sn-002"),
-		Hardware: &gearservice.HardwareInfo{
+		Hardware: &apitypes.HardwareInfo{
 			Depot: strPtr("demo-main"),
 		},
 	}); err != nil {
@@ -79,7 +80,7 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 
 	admin := newTestClient(t, ts)
 	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            serverpublic.DeviceInfo{Name: strPtr("admin")},
+		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
 		RegistrationToken: strPtr("admin_default"),
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
@@ -96,7 +97,7 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	tarData := buildReleaseTar(t, adminservice.DepotRelease{
 		FirmwareSemver: "1.0.0",
 		Channel:        strPtr("stable"),
-		Files: &[]adminservice.DepotFile{{
+		Files: &[]apitypes.DepotFile{{
 			Path:   "bundles/firmware.bin",
 			Sha256: hex.EncodeToString(sum256[:]),
 			Md5:    hex.EncodeToString(sumMD5[:]),
@@ -105,9 +106,9 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	if _, err := uploadFirmware(context.Background(), admin, "demo-main", adminservice.Channel("stable"), tarData); err != nil {
 		t.Fatalf("UploadFirmware error: %v", err)
 	}
-	if _, err := putGearConfig(context.Background(), admin, result.Gear.PublicKey, adminservice.Configuration{
-		Firmware: &adminservice.FirmwareConfig{Channel: func() *adminservice.GearFirmwareChannel {
-			ch := adminservice.GearFirmwareChannel("stable")
+	if _, err := putGearConfig(context.Background(), admin, result.Gear.PublicKey, apitypes.Configuration{
+		Firmware: &apitypes.FirmwareConfig{Channel: func() *apitypes.GearFirmwareChannel {
+			ch := apitypes.GearFirmwareChannel("stable")
 			return &ch
 		}()},
 	}); err != nil {

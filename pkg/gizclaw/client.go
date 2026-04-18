@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/peerpublic"
@@ -29,7 +31,7 @@ var _ peerpublic.StrictServerInterface = (*Client)(nil)
 type Client struct {
 	KeyPair *giznet.KeyPair
 
-	Device gearservice.DeviceInfo
+	Device apitypes.DeviceInfo
 
 	mu       sync.RWMutex
 	listener *giznet.Listener
@@ -352,7 +354,7 @@ func redirectProxyPrefix(target string) func(http.ResponseWriter, *http.Request)
 	}
 }
 
-func gearDeviceToPeerRefreshInfo(in gearservice.DeviceInfo) peerpublic.RefreshInfo {
+func gearDeviceToPeerRefreshInfo(in apitypes.DeviceInfo) peerpublic.RefreshInfo {
 	out := peerpublic.RefreshInfo{}
 	if in.Name != nil {
 		out.Name = in.Name
@@ -365,7 +367,7 @@ func gearDeviceToPeerRefreshInfo(in gearservice.DeviceInfo) peerpublic.RefreshIn
 	return out
 }
 
-func gearToPeerGearIMEI(in gearservice.GearIMEI) peerpublic.GearIMEI {
+func gearToPeerGearIMEI(in apitypes.GearIMEI) peerpublic.GearIMEI {
 	out := peerpublic.GearIMEI{
 		Tac:    in.Tac,
 		Serial: in.Serial,
@@ -374,14 +376,14 @@ func gearToPeerGearIMEI(in gearservice.GearIMEI) peerpublic.GearIMEI {
 	return out
 }
 
-func gearToPeerGearLabel(in gearservice.GearLabel) peerpublic.GearLabel {
+func gearToPeerGearLabel(in apitypes.GearLabel) peerpublic.GearLabel {
 	return peerpublic.GearLabel{
 		Key:   in.Key,
 		Value: in.Value,
 	}
 }
 
-func gearDeviceToPeerRefreshIdentifiers(in gearservice.DeviceInfo) peerpublic.RefreshIdentifiers {
+func gearDeviceToPeerRefreshIdentifiers(in apitypes.DeviceInfo) peerpublic.RefreshIdentifiers {
 	out := peerpublic.RefreshIdentifiers{}
 	out.Sn = in.Sn
 	if in.Hardware != nil {
@@ -403,7 +405,7 @@ func gearDeviceToPeerRefreshIdentifiers(in gearservice.DeviceInfo) peerpublic.Re
 	return out
 }
 
-func gearDeviceToPeerRefreshVersion(in gearservice.DeviceInfo) peerpublic.RefreshVersion {
+func gearDeviceToPeerRefreshVersion(in apitypes.DeviceInfo) peerpublic.RefreshVersion {
 	out := peerpublic.RefreshVersion{}
 	if in.Hardware != nil {
 		out.Depot = in.Hardware.Depot

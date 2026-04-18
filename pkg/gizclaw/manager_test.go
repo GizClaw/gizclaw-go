@@ -5,7 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/peerpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -57,12 +58,12 @@ func TestManagerRefreshDeviceErrors(t *testing.T) {
 		t.Fatalf("RefreshGear missing err = %v", err)
 	}
 
-	if _, err := service.SaveGear(ctx, gearservice.Gear{
+	if _, err := service.SaveGear(ctx, apitypes.Gear{
 		PublicKey:     "device-pk",
-		Role:          gearservice.GearRoleUnspecified,
-		Status:        gearservice.GearStatusUnspecified,
-		Device:        gearservice.DeviceInfo{},
-		Configuration: gearservice.Configuration{},
+		Role:          apitypes.GearRoleUnspecified,
+		Status:        apitypes.GearStatusUnspecified,
+		Device:        apitypes.DeviceInfo{},
+		Configuration: apitypes.Configuration{},
 	}); err != nil {
 		t.Fatalf("SaveGear error: %v", err)
 	}
@@ -77,16 +78,16 @@ func TestManagerRefreshDeviceErrors(t *testing.T) {
 func TestApplyPeerRefreshIdentifiersSkipsUnchangedCollections(t *testing.T) {
 	name := "primary"
 	sn := "sn-1"
-	gear := gearservice.Gear{
-		Device: gearservice.DeviceInfo{
+	gear := apitypes.Gear{
+		Device: apitypes.DeviceInfo{
 			Sn: &sn,
-			Hardware: &gearservice.HardwareInfo{
-				Imeis: &[]gearservice.GearIMEI{{
+			Hardware: &apitypes.HardwareInfo{
+				Imeis: &[]apitypes.GearIMEI{{
 					Name:   &name,
 					Tac:    "12345678",
 					Serial: "0000001",
 				}},
-				Labels: &[]gearservice.GearLabel{{
+				Labels: &[]apitypes.GearLabel{{
 					Key:   "batch",
 					Value: "cn-east",
 				}},
@@ -117,15 +118,15 @@ func TestApplyPeerRefreshIdentifiersSkipsUnchangedCollections(t *testing.T) {
 func TestApplyPeerRefreshIdentifiersUpdatesChangedCollections(t *testing.T) {
 	name := "primary"
 	nextName := "secondary"
-	gear := gearservice.Gear{
-		Device: gearservice.DeviceInfo{
-			Hardware: &gearservice.HardwareInfo{
-				Imeis: &[]gearservice.GearIMEI{{
+	gear := apitypes.Gear{
+		Device: apitypes.DeviceInfo{
+			Hardware: &apitypes.HardwareInfo{
+				Imeis: &[]apitypes.GearIMEI{{
 					Name:   &name,
 					Tac:    "12345678",
 					Serial: "0000001",
 				}},
-				Labels: &[]gearservice.GearLabel{{
+				Labels: &[]apitypes.GearLabel{{
 					Key:   "batch",
 					Value: "cn-east",
 				}},

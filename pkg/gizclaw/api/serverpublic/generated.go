@@ -12,301 +12,22 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/gofiber/fiber/v2"
 )
 
-// Defines values for GearCertificationAuthority.
-const (
-	Ccc      GearCertificationAuthority = "ccc"
-	Ce       GearCertificationAuthority = "ce"
-	Fcc      GearCertificationAuthority = "fcc"
-	Internal GearCertificationAuthority = "internal"
-	Miit     GearCertificationAuthority = "miit"
-	Rohs     GearCertificationAuthority = "rohs"
-	Srrc     GearCertificationAuthority = "srrc"
-	Unknown  GearCertificationAuthority = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the GearCertificationAuthority enum.
-func (e GearCertificationAuthority) Valid() bool {
-	switch e {
-	case Ccc:
-		return true
-	case Ce:
-		return true
-	case Fcc:
-		return true
-	case Internal:
-		return true
-	case Miit:
-		return true
-	case Rohs:
-		return true
-	case Srrc:
-		return true
-	case Unknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearCertificationType.
-const (
-	Certification GearCertificationType = "certification"
-	License       GearCertificationType = "license"
-)
-
-// Valid indicates whether the value is a known member of the GearCertificationType enum.
-func (e GearCertificationType) Valid() bool {
-	switch e {
-	case Certification:
-		return true
-	case License:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearRole.
-const (
-	GearRoleAdmin       GearRole = "admin"
-	GearRoleDevice      GearRole = "device"
-	GearRolePeer        GearRole = "peer"
-	GearRoleUnspecified GearRole = "unspecified"
-)
-
-// Valid indicates whether the value is a known member of the GearRole enum.
-func (e GearRole) Valid() bool {
-	switch e {
-	case GearRoleAdmin:
-		return true
-	case GearRoleDevice:
-		return true
-	case GearRolePeer:
-		return true
-	case GearRoleUnspecified:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearStatus.
-const (
-	GearStatusActive      GearStatus = "active"
-	GearStatusBlocked     GearStatus = "blocked"
-	GearStatusUnspecified GearStatus = "unspecified"
-)
-
-// Valid indicates whether the value is a known member of the GearStatus enum.
-func (e GearStatus) Valid() bool {
-	switch e {
-	case GearStatusActive:
-		return true
-	case GearStatusBlocked:
-		return true
-	case GearStatusUnspecified:
-		return true
-	default:
-		return false
-	}
-}
-
-// ApproveRequest defines model for ApproveRequest.
-type ApproveRequest struct {
-	Role GearRole `json:"role"`
-}
-
-// Channel defines model for Channel.
-type Channel = string
-
-// Configuration defines model for Configuration.
-type Configuration struct {
-	Certifications *[]GearCertification `json:"certifications,omitempty"`
-	Firmware       *FirmwareConfig      `json:"firmware,omitempty"`
-}
-
-// Depot defines model for Depot.
-type Depot struct {
-	Beta     DepotRelease `json:"beta"`
-	Info     DepotInfo    `json:"info"`
-	Name     string       `json:"name"`
-	Rollback DepotRelease `json:"rollback"`
-	Stable   DepotRelease `json:"stable"`
-	Testing  DepotRelease `json:"testing"`
-}
-
-// DepotFile defines model for DepotFile.
-type DepotFile struct {
-	Md5    string `json:"md5"`
-	Path   string `json:"path"`
-	Sha256 string `json:"sha256"`
-}
-
-// DepotInfo defines model for DepotInfo.
-type DepotInfo struct {
-	Files *[]DepotInfoFile `json:"files,omitempty"`
-}
-
-// DepotInfoFile defines model for DepotInfoFile.
-type DepotInfoFile struct {
-	Path string `json:"path"`
-}
-
-// DepotList defines model for DepotList.
-type DepotList struct {
-	Items []Depot `json:"items"`
-}
-
-// DepotRelease defines model for DepotRelease.
-type DepotRelease struct {
-	Channel        *string      `json:"channel,omitempty"`
-	Files          *[]DepotFile `json:"files,omitempty"`
-	FirmwareSemver string       `json:"firmware_semver"`
-}
-
-// DeviceInfo defines model for DeviceInfo.
-type DeviceInfo struct {
-	Hardware *HardwareInfo `json:"hardware,omitempty"`
-	Name     *string       `json:"name,omitempty"`
-	Sn       *string       `json:"sn,omitempty"`
-}
-
-// ErrorPayload defines model for ErrorPayload.
-type ErrorPayload struct {
-	Code    string                  `json:"code"`
-	Details *map[string]interface{} `json:"details,omitempty"`
-	Message string                  `json:"message"`
-}
-
-// ErrorResponse defines model for ErrorResponse.
-type ErrorResponse struct {
-	Error ErrorPayload `json:"error"`
-}
-
-// FirmwareConfig defines model for FirmwareConfig.
-type FirmwareConfig struct {
-	Channel *GearFirmwareChannel `json:"channel,omitempty"`
-}
-
-// Gear defines model for Gear.
-type Gear struct {
-	ApprovedAt     *time.Time    `json:"approved_at,omitempty"`
-	AutoRegistered *bool         `json:"auto_registered,omitempty"`
-	Configuration  Configuration `json:"configuration"`
-	CreatedAt      time.Time     `json:"created_at"`
-	Device         DeviceInfo    `json:"device"`
-	PublicKey      string        `json:"public_key"`
-	Role           GearRole      `json:"role"`
-	Status         GearStatus    `json:"status"`
-	UpdatedAt      time.Time     `json:"updated_at"`
-}
-
-// GearCertification defines model for GearCertification.
-type GearCertification struct {
-	Authority     GearCertificationAuthority `json:"authority"`
-	AuthorityName *string                    `json:"authority_name,omitempty"`
-	Id            string                     `json:"id"`
-	Type          GearCertificationType      `json:"type"`
-}
-
-// GearCertificationAuthority defines model for GearCertificationAuthority.
-type GearCertificationAuthority string
-
-// GearCertificationType defines model for GearCertificationType.
-type GearCertificationType string
-
-// GearFirmwareChannel defines model for GearFirmwareChannel.
-type GearFirmwareChannel = string
-
-// GearIMEI defines model for GearIMEI.
-type GearIMEI struct {
-	Name   *string `json:"name,omitempty"`
-	Serial string  `json:"serial"`
-	Tac    string  `json:"tac"`
-}
-
-// GearLabel defines model for GearLabel.
-type GearLabel struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
-}
-
-// GearRole defines model for GearRole.
-type GearRole string
-
-// GearStatus defines model for GearStatus.
-type GearStatus string
-
-// HardwareInfo defines model for HardwareInfo.
-type HardwareInfo struct {
-	Depot            *string      `json:"depot,omitempty"`
-	FirmwareSemver   *string      `json:"firmware_semver,omitempty"`
-	HardwareRevision *string      `json:"hardware_revision,omitempty"`
-	Imeis            *[]GearIMEI  `json:"imeis,omitempty"`
-	Labels           *[]GearLabel `json:"labels,omitempty"`
-	Manufacturer     *string      `json:"manufacturer,omitempty"`
-	Model            *string      `json:"model,omitempty"`
-}
-
-// OTASummary defines model for OTASummary.
-type OTASummary struct {
-	Channel        string      `json:"channel"`
-	Depot          string      `json:"depot"`
-	Files          []DepotFile `json:"files"`
-	FirmwareSemver string      `json:"firmware_semver"`
-}
-
-// PublicKeyResponse defines model for PublicKeyResponse.
-type PublicKeyResponse struct {
-	PublicKey string `json:"public_key"`
-}
-
-// RefreshResult defines model for RefreshResult.
-type RefreshResult struct {
-	Errors        *[]string `json:"errors,omitempty"`
-	Gear          Gear      `json:"gear"`
-	UpdatedFields *[]string `json:"updated_fields,omitempty"`
-}
-
-// Registration defines model for Registration.
-type Registration struct {
-	ApprovedAt     *time.Time `json:"approved_at,omitempty"`
-	AutoRegistered *bool      `json:"auto_registered,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	PublicKey      string     `json:"public_key"`
-	Role           GearRole   `json:"role"`
-	Status         GearStatus `json:"status"`
-	UpdatedAt      time.Time  `json:"updated_at"`
-}
-
-// RegistrationList defines model for RegistrationList.
-type RegistrationList struct {
-	Items []Registration `json:"items"`
-}
-
 // RegistrationRequest defines model for RegistrationRequest.
 type RegistrationRequest struct {
-	Device            DeviceInfo `json:"device"`
-	PublicKey         string     `json:"public_key"`
-	RegistrationToken *string    `json:"registration_token,omitempty"`
+	Device            apitypes.DeviceInfo `json:"device"`
+	PublicKey         string              `json:"public_key"`
+	RegistrationToken *string             `json:"registration_token,omitempty"`
 }
 
 // RegistrationResult defines model for RegistrationResult.
 type RegistrationResult struct {
-	Gear         Gear         `json:"gear"`
-	Registration Registration `json:"registration"`
-}
-
-// Runtime defines model for Runtime.
-type Runtime struct {
-	LastAddr   *string   `json:"last_addr,omitempty"`
-	LastSeenAt time.Time `json:"last_seen_at"`
-	Online     bool      `json:"online"`
+	Gear         apitypes.Gear         `json:"gear"`
+	Registration apitypes.Registration `json:"registration"`
 }
 
 // ServerInfo defines model for ServerInfo.
@@ -560,8 +281,8 @@ type RegisterGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationResult
-	JSON400      *ErrorResponse
-	JSON409      *ErrorResponse
+	JSON400      *apitypes.ErrorResponse
+	JSON409      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -584,7 +305,7 @@ type GetServerInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *ServerInfo
-	JSON400      *ErrorResponse
+	JSON400      *apitypes.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -651,14 +372,14 @@ func ParseRegisterGearResponse(rsp *http.Response) (*RegisterGearResponse, error
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -691,7 +412,7 @@ func ParseGetServerInfoResponse(rsp *http.Response) (*GetServerInfoResponse, err
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest ErrorResponse
+		var dest apitypes.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -775,7 +496,7 @@ func (response RegisterGear200JSONResponse) VisitRegisterGearResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type RegisterGear400JSONResponse ErrorResponse
+type RegisterGear400JSONResponse apitypes.ErrorResponse
 
 func (response RegisterGear400JSONResponse) VisitRegisterGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -784,7 +505,7 @@ func (response RegisterGear400JSONResponse) VisitRegisterGearResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type RegisterGear409JSONResponse ErrorResponse
+type RegisterGear409JSONResponse apitypes.ErrorResponse
 
 func (response RegisterGear409JSONResponse) VisitRegisterGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -809,7 +530,7 @@ func (response GetServerInfo200JSONResponse) VisitGetServerInfoResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type GetServerInfo400JSONResponse ErrorResponse
+type GetServerInfo400JSONResponse apitypes.ErrorResponse
 
 func (response GetServerInfo400JSONResponse) VisitGetServerInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")

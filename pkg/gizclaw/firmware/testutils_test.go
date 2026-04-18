@@ -12,6 +12,8 @@ import (
 	"sort"
 	"testing"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 )
@@ -96,10 +98,10 @@ func depotReleaseForFiles(channel Channel, version string, files map[string]stri
 	}
 	sort.Strings(paths)
 
-	out := make([]adminservice.DepotFile, 0, len(paths))
+	out := make([]apitypes.DepotFile, 0, len(paths))
 	for _, p := range paths {
 		md5Hex, shaHex := fileDigests([]byte(files[p]))
-		out = append(out, adminservice.DepotFile{
+		out = append(out, apitypes.DepotFile{
 			Md5:    md5Hex,
 			Path:   p,
 			Sha256: shaHex,

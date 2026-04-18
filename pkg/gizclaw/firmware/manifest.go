@@ -11,6 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 )
@@ -87,11 +89,11 @@ func infoFiles(info adminservice.DepotInfo) []adminservice.DepotInfoFile {
 	return out
 }
 
-func releaseFiles(release adminservice.DepotRelease) []adminservice.DepotFile {
+func releaseFiles(release adminservice.DepotRelease) []apitypes.DepotFile {
 	if release.Files == nil {
 		return nil
 	}
-	out := append([]adminservice.DepotFile(nil), (*release.Files)...)
+	out := append([]apitypes.DepotFile(nil), (*release.Files)...)
 	return out
 }
 
