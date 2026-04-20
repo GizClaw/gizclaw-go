@@ -79,6 +79,15 @@ func TestValidationHelpers(t *testing.T) {
 	if err := validateSampleRate(44100); err == nil {
 		t.Fatal("validateSampleRate(44100) expected error")
 	}
+	if got := SampleRate16K.Int(); got != 16000 {
+		t.Fatalf("SampleRate16K.Int() = %d", got)
+	}
+	if err := SampleRate16K.Validate(); err != nil {
+		t.Fatalf("SampleRate16K.Validate(): %v", err)
+	}
+	if err := OpusSampleRate(0).Validate(); err == nil {
+		t.Fatal("OpusSampleRate(0).Validate() expected error")
+	}
 
 	if err := validateChannels(1); err != nil {
 		t.Fatalf("validateChannels(1): %v", err)

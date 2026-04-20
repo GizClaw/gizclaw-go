@@ -13,6 +13,9 @@ const (
 	// ModelSpeakerERes2Net is the speaker embedding model.
 	ModelSpeakerERes2Net ModelID = "speaker-eres2net"
 
+	// ModelSpeakerECAPA is the ECAPA-TDNN speaker embedding model.
+	ModelSpeakerECAPA ModelID = "speaker-ecapa"
+
 	// ModelVADSilero is the voice activity detection model.
 	ModelVADSilero ModelID = "vad-silero"
 

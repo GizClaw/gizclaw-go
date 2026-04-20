@@ -8,6 +8,9 @@ import (
 // Application maps to libopus encoder application modes.
 type Application int
 
+// OpusSampleRate represents one of the discrete sample rates supported by Opus.
+type OpusSampleRate int
+
 const (
 	// ApplicationVoIP optimizes for voice speech.
 	ApplicationVoIP Application = 2048
@@ -22,6 +25,14 @@ const (
 	DefaultMaxPacketSize = 4000
 )
 
+const (
+	SampleRate8K  OpusSampleRate = 8000
+	SampleRate12K OpusSampleRate = 12000
+	SampleRate16K OpusSampleRate = 16000
+	SampleRate24K OpusSampleRate = 24000
+	SampleRate48K OpusSampleRate = 48000
+)
+
 var supportedSampleRates = map[int]struct{}{
 	8000:  {},
 	12000: {},
@@ -33,6 +44,14 @@ var supportedSampleRates = map[int]struct{}{
 // IsRuntimeSupported reports whether native cgo-backed Opus is available.
 func IsRuntimeSupported() bool {
 	return nativeCGOEnabled && isSupportedPlatform(runtime.GOOS, runtime.GOARCH)
+}
+
+func (r OpusSampleRate) Int() int {
+	return int(r)
+}
+
+func (r OpusSampleRate) Validate() error {
+	return validateSampleRate(int(r))
 }
 
 func validateSampleRate(sampleRate int) error {

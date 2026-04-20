@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 )
 
 // StreamReader 从 io.Reader 顺序读取 OGG page。
@@ -88,4 +89,98 @@ func ReadAllPackets(r io.Reader) ([]Packet, error) {
 		return nil, err
 	}
 	return ExtractPackets(pages)
+}
+
+// Packets streams logical packets reconstructed from an OGG stream.
+func Packets(r io.Reader) iter.Seq2[Packet, error] {
+	return NewStreamReader(r).Packets()
+}
+
+// Packets streams logical packets reconstructed from the underlying page stream.
+func (sr *StreamReader) Packets() iter.Seq2[Packet, error] {
+	return func(yield func(Packet, error) bool) {
+		if sr == nil || sr.r == nil {
+			yield(Packet{}, fmt.Errorf("reader is nil"))
+			return
+		}
+
+		var (
+			buf                   []byte
+			expectingContinuation bool
+			currentPacketBOS      bool
+			pageIdx               int
+		)
+
+		for {
+			page, err := sr.NextPage()
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					if expectingContinuation {
+						yield(Packet{}, fmt.Errorf("stream ended with unterminated packet"))
+					}
+					return
+				}
+				yield(Packet{}, err)
+				return
+			}
+
+			if page.HasContinuation() {
+				if !expectingContinuation {
+					yield(Packet{}, fmt.Errorf("unexpected continuation on page %d", pageIdx))
+					return
+				}
+			} else if expectingContinuation {
+				yield(Packet{}, fmt.Errorf("missing continuation before page %d", pageIdx))
+				return
+			}
+
+			payloadOffset := 0
+			for segIdx, seg := range page.Segments {
+				if !expectingContinuation && len(buf) == 0 {
+					currentPacketBOS = page.HasBOS() && segIdx == 0
+				}
+
+				chunkLen := int(seg)
+				if payloadOffset+chunkLen > len(page.Payload) {
+					yield(Packet{}, fmt.Errorf(
+						"page %d segment %d overflows payload: offset=%d chunk=%d payload=%d",
+						pageIdx,
+						segIdx,
+						payloadOffset,
+						chunkLen,
+						len(page.Payload),
+					))
+					return
+				}
+				if chunkLen > 0 {
+					buf = append(buf, page.Payload[payloadOffset:payloadOffset+chunkLen]...)
+				}
+				payloadOffset += chunkLen
+
+				if seg < maxSegmentSize {
+					packet := Packet{
+						Data:            append([]byte(nil), buf...),
+						GranulePosition: page.GranulePosition,
+						BOS:             currentPacketBOS,
+						EOS:             page.HasEOS() && segIdx == len(page.Segments)-1,
+					}
+					buf = buf[:0]
+					expectingContinuation = false
+					currentPacketBOS = false
+					if !yield(packet, nil) {
+						return
+					}
+					continue
+				}
+				expectingContinuation = true
+			}
+
+			if payloadOffset != len(page.Payload) {
+				yield(Packet{}, fmt.Errorf("page %d has trailing payload: consumed=%d total=%d", pageIdx, payloadOffset, len(page.Payload)))
+				return
+			}
+
+			pageIdx++
+		}
+	}
 }

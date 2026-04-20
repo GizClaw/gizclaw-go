@@ -522,6 +522,83 @@ func TestReadAllPackets(t *testing.T) {
 	}
 }
 
+func TestPacketsSeq(t *testing.T) {
+	var out bytes.Buffer
+	w, err := NewStreamWriter(&out, 66)
+	if err != nil {
+		t.Fatalf("NewStreamWriter: %v", err)
+	}
+	p1 := deterministicBytes(12)
+	p2 := deterministicBytes(400)
+	if _, err := w.WritePacket(p1, 1, false); err != nil {
+		t.Fatalf("WritePacket #1: %v", err)
+	}
+	if _, err := w.WritePacket(p2, 2, true); err != nil {
+		t.Fatalf("WritePacket #2: %v", err)
+	}
+
+	var packets []Packet
+	for packet, err := range Packets(bytes.NewReader(out.Bytes())) {
+		if err != nil {
+			t.Fatalf("Packets: %v", err)
+		}
+		packets = append(packets, packet)
+	}
+
+	if len(packets) != 2 {
+		t.Fatalf("packet count=%d, want 2", len(packets))
+	}
+	if !bytes.Equal(packets[0].Data, p1) || !bytes.Equal(packets[1].Data, p2) {
+		t.Fatal("packet payload mismatch")
+	}
+	if !packets[0].BOS || packets[0].EOS {
+		t.Fatalf("first packet flags mismatch: bos=%v eos=%v", packets[0].BOS, packets[0].EOS)
+	}
+	if packets[1].BOS || !packets[1].EOS {
+		t.Fatalf("second packet flags mismatch: bos=%v eos=%v", packets[1].BOS, packets[1].EOS)
+	}
+}
+
+func TestPacketsSeqErrors(t *testing.T) {
+	if yielded := 0; yielded != func() int {
+		n := 0
+		for _, err := range Packets(bytes.NewReader(nil)) {
+			if err != nil {
+				t.Fatalf("empty stream should not yield error, got %v", err)
+			}
+			n++
+		}
+		return n
+	}() {
+		t.Fatalf("empty stream yielded %d packets", yielded)
+	}
+
+	page := &Page{
+		Version:         0,
+		HeaderType:      HeaderTypeContinued,
+		GranulePosition: 0,
+		BitstreamSerial: 77,
+		PageSequence:    0,
+		Segments:        []byte{3},
+		Payload:         []byte{1, 2, 3},
+	}
+	raw, err := page.MarshalBinary()
+	if err != nil {
+		t.Fatalf("MarshalBinary: %v", err)
+	}
+
+	gotErr := ""
+	for _, err := range Packets(bytes.NewReader(raw)) {
+		if err != nil {
+			gotErr = err.Error()
+			break
+		}
+	}
+	if !strings.Contains(gotErr, "unexpected continuation") {
+		t.Fatalf("expected unexpected continuation error, got %q", gotErr)
+	}
+}
+
 func TestOpusInteropPacketPath(t *testing.T) {
 	if !opus.IsRuntimeSupported() {
 		t.Skip("requires native opus runtime")

@@ -28,7 +28,7 @@ func containsModel(models []ModelID, target ModelID) bool {
 
 func TestListModelsIncludesBuiltins(t *testing.T) {
 	models := ListModels()
-	for _, required := range []ModelID{ModelSpeakerERes2Net, ModelVADSilero, ModelDenoiseNSNet2} {
+	for _, required := range []ModelID{ModelSpeakerERes2Net, ModelSpeakerECAPA, ModelVADSilero, ModelDenoiseNSNet2} {
 		if !containsModel(models, required) {
 			t.Fatalf("ListModels() missing %q, got=%v", required, models)
 		}
@@ -80,7 +80,7 @@ func TestNewMat2DMinValidInput(t *testing.T) {
 func TestLoadThreeBuiltinModels(t *testing.T) {
 	requireNativeNCNNSupportedRuntime(t)
 
-	for _, id := range []ModelID{ModelSpeakerERes2Net, ModelVADSilero, ModelDenoiseNSNet2} {
+	for _, id := range []ModelID{ModelSpeakerERes2Net, ModelSpeakerECAPA, ModelVADSilero, ModelDenoiseNSNet2} {
 		t.Run(string(id), func(t *testing.T) {
 			net, err := LoadModel(id)
 			if err != nil {
