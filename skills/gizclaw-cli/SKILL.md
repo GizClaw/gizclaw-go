@@ -66,4 +66,3 @@ When reporting results to the user, include:
 Use these only when validating implementation details or updating the CLI itself:
 
 - Command implementation: `cmd/internal/commands/`
-- CLI integration stories: `integration/cmd/`

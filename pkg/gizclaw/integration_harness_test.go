@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
-	"github.com/GizClaw/gizclaw-go/integration/testutil"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
@@ -25,10 +25,44 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 )
 
+const (
+	testReadyTimeout = 10 * time.Second
+	testProbeTimeout = time.Second
+	testPollInterval = 20 * time.Millisecond
+)
+
 type testServer struct {
 	server *gizclaw.Server
 	addr   string
 	errCh  chan error
+}
+
+func allocateUDPAddr(t testing.TB) string {
+	t.Helper()
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("allocate UDP addr: %v", err)
+	}
+	addr := pc.LocalAddr().(*net.UDPAddr)
+	_ = pc.Close()
+	return fmt.Sprintf("127.0.0.1:%d", addr.Port)
+}
+
+func waitUntil(timeout time.Duration, check func() error) error {
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		if err := check(); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(testPollInterval)
+	}
+	if lastErr != nil {
+		return lastErr
+	}
+	return fmt.Errorf("condition not satisfied before timeout")
 }
 
 func startTestServer(t *testing.T) *testServer {
@@ -57,7 +91,7 @@ func startTestServer(t *testing.T) *testServer {
 
 	ts := &testServer{
 		server: srv,
-		addr:   testutil.AllocateUDPAddr(t),
+		addr:   allocateUDPAddr(t),
 		errCh:  make(chan error, 1),
 	}
 	go func() {
@@ -92,7 +126,7 @@ func newTestClient(t *testing.T, ts *testServer) *gizclaw.Client {
 }
 
 func waitForServerReady(addr string, pk giznet.PublicKey, errCh <-chan error) error {
-	return testutil.WaitUntil(testutil.ReadyTimeout, func() error {
+	return waitUntil(testReadyTimeout, func() error {
 		select {
 		case err := <-errCh:
 			return fmt.Errorf("test server exited before ready: %w", err)
@@ -141,7 +175,7 @@ func startTestClient(t *testing.T, c *gizclaw.Client, serverPK giznet.PublicKey,
 		errCh <- c.DialAndServe(serverPK, addr)
 	}()
 
-	if err := testutil.WaitUntil(testutil.ReadyTimeout, func() error {
+	if err := waitUntil(testReadyTimeout, func() error {
 		select {
 		case err := <-errCh:
 			if err != nil {
@@ -157,7 +191,7 @@ func startTestClient(t *testing.T, c *gizclaw.Client, serverPK giznet.PublicKey,
 }
 
 func probeServerPublicReady(c *gizclaw.Client) error {
-	ctx, cancel := context.WithTimeout(context.Background(), testutil.ProbeTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), testProbeTimeout)
 	defer cancel()
 	_, err := getServerInfo(ctx, c)
 	return err

@@ -58,7 +58,7 @@ go generate ./pkg/gizclaw/api/...
   Go code, implement the strict server interface, and add tests for both success
   and user-visible error paths.
 - When changing declarative admin resources, verify `resourcemanager` behavior
-  and CLI stories under `integration/cmd/` when applicable.
+  and CLI stories under `test/gizclaw-e2e/cmd/` when applicable.
 - Run focused tests for the touched API surface and coverage-sensitive packages.
   For broader API changes, prefer:
 

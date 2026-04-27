@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/integration/testutil"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 )
 
@@ -19,7 +18,7 @@ func TestIntegrationRPCDialAndPing(t *testing.T) {
 	var clockDiff time.Duration
 	var secondServerTime time.Time
 	var pingErr error
-	if err := testutil.WaitUntil(testutil.ReadyTimeout, func() error {
+	if err := waitUntil(testReadyTimeout, func() error {
 		t1 := time.Now()
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		ping, err := client.Ping(ctx, "ping")
@@ -69,7 +68,7 @@ func TestIntegrationRPCReversePingClient(t *testing.T) {
 	var clientTime time.Time
 	var secondClientTime time.Time
 	var pingErr error
-	if err := testutil.WaitUntil(testutil.ReadyTimeout, func() error {
+	if err := waitUntil(testReadyTimeout, func() error {
 		manager := ts.server.Manager()
 		if manager == nil {
 			return fmt.Errorf("server manager not ready")

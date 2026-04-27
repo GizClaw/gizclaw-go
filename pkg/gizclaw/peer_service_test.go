@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/integration/testutil"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
@@ -24,6 +23,28 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 )
+
+const (
+	testReadyTimeout = 10 * time.Second
+	testPollInterval = 20 * time.Millisecond
+)
+
+func waitUntil(timeout time.Duration, check func() error) error {
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		if err := check(); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(testPollInterval)
+	}
+	if lastErr != nil {
+		return lastErr
+	}
+	return fmt.Errorf("condition not satisfied before timeout")
+}
 
 func TestPublicFiberAdapterServerInfo(t *testing.T) {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
@@ -446,7 +467,7 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 		Transport: gizhttp.NewRoundTripper(clientConn, ServiceServerPublic),
 		Timeout:   time.Second,
 	}
-	if err := testutil.WaitUntil(testutil.ReadyTimeout, func() error {
+	if err := waitUntil(testReadyTimeout, func() error {
 		if _, ok := server.manager.ActivePeer(clientKey.Public.String()); !ok {
 			return fmt.Errorf("peer not marked online yet")
 		}

@@ -11,7 +11,6 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 
-	"github.com/GizClaw/gizclaw-go/integration/testutil"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 )
@@ -89,7 +88,7 @@ func TestIntegrationPeerPublicRefreshReportsOfflineWhenDeviceDisconnected(t *tes
 
 func waitForRefreshGearSuccess(admin *gizclaw.Client, publicKey string) (adminservice.RefreshResult, error) {
 	var lastResult adminservice.RefreshResult
-	err := testutil.WaitUntil(testutil.ReadyTimeout, func() error {
+	err := waitUntil(testReadyTimeout, func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		result, err := refreshGear(ctx, admin, publicKey)
 		cancel()
@@ -113,7 +112,7 @@ func waitForRefreshGearSuccess(admin *gizclaw.Client, publicKey string) (adminse
 
 func waitForRefreshGearFailure(admin *gizclaw.Client, publicKey string) error {
 	var offlineErr error
-	err := testutil.WaitUntil(testutil.ReadyTimeout, func() error {
+	err := waitUntil(testReadyTimeout, func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		_, err := refreshGear(ctx, admin, publicKey)
 		cancel()
