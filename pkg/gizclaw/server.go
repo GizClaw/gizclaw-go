@@ -7,12 +7,13 @@ import (
 	"net"
 	"sync"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/credential"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/mmx"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspacetemplate"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -251,6 +252,13 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 	workspaceServer := &workspace.Server{Store: s.GearStore}
 	credentialServer := &credential.Server{Store: s.GearStore}
 	mmxServer := &mmx.Server{Store: s.GearStore}
+	resourceManager := resourcemanager.New(resourcemanager.Services{
+		Credentials:        credentialServer,
+		Gears:              gearsServer,
+		MiniMax:            mmxServer,
+		Workspaces:         workspaceServer,
+		WorkspaceTemplates: workspaceTemplateServer,
+	})
 
 	s.manager = manager
 	s.peerService = &PeerService{
@@ -262,6 +270,7 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 			MiniMaxAdminService:           mmxServer,
 			WorkspaceAdminService:         workspaceServer,
 			WorkspaceTemplateAdminService: workspaceTemplateServer,
+			ResourceManager:               resourceManager,
 		},
 		gear: &gearAPIBundle{
 			FirmwareGearService: firmwareServer,

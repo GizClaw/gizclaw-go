@@ -1,0 +1,35 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gear Certification Type",
+    "description": "GearCertification schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GearCertification": {
+        "type": "object",
+        "required": [
+          "type",
+          "authority",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "$ref": "./gear_certification_type.json#/components/schemas/GearCertificationType"
+          },
+          "authority": {
+            "$ref": "./gear_certification_authority.json#/components/schemas/GearCertificationAuthority"
+          },
+          "id": {
+            "type": "string"
+          },
+          "authority_name": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

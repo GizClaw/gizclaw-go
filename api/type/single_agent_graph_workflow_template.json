@@ -1,0 +1,48 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Single Agent Graph Workflow Template Type",
+    "description": "SingleAgentGraphWorkflowTemplate schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "SingleAgentGraphWorkflowTemplate": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "properties": {
+          "apiVersion": {
+            "$ref": "./workflow_template_api_version.json#/components/schemas/WorkflowTemplateAPIVersion"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "SingleAgentGraphWorkflowTemplate"
+            ]
+          },
+          "metadata": {
+            "$ref": "./template_metadata.json#/components/schemas/TemplateMetadata"
+          },
+          "spec": {
+            "$ref": "./single_agent_graph_workflow_spec.json#/components/schemas/SingleAgentGraphWorkflowSpec"
+          }
+        },
+        "example": {
+          "apiVersion": "gizclaw.flowcraft/v1alpha1",
+          "kind": "SingleAgentGraphWorkflowTemplate",
+          "metadata": {
+            "name": "demo-assistant",
+            "description": "single-agent graph workflow"
+          },
+          "spec": {}
+        }
+      }
+    }
+  }
+}

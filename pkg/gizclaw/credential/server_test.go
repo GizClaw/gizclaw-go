@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -31,7 +31,7 @@ func TestServerCredentialsCRUD(t *testing.T) {
 	if !ok {
 		t.Fatalf("CreateCredential() response = %#v", createResp)
 	}
-	if created.Name != "openai-primary" || created.Provider != "openai" || created.Method != apitypes.ApiKey {
+	if created.Name != "openai-primary" || created.Provider != "openai" || created.Method != apitypes.CredentialMethodApiKey {
 		t.Fatalf("CreateCredential() credential = %#v", created)
 	}
 	if created.Body["api_key"] != "sk-test" {
@@ -71,7 +71,7 @@ func TestServerCredentialsCRUD(t *testing.T) {
 	if !ok {
 		t.Fatalf("PutCredential() response = %#v", putResp)
 	}
-	if updated.Provider != "minimax" || updated.Method != apitypes.AppIdToken {
+	if updated.Provider != "minimax" || updated.Method != apitypes.CredentialMethodAppIdToken {
 		t.Fatalf("PutCredential() credential = %#v", updated)
 	}
 	if updated.Body["app_id"] != "app-123" || updated.Body["token"] != "tok-123" {

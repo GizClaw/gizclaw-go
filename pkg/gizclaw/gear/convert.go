@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 )
 

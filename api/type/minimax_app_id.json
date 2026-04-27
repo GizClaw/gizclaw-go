@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mini Max App ID Type",
+    "description": "MiniMaxAppID schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "MiniMaxAppID": {
+        "type": "string",
+        "description": "MiniMax app identifier",
+        "example": "app-123"
+      }
+    }
+  }
+}

@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
-	minimax "github.com/giztoy/minimax-go"
+	"github.com/giztoy/minimax-go"
 )
 
 // MinimaxTTS is a TTS transformer using MiniMax text-to-speech API.

@@ -1,0 +1,32 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Runtime Type",
+    "description": "Gear runtime status schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Runtime": {
+        "type": "object",
+        "required": [
+          "online",
+          "last_seen_at"
+        ],
+        "properties": {
+          "online": {
+            "type": "boolean"
+          },
+          "last_seen_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "last_addr": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

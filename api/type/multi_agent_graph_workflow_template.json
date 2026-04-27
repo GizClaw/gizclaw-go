@@ -1,0 +1,48 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Multi Agent Graph Workflow Template Type",
+    "description": "MultiAgentGraphWorkflowTemplate schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "MultiAgentGraphWorkflowTemplate": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "properties": {
+          "apiVersion": {
+            "$ref": "./workflow_template_api_version.json#/components/schemas/WorkflowTemplateAPIVersion"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "MultiAgentGraphWorkflowTemplate"
+            ]
+          },
+          "metadata": {
+            "$ref": "./template_metadata.json#/components/schemas/TemplateMetadata"
+          },
+          "spec": {
+            "$ref": "./multi_agent_graph_workflow_spec.json#/components/schemas/MultiAgentGraphWorkflowSpec"
+          }
+        },
+        "example": {
+          "apiVersion": "gizclaw.flowcraft/v1alpha1",
+          "kind": "MultiAgentGraphWorkflowTemplate",
+          "metadata": {
+            "name": "demo-team",
+            "description": "multi-agent graph workflow"
+          },
+          "spec": {}
+        }
+      }
+    }
+  }
+}

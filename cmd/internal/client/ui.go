@@ -12,20 +12,23 @@ import (
 	"path"
 	"strings"
 	"syscall"
+	"time"
 
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	adminui "github.com/GizClaw/gizclaw-go/ui/apps/admin"
 	playui "github.com/GizClaw/gizclaw-go/ui/apps/play"
 )
 
 func ListenAndServeAdminUI(ctxName, addr string, out io.Writer) error {
-	return listenAndServeUI(ctxName, addr, "GizClaw Admin UI", adminui.FS(), out)
+	return listenAndServeUI(ctxName, addr, "GizClaw Admin UI", adminui.FS(), out, nil)
 }
 
 func ListenAndServePlayUI(ctxName, addr string, out io.Writer) error {
-	return listenAndServeUI(ctxName, addr, "GizClaw Play UI", playui.FS(), out)
+	return listenAndServeUI(ctxName, addr, "GizClaw Play UI", playui.FS(), out, ensurePlayRegistration)
 }
 
-func listenAndServeUI(ctxName, addr, title string, uiFS fs.FS, out io.Writer) error {
+func listenAndServeUI(ctxName, addr, title string, uiFS fs.FS, out io.Writer, beforeServe func(context.Context, *gizclaw.Client) error) error {
 	if strings.TrimSpace(addr) == "" {
 		return fmt.Errorf("gizclaw: empty listen addr")
 	}
@@ -38,6 +41,14 @@ func listenAndServeUI(ctxName, addr, title string, uiFS fs.FS, out io.Writer) er
 	listener, err := net.Listen("tcp", normalizeListenAddr(addr))
 	if err != nil {
 		return fmt.Errorf("gizclaw: listen ui: %w", err)
+	}
+	if beforeServe != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if err := beforeServe(ctx, c); err != nil {
+			_ = listener.Close()
+			return err
+		}
 	}
 
 	mux := http.NewServeMux()
@@ -68,6 +79,36 @@ func listenAndServeUI(ctxName, addr, title string, uiFS fs.FS, out io.Writer) er
 		return nil
 	}
 	return err
+}
+
+func ensurePlayRegistration(ctx context.Context, c *gizclaw.Client) error {
+	gearAPI, err := c.GearServiceClient()
+	if err != nil {
+		return err
+	}
+	registration, err := gearAPI.GetRegistrationWithResponse(ctx)
+	if err != nil {
+		return err
+	}
+	if registration.JSON200 != nil {
+		return nil
+	}
+	if registration.StatusCode() != http.StatusNotFound {
+		return responseError(registration.StatusCode(), registration.Body, registration.JSON404)
+	}
+
+	publicAPI, err := c.ServerPublicClient()
+	if err != nil {
+		return err
+	}
+	created, err := publicAPI.RegisterGearWithResponse(ctx, serverpublic.RegistrationRequest{})
+	if err != nil {
+		return err
+	}
+	if created.JSON200 != nil || created.StatusCode() == http.StatusConflict {
+		return nil
+	}
+	return responseError(created.StatusCode(), created.Body, created.JSON400, created.JSON409)
 }
 
 // staticWithSPAFallback serves embedded UI assets and falls back to index.html

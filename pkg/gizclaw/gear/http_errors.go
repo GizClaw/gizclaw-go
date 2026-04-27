@@ -1,36 +1,9 @@
 package gear
 
 import (
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/gofiber/fiber/v2"
 )
-
-func adminError(code, message string) apitypes.ErrorResponse {
-	return apitypes.ErrorResponse{
-		Error: apitypes.ErrorPayload{
-			Code:    code,
-			Message: message,
-		},
-	}
-}
-
-func gearError(code, message string) apitypes.ErrorResponse {
-	return apitypes.ErrorResponse{
-		Error: apitypes.ErrorPayload{
-			Code:    code,
-			Message: message,
-		},
-	}
-}
-
-func publicError(code, message string) apitypes.ErrorResponse {
-	return apitypes.ErrorResponse{
-		Error: apitypes.ErrorPayload{
-			Code:    code,
-			Message: message,
-		},
-	}
-}
 
 type getGearConfig500JSONResponse apitypes.ErrorResponse
 

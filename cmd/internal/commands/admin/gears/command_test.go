@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
-func TestPutConfigMergesExistingConfig(t *testing.T) {
+func TestSetFirmwareChannelMergesExistingConfig(t *testing.T) {
 	original := openGearConfigClient
 	fake := &fakeGearConfigClient{
 		getCfg: apitypes.Configuration{
@@ -29,7 +31,7 @@ func TestPutConfigMergesExistingConfig(t *testing.T) {
 	cmd := NewCmd()
 	var out bytes.Buffer
 	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"put-config", "device-pk", "stable"})
+	cmd.SetArgs([]string{"set-firmware-channel", "device-pk", "stable"})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute error: %v", err)
 	}
@@ -50,6 +52,30 @@ func TestPutConfigMergesExistingConfig(t *testing.T) {
 	}
 	if got.Certifications == nil || len(*got.Certifications) != 1 {
 		t.Fatalf("output certifications = %+v", got.Certifications)
+	}
+}
+
+func TestPutConfigUsesFilePayload(t *testing.T) {
+	original := openGearConfigClient
+	fake := &fakeGearConfigClient{}
+	openGearConfigClient = func(string) (gearConfigClient, error) {
+		return fake, nil
+	}
+	defer func() { openGearConfigClient = original }()
+
+	file := filepath.Join(t.TempDir(), "config.json")
+	data := []byte(`{"firmware":{"channel":"beta"}}`)
+	if err := os.WriteFile(file, data, 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	cmd := NewCmd()
+	cmd.SetArgs([]string{"put-config", "device-pk", "--file", file})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("Execute error: %v", err)
+	}
+	if fake.putCfg.Firmware == nil || fake.putCfg.Firmware.Channel == nil || *fake.putCfg.Firmware.Channel != "beta" {
+		t.Fatalf("put config = %+v", fake.putCfg)
 	}
 }
 

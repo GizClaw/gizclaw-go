@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mini Max Group ID Type",
+    "description": "MiniMaxGroupID schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "MiniMaxGroupID": {
+        "type": "string",
+        "description": "MiniMax group identifier",
+        "example": "group-123"
+      }
+    }
+  }
+}

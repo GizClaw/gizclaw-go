@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	minimax "github.com/giztoy/minimax-go"
+	"github.com/giztoy/minimax-go"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -59,12 +59,12 @@ var _ MiniMaxAdminService = (*Server)(nil)
 func (s *Server) ListMiniMaxTenants(ctx context.Context, request adminservice.ListMiniMaxTenantsRequestObject) (adminservice.ListMiniMaxTenantsResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.ListMiniMaxTenants500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListMiniMaxTenants500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
 	items, hasNext, nextCursor, err := listMiniMaxTenantsPage(ctx, store, cursor, limit)
 	if err != nil {
-		return adminservice.ListMiniMaxTenants500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListMiniMaxTenants500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.ListMiniMaxTenants200JSONResponse(adminservice.MiniMaxTenantList{
 		HasNext:    hasNext,
@@ -76,28 +76,28 @@ func (s *Server) ListMiniMaxTenants(ctx context.Context, request adminservice.Li
 func (s *Server) CreateMiniMaxTenant(ctx context.Context, request adminservice.CreateMiniMaxTenantRequestObject) (adminservice.CreateMiniMaxTenantResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.CreateMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if request.Body == nil {
-		return adminservice.CreateMiniMaxTenant400JSONResponse(adminError("INVALID_MINIMAX_TENANT", "request body required")), nil
+		return adminservice.CreateMiniMaxTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", "request body required")), nil
 	}
 	tenant, err := normalizeMiniMaxTenantUpsert(*request.Body, "")
 	if err != nil {
-		return adminservice.CreateMiniMaxTenant400JSONResponse(adminError("INVALID_MINIMAX_TENANT", err.Error())), nil
+		return adminservice.CreateMiniMaxTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", err.Error())), nil
 	}
 	if err := validateTenantReferences(ctx, store, tenant); err != nil {
-		return adminservice.CreateMiniMaxTenant400JSONResponse(adminError("INVALID_MINIMAX_TENANT", err.Error())), nil
+		return adminservice.CreateMiniMaxTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", err.Error())), nil
 	}
 	if _, err := store.Get(ctx, miniMaxTenantKey(string(tenant.Name))); err == nil {
-		return adminservice.CreateMiniMaxTenant409JSONResponse(adminError("MINIMAX_TENANT_ALREADY_EXISTS", fmt.Sprintf("MiniMax tenant %q already exists", tenant.Name))), nil
+		return adminservice.CreateMiniMaxTenant409JSONResponse(apitypes.NewErrorResponse("MINIMAX_TENANT_ALREADY_EXISTS", fmt.Sprintf("MiniMax tenant %q already exists", tenant.Name))), nil
 	} else if !errors.Is(err, kv.ErrNotFound) {
-		return adminservice.CreateMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	now := s.now()
 	tenant.CreatedAt = now
 	tenant.UpdatedAt = now
 	if err := writeMiniMaxTenant(ctx, store, tenant); err != nil {
-		return adminservice.CreateMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.CreateMiniMaxTenant200JSONResponse(tenant), nil
 }
@@ -105,7 +105,7 @@ func (s *Server) CreateMiniMaxTenant(ctx context.Context, request adminservice.C
 func (s *Server) DeleteMiniMaxTenant(ctx context.Context, request adminservice.DeleteMiniMaxTenantRequestObject) (adminservice.DeleteMiniMaxTenantResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.DeleteMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	name, err := url.PathUnescape(string(request.Name))
 	if err != nil {
@@ -114,15 +114,15 @@ func (s *Server) DeleteMiniMaxTenant(ctx context.Context, request adminservice.D
 	tenant, err := getMiniMaxTenant(ctx, store, name)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return adminservice.DeleteMiniMaxTenant404JSONResponse(adminError("MINIMAX_TENANT_NOT_FOUND", fmt.Sprintf("MiniMax tenant %q not found", name))), nil
+			return adminservice.DeleteMiniMaxTenant404JSONResponse(apitypes.NewErrorResponse("MINIMAX_TENANT_NOT_FOUND", fmt.Sprintf("MiniMax tenant %q not found", name))), nil
 		}
-		return adminservice.DeleteMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if err := deleteMiniMaxTenantVoices(ctx, store, tenant.Name); err != nil {
-		return adminservice.DeleteMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if err := store.Delete(ctx, miniMaxTenantKey(string(tenant.Name))); err != nil {
-		return adminservice.DeleteMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.DeleteMiniMaxTenant200JSONResponse(tenant), nil
 }
@@ -130,7 +130,7 @@ func (s *Server) DeleteMiniMaxTenant(ctx context.Context, request adminservice.D
 func (s *Server) GetMiniMaxTenant(ctx context.Context, request adminservice.GetMiniMaxTenantRequestObject) (adminservice.GetMiniMaxTenantResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.GetMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.GetMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	name, err := url.PathUnescape(string(request.Name))
 	if err != nil {
@@ -139,9 +139,9 @@ func (s *Server) GetMiniMaxTenant(ctx context.Context, request adminservice.GetM
 	tenant, err := getMiniMaxTenant(ctx, store, name)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return adminservice.GetMiniMaxTenant404JSONResponse(adminError("MINIMAX_TENANT_NOT_FOUND", fmt.Sprintf("MiniMax tenant %q not found", name))), nil
+			return adminservice.GetMiniMaxTenant404JSONResponse(apitypes.NewErrorResponse("MINIMAX_TENANT_NOT_FOUND", fmt.Sprintf("MiniMax tenant %q not found", name))), nil
 		}
-		return adminservice.GetMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.GetMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.GetMiniMaxTenant200JSONResponse(tenant), nil
 }
@@ -149,10 +149,10 @@ func (s *Server) GetMiniMaxTenant(ctx context.Context, request adminservice.GetM
 func (s *Server) PutMiniMaxTenant(ctx context.Context, request adminservice.PutMiniMaxTenantRequestObject) (adminservice.PutMiniMaxTenantResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.PutMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if request.Body == nil {
-		return adminservice.PutMiniMaxTenant400JSONResponse(adminError("INVALID_MINIMAX_TENANT", "request body required")), nil
+		return adminservice.PutMiniMaxTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", "request body required")), nil
 	}
 	name, err := url.PathUnescape(string(request.Name))
 	if err != nil {
@@ -160,14 +160,14 @@ func (s *Server) PutMiniMaxTenant(ctx context.Context, request adminservice.PutM
 	}
 	tenant, err := normalizeMiniMaxTenantUpsert(*request.Body, name)
 	if err != nil {
-		return adminservice.PutMiniMaxTenant400JSONResponse(adminError("INVALID_MINIMAX_TENANT", err.Error())), nil
+		return adminservice.PutMiniMaxTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", err.Error())), nil
 	}
 	if err := validateTenantReferences(ctx, store, tenant); err != nil {
-		return adminservice.PutMiniMaxTenant400JSONResponse(adminError("INVALID_MINIMAX_TENANT", err.Error())), nil
+		return adminservice.PutMiniMaxTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", err.Error())), nil
 	}
 	previous, err := getMiniMaxTenant(ctx, store, name)
 	if err != nil && !errors.Is(err, kv.ErrNotFound) {
-		return adminservice.PutMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	now := s.now()
 	tenant.CreatedAt = now
@@ -177,7 +177,7 @@ func (s *Server) PutMiniMaxTenant(ctx context.Context, request adminservice.PutM
 		tenant.LastSyncedAt = cloneTime(previous.LastSyncedAt)
 	}
 	if err := writeMiniMaxTenant(ctx, store, tenant); err != nil {
-		return adminservice.PutMiniMaxTenant500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutMiniMaxTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.PutMiniMaxTenant200JSONResponse(tenant), nil
 }
@@ -185,7 +185,7 @@ func (s *Server) PutMiniMaxTenant(ctx context.Context, request adminservice.PutM
 func (s *Server) SyncMiniMaxTenantVoices(ctx context.Context, request adminservice.SyncMiniMaxTenantVoicesRequestObject) (adminservice.SyncMiniMaxTenantVoicesResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	name, err := url.PathUnescape(string(request.Name))
 	if err != nil {
@@ -194,27 +194,27 @@ func (s *Server) SyncMiniMaxTenantVoices(ctx context.Context, request adminservi
 	tenant, err := getMiniMaxTenant(ctx, store, name)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return adminservice.SyncMiniMaxTenantVoices404JSONResponse(adminError("MINIMAX_TENANT_NOT_FOUND", fmt.Sprintf("MiniMax tenant %q not found", name))), nil
+			return adminservice.SyncMiniMaxTenantVoices404JSONResponse(apitypes.NewErrorResponse("MINIMAX_TENANT_NOT_FOUND", fmt.Sprintf("MiniMax tenant %q not found", name))), nil
 		}
-		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	client, err := s.miniMaxClientForTenant(ctx, store, tenant)
 	if err != nil {
-		return adminservice.SyncMiniMaxTenantVoices400JSONResponse(adminError("INVALID_MINIMAX_TENANT", err.Error())), nil
+		return adminservice.SyncMiniMaxTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", err.Error())), nil
 	}
 	upstream, err := listAllMiniMaxVoices(ctx, client)
 	if err != nil {
-		return adminservice.SyncMiniMaxTenantVoices502JSONResponse(adminError("MINIMAX_SYNC_FAILED", err.Error())), nil
+		return adminservice.SyncMiniMaxTenantVoices502JSONResponse(apitypes.NewErrorResponse("MINIMAX_SYNC_FAILED", err.Error())), nil
 	}
 	now := s.now()
 	createdCount, updatedCount, deletedCount, err := reconcileTenantVoices(ctx, store, tenant, upstream, now)
 	if err != nil {
-		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	tenant.LastSyncedAt = &now
 	tenant.UpdatedAt = now
 	if err := writeMiniMaxTenant(ctx, store, tenant); err != nil {
-		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.SyncMiniMaxTenantVoices200JSONResponse(adminservice.MiniMaxSyncVoicesResult{
 		CreatedCount: createdCount,
@@ -228,25 +228,25 @@ func (s *Server) SyncMiniMaxTenantVoices(ctx context.Context, request adminservi
 func (s *Server) CreateVoice(ctx context.Context, request adminservice.CreateVoiceRequestObject) (adminservice.CreateVoiceResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.CreateVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if request.Body == nil {
-		return adminservice.CreateVoice400JSONResponse(adminError("INVALID_VOICE", "request body required")), nil
+		return adminservice.CreateVoice400JSONResponse(apitypes.NewErrorResponse("INVALID_VOICE", "request body required")), nil
 	}
 	voice, err := normalizeVoiceUpsert(*request.Body, "")
 	if err != nil {
-		return adminservice.CreateVoice400JSONResponse(adminError("INVALID_VOICE", err.Error())), nil
+		return adminservice.CreateVoice400JSONResponse(apitypes.NewErrorResponse("INVALID_VOICE", err.Error())), nil
 	}
 	if _, err := store.Get(ctx, voiceKey(string(voice.Id))); err == nil {
-		return adminservice.CreateVoice409JSONResponse(adminError("VOICE_ALREADY_EXISTS", fmt.Sprintf("voice %q already exists", voice.Id))), nil
+		return adminservice.CreateVoice409JSONResponse(apitypes.NewErrorResponse("VOICE_ALREADY_EXISTS", fmt.Sprintf("voice %q already exists", voice.Id))), nil
 	} else if !errors.Is(err, kv.ErrNotFound) {
-		return adminservice.CreateVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	now := s.now()
 	voice.CreatedAt = now
 	voice.UpdatedAt = now
 	if err := writeVoice(ctx, store, voice, nil); err != nil {
-		return adminservice.CreateVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.CreateVoice200JSONResponse(voice), nil
 }
@@ -254,7 +254,7 @@ func (s *Server) CreateVoice(ctx context.Context, request adminservice.CreateVoi
 func (s *Server) ListVoices(ctx context.Context, request adminservice.ListVoicesRequestObject) (adminservice.ListVoicesResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.ListVoices500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
 	filters := voiceFilters{}
@@ -278,7 +278,7 @@ func (s *Server) ListVoices(ctx context.Context, request adminservice.ListVoices
 	}
 	items, hasNext, nextCursor, err := listVoicesPage(ctx, store, filters, cursor, limit)
 	if err != nil {
-		return adminservice.ListVoices500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.ListVoices200JSONResponse(adminservice.VoiceList{
 		HasNext:    hasNext,
@@ -290,7 +290,7 @@ func (s *Server) ListVoices(ctx context.Context, request adminservice.ListVoices
 func (s *Server) DeleteVoice(ctx context.Context, request adminservice.DeleteVoiceRequestObject) (adminservice.DeleteVoiceResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.DeleteVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	id, err := url.PathUnescape(string(request.Id))
 	if err != nil {
@@ -299,12 +299,12 @@ func (s *Server) DeleteVoice(ctx context.Context, request adminservice.DeleteVoi
 	voice, err := getVoice(ctx, store, id)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return adminservice.DeleteVoice404JSONResponse(adminError("VOICE_NOT_FOUND", fmt.Sprintf("voice %q not found", id))), nil
+			return adminservice.DeleteVoice404JSONResponse(apitypes.NewErrorResponse("VOICE_NOT_FOUND", fmt.Sprintf("voice %q not found", id))), nil
 		}
-		return adminservice.DeleteVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if err := deleteVoice(ctx, store, voice); err != nil {
-		return adminservice.DeleteVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.DeleteVoice200JSONResponse(voice), nil
 }
@@ -312,7 +312,7 @@ func (s *Server) DeleteVoice(ctx context.Context, request adminservice.DeleteVoi
 func (s *Server) GetVoice(ctx context.Context, request adminservice.GetVoiceRequestObject) (adminservice.GetVoiceResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.GetVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.GetVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	id, err := url.PathUnescape(string(request.Id))
 	if err != nil {
@@ -321,9 +321,9 @@ func (s *Server) GetVoice(ctx context.Context, request adminservice.GetVoiceRequ
 	voice, err := getVoice(ctx, store, id)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return adminservice.GetVoice404JSONResponse(adminError("VOICE_NOT_FOUND", fmt.Sprintf("voice %q not found", id))), nil
+			return adminservice.GetVoice404JSONResponse(apitypes.NewErrorResponse("VOICE_NOT_FOUND", fmt.Sprintf("voice %q not found", id))), nil
 		}
-		return adminservice.GetVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.GetVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.GetVoice200JSONResponse(voice), nil
 }
@@ -331,10 +331,10 @@ func (s *Server) GetVoice(ctx context.Context, request adminservice.GetVoiceRequ
 func (s *Server) PutVoice(ctx context.Context, request adminservice.PutVoiceRequestObject) (adminservice.PutVoiceResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.PutVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if request.Body == nil {
-		return adminservice.PutVoice400JSONResponse(adminError("INVALID_VOICE", "request body required")), nil
+		return adminservice.PutVoice400JSONResponse(apitypes.NewErrorResponse("INVALID_VOICE", "request body required")), nil
 	}
 	id, err := url.PathUnescape(string(request.Id))
 	if err != nil {
@@ -342,19 +342,19 @@ func (s *Server) PutVoice(ctx context.Context, request adminservice.PutVoiceRequ
 	}
 	voice, err := normalizeVoiceUpsert(*request.Body, id)
 	if err != nil {
-		return adminservice.PutVoice400JSONResponse(adminError("INVALID_VOICE", err.Error())), nil
+		return adminservice.PutVoice400JSONResponse(apitypes.NewErrorResponse("INVALID_VOICE", err.Error())), nil
 	}
 	previous, err := getVoice(ctx, store, id)
 	if err != nil && !errors.Is(err, kv.ErrNotFound) {
-		return adminservice.PutVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	now := s.now()
 	voice.CreatedAt = now
 	voice.UpdatedAt = now
 	var previousPtr *apitypes.Voice
 	if err == nil {
-		if previous.Source == apitypes.Sync {
-			return adminservice.PutVoice409JSONResponse(adminError("SYNC_VOICE_READ_ONLY", fmt.Sprintf("voice %q has source sync and cannot be modified via API", previous.Id))), nil
+		if previous.Source == apitypes.VoiceSourceSync {
+			return adminservice.PutVoice409JSONResponse(apitypes.NewErrorResponse("SYNC_VOICE_READ_ONLY", fmt.Sprintf("voice %q has source sync and cannot be modified via API", previous.Id))), nil
 		}
 		voice.CreatedAt = previous.CreatedAt
 		voice.SyncedAt = cloneTime(previous.SyncedAt)
@@ -362,7 +362,7 @@ func (s *Server) PutVoice(ctx context.Context, request adminservice.PutVoiceRequ
 		previousPtr = &previousCopy
 	}
 	if err := writeVoice(ctx, store, voice, previousPtr); err != nil {
-		return adminservice.PutVoice500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutVoice500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.PutVoice200JSONResponse(voice), nil
 }
@@ -388,7 +388,7 @@ func normalizeVoiceUpsert(in adminservice.VoiceUpsert, expectedID string) (apity
 	if !source.Valid() {
 		return apitypes.Voice{}, fmt.Errorf("unsupported source %q", source)
 	}
-	if source == apitypes.Sync {
+	if source == apitypes.VoiceSourceSync {
 		return apitypes.Voice{}, errors.New("voices with source sync cannot be created or updated via API")
 	}
 	providerKind := strings.TrimSpace(string(in.Provider.Kind))
@@ -714,7 +714,7 @@ func reconcileTenantVoices(ctx context.Context, store kv.Store, tenant apitypes.
 	}
 	existingByProviderVoiceID := make(map[string]apitypes.Voice, len(existing))
 	for _, voice := range existing {
-		if voice.Source != apitypes.Sync {
+		if voice.Source != apitypes.VoiceSourceSync {
 			continue
 		}
 		if voice.ProviderVoiceId == nil || strings.TrimSpace(*voice.ProviderVoiceId) == "" {
@@ -746,7 +746,7 @@ func reconcileTenantVoices(ctx context.Context, store kv.Store, tenant apitypes.
 			continue
 		}
 		if occupied, err := getVoice(ctx, store, string(record.Id)); err == nil {
-			if occupied.Source != apitypes.Sync {
+			if occupied.Source != apitypes.VoiceSourceSync {
 				return 0, 0, 0, fmt.Errorf("voice id %q is occupied by non-sync resource", record.Id)
 			}
 			previousCopy := occupied
@@ -816,7 +816,7 @@ func voiceFromMiniMax(tenantName apitypes.MiniMaxTenantName, upstream minimax.Vo
 			Name: apitypes.VoiceProviderName(tenantName),
 		},
 		ProviderVoiceId: &providerVoiceID,
-		Source:          apitypes.Sync,
+		Source:          apitypes.VoiceSourceSync,
 		SyncedAt:        &syncedAt,
 		UpdatedAt:       now,
 	}
@@ -985,7 +985,7 @@ func deleteMiniMaxTenantVoices(ctx context.Context, store kv.Store, tenantName a
 		return err
 	}
 	for _, voice := range voices {
-		if voice.Source != apitypes.Sync {
+		if voice.Source != apitypes.VoiceSourceSync {
 			continue
 		}
 		if err := deleteVoice(ctx, store, voice); err != nil {
@@ -1204,13 +1204,4 @@ func (s *Server) store() (kv.Store, error) {
 		return nil, errors.New("MiniMax store not configured")
 	}
 	return s.Store, nil
-}
-
-func adminError(code, message string) apitypes.ErrorResponse {
-	return apitypes.ErrorResponse{
-		Error: apitypes.ErrorPayload{
-			Code:    code,
-			Message: message,
-		},
-	}
 }

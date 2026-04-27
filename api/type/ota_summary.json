@@ -1,0 +1,39 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OTA Summary Type",
+    "description": "OTASummary schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "OTASummary": {
+        "type": "object",
+        "required": [
+          "depot",
+          "channel",
+          "firmware_semver",
+          "files"
+        ],
+        "properties": {
+          "depot": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "firmware_semver": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "./depot_file.json#/components/schemas/DepotFile"
+            }
+          }
+        }
+      }
+    }
+  }
+}

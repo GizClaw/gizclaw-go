@@ -9,6 +9,7 @@ import (
 	pingcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/ping"
 	playcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/play"
 	servecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/serve"
+	serverinfocmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/serverinfo"
 	servicecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/service"
 	"github.com/spf13/cobra"
 )
@@ -27,6 +28,7 @@ func New() *cobra.Command {
 		pingcmd.NewCmd(),
 		admincmd.NewCmd(),
 		playcmd.NewCmd(),
+		serverinfocmd.NewCmd(),
 	)
 
 	return root

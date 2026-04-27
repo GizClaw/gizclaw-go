@@ -1,0 +1,33 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Refresh Identifiers Type",
+    "description": "Gear refresh identifiers schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "RefreshIdentifiers": {
+        "type": "object",
+        "properties": {
+          "sn": {
+            "type": "string"
+          },
+          "imeis": {
+            "type": "array",
+            "items": {
+              "$ref": "./gear_imei.json#/components/schemas/GearIMEI"
+            }
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "./gear_label.json#/components/schemas/GearLabel"
+            }
+          }
+        }
+      }
+    }
+  }
+}

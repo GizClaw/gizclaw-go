@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/cmdutil"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/spf13/cobra"
 )
@@ -189,34 +190,8 @@ func NewCmd() *cobra.Command {
 				return json.NewEncoder(cmd.OutOrStdout()).Encode(item)
 			},
 		},
-		&cobra.Command{
-			Use:   "put-config <pubkey> <channel>",
-			Short: "Replace gear firmware config",
-			Args:  cobra.ExactArgs(2),
-			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := openGearConfigClient(ctxName)
-				if err != nil {
-					return err
-				}
-				defer c.Close()
-
-				cfg, err := c.GetGearConfig(context.Background(), args[0])
-				if err != nil {
-					return err
-				}
-				if cfg.Firmware == nil {
-					cfg.Firmware = &apitypes.FirmwareConfig{}
-				}
-				channel := apitypes.GearFirmwareChannel(args[1])
-				cfg.Firmware.Channel = &channel
-
-				item, err := c.PutGearConfig(context.Background(), args[0], cfg)
-				if err != nil {
-					return err
-				}
-				return json.NewEncoder(cmd.OutOrStdout()).Encode(item)
-			},
-		},
+		newPutConfigCmd(&ctxName),
+		newSetFirmwareChannelCmd(&ctxName),
 		&cobra.Command{
 			Use:   "runtime <pubkey>",
 			Short: "Get gear runtime snapshot",
@@ -337,5 +312,65 @@ func NewCmd() *cobra.Command {
 			},
 		},
 	)
+	return cmd
+}
+
+func newPutConfigCmd(ctxName *string) *cobra.Command {
+	var file string
+	cmd := &cobra.Command{
+		Use:   "put-config <pubkey> --file <config.json>",
+		Short: "Replace gear config",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := cmdutil.ReadJSONFile[apitypes.Configuration](file)
+			if err != nil {
+				return err
+			}
+			c, err := openGearConfigClient(*ctxName)
+			if err != nil {
+				return err
+			}
+			defer c.Close()
+			item, err := c.PutGearConfig(context.Background(), args[0], cfg)
+			if err != nil {
+				return err
+			}
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(item)
+		},
+	}
+	cmd.Flags().StringVar(&file, "file", "", "path to config JSON")
+	_ = cmd.MarkFlagRequired("file")
+	return cmd
+}
+
+func newSetFirmwareChannelCmd(ctxName *string) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-firmware-channel <pubkey> <channel>",
+		Short: "Set gear firmware channel",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := openGearConfigClient(*ctxName)
+			if err != nil {
+				return err
+			}
+			defer c.Close()
+
+			cfg, err := c.GetGearConfig(context.Background(), args[0])
+			if err != nil {
+				return err
+			}
+			if cfg.Firmware == nil {
+				cfg.Firmware = &apitypes.FirmwareConfig{}
+			}
+			channel := apitypes.GearFirmwareChannel(args[1])
+			cfg.Firmware.Channel = &channel
+
+			item, err := c.PutGearConfig(context.Background(), args[0], cfg)
+			if err != nil {
+				return err
+			}
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(item)
+		},
+	}
 	return cmd
 }

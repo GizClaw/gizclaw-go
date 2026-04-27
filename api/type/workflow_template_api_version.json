@@ -1,0 +1,19 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workflow Template API Version Type",
+    "description": "WorkflowTemplateAPIVersion schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "WorkflowTemplateAPIVersion": {
+        "type": "string",
+        "enum": [
+          "gizclaw.flowcraft/v1alpha1"
+        ]
+      }
+    }
+  }
+}

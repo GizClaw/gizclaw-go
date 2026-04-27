@@ -1,0 +1,31 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gear IMEI Type",
+    "description": "GearIMEI schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GearIMEI": {
+        "type": "object",
+        "required": [
+          "tac",
+          "serial"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "tac": {
+            "type": "string"
+          },
+          "serial": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

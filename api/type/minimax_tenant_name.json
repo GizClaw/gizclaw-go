@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mini Max Tenant Name Type",
+    "description": "MiniMaxTenantName schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "MiniMaxTenantName": {
+        "type": "string",
+        "description": "MiniMax tenant name",
+        "example": "main-cn"
+      }
+    }
+  }
+}

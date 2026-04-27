@@ -1,6 +1,7 @@
 package contextcmd
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/clicontext"
@@ -9,18 +10,37 @@ import (
 
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "context",
-		Aliases: []string{"ctx"},
-		Short:   "Manage server connection contexts",
+		Use:   "context",
+		Short: "Manage server connection contexts",
 	}
 
 	cmd.AddCommand(
 		newCreateCmd(),
 		newUseCmd(),
 		newListCmd(),
+		newInfoCmd(),
+		newShowCmd(),
 	)
 
 	return cmd
+}
+
+type contextInfo struct {
+	Name            string `json:"name"`
+	Current         bool   `json:"current"`
+	ServerAddress   string `json:"server_address"`
+	ServerPublicKey string `json:"server_public_key"`
+	IdentityPublic  string `json:"identity_public"`
+}
+
+func buildContextInfo(ctx *clicontext.CLIContext, current string) contextInfo {
+	return contextInfo{
+		Name:            ctx.Name,
+		Current:         ctx.Name == current,
+		ServerAddress:   ctx.Config.Server.Address,
+		ServerPublicKey: ctx.Config.Server.PublicKey,
+		IdentityPublic:  ctx.KeyPair.Public.String(),
+	}
 }
 
 func newCreateCmd() *cobra.Command {
@@ -96,6 +116,55 @@ func newListCmd() *cobra.Command {
 				fmt.Fprintf(cmd.OutOrStdout(), "%s%s\n", marker, name)
 			}
 			return nil
+		},
+	}
+}
+
+func newInfoCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "info",
+		Short: "Show current context information",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store, err := clicontext.DefaultStore()
+			if err != nil {
+				return err
+			}
+			ctx, err := store.Current()
+			if err != nil {
+				return err
+			}
+			if ctx == nil {
+				return fmt.Errorf("no active context; run 'gizclaw context create' first")
+			}
+			_, current, err := store.List()
+			if err != nil {
+				return err
+			}
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(buildContextInfo(ctx, current))
+		},
+	}
+}
+
+func newShowCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "show <name>",
+		Short: "Show context information by name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store, err := clicontext.DefaultStore()
+			if err != nil {
+				return err
+			}
+			ctx, err := store.LoadByName(args[0])
+			if err != nil {
+				return err
+			}
+			_, current, err := store.List()
+			if err != nil {
+				return err
+			}
+			return json.NewEncoder(cmd.OutOrStdout()).Encode(buildContextInfo(ctx, current))
 		},
 	}
 }

@@ -1,0 +1,44 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Depot Type",
+    "description": "Depot schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Depot": {
+        "type": "object",
+        "required": [
+          "name",
+          "info",
+          "rollback",
+          "stable",
+          "beta",
+          "testing"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "info": {
+            "$ref": "./depot_info.json#/components/schemas/DepotInfo"
+          },
+          "rollback": {
+            "$ref": "./depot_release.json#/components/schemas/DepotRelease"
+          },
+          "stable": {
+            "$ref": "./depot_release.json#/components/schemas/DepotRelease"
+          },
+          "beta": {
+            "$ref": "./depot_release.json#/components/schemas/DepotRelease"
+          },
+          "testing": {
+            "$ref": "./depot_release.json#/components/schemas/DepotRelease"
+          }
+        }
+      }
+    }
+  }
+}

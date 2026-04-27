@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -59,7 +59,7 @@ type normalizedCredentialUpsert struct {
 func (s *Server) ListCredentials(ctx context.Context, request adminservice.ListCredentialsRequestObject) (adminservice.ListCredentialsResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.ListCredentials500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListCredentials500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
 	provider := ""
@@ -77,7 +77,7 @@ func (s *Server) ListCredentials(ctx context.Context, request adminservice.ListC
 		items, hasNext, nextCursor, err = listCredentialsByProviderPage(ctx, store, provider, cursor, limit)
 	}
 	if err != nil {
-		return adminservice.ListCredentials500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListCredentials500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.ListCredentials200JSONResponse(adminservice.CredentialList{
 		HasNext:    hasNext,
@@ -89,22 +89,22 @@ func (s *Server) ListCredentials(ctx context.Context, request adminservice.ListC
 func (s *Server) CreateCredential(ctx context.Context, request adminservice.CreateCredentialRequestObject) (adminservice.CreateCredentialResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.CreateCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if request.Body == nil {
-		return adminservice.CreateCredential400JSONResponse(adminError("INVALID_CREDENTIAL", "request body required")), nil
+		return adminservice.CreateCredential400JSONResponse(apitypes.NewErrorResponse("INVALID_CREDENTIAL", "request body required")), nil
 	}
 	upsert, err := normalizeCredentialUpsert(*request.Body, "")
 	if err != nil {
-		return adminservice.CreateCredential400JSONResponse(adminError("INVALID_CREDENTIAL", err.Error())), nil
+		return adminservice.CreateCredential400JSONResponse(apitypes.NewErrorResponse("INVALID_CREDENTIAL", err.Error())), nil
 	}
 	if upsert.Body == nil {
-		return adminservice.CreateCredential400JSONResponse(adminError("INVALID_CREDENTIAL", "body is required")), nil
+		return adminservice.CreateCredential400JSONResponse(apitypes.NewErrorResponse("INVALID_CREDENTIAL", "body is required")), nil
 	}
 	if _, err := store.Get(ctx, credentialKey(string(upsert.Name))); err == nil {
-		return adminservice.CreateCredential409JSONResponse(adminError("CREDENTIAL_ALREADY_EXISTS", fmt.Sprintf("credential %q already exists", upsert.Name))), nil
+		return adminservice.CreateCredential409JSONResponse(apitypes.NewErrorResponse("CREDENTIAL_ALREADY_EXISTS", fmt.Sprintf("credential %q already exists", upsert.Name))), nil
 	} else if !errors.Is(err, kv.ErrNotFound) {
-		return adminservice.CreateCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	now := time.Now().UTC()
 	record := credentialRecord{
@@ -117,7 +117,7 @@ func (s *Server) CreateCredential(ctx context.Context, request adminservice.Crea
 		UpdatedAt:   now,
 	}
 	if err := writeCredential(ctx, store, record, nil); err != nil {
-		return adminservice.CreateCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.CreateCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.CreateCredential200JSONResponse(credentialFromRecord(record)), nil
 }
@@ -125,7 +125,7 @@ func (s *Server) CreateCredential(ctx context.Context, request adminservice.Crea
 func (s *Server) DeleteCredential(ctx context.Context, request adminservice.DeleteCredentialRequestObject) (adminservice.DeleteCredentialResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.DeleteCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	name, err := url.PathUnescape(string(request.Name))
 	if err != nil {
@@ -134,15 +134,15 @@ func (s *Server) DeleteCredential(ctx context.Context, request adminservice.Dele
 	record, err := getCredentialRecord(ctx, store, name)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return adminservice.DeleteCredential404JSONResponse(adminError("CREDENTIAL_NOT_FOUND", fmt.Sprintf("credential %q not found", name))), nil
+			return adminservice.DeleteCredential404JSONResponse(apitypes.NewErrorResponse("CREDENTIAL_NOT_FOUND", fmt.Sprintf("credential %q not found", name))), nil
 		}
-		return adminservice.DeleteCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if err := store.BatchDelete(ctx, []kv.Key{
 		credentialKey(string(record.Name)),
 		credentialByProviderKey(string(record.Provider), string(record.Name)),
 	}); err != nil {
-		return adminservice.DeleteCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.DeleteCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.DeleteCredential200JSONResponse(credentialFromRecord(record)), nil
 }
@@ -150,7 +150,7 @@ func (s *Server) DeleteCredential(ctx context.Context, request adminservice.Dele
 func (s *Server) GetCredential(ctx context.Context, request adminservice.GetCredentialRequestObject) (adminservice.GetCredentialResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.GetCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.GetCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	name, err := url.PathUnescape(string(request.Name))
 	if err != nil {
@@ -159,9 +159,9 @@ func (s *Server) GetCredential(ctx context.Context, request adminservice.GetCred
 	record, err := getCredentialRecord(ctx, store, name)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return adminservice.GetCredential404JSONResponse(adminError("CREDENTIAL_NOT_FOUND", fmt.Sprintf("credential %q not found", name))), nil
+			return adminservice.GetCredential404JSONResponse(apitypes.NewErrorResponse("CREDENTIAL_NOT_FOUND", fmt.Sprintf("credential %q not found", name))), nil
 		}
-		return adminservice.GetCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.GetCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.GetCredential200JSONResponse(credentialFromRecord(record)), nil
 }
@@ -169,10 +169,10 @@ func (s *Server) GetCredential(ctx context.Context, request adminservice.GetCred
 func (s *Server) PutCredential(ctx context.Context, request adminservice.PutCredentialRequestObject) (adminservice.PutCredentialResponseObject, error) {
 	store, err := s.store()
 	if err != nil {
-		return adminservice.PutCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	if request.Body == nil {
-		return adminservice.PutCredential400JSONResponse(adminError("INVALID_CREDENTIAL", "request body required")), nil
+		return adminservice.PutCredential400JSONResponse(apitypes.NewErrorResponse("INVALID_CREDENTIAL", "request body required")), nil
 	}
 	name, err := url.PathUnescape(string(request.Name))
 	if err != nil {
@@ -180,11 +180,11 @@ func (s *Server) PutCredential(ctx context.Context, request adminservice.PutCred
 	}
 	upsert, err := normalizeCredentialUpsert(*request.Body, name)
 	if err != nil {
-		return adminservice.PutCredential400JSONResponse(adminError("INVALID_CREDENTIAL", err.Error())), nil
+		return adminservice.PutCredential400JSONResponse(apitypes.NewErrorResponse("INVALID_CREDENTIAL", err.Error())), nil
 	}
 	previous, err := getCredentialRecord(ctx, store, name)
 	if err != nil && !errors.Is(err, kv.ErrNotFound) {
-		return adminservice.PutCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	now := time.Now().UTC()
 	record := credentialRecord{
@@ -206,10 +206,10 @@ func (s *Server) PutCredential(ctx context.Context, request adminservice.PutCred
 		previousPtr = &previousCopy
 	}
 	if record.Body == nil {
-		return adminservice.PutCredential400JSONResponse(adminError("INVALID_CREDENTIAL", "body is required")), nil
+		return adminservice.PutCredential400JSONResponse(apitypes.NewErrorResponse("INVALID_CREDENTIAL", "body is required")), nil
 	}
 	if err := writeCredential(ctx, store, record, previousPtr); err != nil {
-		return adminservice.PutCredential500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.PutCredential500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.PutCredential200JSONResponse(credentialFromRecord(record)), nil
 }
@@ -429,13 +429,4 @@ func (s *Server) store() (kv.Store, error) {
 		return nil, errors.New("credential store not configured")
 	}
 	return s.Store, nil
-}
-
-func adminError(code, message string) apitypes.ErrorResponse {
-	return apitypes.ErrorResponse{
-		Error: apitypes.ErrorPayload{
-			Code:    code,
-			Message: message,
-		},
-	}
 }

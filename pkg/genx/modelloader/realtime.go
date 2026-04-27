@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/pkg/genx/transformers"
-	doubaospeech "github.com/giztoy/doubao-speech-go"
+	"github.com/giztoy/doubao-speech-go"
 )
 
 func registerRealtimeBySchema(cfg ConfigFile) ([]string, error) {

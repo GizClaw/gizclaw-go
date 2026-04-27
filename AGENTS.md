@@ -1,5 +1,14 @@
 # AGENTS Guide (Repository Review Strategy)
 
+## Table of Contents
+
+- [Repository Context](#repository-context)
+- [Repository Documentation](#repository-documentation)
+- [Development & Merge Workflow](#development--merge-workflow)
+- [Review Policy](#review-policy)
+- [Reviewer Output Expectations](#reviewer-output-expectations)
+- [Non-Goals](#non-goals)
+
 ## Repository Context
 
 - This is a **pure Go** repository.
@@ -8,6 +17,11 @@
 - The repository has a **GitHub Actions CI workflow** for automated checks.
 
 Even with CI, quality gates must still be enforced during local development and manual review.
+
+## Repository Documentation
+
+- [`api/README.md`](api/README.md): explains the source OpenAPI definitions,
+  generated Go API packages, and API schema maintenance workflow.
 
 ## Development & Merge Workflow
 

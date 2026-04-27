@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
@@ -81,7 +81,7 @@ func (s *Server) ListGears(ctx context.Context, request adminservice.ListGearsRe
 	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
 	items, hasNext, nextCursor, err := s.listPage(ctx, cursor, limit)
 	if err != nil {
-		return adminservice.ListGears500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListGears500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.ListGears200JSONResponse(toAdminRegistrationList(items, hasNext, nextCursor)), nil
 }
@@ -95,7 +95,7 @@ func (s *Server) ListByCertification(ctx context.Context, request adminservice.L
 	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
 	items, hasNext, nextCursor, err := s.listByCertification(ctx, apitypes.GearCertificationType(request.Type), apitypes.GearCertificationAuthority(request.Authority), id, cursor, limit)
 	if err != nil {
-		return adminservice.ListByCertification500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListByCertification500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.ListByCertification200JSONResponse(toAdminRegistrationList(items, hasNext, nextCursor)), nil
 }
@@ -109,7 +109,7 @@ func (s *Server) ListByFirmware(ctx context.Context, request adminservice.ListBy
 	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
 	items, hasNext, nextCursor, err := s.listByFirmware(ctx, depot, apitypes.GearFirmwareChannel(request.Channel), cursor, limit)
 	if err != nil {
-		return adminservice.ListByFirmware500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListByFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.ListByFirmware200JSONResponse(toAdminRegistrationList(items, hasNext, nextCursor)), nil
 }
@@ -126,7 +126,7 @@ func (s *Server) ResolveByIMEI(ctx context.Context, request adminservice.Resolve
 	}
 	publicKey, err := s.resolveByIMEI(ctx, tac, serial)
 	if err != nil {
-		return adminservice.ResolveByIMEI404JSONResponse(adminError("GEAR_IMEI_NOT_FOUND", err.Error())), nil
+		return adminservice.ResolveByIMEI404JSONResponse(apitypes.NewErrorResponse("GEAR_IMEI_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.ResolveByIMEI200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey}), nil
 }
@@ -144,7 +144,7 @@ func (s *Server) ListByLabel(ctx context.Context, request adminservice.ListByLab
 	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
 	items, hasNext, nextCursor, err := s.listByLabel(ctx, key, value, cursor, limit)
 	if err != nil {
-		return adminservice.ListByLabel500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return adminservice.ListByLabel500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.ListByLabel200JSONResponse(toAdminRegistrationList(items, hasNext, nextCursor)), nil
 }
@@ -157,7 +157,7 @@ func (s *Server) ResolveBySN(ctx context.Context, request adminservice.ResolveBy
 	}
 	publicKey, err := s.resolveBySN(ctx, sn)
 	if err != nil {
-		return adminservice.ResolveBySN404JSONResponse(adminError("GEAR_SN_NOT_FOUND", err.Error())), nil
+		return adminservice.ResolveBySN404JSONResponse(apitypes.NewErrorResponse("GEAR_SN_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.ResolveBySN200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey}), nil
 }
@@ -170,7 +170,7 @@ func (s *Server) DeleteGear(ctx context.Context, request adminservice.DeleteGear
 	}
 	gear, err := s.delete(ctx, publicKey)
 	if err != nil {
-		return adminservice.DeleteGear404JSONResponse(adminError("GEAR_NOT_FOUND", err.Error())), nil
+		return adminservice.DeleteGear404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.DeleteGear200JSONResponse(toAdminRegistration(gear)), nil
 }
@@ -183,7 +183,7 @@ func (s *Server) GetGear(ctx context.Context, request adminservice.GetGearReques
 	}
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
-		return adminservice.GetGear404JSONResponse(adminError("GEAR_NOT_FOUND", err.Error())), nil
+		return adminservice.GetGear404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.GetGear200JSONResponse(toAdminRegistration(gear)), nil
 }
@@ -196,7 +196,7 @@ func (s *Server) GetGearConfig(ctx context.Context, request adminservice.GetGear
 	}
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
-		return adminservice.GetGearConfig404JSONResponse(adminError("GEAR_NOT_FOUND", err.Error())), nil
+		return adminservice.GetGearConfig404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.GetGearConfig200JSONResponse(gear.Configuration), nil
 }
@@ -204,18 +204,18 @@ func (s *Server) GetGearConfig(ctx context.Context, request adminservice.GetGear
 // PutGearConfig implements `adminservice.StrictServerInterface.PutGearConfig`.
 func (s *Server) PutGearConfig(ctx context.Context, request adminservice.PutGearConfigRequestObject) (adminservice.PutGearConfigResponseObject, error) {
 	if request.Body == nil {
-		return adminservice.PutGearConfig400JSONResponse(adminError("INVALID_PARAMS", "request body required")), nil
+		return adminservice.PutGearConfig400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", "request body required")), nil
 	}
 	publicKey, err := pathUnescape(string(request.PublicKey))
 	if err != nil {
-		return adminservice.PutGearConfig400JSONResponse(adminError("INVALID_PARAMS", err.Error())), nil
+		return adminservice.PutGearConfig400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
 	gear, err := s.putConfig(ctx, publicKey, *request.Body)
 	if err != nil {
 		if errors.Is(err, ErrGearNotFound) {
-			return adminservice.PutGearConfig404JSONResponse(adminError("GEAR_NOT_FOUND", err.Error())), nil
+			return adminservice.PutGearConfig404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 		}
-		return adminservice.PutGearConfig400JSONResponse(adminError("INVALID_PARAMS", err.Error())), nil
+		return adminservice.PutGearConfig400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
 	return adminservice.PutGearConfig200JSONResponse(gear.Configuration), nil
 }
@@ -228,7 +228,7 @@ func (s *Server) GetGearInfo(ctx context.Context, request adminservice.GetGearIn
 	}
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
-		return adminservice.GetGearInfo404JSONResponse(adminError("GEAR_NOT_FOUND", err.Error())), nil
+		return adminservice.GetGearInfo404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.GetGearInfo200JSONResponse(gear.Device), nil
 }
@@ -245,15 +245,15 @@ func (s *Server) GetGearRuntime(ctx context.Context, request adminservice.GetGea
 // ApproveGear implements `adminservice.StrictServerInterface.ApproveGear`.
 func (s *Server) ApproveGear(ctx context.Context, request adminservice.ApproveGearRequestObject) (adminservice.ApproveGearResponseObject, error) {
 	if request.Body == nil {
-		return adminservice.ApproveGear400JSONResponse(adminError("INVALID_ROLE", "request body required")), nil
+		return adminservice.ApproveGear400JSONResponse(apitypes.NewErrorResponse("INVALID_ROLE", "request body required")), nil
 	}
 	publicKey, err := pathUnescape(string(request.PublicKey))
 	if err != nil {
-		return adminservice.ApproveGear400JSONResponse(adminError("INVALID_PARAMS", err.Error())), nil
+		return adminservice.ApproveGear400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
 	gear, err := s.approve(ctx, publicKey, apitypes.GearRole(request.Body.Role))
 	if err != nil {
-		return adminservice.ApproveGear400JSONResponse(adminError("INVALID_ROLE", err.Error())), nil
+		return adminservice.ApproveGear400JSONResponse(apitypes.NewErrorResponse("INVALID_ROLE", err.Error())), nil
 	}
 	return adminservice.ApproveGear200JSONResponse(toAdminRegistration(gear)), nil
 }
@@ -266,7 +266,7 @@ func (s *Server) BlockGear(ctx context.Context, request adminservice.BlockGearRe
 	}
 	gear, err := s.block(ctx, publicKey)
 	if err != nil {
-		return adminservice.BlockGear404JSONResponse(adminError("GEAR_NOT_FOUND", err.Error())), nil
+		return adminservice.BlockGear404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.BlockGear200JSONResponse(toAdminRegistration(gear)), nil
 }
@@ -274,7 +274,7 @@ func (s *Server) BlockGear(ctx context.Context, request adminservice.BlockGearRe
 // RefreshGear implements `adminservice.StrictServerInterface.RefreshGear`.
 func (s *Server) RefreshGear(ctx context.Context, request adminservice.RefreshGearRequestObject) (adminservice.RefreshGearResponseObject, error) {
 	if s.PeerManager == nil {
-		return adminservice.RefreshGear502JSONResponse(adminError("DEVICE_REFRESH_FAILED", "refresh provider not configured")), nil
+		return adminservice.RefreshGear502JSONResponse(apitypes.NewErrorResponse("DEVICE_REFRESH_FAILED", "refresh provider not configured")), nil
 	}
 	publicKey, err := pathUnescape(string(request.PublicKey))
 	if err != nil {
@@ -284,11 +284,11 @@ func (s *Server) RefreshGear(ctx context.Context, request adminservice.RefreshGe
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrGearNotFound):
-			return adminservice.RefreshGear404JSONResponse(adminError("GEAR_NOT_FOUND", err.Error())), nil
+			return adminservice.RefreshGear404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 		case !online:
-			return adminservice.RefreshGear409JSONResponse(adminError("DEVICE_OFFLINE", err.Error())), nil
+			return adminservice.RefreshGear409JSONResponse(apitypes.NewErrorResponse("DEVICE_OFFLINE", err.Error())), nil
 		default:
-			return adminservice.RefreshGear502JSONResponse(adminError("DEVICE_REFRESH_FAILED", err.Error())), nil
+			return adminservice.RefreshGear502JSONResponse(apitypes.NewErrorResponse("DEVICE_REFRESH_FAILED", err.Error())), nil
 		}
 	}
 	return adminservice.RefreshGear200JSONResponse(result), nil
@@ -298,11 +298,11 @@ func (s *Server) RefreshGear(ctx context.Context, request adminservice.RefreshGe
 func (s *Server) GetConfig(ctx context.Context, _ gearservice.GetConfigRequestObject) (gearservice.GetConfigResponseObject, error) {
 	gear, err := s.get(ctx, gearservice.CallerPublicKey(ctx))
 	if err != nil {
-		return gearservice.GetConfig404JSONResponse(gearError("GEAR_NOT_FOUND", err.Error())), nil
+		return gearservice.GetConfig404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	cfg, err := toGearConfiguration(gear.Configuration)
 	if err != nil {
-		return getConfig500JSONResponse(gearError("INTERNAL_ERROR", err.Error())), nil
+		return getConfig500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return gearservice.GetConfig200JSONResponse(cfg), nil
 }
@@ -311,11 +311,11 @@ func (s *Server) GetConfig(ctx context.Context, _ gearservice.GetConfigRequestOb
 func (s *Server) GetInfo(ctx context.Context, _ gearservice.GetInfoRequestObject) (gearservice.GetInfoResponseObject, error) {
 	gear, err := s.get(ctx, gearservice.CallerPublicKey(ctx))
 	if err != nil {
-		return gearservice.GetInfo404JSONResponse(gearError("GEAR_NOT_FOUND", err.Error())), nil
+		return gearservice.GetInfo404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	info, err := toGearDeviceInfo(gear.Device)
 	if err != nil {
-		return getInfo500JSONResponse(gearError("INTERNAL_ERROR", err.Error())), nil
+		return getInfo500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return gearservice.GetInfo200JSONResponse(info), nil
 }
@@ -323,19 +323,19 @@ func (s *Server) GetInfo(ctx context.Context, _ gearservice.GetInfoRequestObject
 // PutInfo implements `gearservice.StrictServerInterface.PutInfo`.
 func (s *Server) PutInfo(ctx context.Context, request gearservice.PutInfoRequestObject) (gearservice.PutInfoResponseObject, error) {
 	if request.Body == nil {
-		return gearservice.PutInfo400JSONResponse(gearError("INVALID_DEVICE_INFO", "request body required")), nil
+		return gearservice.PutInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_DEVICE_INFO", "request body required")), nil
 	}
 	info, err := toAdminDeviceInfo(*request.Body)
 	if err != nil {
-		return gearservice.PutInfo400JSONResponse(gearError("INVALID_DEVICE_INFO", err.Error())), nil
+		return gearservice.PutInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_DEVICE_INFO", err.Error())), nil
 	}
 	gear, err := s.putInfo(ctx, gearservice.CallerPublicKey(ctx), info)
 	if err != nil {
-		return gearservice.PutInfo404JSONResponse(gearError("GEAR_NOT_FOUND", err.Error())), nil
+		return gearservice.PutInfo404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	out, err := toGearDeviceInfo(gear.Device)
 	if err != nil {
-		return putInfo500JSONResponse(gearError("INTERNAL_ERROR", err.Error())), nil
+		return putInfo500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return gearservice.PutInfo200JSONResponse(out), nil
 }
@@ -343,20 +343,20 @@ func (s *Server) PutInfo(ctx context.Context, request gearservice.PutInfoRequest
 // RegisterGear implements `serverpublic.StrictServerInterface.RegisterGear`.
 func (s *Server) RegisterGear(ctx context.Context, request serverpublic.RegisterGearRequestObject) (serverpublic.RegisterGearResponseObject, error) {
 	if request.Body == nil {
-		return serverpublic.RegisterGear400JSONResponse(publicError("INVALID_PARAMS", "request body required")), nil
+		return serverpublic.RegisterGear400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", "request body required")), nil
 	}
 	body := *request.Body
 	body.PublicKey = serverpublic.CallerPublicKey(ctx)
 	gear, err := s.register(ctx, body)
 	if err != nil {
 		if errors.Is(err, ErrGearAlreadyExists) {
-			return serverpublic.RegisterGear409JSONResponse(publicError("GEAR_ALREADY_EXISTS", err.Error())), nil
+			return serverpublic.RegisterGear409JSONResponse(apitypes.NewErrorResponse("GEAR_ALREADY_EXISTS", err.Error())), nil
 		}
-		return serverpublic.RegisterGear400JSONResponse(publicError("INVALID_PARAMS", err.Error())), nil
+		return serverpublic.RegisterGear400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
 	out, err := toPublicRegistrationResult(gear)
 	if err != nil {
-		return registerGear500JSONResponse(publicError("INTERNAL_ERROR", err.Error())), nil
+		return registerGear500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return serverpublic.RegisterGear200JSONResponse(out), nil
 }
@@ -365,7 +365,7 @@ func (s *Server) RegisterGear(ctx context.Context, request serverpublic.Register
 func (s *Server) GetRegistration(ctx context.Context, _ gearservice.GetRegistrationRequestObject) (gearservice.GetRegistrationResponseObject, error) {
 	gear, err := s.get(ctx, gearservice.CallerPublicKey(ctx))
 	if err != nil {
-		return gearservice.GetRegistration404JSONResponse(gearError("GEAR_NOT_FOUND", err.Error())), nil
+		return gearservice.GetRegistration404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", err.Error())), nil
 	}
 	return gearservice.GetRegistration200JSONResponse(toGearRegistration(gear)), nil
 }

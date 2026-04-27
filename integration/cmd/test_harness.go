@@ -3,6 +3,7 @@ package clitest
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +16,8 @@ import (
 
 	itest "github.com/GizClaw/gizclaw-go/integration/testutil"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/goccy/go-yaml"
 )
@@ -190,12 +192,77 @@ func (h *Harness) CreateContextWith(name, serverAddr, serverPublicKey string) Re
 func (h *Harness) RegisterContext(name, token string, extraArgs ...string) Result {
 	h.t.Helper()
 
-	args := []string{"play", "register", "--context", name}
-	if token != "" {
-		args = append(args, "--token", token)
+	req, err := h.registrationRequest(name, token, extraArgs...)
+	if err != nil {
+		return Result{Args: append([]string{"register-context", name}, extraArgs...), Err: err, Stderr: err.Error()}
 	}
-	args = append(args, extraArgs...)
-	return h.RunCLI(args...)
+	c, err := h.connectClientFromContext(name)
+	if err != nil {
+		return Result{Args: []string{"register-context", name}, Err: err, Stderr: err.Error()}
+	}
+	defer c.Close()
+	api, err := c.ServerPublicClient()
+	if err != nil {
+		return Result{Args: []string{"register-context", name}, Err: err, Stderr: err.Error()}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), itest.ReadyTimeout)
+	defer cancel()
+	resp, err := api.RegisterGearWithResponse(ctx, req)
+	if err != nil {
+		return Result{Args: []string{"register-context", name}, Err: err, Stderr: err.Error()}
+	}
+	if resp.JSON200 == nil {
+		err := fmt.Errorf("register context %q failed with status %d: %s", name, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
+		return Result{Args: []string{"register-context", name}, Err: err, Stdout: string(resp.Body), Stderr: err.Error()}
+	}
+	data, err := json.Marshal(resp.JSON200)
+	if err != nil {
+		return Result{Args: []string{"register-context", name}, Err: err, Stderr: err.Error()}
+	}
+	return Result{Args: append([]string{"register-context", name}, extraArgs...), Stdout: string(data)}
+}
+
+func (h *Harness) registrationRequest(name, token string, extraArgs ...string) (serverpublic.RegistrationRequest, error) {
+	req := serverpublic.RegistrationRequest{
+		PublicKey: h.ContextPublicKey(name),
+	}
+	if token != "" {
+		req.RegistrationToken = &token
+	}
+	device := apitypes.DeviceInfo{
+		Hardware: &apitypes.HardwareInfo{},
+	}
+	for i := 0; i < len(extraArgs); i++ {
+		flag := extraArgs[i]
+		if !strings.HasPrefix(flag, "--") {
+			return serverpublic.RegistrationRequest{}, fmt.Errorf("unexpected register arg %q", flag)
+		}
+		if i+1 >= len(extraArgs) {
+			return serverpublic.RegistrationRequest{}, fmt.Errorf("missing value for %s", flag)
+		}
+		value := extraArgs[i+1]
+		i++
+		switch flag {
+		case "--name":
+			device.Name = &value
+		case "--sn":
+			device.Sn = &value
+		case "--manufacturer":
+			device.Hardware.Manufacturer = &value
+		case "--model":
+			device.Hardware.Model = &value
+		case "--hardware-revision":
+			device.Hardware.HardwareRevision = &value
+		case "--depot":
+			device.Hardware.Depot = &value
+		case "--firmware-semver":
+			device.Hardware.FirmwareSemver = &value
+		default:
+			return serverpublic.RegistrationRequest{}, fmt.Errorf("unsupported register arg %q", flag)
+		}
+	}
+	req.Device = device
+	return req, nil
 }
 
 func (h *Harness) WaitForPing(contextName string) {

@@ -1,0 +1,71 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Voice Type",
+    "description": "Voice schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Voice": {
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "provider",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "./voice_id.json#/components/schemas/VoiceID"
+          },
+          "source": {
+            "$ref": "./voice_source.json#/components/schemas/VoiceSource"
+          },
+          "provider": {
+            "$ref": "./voice_provider.json#/components/schemas/VoiceProvider"
+          },
+          "provider_voice_id": {
+            "type": "string",
+            "description": "Upstream provider voice identifier. Present for synced voices.",
+            "example": "voice-system-1"
+          },
+          "name": {
+            "type": "string",
+            "example": "calm narrator"
+          },
+          "description": {
+            "type": "string",
+            "example": "calm female narrator"
+          },
+          "provider_voice_type": {
+            "type": "string",
+            "description": "Provider-specific voice type",
+            "example": "voice_cloning"
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "gender": "female"
+            }
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

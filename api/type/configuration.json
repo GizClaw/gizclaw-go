@@ -1,0 +1,27 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Configuration Type",
+    "description": "Configuration schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Configuration": {
+        "type": "object",
+        "properties": {
+          "certifications": {
+            "type": "array",
+            "items": {
+              "$ref": "./gear_certification.json#/components/schemas/GearCertification"
+            }
+          },
+          "firmware": {
+            "$ref": "./firmware_config.json#/components/schemas/FirmwareConfig"
+          }
+        }
+      }
+    }
+  }
+}

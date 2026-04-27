@@ -1,0 +1,33 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Server Info Type",
+    "description": "Server identity and status schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ServerInfo": {
+        "type": "object",
+        "required": [
+          "public_key",
+          "server_time",
+          "build_commit"
+        ],
+        "properties": {
+          "public_key": {
+            "type": "string"
+          },
+          "server_time": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "build_commit": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

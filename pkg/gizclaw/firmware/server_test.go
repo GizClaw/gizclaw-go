@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/gofiber/fiber/v2"
 )
@@ -749,7 +750,7 @@ func TestDownloadFirmware500Visitor(t *testing.T) {
 
 	app := fiber.New()
 	app.Get("/", func(c *fiber.Ctx) error {
-		return downloadFirmware500JSONResponse(gearError("INTERNAL_ERROR", "boom")).VisitDownloadFirmwareResponse(c)
+		return downloadFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", "boom")).VisitDownloadFirmwareResponse(c)
 	})
 
 	req := httptest.NewRequest("GET", "/", nil)

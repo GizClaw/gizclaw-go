@@ -1,0 +1,27 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Device Info Type",
+    "description": "DeviceInfo schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "DeviceInfo": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "sn": {
+            "type": "string"
+          },
+          "hardware": {
+            "$ref": "./hardware_info.json#/components/schemas/HardwareInfo"
+          }
+        }
+      }
+    }
+  }
+}

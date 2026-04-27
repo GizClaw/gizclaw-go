@@ -1,0 +1,29 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Template Metadata Type",
+    "description": "TemplateMetadata schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "TemplateMetadata": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "demo-assistant"
+          },
+          "description": {
+            "type": "string",
+            "example": "single-agent graph workflow"
+          }
+        }
+      }
+    }
+  }
+}

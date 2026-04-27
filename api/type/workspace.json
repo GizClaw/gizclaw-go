@@ -1,0 +1,43 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workspace Type",
+    "description": "Workspace schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Workspace": {
+        "type": "object",
+        "required": [
+          "name",
+          "workspace_template_name",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "./workspace_name.json#/components/schemas/WorkspaceName"
+          },
+          "workspace_template_name": {
+            "$ref": "./workspace_template_name.json#/components/schemas/WorkspaceTemplateName"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {}
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

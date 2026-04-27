@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Voice Provider Name Type",
+    "description": "VoiceProviderName schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VoiceProviderName": {
+        "type": "string",
+        "description": "Voice provider instance name",
+        "example": "main-cn"
+      }
+    }
+  }
+}

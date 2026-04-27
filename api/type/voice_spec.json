@@ -1,0 +1,53 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Voice Spec Type",
+    "description": "VoiceSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VoiceSpec": {
+        "type": "object",
+        "required": [
+          "source",
+          "provider"
+        ],
+        "properties": {
+          "source": {
+            "$ref": "./voice_source.json#/components/schemas/VoiceSource"
+          },
+          "provider": {
+            "$ref": "./voice_provider.json#/components/schemas/VoiceProvider"
+          },
+          "provider_voice_id": {
+            "type": "string",
+            "description": "Upstream provider voice identifier. Present for synced voices.",
+            "example": "voice-system-1"
+          },
+          "name": {
+            "type": "string",
+            "example": "calm narrator"
+          },
+          "description": {
+            "type": "string",
+            "example": "calm female narrator"
+          },
+          "provider_voice_type": {
+            "type": "string",
+            "description": "Provider-specific voice type",
+            "example": "voice_cloning"
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {
+              "gender": "female"
+            }
+          }
+        }
+      }
+    }
+  }
+}

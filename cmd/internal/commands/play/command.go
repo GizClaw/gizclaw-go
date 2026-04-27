@@ -4,10 +4,6 @@ import (
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
-	playconfigcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/play/config"
-	playotacmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/play/ota"
-	playregistercmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/play/register"
-	playservecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/play/serve"
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +14,9 @@ func NewCmd() *cobra.Command {
 	var listenAddr string
 	cmd := &cobra.Command{
 		Use:   "play",
-		Short: "Device-side commands and reverse API provider",
+		Short: "Open the Play web UI",
+		Long:  "Open the Play web UI. When --listen is set, the current context is automatically registered before the UI starts.",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if strings.TrimSpace(listenAddr) == "" {
 				return cmd.Help()
@@ -28,11 +26,5 @@ func NewCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&ctxName, "context", "", "context name (default: current)")
 	cmd.Flags().StringVar(&listenAddr, "listen", "", "listen address or port for the play web UI")
-	cmd.AddCommand(
-		playservecmd.NewCmd(),
-		playregistercmd.NewCmd(),
-		playconfigcmd.NewCmd(),
-		playotacmd.NewCmd(),
-	)
 	return cmd
 }

@@ -1,0 +1,30 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workflow Template Document Type",
+    "description": "WorkflowTemplateDocument schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "WorkflowTemplateDocument": {
+        "oneOf": [
+          {
+            "$ref": "./single_agent_graph_workflow_template.json#/components/schemas/SingleAgentGraphWorkflowTemplate"
+          },
+          {
+            "$ref": "./multi_agent_graph_workflow_template.json#/components/schemas/MultiAgentGraphWorkflowTemplate"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "SingleAgentGraphWorkflowTemplate": "./single_agent_graph_workflow_template.json#/components/schemas/SingleAgentGraphWorkflowTemplate",
+            "MultiAgentGraphWorkflowTemplate": "./multi_agent_graph_workflow_template.json#/components/schemas/MultiAgentGraphWorkflowTemplate"
+          }
+        }
+      }
+    }
+  }
+}

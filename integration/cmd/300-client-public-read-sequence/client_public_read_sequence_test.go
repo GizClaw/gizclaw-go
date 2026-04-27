@@ -1,8 +1,10 @@
 package clientpublicreadsequence_test
 
 import (
+	"context"
 	"strings"
 	"testing"
+	"time"
 
 	clitest "github.com/GizClaw/gizclaw-go/integration/cmd"
 )
@@ -23,10 +25,20 @@ func TestClientPublicReadSequenceUserStory(t *testing.T) {
 		"--firmware-semver", "1.0.0",
 	).MustSucceed(t)
 
-	config := h.RunCLI("play", "config", "--context", "device-a")
-	config.MustSucceed(t)
-	if !strings.Contains(config.Stdout, `"firmware"`) {
-		t.Fatalf("expected play config output to include firmware config:\n%s", config.Stdout)
+	c := h.ConnectClientFromContext("device-a")
+	defer c.Close()
+	api, err := c.GearServiceClient()
+	if err != nil {
+		t.Fatalf("create gear service client: %v", err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	config, err := api.GetConfigWithResponse(ctx)
+	if err != nil {
+		t.Fatalf("get device config: %v", err)
+	}
+	if config.JSON200 == nil {
+		t.Fatalf("expected public config response, got status %d: %s", config.StatusCode(), strings.TrimSpace(string(config.Body)))
 	}
 
 	if _, err := h.RunCLIUntilSuccess("ping", "--context", "device-a"); err != nil {

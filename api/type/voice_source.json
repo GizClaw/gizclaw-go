@@ -1,0 +1,22 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Voice Source Type",
+    "description": "VoiceSource schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VoiceSource": {
+        "type": "string",
+        "description": "How the voice entered the global catalog",
+        "enum": [
+          "sync",
+          "manual"
+        ],
+        "example": "sync"
+      }
+    }
+  }
+}

@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 
 	"github.com/GizClaw/gizclaw-go/integration/testutil"

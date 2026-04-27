@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
-	doubaospeech "github.com/giztoy/doubao-speech-go"
+	"github.com/giztoy/doubao-speech-go"
 )
 
 // DoubaoRealtime is a realtime transformer using Doubao realtime dialogue.

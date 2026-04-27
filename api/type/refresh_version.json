@@ -1,0 +1,24 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Refresh Version Type",
+    "description": "Gear refresh version schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "RefreshVersion": {
+        "type": "object",
+        "properties": {
+          "depot": {
+            "type": "string"
+          },
+          "firmware_semver": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

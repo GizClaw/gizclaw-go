@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"

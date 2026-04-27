@@ -8,7 +8,7 @@ import (
 	"io"
 	"sync"
 
-	resampling "github.com/tphakala/go-audio-resampling"
+	"github.com/tphakala/go-audio-resampling"
 )
 
 // Resampler wraps an io.Reader and resamples audio from srcFmt to dstFmt.

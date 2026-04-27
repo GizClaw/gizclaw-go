@@ -14,41 +14,41 @@ import (
 	"strings"
 	"time"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	externalRef0 "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/oapi-codegen/runtime"
 )
 
 // ApproveRequest defines model for ApproveRequest.
 type ApproveRequest struct {
-	Role apitypes.GearRole `json:"role"`
+	Role externalRef0.GearRole `json:"role"`
 }
 
 // CredentialList defines model for CredentialList.
 type CredentialList struct {
-	HasNext    bool                  `json:"has_next"`
-	Items      []apitypes.Credential `json:"items"`
-	NextCursor *string               `json:"next_cursor,omitempty"`
+	HasNext    bool                      `json:"has_next"`
+	Items      []externalRef0.Credential `json:"items"`
+	NextCursor *string                   `json:"next_cursor,omitempty"`
 }
 
 // CredentialUpsert defines model for CredentialUpsert.
 type CredentialUpsert struct {
-	Body        apitypes.CredentialBody `json:"body"`
-	Description *string                 `json:"description,omitempty"`
+	Body        externalRef0.CredentialBody `json:"body"`
+	Description *string                     `json:"description,omitempty"`
 
 	// Method Credential authentication method
-	Method apitypes.CredentialMethod `json:"method"`
+	Method externalRef0.CredentialMethod `json:"method"`
 
 	// Name Credential name
-	Name apitypes.CredentialName `json:"name"`
+	Name externalRef0.CredentialName `json:"name"`
 
 	// Provider Credential provider name
-	Provider apitypes.CredentialProvider `json:"provider"`
+	Provider externalRef0.CredentialProvider `json:"provider"`
 }
 
 // DepotList defines model for DepotList.
 type DepotList struct {
-	Items []apitypes.Depot `json:"items"`
+	Items []externalRef0.Depot `json:"items"`
 }
 
 // MiniMaxSyncVoicesResult defines model for MiniMaxSyncVoicesResult.
@@ -58,32 +58,32 @@ type MiniMaxSyncVoicesResult struct {
 	SyncedAt     time.Time `json:"synced_at"`
 
 	// TenantName MiniMax tenant name
-	TenantName   apitypes.MiniMaxTenantName `json:"tenant_name"`
-	UpdatedCount int32                      `json:"updated_count"`
+	TenantName   externalRef0.MiniMaxTenantName `json:"tenant_name"`
+	UpdatedCount int32                          `json:"updated_count"`
 }
 
 // MiniMaxTenantList defines model for MiniMaxTenantList.
 type MiniMaxTenantList struct {
-	HasNext    bool                     `json:"has_next"`
-	Items      []apitypes.MiniMaxTenant `json:"items"`
-	NextCursor *string                  `json:"next_cursor,omitempty"`
+	HasNext    bool                         `json:"has_next"`
+	Items      []externalRef0.MiniMaxTenant `json:"items"`
+	NextCursor *string                      `json:"next_cursor,omitempty"`
 }
 
 // MiniMaxTenantUpsert defines model for MiniMaxTenantUpsert.
 type MiniMaxTenantUpsert struct {
 	// AppId MiniMax app identifier
-	AppId   apitypes.MiniMaxAppID `json:"app_id"`
-	BaseUrl *string               `json:"base_url,omitempty"`
+	AppId   externalRef0.MiniMaxAppID `json:"app_id"`
+	BaseUrl *string                   `json:"base_url,omitempty"`
 
 	// CredentialName Credential name
-	CredentialName apitypes.CredentialName `json:"credential_name"`
-	Description    *string                 `json:"description,omitempty"`
+	CredentialName externalRef0.CredentialName `json:"credential_name"`
+	Description    *string                     `json:"description,omitempty"`
 
 	// GroupId MiniMax group identifier
-	GroupId apitypes.MiniMaxGroupID `json:"group_id"`
+	GroupId externalRef0.MiniMaxGroupID `json:"group_id"`
 
 	// Name MiniMax tenant name
-	Name apitypes.MiniMaxTenantName `json:"name"`
+	Name externalRef0.MiniMaxTenantName `json:"name"`
 }
 
 // PublicKeyResponse defines model for PublicKeyResponse.
@@ -93,23 +93,23 @@ type PublicKeyResponse struct {
 
 // RefreshResult defines model for RefreshResult.
 type RefreshResult struct {
-	Errors        *[]string     `json:"errors,omitempty"`
-	Gear          apitypes.Gear `json:"gear"`
-	UpdatedFields *[]string     `json:"updated_fields,omitempty"`
+	Errors        *[]string         `json:"errors,omitempty"`
+	Gear          externalRef0.Gear `json:"gear"`
+	UpdatedFields *[]string         `json:"updated_fields,omitempty"`
 }
 
 // RegistrationList defines model for RegistrationList.
 type RegistrationList struct {
-	HasNext    bool                    `json:"has_next"`
-	Items      []apitypes.Registration `json:"items"`
-	NextCursor *string                 `json:"next_cursor,omitempty"`
+	HasNext    bool                        `json:"has_next"`
+	Items      []externalRef0.Registration `json:"items"`
+	NextCursor *string                     `json:"next_cursor,omitempty"`
 }
 
 // VoiceList defines model for VoiceList.
 type VoiceList struct {
-	HasNext    bool             `json:"has_next"`
-	Items      []apitypes.Voice `json:"items"`
-	NextCursor *string          `json:"next_cursor,omitempty"`
+	HasNext    bool                 `json:"has_next"`
+	Items      []externalRef0.Voice `json:"items"`
+	NextCursor *string              `json:"next_cursor,omitempty"`
 }
 
 // VoiceUpsert defines model for VoiceUpsert.
@@ -117,9 +117,9 @@ type VoiceUpsert struct {
 	Description *string `json:"description,omitempty"`
 
 	// Id Global voice identifier
-	Id       apitypes.VoiceID       `json:"id"`
-	Name     *string                `json:"name,omitempty"`
-	Provider apitypes.VoiceProvider `json:"provider"`
+	Id       externalRef0.VoiceID       `json:"id"`
+	Name     *string                    `json:"name,omitempty"`
+	Provider externalRef0.VoiceProvider `json:"provider"`
 
 	// ProviderVoiceId Upstream provider voice identifier. Present for synced voices.
 	ProviderVoiceId *string `json:"provider_voice_id,omitempty"`
@@ -129,41 +129,41 @@ type VoiceUpsert struct {
 	Raw               *map[string]interface{} `json:"raw,omitempty"`
 
 	// Source How the voice entered the global catalog
-	Source apitypes.VoiceSource `json:"source"`
+	Source externalRef0.VoiceSource `json:"source"`
 }
 
 // WorkspaceList defines model for WorkspaceList.
 type WorkspaceList struct {
-	HasNext    bool                 `json:"has_next"`
-	Items      []apitypes.Workspace `json:"items"`
-	NextCursor *string              `json:"next_cursor,omitempty"`
+	HasNext    bool                     `json:"has_next"`
+	Items      []externalRef0.Workspace `json:"items"`
+	NextCursor *string                  `json:"next_cursor,omitempty"`
 }
 
 // WorkspaceTemplateList defines model for WorkspaceTemplateList.
 type WorkspaceTemplateList struct {
-	HasNext    bool                                `json:"has_next"`
-	Items      []apitypes.WorkflowTemplateDocument `json:"items"`
-	NextCursor *string                             `json:"next_cursor,omitempty"`
+	HasNext    bool                                    `json:"has_next"`
+	Items      []externalRef0.WorkflowTemplateDocument `json:"items"`
+	NextCursor *string                                 `json:"next_cursor,omitempty"`
 }
 
 // WorkspaceUpsert defines model for WorkspaceUpsert.
 type WorkspaceUpsert struct {
 	// Name Workspace name
-	Name       apitypes.WorkspaceName  `json:"name"`
-	Parameters *map[string]interface{} `json:"parameters,omitempty"`
+	Name       externalRef0.WorkspaceName `json:"name"`
+	Parameters *map[string]interface{}    `json:"parameters,omitempty"`
 
 	// WorkspaceTemplateName Workspace template name
-	WorkspaceTemplateName apitypes.WorkspaceTemplateName `json:"workspace_template_name"`
+	WorkspaceTemplateName externalRef0.WorkspaceTemplateName `json:"workspace_template_name"`
 }
 
 // Channel defines model for channel.
-type Channel = apitypes.Channel
+type Channel = externalRef0.Channel
 
 // CredentialName Credential name
-type CredentialName = apitypes.CredentialName
+type CredentialName = externalRef0.CredentialName
 
 // CredentialProvider Credential provider name
-type CredentialProvider = apitypes.CredentialProvider
+type CredentialProvider = externalRef0.CredentialProvider
 
 // Cursor defines model for cursor.
 type Cursor = string
@@ -175,28 +175,34 @@ type DepotName = string
 type Limit = int32
 
 // MiniMaxTenantName MiniMax tenant name
-type MiniMaxTenantName = apitypes.MiniMaxTenantName
+type MiniMaxTenantName = externalRef0.MiniMaxTenantName
 
 // PublicKey defines model for publicKey.
 type PublicKey = string
 
+// ResourceKind Declarative GizClaw resource kind.
+type ResourceKind = externalRef0.ResourceKind
+
+// ResourceName defines model for resourceName.
+type ResourceName = string
+
 // VoiceID Global voice identifier
-type VoiceID = apitypes.VoiceID
+type VoiceID = externalRef0.VoiceID
 
 // VoiceProviderKind Voice provider kind
-type VoiceProviderKind = apitypes.VoiceProviderKind
+type VoiceProviderKind = externalRef0.VoiceProviderKind
 
 // VoiceProviderName Voice provider instance name
-type VoiceProviderName = apitypes.VoiceProviderName
+type VoiceProviderName = externalRef0.VoiceProviderName
 
 // VoiceSource How the voice entered the global catalog
-type VoiceSource = apitypes.VoiceSource
+type VoiceSource = externalRef0.VoiceSource
 
 // WorkspaceName Workspace name
-type WorkspaceName = apitypes.WorkspaceName
+type WorkspaceName = externalRef0.WorkspaceName
 
 // WorkspaceTemplateName Workspace template name
-type WorkspaceTemplateName = apitypes.WorkspaceTemplateName
+type WorkspaceTemplateName = externalRef0.WorkspaceTemplateName
 
 // ListCredentialsParams defines parameters for ListCredentials.
 type ListCredentialsParams struct {
@@ -291,6 +297,9 @@ type ListWorkspacesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ApplyResourceJSONRequestBody defines body for ApplyResource for application/json ContentType.
+type ApplyResourceJSONRequestBody = externalRef0.ApplyResource
+
 // CreateCredentialJSONRequestBody defines body for CreateCredential for application/json ContentType.
 type CreateCredentialJSONRequestBody = CredentialUpsert
 
@@ -298,19 +307,22 @@ type CreateCredentialJSONRequestBody = CredentialUpsert
 type PutCredentialJSONRequestBody = CredentialUpsert
 
 // PutDepotInfoJSONRequestBody defines body for PutDepotInfo for application/json ContentType.
-type PutDepotInfoJSONRequestBody = apitypes.DepotInfo
+type PutDepotInfoJSONRequestBody = externalRef0.DepotInfo
 
 // ApproveGearJSONRequestBody defines body for ApproveGear for application/json ContentType.
 type ApproveGearJSONRequestBody = ApproveRequest
 
 // PutGearConfigJSONRequestBody defines body for PutGearConfig for application/json ContentType.
-type PutGearConfigJSONRequestBody = apitypes.Configuration
+type PutGearConfigJSONRequestBody = externalRef0.Configuration
 
 // CreateMiniMaxTenantJSONRequestBody defines body for CreateMiniMaxTenant for application/json ContentType.
 type CreateMiniMaxTenantJSONRequestBody = MiniMaxTenantUpsert
 
 // PutMiniMaxTenantJSONRequestBody defines body for PutMiniMaxTenant for application/json ContentType.
 type PutMiniMaxTenantJSONRequestBody = MiniMaxTenantUpsert
+
+// PutResourceJSONRequestBody defines body for PutResource for application/json ContentType.
+type PutResourceJSONRequestBody = externalRef0.Resource
 
 // CreateVoiceJSONRequestBody defines body for CreateVoice for application/json ContentType.
 type CreateVoiceJSONRequestBody = VoiceUpsert
@@ -319,10 +331,10 @@ type CreateVoiceJSONRequestBody = VoiceUpsert
 type PutVoiceJSONRequestBody = VoiceUpsert
 
 // CreateWorkspaceTemplateJSONRequestBody defines body for CreateWorkspaceTemplate for application/json ContentType.
-type CreateWorkspaceTemplateJSONRequestBody = apitypes.WorkflowTemplateDocument
+type CreateWorkspaceTemplateJSONRequestBody = externalRef0.WorkflowTemplateDocument
 
 // PutWorkspaceTemplateJSONRequestBody defines body for PutWorkspaceTemplate for application/json ContentType.
-type PutWorkspaceTemplateJSONRequestBody = apitypes.WorkflowTemplateDocument
+type PutWorkspaceTemplateJSONRequestBody = externalRef0.WorkflowTemplateDocument
 
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody = WorkspaceUpsert
@@ -403,6 +415,11 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// ApplyResourceWithBody request with any body
+	ApplyResourceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	ApplyResource(ctx context.Context, body ApplyResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListCredentials request
 	ListCredentials(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -449,10 +466,10 @@ type ClientInterface interface {
 	ListGears(ctx context.Context, params *ListGearsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListByCertification request
-	ListByCertification(ctx context.Context, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, params *ListByCertificationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListByCertification(ctx context.Context, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListByCertificationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListByFirmware request
-	ListByFirmware(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, params *ListByFirmwareParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ListByFirmware(ctx context.Context, depot string, channel externalRef0.GearFirmwareChannel, params *ListByFirmwareParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ResolveByIMEI request
 	ResolveByIMEI(ctx context.Context, tac string, serial string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -519,6 +536,17 @@ type ClientInterface interface {
 	// SyncMiniMaxTenantVoices request
 	SyncMiniMaxTenantVoices(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DeleteResource request
+	DeleteResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetResource request
+	GetResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutResourceWithBody request with any body
+	PutResourceWithBody(ctx context.Context, kind ResourceKind, name ResourceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutResource(ctx context.Context, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListVoices request
 	ListVoices(ctx context.Context, params *ListVoicesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -575,6 +603,30 @@ type ClientInterface interface {
 	PutWorkspaceWithBody(ctx context.Context, name WorkspaceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PutWorkspace(ctx context.Context, name WorkspaceName, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) ApplyResourceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApplyResourceRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ApplyResource(ctx context.Context, body ApplyResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewApplyResourceRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) ListCredentials(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -769,7 +821,7 @@ func (c *Client) ListGears(ctx context.Context, params *ListGearsParams, reqEdit
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListByCertification(ctx context.Context, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, params *ListByCertificationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ListByCertification(ctx context.Context, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListByCertificationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListByCertificationRequest(c.Server, pType, authority, id, params)
 	if err != nil {
 		return nil, err
@@ -781,7 +833,7 @@ func (c *Client) ListByCertification(ctx context.Context, pType apitypes.GearCer
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListByFirmware(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, params *ListByFirmwareParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ListByFirmware(ctx context.Context, depot string, channel externalRef0.GearFirmwareChannel, params *ListByFirmwareParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListByFirmwareRequest(c.Server, depot, channel, params)
 	if err != nil {
 		return nil, err
@@ -1069,6 +1121,54 @@ func (c *Client) SyncMiniMaxTenantVoices(ctx context.Context, name MiniMaxTenant
 	return c.Client.Do(req)
 }
 
+func (c *Client) DeleteResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteResourceRequest(c.Server, kind, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetResourceRequest(c.Server, kind, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutResourceWithBody(ctx context.Context, kind ResourceKind, name ResourceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutResourceRequestWithBody(c.Server, kind, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutResource(ctx context.Context, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutResourceRequest(c.Server, kind, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) ListVoices(ctx context.Context, params *ListVoicesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListVoicesRequest(c.Server, params)
 	if err != nil {
@@ -1319,6 +1419,46 @@ func (c *Client) PutWorkspace(ctx context.Context, name WorkspaceName, body PutW
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewApplyResourceRequest calls the generic ApplyResource builder with application/json body
+func NewApplyResourceRequest(server string, body ApplyResourceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewApplyResourceRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewApplyResourceRequestWithBody generates requests for ApplyResource with any type of body
+func NewApplyResourceRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/@apply")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
 }
 
 // NewListCredentialsRequest generates requests for ListCredentials
@@ -1883,7 +2023,7 @@ func NewListGearsRequest(server string, params *ListGearsParams) (*http.Request,
 }
 
 // NewListByCertificationRequest generates requests for ListByCertification
-func NewListByCertificationRequest(server string, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, params *ListByCertificationParams) (*http.Request, error) {
+func NewListByCertificationRequest(server string, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListByCertificationParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1969,7 +2109,7 @@ func NewListByCertificationRequest(server string, pType apitypes.GearCertificati
 }
 
 // NewListByFirmwareRequest generates requests for ListByFirmware
-func NewListByFirmwareRequest(server string, depot string, channel apitypes.GearFirmwareChannel, params *ListByFirmwareParams) (*http.Request, error) {
+func NewListByFirmwareRequest(server string, depot string, channel externalRef0.GearFirmwareChannel, params *ListByFirmwareParams) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2821,6 +2961,142 @@ func NewSyncMiniMaxTenantVoicesRequest(server string, name MiniMaxTenantName) (*
 	return req, nil
 }
 
+// NewDeleteResourceRequest generates requests for DeleteResource
+func NewDeleteResourceRequest(server string, kind ResourceKind, name ResourceName) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "kind", kind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/resources/%s/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetResourceRequest generates requests for GetResource
+func NewGetResourceRequest(server string, kind ResourceKind, name ResourceName) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "kind", kind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/resources/%s/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutResourceRequest calls the generic PutResource builder with application/json body
+func NewPutResourceRequest(server string, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutResourceRequestWithBody(server, kind, name, "application/json", bodyReader)
+}
+
+// NewPutResourceRequestWithBody generates requests for PutResource with any type of body
+func NewPutResourceRequestWithBody(server string, kind ResourceKind, name ResourceName, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "kind", kind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/resources/%s/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewListVoicesRequest generates requests for ListVoices
 func NewListVoicesRequest(server string, params *ListVoicesParams) (*http.Request, error) {
 	var err error
@@ -3572,6 +3848,11 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// ApplyResourceWithBodyWithResponse request with any body
+	ApplyResourceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApplyResourceResponse, error)
+
+	ApplyResourceWithResponse(ctx context.Context, body ApplyResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*ApplyResourceResponse, error)
+
 	// ListCredentialsWithResponse request
 	ListCredentialsWithResponse(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*ListCredentialsResponse, error)
 
@@ -3618,10 +3899,10 @@ type ClientWithResponsesInterface interface {
 	ListGearsWithResponse(ctx context.Context, params *ListGearsParams, reqEditors ...RequestEditorFn) (*ListGearsResponse, error)
 
 	// ListByCertificationWithResponse request
-	ListByCertificationWithResponse(ctx context.Context, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, params *ListByCertificationParams, reqEditors ...RequestEditorFn) (*ListByCertificationResponse, error)
+	ListByCertificationWithResponse(ctx context.Context, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListByCertificationParams, reqEditors ...RequestEditorFn) (*ListByCertificationResponse, error)
 
 	// ListByFirmwareWithResponse request
-	ListByFirmwareWithResponse(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, params *ListByFirmwareParams, reqEditors ...RequestEditorFn) (*ListByFirmwareResponse, error)
+	ListByFirmwareWithResponse(ctx context.Context, depot string, channel externalRef0.GearFirmwareChannel, params *ListByFirmwareParams, reqEditors ...RequestEditorFn) (*ListByFirmwareResponse, error)
 
 	// ResolveByIMEIWithResponse request
 	ResolveByIMEIWithResponse(ctx context.Context, tac string, serial string, reqEditors ...RequestEditorFn) (*ResolveByIMEIResponse, error)
@@ -3688,6 +3969,17 @@ type ClientWithResponsesInterface interface {
 	// SyncMiniMaxTenantVoicesWithResponse request
 	SyncMiniMaxTenantVoicesWithResponse(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*SyncMiniMaxTenantVoicesResponse, error)
 
+	// DeleteResourceWithResponse request
+	DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error)
+
+	// GetResourceWithResponse request
+	GetResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*GetResourceResponse, error)
+
+	// PutResourceWithBodyWithResponse request with any body
+	PutResourceWithBodyWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutResourceResponse, error)
+
+	PutResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutResourceResponse, error)
+
 	// ListVoicesWithResponse request
 	ListVoicesWithResponse(ctx context.Context, params *ListVoicesParams, reqEditors ...RequestEditorFn) (*ListVoicesResponse, error)
 
@@ -3746,11 +4038,37 @@ type ClientWithResponsesInterface interface {
 	PutWorkspaceWithResponse(ctx context.Context, name WorkspaceName, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error)
 }
 
+type ApplyResourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ApplyResult
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+	JSON501      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ApplyResourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ApplyResourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListCredentialsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *CredentialList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3772,10 +4090,10 @@ func (r ListCredentialsResponse) StatusCode() int {
 type CreateCredentialResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Credential
-	JSON400      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Credential
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3797,9 +4115,9 @@ func (r CreateCredentialResponse) StatusCode() int {
 type DeleteCredentialResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Credential
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Credential
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3821,9 +4139,9 @@ func (r DeleteCredentialResponse) StatusCode() int {
 type GetCredentialResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Credential
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Credential
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3845,9 +4163,9 @@ func (r GetCredentialResponse) StatusCode() int {
 type PutCredentialResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Credential
-	JSON400      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Credential
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3870,7 +4188,7 @@ type ListDepotsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *DepotList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3892,8 +4210,8 @@ func (r ListDepotsResponse) StatusCode() int {
 type GetDepotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Depot
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Depot
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3915,10 +4233,10 @@ func (r GetDepotResponse) StatusCode() int {
 type PutDepotInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Depot
-	JSON400      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Depot
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3940,10 +4258,10 @@ func (r PutDepotInfoResponse) StatusCode() int {
 type ReleaseDepotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Depot
-	JSON404      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Depot
+	JSON404      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3965,10 +4283,10 @@ func (r ReleaseDepotResponse) StatusCode() int {
 type RollbackDepotResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Depot
-	JSON404      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Depot
+	JSON404      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -3990,8 +4308,8 @@ func (r RollbackDepotResponse) StatusCode() int {
 type GetChannelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.DepotRelease
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.DepotRelease
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4013,8 +4331,8 @@ func (r GetChannelResponse) StatusCode() int {
 type PutChannelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.DepotRelease
-	JSON409      *apitypes.ErrorResponse
+	JSON200      *externalRef0.DepotRelease
+	JSON409      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4037,7 +4355,7 @@ type ListGearsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4060,7 +4378,7 @@ type ListByCertificationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4083,7 +4401,7 @@ type ListByFirmwareResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4106,7 +4424,7 @@ type ResolveByIMEIResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *PublicKeyResponse
-	JSON404      *apitypes.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4129,7 +4447,7 @@ type ListByLabelResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RegistrationList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4152,7 +4470,7 @@ type ResolveBySNResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *PublicKeyResponse
-	JSON404      *apitypes.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4174,8 +4492,8 @@ func (r ResolveBySNResponse) StatusCode() int {
 type DeleteGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Registration
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Registration
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4197,8 +4515,8 @@ func (r DeleteGearResponse) StatusCode() int {
 type GetGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Registration
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Registration
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4220,8 +4538,8 @@ func (r GetGearResponse) StatusCode() int {
 type ApproveGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Registration
-	JSON400      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Registration
+	JSON400      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4243,8 +4561,8 @@ func (r ApproveGearResponse) StatusCode() int {
 type BlockGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Registration
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Registration
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4267,9 +4585,9 @@ type RefreshGearResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *RefreshResult
-	JSON404      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON502      *apitypes.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON502      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4291,8 +4609,8 @@ func (r RefreshGearResponse) StatusCode() int {
 type GetGearConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Configuration
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Configuration
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4314,9 +4632,9 @@ func (r GetGearConfigResponse) StatusCode() int {
 type PutGearConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Configuration
-	JSON400      *apitypes.ErrorResponse
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Configuration
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4338,8 +4656,8 @@ func (r PutGearConfigResponse) StatusCode() int {
 type GetGearInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.DeviceInfo
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.DeviceInfo
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4361,8 +4679,8 @@ func (r GetGearInfoResponse) StatusCode() int {
 type GetGearOTAResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.OTASummary
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.OTASummary
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4384,7 +4702,7 @@ func (r GetGearOTAResponse) StatusCode() int {
 type GetGearRuntimeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Runtime
+	JSON200      *externalRef0.Runtime
 }
 
 // Status returns HTTPResponse.Status
@@ -4407,7 +4725,7 @@ type ListMiniMaxTenantsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *MiniMaxTenantList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4429,10 +4747,10 @@ func (r ListMiniMaxTenantsResponse) StatusCode() int {
 type CreateMiniMaxTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.MiniMaxTenant
-	JSON400      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.MiniMaxTenant
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4454,9 +4772,9 @@ func (r CreateMiniMaxTenantResponse) StatusCode() int {
 type DeleteMiniMaxTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.MiniMaxTenant
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.MiniMaxTenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4478,9 +4796,9 @@ func (r DeleteMiniMaxTenantResponse) StatusCode() int {
 type GetMiniMaxTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.MiniMaxTenant
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.MiniMaxTenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4502,9 +4820,9 @@ func (r GetMiniMaxTenantResponse) StatusCode() int {
 type PutMiniMaxTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.MiniMaxTenant
-	JSON400      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.MiniMaxTenant
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4527,10 +4845,10 @@ type SyncMiniMaxTenantVoicesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *MiniMaxSyncVoicesResult
-	JSON400      *apitypes.ErrorResponse
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
-	JSON502      *apitypes.ErrorResponse
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+	JSON502      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4549,11 +4867,90 @@ func (r SyncMiniMaxTenantVoicesResponse) StatusCode() int {
 	return 0
 }
 
+type DeleteResourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Resource
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteResourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteResourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetResourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Resource
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+	JSON501      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetResourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetResourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutResourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Resource
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+	JSON501      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutResourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutResourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListVoicesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *VoiceList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4575,10 +4972,10 @@ func (r ListVoicesResponse) StatusCode() int {
 type CreateVoiceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Voice
-	JSON400      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Voice
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4600,9 +4997,9 @@ func (r CreateVoiceResponse) StatusCode() int {
 type DeleteVoiceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Voice
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Voice
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4624,9 +5021,9 @@ func (r DeleteVoiceResponse) StatusCode() int {
 type GetVoiceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Voice
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Voice
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4648,10 +5045,10 @@ func (r GetVoiceResponse) StatusCode() int {
 type PutVoiceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Voice
-	JSON400      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Voice
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4674,7 +5071,7 @@ type ListWorkspaceTemplatesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *WorkspaceTemplateList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4696,10 +5093,10 @@ func (r ListWorkspaceTemplatesResponse) StatusCode() int {
 type CreateWorkspaceTemplateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.WorkflowTemplateDocument
-	JSON400      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.WorkflowTemplateDocument
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4721,9 +5118,9 @@ func (r CreateWorkspaceTemplateResponse) StatusCode() int {
 type DeleteWorkspaceTemplateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.WorkflowTemplateDocument
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.WorkflowTemplateDocument
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4745,9 +5142,9 @@ func (r DeleteWorkspaceTemplateResponse) StatusCode() int {
 type GetWorkspaceTemplateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.WorkflowTemplateDocument
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.WorkflowTemplateDocument
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4769,9 +5166,9 @@ func (r GetWorkspaceTemplateResponse) StatusCode() int {
 type PutWorkspaceTemplateResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.WorkflowTemplateDocument
-	JSON400      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.WorkflowTemplateDocument
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4794,7 +5191,7 @@ type ListWorkspacesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *WorkspaceList
-	JSON500      *apitypes.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4816,10 +5213,10 @@ func (r ListWorkspacesResponse) StatusCode() int {
 type CreateWorkspaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Workspace
-	JSON400      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Workspace
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4841,9 +5238,9 @@ func (r CreateWorkspaceResponse) StatusCode() int {
 type DeleteWorkspaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Workspace
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Workspace
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4865,9 +5262,9 @@ func (r DeleteWorkspaceResponse) StatusCode() int {
 type GetWorkspaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Workspace
-	JSON404      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Workspace
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4889,9 +5286,9 @@ func (r GetWorkspaceResponse) StatusCode() int {
 type PutWorkspaceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Workspace
-	JSON400      *apitypes.ErrorResponse
-	JSON500      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Workspace
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -4908,6 +5305,23 @@ func (r PutWorkspaceResponse) StatusCode() int {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
+}
+
+// ApplyResourceWithBodyWithResponse request with arbitrary body returning *ApplyResourceResponse
+func (c *ClientWithResponses) ApplyResourceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApplyResourceResponse, error) {
+	rsp, err := c.ApplyResourceWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApplyResourceResponse(rsp)
+}
+
+func (c *ClientWithResponses) ApplyResourceWithResponse(ctx context.Context, body ApplyResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*ApplyResourceResponse, error) {
+	rsp, err := c.ApplyResource(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseApplyResourceResponse(rsp)
 }
 
 // ListCredentialsWithResponse request returning *ListCredentialsResponse
@@ -5052,7 +5466,7 @@ func (c *ClientWithResponses) ListGearsWithResponse(ctx context.Context, params 
 }
 
 // ListByCertificationWithResponse request returning *ListByCertificationResponse
-func (c *ClientWithResponses) ListByCertificationWithResponse(ctx context.Context, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, params *ListByCertificationParams, reqEditors ...RequestEditorFn) (*ListByCertificationResponse, error) {
+func (c *ClientWithResponses) ListByCertificationWithResponse(ctx context.Context, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListByCertificationParams, reqEditors ...RequestEditorFn) (*ListByCertificationResponse, error) {
 	rsp, err := c.ListByCertification(ctx, pType, authority, id, params, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -5061,7 +5475,7 @@ func (c *ClientWithResponses) ListByCertificationWithResponse(ctx context.Contex
 }
 
 // ListByFirmwareWithResponse request returning *ListByFirmwareResponse
-func (c *ClientWithResponses) ListByFirmwareWithResponse(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, params *ListByFirmwareParams, reqEditors ...RequestEditorFn) (*ListByFirmwareResponse, error) {
+func (c *ClientWithResponses) ListByFirmwareWithResponse(ctx context.Context, depot string, channel externalRef0.GearFirmwareChannel, params *ListByFirmwareParams, reqEditors ...RequestEditorFn) (*ListByFirmwareResponse, error) {
 	rsp, err := c.ListByFirmware(ctx, depot, channel, params, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -5272,6 +5686,41 @@ func (c *ClientWithResponses) SyncMiniMaxTenantVoicesWithResponse(ctx context.Co
 	return ParseSyncMiniMaxTenantVoicesResponse(rsp)
 }
 
+// DeleteResourceWithResponse request returning *DeleteResourceResponse
+func (c *ClientWithResponses) DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error) {
+	rsp, err := c.DeleteResource(ctx, kind, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteResourceResponse(rsp)
+}
+
+// GetResourceWithResponse request returning *GetResourceResponse
+func (c *ClientWithResponses) GetResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*GetResourceResponse, error) {
+	rsp, err := c.GetResource(ctx, kind, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetResourceResponse(rsp)
+}
+
+// PutResourceWithBodyWithResponse request with arbitrary body returning *PutResourceResponse
+func (c *ClientWithResponses) PutResourceWithBodyWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutResourceResponse, error) {
+	rsp, err := c.PutResourceWithBody(ctx, kind, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutResourceResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutResourceResponse, error) {
+	rsp, err := c.PutResource(ctx, kind, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutResourceResponse(rsp)
+}
+
 // ListVoicesWithResponse request returning *ListVoicesResponse
 func (c *ClientWithResponses) ListVoicesWithResponse(ctx context.Context, params *ListVoicesParams, reqEditors ...RequestEditorFn) (*ListVoicesResponse, error) {
 	rsp, err := c.ListVoices(ctx, params, reqEditors...)
@@ -5455,6 +5904,60 @@ func (c *ClientWithResponses) PutWorkspaceWithResponse(ctx context.Context, name
 	return ParsePutWorkspaceResponse(rsp)
 }
 
+// ParseApplyResourceResponse parses an HTTP response from a ApplyResourceWithResponse call
+func ParseApplyResourceResponse(rsp *http.Response) (*ApplyResourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ApplyResourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ApplyResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 501:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON501 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListCredentialsResponse parses an HTTP response from a ListCredentialsWithResponse call
 func ParseListCredentialsResponse(rsp *http.Response) (*ListCredentialsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -5477,7 +5980,7 @@ func ParseListCredentialsResponse(rsp *http.Response) (*ListCredentialsResponse,
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5503,28 +6006,28 @@ func ParseCreateCredentialResponse(rsp *http.Response) (*CreateCredentialRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Credential
+		var dest externalRef0.Credential
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5550,21 +6053,21 @@ func ParseDeleteCredentialResponse(rsp *http.Response) (*DeleteCredentialRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Credential
+		var dest externalRef0.Credential
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5590,21 +6093,21 @@ func ParseGetCredentialResponse(rsp *http.Response) (*GetCredentialResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Credential
+		var dest externalRef0.Credential
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5630,21 +6133,21 @@ func ParsePutCredentialResponse(rsp *http.Response) (*PutCredentialResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Credential
+		var dest externalRef0.Credential
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5677,7 +6180,7 @@ func ParseListDepotsResponse(rsp *http.Response) (*ListDepotsResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5703,14 +6206,14 @@ func ParseGetDepotResponse(rsp *http.Response) (*GetDepotResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Depot
+		var dest externalRef0.Depot
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5736,28 +6239,28 @@ func ParsePutDepotInfoResponse(rsp *http.Response) (*PutDepotInfoResponse, error
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Depot
+		var dest externalRef0.Depot
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5783,28 +6286,28 @@ func ParseReleaseDepotResponse(rsp *http.Response) (*ReleaseDepotResponse, error
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Depot
+		var dest externalRef0.Depot
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5830,28 +6333,28 @@ func ParseRollbackDepotResponse(rsp *http.Response) (*RollbackDepotResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Depot
+		var dest externalRef0.Depot
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5877,14 +6380,14 @@ func ParseGetChannelResponse(rsp *http.Response) (*GetChannelResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.DepotRelease
+		var dest externalRef0.DepotRelease
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5910,14 +6413,14 @@ func ParsePutChannelResponse(rsp *http.Response) (*PutChannelResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.DepotRelease
+		var dest externalRef0.DepotRelease
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5950,7 +6453,7 @@ func ParseListGearsResponse(rsp *http.Response) (*ListGearsResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -5983,7 +6486,7 @@ func ParseListByCertificationResponse(rsp *http.Response) (*ListByCertificationR
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6016,7 +6519,7 @@ func ParseListByFirmwareResponse(rsp *http.Response) (*ListByFirmwareResponse, e
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6049,7 +6552,7 @@ func ParseResolveByIMEIResponse(rsp *http.Response) (*ResolveByIMEIResponse, err
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6082,7 +6585,7 @@ func ParseListByLabelResponse(rsp *http.Response) (*ListByLabelResponse, error) 
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6115,7 +6618,7 @@ func ParseResolveBySNResponse(rsp *http.Response) (*ResolveBySNResponse, error) 
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6141,14 +6644,14 @@ func ParseDeleteGearResponse(rsp *http.Response) (*DeleteGearResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Registration
+		var dest externalRef0.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6174,14 +6677,14 @@ func ParseGetGearResponse(rsp *http.Response) (*GetGearResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Registration
+		var dest externalRef0.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6207,14 +6710,14 @@ func ParseApproveGearResponse(rsp *http.Response) (*ApproveGearResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Registration
+		var dest externalRef0.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6240,14 +6743,14 @@ func ParseBlockGearResponse(rsp *http.Response) (*BlockGearResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Registration
+		var dest externalRef0.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6280,21 +6783,21 @@ func ParseRefreshGearResponse(rsp *http.Response) (*RefreshGearResponse, error) 
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6320,14 +6823,14 @@ func ParseGetGearConfigResponse(rsp *http.Response) (*GetGearConfigResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Configuration
+		var dest externalRef0.Configuration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6353,21 +6856,21 @@ func ParsePutGearConfigResponse(rsp *http.Response) (*PutGearConfigResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Configuration
+		var dest externalRef0.Configuration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6393,14 +6896,14 @@ func ParseGetGearInfoResponse(rsp *http.Response) (*GetGearInfoResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.DeviceInfo
+		var dest externalRef0.DeviceInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6426,14 +6929,14 @@ func ParseGetGearOTAResponse(rsp *http.Response) (*GetGearOTAResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.OTASummary
+		var dest externalRef0.OTASummary
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6459,7 +6962,7 @@ func ParseGetGearRuntimeResponse(rsp *http.Response) (*GetGearRuntimeResponse, e
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Runtime
+		var dest externalRef0.Runtime
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6492,7 +6995,7 @@ func ParseListMiniMaxTenantsResponse(rsp *http.Response) (*ListMiniMaxTenantsRes
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6518,28 +7021,28 @@ func ParseCreateMiniMaxTenantResponse(rsp *http.Response) (*CreateMiniMaxTenantR
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.MiniMaxTenant
+		var dest externalRef0.MiniMaxTenant
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6565,21 +7068,21 @@ func ParseDeleteMiniMaxTenantResponse(rsp *http.Response) (*DeleteMiniMaxTenantR
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.MiniMaxTenant
+		var dest externalRef0.MiniMaxTenant
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6605,21 +7108,21 @@ func ParseGetMiniMaxTenantResponse(rsp *http.Response) (*GetMiniMaxTenantRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.MiniMaxTenant
+		var dest externalRef0.MiniMaxTenant
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6645,21 +7148,21 @@ func ParsePutMiniMaxTenantResponse(rsp *http.Response) (*PutMiniMaxTenantRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.MiniMaxTenant
+		var dest externalRef0.MiniMaxTenant
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6692,32 +7195,201 @@ func ParseSyncMiniMaxTenantVoicesResponse(rsp *http.Response) (*SyncMiniMaxTenan
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON500 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON502 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteResourceResponse parses an HTTP response from a DeleteResourceWithResponse call
+func ParseDeleteResourceResponse(rsp *http.Response) (*DeleteResourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteResourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Resource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetResourceResponse parses an HTTP response from a GetResourceWithResponse call
+func ParseGetResourceResponse(rsp *http.Response) (*GetResourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetResourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Resource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 501:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON501 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutResourceResponse parses an HTTP response from a PutResourceWithResponse call
+func ParsePutResourceResponse(rsp *http.Response) (*PutResourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutResourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Resource
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 501:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON501 = &dest
 
 	}
 
@@ -6746,7 +7418,7 @@ func ParseListVoicesResponse(rsp *http.Response) (*ListVoicesResponse, error) {
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6772,28 +7444,28 @@ func ParseCreateVoiceResponse(rsp *http.Response) (*CreateVoiceResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Voice
+		var dest externalRef0.Voice
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6819,21 +7491,21 @@ func ParseDeleteVoiceResponse(rsp *http.Response) (*DeleteVoiceResponse, error) 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Voice
+		var dest externalRef0.Voice
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6859,21 +7531,21 @@ func ParseGetVoiceResponse(rsp *http.Response) (*GetVoiceResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Voice
+		var dest externalRef0.Voice
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6899,28 +7571,28 @@ func ParsePutVoiceResponse(rsp *http.Response) (*PutVoiceResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Voice
+		var dest externalRef0.Voice
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6953,7 +7625,7 @@ func ParseListWorkspaceTemplatesResponse(rsp *http.Response) (*ListWorkspaceTemp
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -6979,28 +7651,28 @@ func ParseCreateWorkspaceTemplateResponse(rsp *http.Response) (*CreateWorkspaceT
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.WorkflowTemplateDocument
+		var dest externalRef0.WorkflowTemplateDocument
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7026,21 +7698,21 @@ func ParseDeleteWorkspaceTemplateResponse(rsp *http.Response) (*DeleteWorkspaceT
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.WorkflowTemplateDocument
+		var dest externalRef0.WorkflowTemplateDocument
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7066,21 +7738,21 @@ func ParseGetWorkspaceTemplateResponse(rsp *http.Response) (*GetWorkspaceTemplat
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.WorkflowTemplateDocument
+		var dest externalRef0.WorkflowTemplateDocument
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7106,21 +7778,21 @@ func ParsePutWorkspaceTemplateResponse(rsp *http.Response) (*PutWorkspaceTemplat
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.WorkflowTemplateDocument
+		var dest externalRef0.WorkflowTemplateDocument
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7153,7 +7825,7 @@ func ParseListWorkspacesResponse(rsp *http.Response) (*ListWorkspacesResponse, e
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7179,28 +7851,28 @@ func ParseCreateWorkspaceResponse(rsp *http.Response) (*CreateWorkspaceResponse,
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Workspace
+		var dest externalRef0.Workspace
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON409 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7226,21 +7898,21 @@ func ParseDeleteWorkspaceResponse(rsp *http.Response) (*DeleteWorkspaceResponse,
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Workspace
+		var dest externalRef0.Workspace
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7266,21 +7938,21 @@ func ParseGetWorkspaceResponse(rsp *http.Response) (*GetWorkspaceResponse, error
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Workspace
+		var dest externalRef0.Workspace
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7306,21 +7978,21 @@ func ParsePutWorkspaceResponse(rsp *http.Response) (*PutWorkspaceResponse, error
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Workspace
+		var dest externalRef0.Workspace
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7333,6 +8005,9 @@ func ParsePutWorkspaceResponse(rsp *http.Response) (*PutWorkspaceResponse, error
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Apply an admin resource
+	// (POST /@apply)
+	ApplyResource(c *fiber.Ctx) error
 	// List stored credentials
 	// (GET /credentials)
 	ListCredentials(c *fiber.Ctx, params ListCredentialsParams) error
@@ -7374,10 +8049,10 @@ type ServerInterface interface {
 	ListGears(c *fiber.Ctx, params ListGearsParams) error
 	// List gears by certification
 	// (GET /gears/certification/{type}/{authority}/{id})
-	ListByCertification(c *fiber.Ctx, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, params ListByCertificationParams) error
+	ListByCertification(c *fiber.Ctx, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params ListByCertificationParams) error
 	// List gears by firmware depot and channel
 	// (GET /gears/firmware/{depot}/{channel})
-	ListByFirmware(c *fiber.Ctx, depot string, channel apitypes.GearFirmwareChannel, params ListByFirmwareParams) error
+	ListByFirmware(c *fiber.Ctx, depot string, channel externalRef0.GearFirmwareChannel, params ListByFirmwareParams) error
 	// Resolve gear public key by IMEI
 	// (GET /gears/imei/{tac}/{serial})
 	ResolveByIMEI(c *fiber.Ctx, tac string, serial string) error
@@ -7435,6 +8110,15 @@ type ServerInterface interface {
 	// Sync voices from a MiniMax tenant into the global voice catalog
 	// (POST /minimax-tenants/{name}/@sync-voices)
 	SyncMiniMaxTenantVoices(c *fiber.Ctx, name MiniMaxTenantName) error
+	// Delete an admin resource
+	// (DELETE /resources/{kind}/{name})
+	DeleteResource(c *fiber.Ctx, kind ResourceKind, name ResourceName) error
+	// Get an admin resource
+	// (GET /resources/{kind}/{name})
+	GetResource(c *fiber.Ctx, kind ResourceKind, name ResourceName) error
+	// Create or update an admin resource
+	// (PUT /resources/{kind}/{name})
+	PutResource(c *fiber.Ctx, kind ResourceKind, name ResourceName) error
 	// List all voices
 	// (GET /voices)
 	ListVoices(c *fiber.Ctx, params ListVoicesParams) error
@@ -7488,6 +8172,12 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc fiber.Handler
+
+// ApplyResource operation middleware
+func (siw *ServerInterfaceWrapper) ApplyResource(c *fiber.Ctx) error {
+
+	return siw.Handler.ApplyResource(c)
+}
 
 // ListCredentials operation middleware
 func (siw *ServerInterfaceWrapper) ListCredentials(c *fiber.Ctx) error {
@@ -7736,7 +8426,7 @@ func (siw *ServerInterfaceWrapper) ListByCertification(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "type" -------------
-	var pType apitypes.GearCertificationType
+	var pType externalRef0.GearCertificationType
 
 	err = runtime.BindStyledParameterWithOptions("simple", "type", c.Params("type"), &pType, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -7744,7 +8434,7 @@ func (siw *ServerInterfaceWrapper) ListByCertification(c *fiber.Ctx) error {
 	}
 
 	// ------------- Path parameter "authority" -------------
-	var authority apitypes.GearCertificationAuthority
+	var authority externalRef0.GearCertificationAuthority
 
 	err = runtime.BindStyledParameterWithOptions("simple", "authority", c.Params("authority"), &authority, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -7799,7 +8489,7 @@ func (siw *ServerInterfaceWrapper) ListByFirmware(c *fiber.Ctx) error {
 	}
 
 	// ------------- Path parameter "channel" -------------
-	var channel apitypes.GearFirmwareChannel
+	var channel externalRef0.GearFirmwareChannel
 
 	err = runtime.BindStyledParameterWithOptions("simple", "channel", c.Params("channel"), &channel, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -8180,6 +8870,78 @@ func (siw *ServerInterfaceWrapper) SyncMiniMaxTenantVoices(c *fiber.Ctx) error {
 	return siw.Handler.SyncMiniMaxTenantVoices(c, name)
 }
 
+// DeleteResource operation middleware
+func (siw *ServerInterfaceWrapper) DeleteResource(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "kind" -------------
+	var kind ResourceKind
+
+	err = runtime.BindStyledParameterWithOptions("simple", "kind", c.Params("kind"), &kind, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter kind: %w", err).Error())
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteResource(c, kind, name)
+}
+
+// GetResource operation middleware
+func (siw *ServerInterfaceWrapper) GetResource(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "kind" -------------
+	var kind ResourceKind
+
+	err = runtime.BindStyledParameterWithOptions("simple", "kind", c.Params("kind"), &kind, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter kind: %w", err).Error())
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.GetResource(c, kind, name)
+}
+
+// PutResource operation middleware
+func (siw *ServerInterfaceWrapper) PutResource(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "kind" -------------
+	var kind ResourceKind
+
+	err = runtime.BindStyledParameterWithOptions("simple", "kind", c.Params("kind"), &kind, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter kind: %w", err).Error())
+	}
+
+	// ------------- Path parameter "name" -------------
+	var name ResourceName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.PutResource(c, kind, name)
+}
+
 // ListVoices operation middleware
 func (siw *ServerInterfaceWrapper) ListVoices(c *fiber.Ctx) error {
 
@@ -8477,6 +9239,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 		router.Use(fiber.Handler(m))
 	}
 
+	router.Post(options.BaseURL+"/@apply", wrapper.ApplyResource)
+
 	router.Get(options.BaseURL+"/credentials", wrapper.ListCredentials)
 
 	router.Post(options.BaseURL+"/credentials", wrapper.CreateCredential)
@@ -8545,6 +9309,12 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Post(options.BaseURL+"/minimax-tenants/:name/@sync-voices", wrapper.SyncMiniMaxTenantVoices)
 
+	router.Delete(options.BaseURL+"/resources/:kind/:name", wrapper.DeleteResource)
+
+	router.Get(options.BaseURL+"/resources/:kind/:name", wrapper.GetResource)
+
+	router.Put(options.BaseURL+"/resources/:kind/:name", wrapper.PutResource)
+
 	router.Get(options.BaseURL+"/voices", wrapper.ListVoices)
 
 	router.Post(options.BaseURL+"/voices", wrapper.CreateVoice)
@@ -8577,6 +9347,60 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 }
 
+type ApplyResourceRequestObject struct {
+	JSONBody *ApplyResourceJSONRequestBody
+	Body     io.Reader
+}
+
+type ApplyResourceResponseObject interface {
+	VisitApplyResourceResponse(ctx *fiber.Ctx) error
+}
+
+type ApplyResource200JSONResponse externalRef0.ApplyResult
+
+func (response ApplyResource200JSONResponse) VisitApplyResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ApplyResource400JSONResponse externalRef0.ErrorResponse
+
+func (response ApplyResource400JSONResponse) VisitApplyResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type ApplyResource409JSONResponse externalRef0.ErrorResponse
+
+func (response ApplyResource409JSONResponse) VisitApplyResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type ApplyResource500JSONResponse externalRef0.ErrorResponse
+
+func (response ApplyResource500JSONResponse) VisitApplyResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type ApplyResource501JSONResponse externalRef0.ErrorResponse
+
+func (response ApplyResource501JSONResponse) VisitApplyResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(501)
+
+	return ctx.JSON(&response)
+}
+
 type ListCredentialsRequestObject struct {
 	Params ListCredentialsParams
 }
@@ -8594,7 +9418,7 @@ func (response ListCredentials200JSONResponse) VisitListCredentialsResponse(ctx 
 	return ctx.JSON(&response)
 }
 
-type ListCredentials500JSONResponse apitypes.ErrorResponse
+type ListCredentials500JSONResponse externalRef0.ErrorResponse
 
 func (response ListCredentials500JSONResponse) VisitListCredentialsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8611,7 +9435,7 @@ type CreateCredentialResponseObject interface {
 	VisitCreateCredentialResponse(ctx *fiber.Ctx) error
 }
 
-type CreateCredential200JSONResponse apitypes.Credential
+type CreateCredential200JSONResponse externalRef0.Credential
 
 func (response CreateCredential200JSONResponse) VisitCreateCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8620,7 +9444,7 @@ func (response CreateCredential200JSONResponse) VisitCreateCredentialResponse(ct
 	return ctx.JSON(&response)
 }
 
-type CreateCredential400JSONResponse apitypes.ErrorResponse
+type CreateCredential400JSONResponse externalRef0.ErrorResponse
 
 func (response CreateCredential400JSONResponse) VisitCreateCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8629,7 +9453,7 @@ func (response CreateCredential400JSONResponse) VisitCreateCredentialResponse(ct
 	return ctx.JSON(&response)
 }
 
-type CreateCredential409JSONResponse apitypes.ErrorResponse
+type CreateCredential409JSONResponse externalRef0.ErrorResponse
 
 func (response CreateCredential409JSONResponse) VisitCreateCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8638,7 +9462,7 @@ func (response CreateCredential409JSONResponse) VisitCreateCredentialResponse(ct
 	return ctx.JSON(&response)
 }
 
-type CreateCredential500JSONResponse apitypes.ErrorResponse
+type CreateCredential500JSONResponse externalRef0.ErrorResponse
 
 func (response CreateCredential500JSONResponse) VisitCreateCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8655,7 +9479,7 @@ type DeleteCredentialResponseObject interface {
 	VisitDeleteCredentialResponse(ctx *fiber.Ctx) error
 }
 
-type DeleteCredential200JSONResponse apitypes.Credential
+type DeleteCredential200JSONResponse externalRef0.Credential
 
 func (response DeleteCredential200JSONResponse) VisitDeleteCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8664,7 +9488,7 @@ func (response DeleteCredential200JSONResponse) VisitDeleteCredentialResponse(ct
 	return ctx.JSON(&response)
 }
 
-type DeleteCredential404JSONResponse apitypes.ErrorResponse
+type DeleteCredential404JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteCredential404JSONResponse) VisitDeleteCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8673,7 +9497,7 @@ func (response DeleteCredential404JSONResponse) VisitDeleteCredentialResponse(ct
 	return ctx.JSON(&response)
 }
 
-type DeleteCredential500JSONResponse apitypes.ErrorResponse
+type DeleteCredential500JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteCredential500JSONResponse) VisitDeleteCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8690,7 +9514,7 @@ type GetCredentialResponseObject interface {
 	VisitGetCredentialResponse(ctx *fiber.Ctx) error
 }
 
-type GetCredential200JSONResponse apitypes.Credential
+type GetCredential200JSONResponse externalRef0.Credential
 
 func (response GetCredential200JSONResponse) VisitGetCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8699,7 +9523,7 @@ func (response GetCredential200JSONResponse) VisitGetCredentialResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type GetCredential404JSONResponse apitypes.ErrorResponse
+type GetCredential404JSONResponse externalRef0.ErrorResponse
 
 func (response GetCredential404JSONResponse) VisitGetCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8708,7 +9532,7 @@ func (response GetCredential404JSONResponse) VisitGetCredentialResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type GetCredential500JSONResponse apitypes.ErrorResponse
+type GetCredential500JSONResponse externalRef0.ErrorResponse
 
 func (response GetCredential500JSONResponse) VisitGetCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8726,7 +9550,7 @@ type PutCredentialResponseObject interface {
 	VisitPutCredentialResponse(ctx *fiber.Ctx) error
 }
 
-type PutCredential200JSONResponse apitypes.Credential
+type PutCredential200JSONResponse externalRef0.Credential
 
 func (response PutCredential200JSONResponse) VisitPutCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8735,7 +9559,7 @@ func (response PutCredential200JSONResponse) VisitPutCredentialResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type PutCredential400JSONResponse apitypes.ErrorResponse
+type PutCredential400JSONResponse externalRef0.ErrorResponse
 
 func (response PutCredential400JSONResponse) VisitPutCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8744,7 +9568,7 @@ func (response PutCredential400JSONResponse) VisitPutCredentialResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type PutCredential500JSONResponse apitypes.ErrorResponse
+type PutCredential500JSONResponse externalRef0.ErrorResponse
 
 func (response PutCredential500JSONResponse) VisitPutCredentialResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8769,7 +9593,7 @@ func (response ListDepots200JSONResponse) VisitListDepotsResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type ListDepots500JSONResponse apitypes.ErrorResponse
+type ListDepots500JSONResponse externalRef0.ErrorResponse
 
 func (response ListDepots500JSONResponse) VisitListDepotsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8786,7 +9610,7 @@ type GetDepotResponseObject interface {
 	VisitGetDepotResponse(ctx *fiber.Ctx) error
 }
 
-type GetDepot200JSONResponse apitypes.Depot
+type GetDepot200JSONResponse externalRef0.Depot
 
 func (response GetDepot200JSONResponse) VisitGetDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8795,7 +9619,7 @@ func (response GetDepot200JSONResponse) VisitGetDepotResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
-type GetDepot404JSONResponse apitypes.ErrorResponse
+type GetDepot404JSONResponse externalRef0.ErrorResponse
 
 func (response GetDepot404JSONResponse) VisitGetDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8813,7 +9637,7 @@ type PutDepotInfoResponseObject interface {
 	VisitPutDepotInfoResponse(ctx *fiber.Ctx) error
 }
 
-type PutDepotInfo200JSONResponse apitypes.Depot
+type PutDepotInfo200JSONResponse externalRef0.Depot
 
 func (response PutDepotInfo200JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8822,7 +9646,7 @@ func (response PutDepotInfo200JSONResponse) VisitPutDepotInfoResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type PutDepotInfo400JSONResponse apitypes.ErrorResponse
+type PutDepotInfo400JSONResponse externalRef0.ErrorResponse
 
 func (response PutDepotInfo400JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8831,7 +9655,7 @@ func (response PutDepotInfo400JSONResponse) VisitPutDepotInfoResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type PutDepotInfo409JSONResponse apitypes.ErrorResponse
+type PutDepotInfo409JSONResponse externalRef0.ErrorResponse
 
 func (response PutDepotInfo409JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8840,7 +9664,7 @@ func (response PutDepotInfo409JSONResponse) VisitPutDepotInfoResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type PutDepotInfo500JSONResponse apitypes.ErrorResponse
+type PutDepotInfo500JSONResponse externalRef0.ErrorResponse
 
 func (response PutDepotInfo500JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8857,7 +9681,7 @@ type ReleaseDepotResponseObject interface {
 	VisitReleaseDepotResponse(ctx *fiber.Ctx) error
 }
 
-type ReleaseDepot200JSONResponse apitypes.Depot
+type ReleaseDepot200JSONResponse externalRef0.Depot
 
 func (response ReleaseDepot200JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8866,7 +9690,7 @@ func (response ReleaseDepot200JSONResponse) VisitReleaseDepotResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepot404JSONResponse apitypes.ErrorResponse
+type ReleaseDepot404JSONResponse externalRef0.ErrorResponse
 
 func (response ReleaseDepot404JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8875,7 +9699,7 @@ func (response ReleaseDepot404JSONResponse) VisitReleaseDepotResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepot409JSONResponse apitypes.ErrorResponse
+type ReleaseDepot409JSONResponse externalRef0.ErrorResponse
 
 func (response ReleaseDepot409JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8884,7 +9708,7 @@ func (response ReleaseDepot409JSONResponse) VisitReleaseDepotResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepot500JSONResponse apitypes.ErrorResponse
+type ReleaseDepot500JSONResponse externalRef0.ErrorResponse
 
 func (response ReleaseDepot500JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8901,7 +9725,7 @@ type RollbackDepotResponseObject interface {
 	VisitRollbackDepotResponse(ctx *fiber.Ctx) error
 }
 
-type RollbackDepot200JSONResponse apitypes.Depot
+type RollbackDepot200JSONResponse externalRef0.Depot
 
 func (response RollbackDepot200JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8910,7 +9734,7 @@ func (response RollbackDepot200JSONResponse) VisitRollbackDepotResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type RollbackDepot404JSONResponse apitypes.ErrorResponse
+type RollbackDepot404JSONResponse externalRef0.ErrorResponse
 
 func (response RollbackDepot404JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8919,7 +9743,7 @@ func (response RollbackDepot404JSONResponse) VisitRollbackDepotResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type RollbackDepot409JSONResponse apitypes.ErrorResponse
+type RollbackDepot409JSONResponse externalRef0.ErrorResponse
 
 func (response RollbackDepot409JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8928,7 +9752,7 @@ func (response RollbackDepot409JSONResponse) VisitRollbackDepotResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type RollbackDepot500JSONResponse apitypes.ErrorResponse
+type RollbackDepot500JSONResponse externalRef0.ErrorResponse
 
 func (response RollbackDepot500JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8946,7 +9770,7 @@ type GetChannelResponseObject interface {
 	VisitGetChannelResponse(ctx *fiber.Ctx) error
 }
 
-type GetChannel200JSONResponse apitypes.DepotRelease
+type GetChannel200JSONResponse externalRef0.DepotRelease
 
 func (response GetChannel200JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8955,7 +9779,7 @@ func (response GetChannel200JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type GetChannel404JSONResponse apitypes.ErrorResponse
+type GetChannel404JSONResponse externalRef0.ErrorResponse
 
 func (response GetChannel404JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8974,7 +9798,7 @@ type PutChannelResponseObject interface {
 	VisitPutChannelResponse(ctx *fiber.Ctx) error
 }
 
-type PutChannel200JSONResponse apitypes.DepotRelease
+type PutChannel200JSONResponse externalRef0.DepotRelease
 
 func (response PutChannel200JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -8983,7 +9807,7 @@ func (response PutChannel200JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type PutChannel409JSONResponse apitypes.ErrorResponse
+type PutChannel409JSONResponse externalRef0.ErrorResponse
 
 func (response PutChannel409JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9009,7 +9833,7 @@ func (response ListGears200JSONResponse) VisitListGearsResponse(ctx *fiber.Ctx) 
 	return ctx.JSON(&response)
 }
 
-type ListGears500JSONResponse apitypes.ErrorResponse
+type ListGears500JSONResponse externalRef0.ErrorResponse
 
 func (response ListGears500JSONResponse) VisitListGearsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9019,9 +9843,9 @@ func (response ListGears500JSONResponse) VisitListGearsResponse(ctx *fiber.Ctx) 
 }
 
 type ListByCertificationRequestObject struct {
-	Type      apitypes.GearCertificationType      `json:"type"`
-	Authority apitypes.GearCertificationAuthority `json:"authority"`
-	Id        string                              `json:"id"`
+	Type      externalRef0.GearCertificationType      `json:"type"`
+	Authority externalRef0.GearCertificationAuthority `json:"authority"`
+	Id        string                                  `json:"id"`
 	Params    ListByCertificationParams
 }
 
@@ -9038,7 +9862,7 @@ func (response ListByCertification200JSONResponse) VisitListByCertificationRespo
 	return ctx.JSON(&response)
 }
 
-type ListByCertification500JSONResponse apitypes.ErrorResponse
+type ListByCertification500JSONResponse externalRef0.ErrorResponse
 
 func (response ListByCertification500JSONResponse) VisitListByCertificationResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9048,8 +9872,8 @@ func (response ListByCertification500JSONResponse) VisitListByCertificationRespo
 }
 
 type ListByFirmwareRequestObject struct {
-	Depot   string                       `json:"depot"`
-	Channel apitypes.GearFirmwareChannel `json:"channel"`
+	Depot   string                           `json:"depot"`
+	Channel externalRef0.GearFirmwareChannel `json:"channel"`
 	Params  ListByFirmwareParams
 }
 
@@ -9066,7 +9890,7 @@ func (response ListByFirmware200JSONResponse) VisitListByFirmwareResponse(ctx *f
 	return ctx.JSON(&response)
 }
 
-type ListByFirmware500JSONResponse apitypes.ErrorResponse
+type ListByFirmware500JSONResponse externalRef0.ErrorResponse
 
 func (response ListByFirmware500JSONResponse) VisitListByFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9093,7 +9917,7 @@ func (response ResolveByIMEI200JSONResponse) VisitResolveByIMEIResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type ResolveByIMEI404JSONResponse apitypes.ErrorResponse
+type ResolveByIMEI404JSONResponse externalRef0.ErrorResponse
 
 func (response ResolveByIMEI404JSONResponse) VisitResolveByIMEIResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9121,7 +9945,7 @@ func (response ListByLabel200JSONResponse) VisitListByLabelResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type ListByLabel500JSONResponse apitypes.ErrorResponse
+type ListByLabel500JSONResponse externalRef0.ErrorResponse
 
 func (response ListByLabel500JSONResponse) VisitListByLabelResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9147,7 +9971,7 @@ func (response ResolveBySN200JSONResponse) VisitResolveBySNResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type ResolveBySN404JSONResponse apitypes.ErrorResponse
+type ResolveBySN404JSONResponse externalRef0.ErrorResponse
 
 func (response ResolveBySN404JSONResponse) VisitResolveBySNResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9164,7 +9988,7 @@ type DeleteGearResponseObject interface {
 	VisitDeleteGearResponse(ctx *fiber.Ctx) error
 }
 
-type DeleteGear200JSONResponse apitypes.Registration
+type DeleteGear200JSONResponse externalRef0.Registration
 
 func (response DeleteGear200JSONResponse) VisitDeleteGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9173,7 +9997,7 @@ func (response DeleteGear200JSONResponse) VisitDeleteGearResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type DeleteGear404JSONResponse apitypes.ErrorResponse
+type DeleteGear404JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteGear404JSONResponse) VisitDeleteGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9190,7 +10014,7 @@ type GetGearResponseObject interface {
 	VisitGetGearResponse(ctx *fiber.Ctx) error
 }
 
-type GetGear200JSONResponse apitypes.Registration
+type GetGear200JSONResponse externalRef0.Registration
 
 func (response GetGear200JSONResponse) VisitGetGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9199,7 +10023,7 @@ func (response GetGear200JSONResponse) VisitGetGearResponse(ctx *fiber.Ctx) erro
 	return ctx.JSON(&response)
 }
 
-type GetGear404JSONResponse apitypes.ErrorResponse
+type GetGear404JSONResponse externalRef0.ErrorResponse
 
 func (response GetGear404JSONResponse) VisitGetGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9217,7 +10041,7 @@ type ApproveGearResponseObject interface {
 	VisitApproveGearResponse(ctx *fiber.Ctx) error
 }
 
-type ApproveGear200JSONResponse apitypes.Registration
+type ApproveGear200JSONResponse externalRef0.Registration
 
 func (response ApproveGear200JSONResponse) VisitApproveGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9226,7 +10050,7 @@ func (response ApproveGear200JSONResponse) VisitApproveGearResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type ApproveGear400JSONResponse apitypes.ErrorResponse
+type ApproveGear400JSONResponse externalRef0.ErrorResponse
 
 func (response ApproveGear400JSONResponse) VisitApproveGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9243,7 +10067,7 @@ type BlockGearResponseObject interface {
 	VisitBlockGearResponse(ctx *fiber.Ctx) error
 }
 
-type BlockGear200JSONResponse apitypes.Registration
+type BlockGear200JSONResponse externalRef0.Registration
 
 func (response BlockGear200JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9252,7 +10076,7 @@ func (response BlockGear200JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) 
 	return ctx.JSON(&response)
 }
 
-type BlockGear404JSONResponse apitypes.ErrorResponse
+type BlockGear404JSONResponse externalRef0.ErrorResponse
 
 func (response BlockGear404JSONResponse) VisitBlockGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9278,7 +10102,7 @@ func (response RefreshGear200JSONResponse) VisitRefreshGearResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type RefreshGear404JSONResponse apitypes.ErrorResponse
+type RefreshGear404JSONResponse externalRef0.ErrorResponse
 
 func (response RefreshGear404JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9287,7 +10111,7 @@ func (response RefreshGear404JSONResponse) VisitRefreshGearResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type RefreshGear409JSONResponse apitypes.ErrorResponse
+type RefreshGear409JSONResponse externalRef0.ErrorResponse
 
 func (response RefreshGear409JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9296,7 +10120,7 @@ func (response RefreshGear409JSONResponse) VisitRefreshGearResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type RefreshGear502JSONResponse apitypes.ErrorResponse
+type RefreshGear502JSONResponse externalRef0.ErrorResponse
 
 func (response RefreshGear502JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9313,7 +10137,7 @@ type GetGearConfigResponseObject interface {
 	VisitGetGearConfigResponse(ctx *fiber.Ctx) error
 }
 
-type GetGearConfig200JSONResponse apitypes.Configuration
+type GetGearConfig200JSONResponse externalRef0.Configuration
 
 func (response GetGearConfig200JSONResponse) VisitGetGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9322,7 +10146,7 @@ func (response GetGearConfig200JSONResponse) VisitGetGearConfigResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type GetGearConfig404JSONResponse apitypes.ErrorResponse
+type GetGearConfig404JSONResponse externalRef0.ErrorResponse
 
 func (response GetGearConfig404JSONResponse) VisitGetGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9340,7 +10164,7 @@ type PutGearConfigResponseObject interface {
 	VisitPutGearConfigResponse(ctx *fiber.Ctx) error
 }
 
-type PutGearConfig200JSONResponse apitypes.Configuration
+type PutGearConfig200JSONResponse externalRef0.Configuration
 
 func (response PutGearConfig200JSONResponse) VisitPutGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9349,7 +10173,7 @@ func (response PutGearConfig200JSONResponse) VisitPutGearConfigResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type PutGearConfig400JSONResponse apitypes.ErrorResponse
+type PutGearConfig400JSONResponse externalRef0.ErrorResponse
 
 func (response PutGearConfig400JSONResponse) VisitPutGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9358,7 +10182,7 @@ func (response PutGearConfig400JSONResponse) VisitPutGearConfigResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type PutGearConfig404JSONResponse apitypes.ErrorResponse
+type PutGearConfig404JSONResponse externalRef0.ErrorResponse
 
 func (response PutGearConfig404JSONResponse) VisitPutGearConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9375,7 +10199,7 @@ type GetGearInfoResponseObject interface {
 	VisitGetGearInfoResponse(ctx *fiber.Ctx) error
 }
 
-type GetGearInfo200JSONResponse apitypes.DeviceInfo
+type GetGearInfo200JSONResponse externalRef0.DeviceInfo
 
 func (response GetGearInfo200JSONResponse) VisitGetGearInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9384,7 +10208,7 @@ func (response GetGearInfo200JSONResponse) VisitGetGearInfoResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type GetGearInfo404JSONResponse apitypes.ErrorResponse
+type GetGearInfo404JSONResponse externalRef0.ErrorResponse
 
 func (response GetGearInfo404JSONResponse) VisitGetGearInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9401,7 +10225,7 @@ type GetGearOTAResponseObject interface {
 	VisitGetGearOTAResponse(ctx *fiber.Ctx) error
 }
 
-type GetGearOTA200JSONResponse apitypes.OTASummary
+type GetGearOTA200JSONResponse externalRef0.OTASummary
 
 func (response GetGearOTA200JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9410,7 +10234,7 @@ func (response GetGearOTA200JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type GetGearOTA404JSONResponse apitypes.ErrorResponse
+type GetGearOTA404JSONResponse externalRef0.ErrorResponse
 
 func (response GetGearOTA404JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9427,7 +10251,7 @@ type GetGearRuntimeResponseObject interface {
 	VisitGetGearRuntimeResponse(ctx *fiber.Ctx) error
 }
 
-type GetGearRuntime200JSONResponse apitypes.Runtime
+type GetGearRuntime200JSONResponse externalRef0.Runtime
 
 func (response GetGearRuntime200JSONResponse) VisitGetGearRuntimeResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9453,7 +10277,7 @@ func (response ListMiniMaxTenants200JSONResponse) VisitListMiniMaxTenantsRespons
 	return ctx.JSON(&response)
 }
 
-type ListMiniMaxTenants500JSONResponse apitypes.ErrorResponse
+type ListMiniMaxTenants500JSONResponse externalRef0.ErrorResponse
 
 func (response ListMiniMaxTenants500JSONResponse) VisitListMiniMaxTenantsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9470,7 +10294,7 @@ type CreateMiniMaxTenantResponseObject interface {
 	VisitCreateMiniMaxTenantResponse(ctx *fiber.Ctx) error
 }
 
-type CreateMiniMaxTenant200JSONResponse apitypes.MiniMaxTenant
+type CreateMiniMaxTenant200JSONResponse externalRef0.MiniMaxTenant
 
 func (response CreateMiniMaxTenant200JSONResponse) VisitCreateMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9479,7 +10303,7 @@ func (response CreateMiniMaxTenant200JSONResponse) VisitCreateMiniMaxTenantRespo
 	return ctx.JSON(&response)
 }
 
-type CreateMiniMaxTenant400JSONResponse apitypes.ErrorResponse
+type CreateMiniMaxTenant400JSONResponse externalRef0.ErrorResponse
 
 func (response CreateMiniMaxTenant400JSONResponse) VisitCreateMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9488,7 +10312,7 @@ func (response CreateMiniMaxTenant400JSONResponse) VisitCreateMiniMaxTenantRespo
 	return ctx.JSON(&response)
 }
 
-type CreateMiniMaxTenant409JSONResponse apitypes.ErrorResponse
+type CreateMiniMaxTenant409JSONResponse externalRef0.ErrorResponse
 
 func (response CreateMiniMaxTenant409JSONResponse) VisitCreateMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9497,7 +10321,7 @@ func (response CreateMiniMaxTenant409JSONResponse) VisitCreateMiniMaxTenantRespo
 	return ctx.JSON(&response)
 }
 
-type CreateMiniMaxTenant500JSONResponse apitypes.ErrorResponse
+type CreateMiniMaxTenant500JSONResponse externalRef0.ErrorResponse
 
 func (response CreateMiniMaxTenant500JSONResponse) VisitCreateMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9514,7 +10338,7 @@ type DeleteMiniMaxTenantResponseObject interface {
 	VisitDeleteMiniMaxTenantResponse(ctx *fiber.Ctx) error
 }
 
-type DeleteMiniMaxTenant200JSONResponse apitypes.MiniMaxTenant
+type DeleteMiniMaxTenant200JSONResponse externalRef0.MiniMaxTenant
 
 func (response DeleteMiniMaxTenant200JSONResponse) VisitDeleteMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9523,7 +10347,7 @@ func (response DeleteMiniMaxTenant200JSONResponse) VisitDeleteMiniMaxTenantRespo
 	return ctx.JSON(&response)
 }
 
-type DeleteMiniMaxTenant404JSONResponse apitypes.ErrorResponse
+type DeleteMiniMaxTenant404JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteMiniMaxTenant404JSONResponse) VisitDeleteMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9532,7 +10356,7 @@ func (response DeleteMiniMaxTenant404JSONResponse) VisitDeleteMiniMaxTenantRespo
 	return ctx.JSON(&response)
 }
 
-type DeleteMiniMaxTenant500JSONResponse apitypes.ErrorResponse
+type DeleteMiniMaxTenant500JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteMiniMaxTenant500JSONResponse) VisitDeleteMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9549,7 +10373,7 @@ type GetMiniMaxTenantResponseObject interface {
 	VisitGetMiniMaxTenantResponse(ctx *fiber.Ctx) error
 }
 
-type GetMiniMaxTenant200JSONResponse apitypes.MiniMaxTenant
+type GetMiniMaxTenant200JSONResponse externalRef0.MiniMaxTenant
 
 func (response GetMiniMaxTenant200JSONResponse) VisitGetMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9558,7 +10382,7 @@ func (response GetMiniMaxTenant200JSONResponse) VisitGetMiniMaxTenantResponse(ct
 	return ctx.JSON(&response)
 }
 
-type GetMiniMaxTenant404JSONResponse apitypes.ErrorResponse
+type GetMiniMaxTenant404JSONResponse externalRef0.ErrorResponse
 
 func (response GetMiniMaxTenant404JSONResponse) VisitGetMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9567,7 +10391,7 @@ func (response GetMiniMaxTenant404JSONResponse) VisitGetMiniMaxTenantResponse(ct
 	return ctx.JSON(&response)
 }
 
-type GetMiniMaxTenant500JSONResponse apitypes.ErrorResponse
+type GetMiniMaxTenant500JSONResponse externalRef0.ErrorResponse
 
 func (response GetMiniMaxTenant500JSONResponse) VisitGetMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9585,7 +10409,7 @@ type PutMiniMaxTenantResponseObject interface {
 	VisitPutMiniMaxTenantResponse(ctx *fiber.Ctx) error
 }
 
-type PutMiniMaxTenant200JSONResponse apitypes.MiniMaxTenant
+type PutMiniMaxTenant200JSONResponse externalRef0.MiniMaxTenant
 
 func (response PutMiniMaxTenant200JSONResponse) VisitPutMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9594,7 +10418,7 @@ func (response PutMiniMaxTenant200JSONResponse) VisitPutMiniMaxTenantResponse(ct
 	return ctx.JSON(&response)
 }
 
-type PutMiniMaxTenant400JSONResponse apitypes.ErrorResponse
+type PutMiniMaxTenant400JSONResponse externalRef0.ErrorResponse
 
 func (response PutMiniMaxTenant400JSONResponse) VisitPutMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9603,7 +10427,7 @@ func (response PutMiniMaxTenant400JSONResponse) VisitPutMiniMaxTenantResponse(ct
 	return ctx.JSON(&response)
 }
 
-type PutMiniMaxTenant500JSONResponse apitypes.ErrorResponse
+type PutMiniMaxTenant500JSONResponse externalRef0.ErrorResponse
 
 func (response PutMiniMaxTenant500JSONResponse) VisitPutMiniMaxTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9629,7 +10453,7 @@ func (response SyncMiniMaxTenantVoices200JSONResponse) VisitSyncMiniMaxTenantVoi
 	return ctx.JSON(&response)
 }
 
-type SyncMiniMaxTenantVoices400JSONResponse apitypes.ErrorResponse
+type SyncMiniMaxTenantVoices400JSONResponse externalRef0.ErrorResponse
 
 func (response SyncMiniMaxTenantVoices400JSONResponse) VisitSyncMiniMaxTenantVoicesResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9638,7 +10462,7 @@ func (response SyncMiniMaxTenantVoices400JSONResponse) VisitSyncMiniMaxTenantVoi
 	return ctx.JSON(&response)
 }
 
-type SyncMiniMaxTenantVoices404JSONResponse apitypes.ErrorResponse
+type SyncMiniMaxTenantVoices404JSONResponse externalRef0.ErrorResponse
 
 func (response SyncMiniMaxTenantVoices404JSONResponse) VisitSyncMiniMaxTenantVoicesResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9647,7 +10471,7 @@ func (response SyncMiniMaxTenantVoices404JSONResponse) VisitSyncMiniMaxTenantVoi
 	return ctx.JSON(&response)
 }
 
-type SyncMiniMaxTenantVoices500JSONResponse apitypes.ErrorResponse
+type SyncMiniMaxTenantVoices500JSONResponse externalRef0.ErrorResponse
 
 func (response SyncMiniMaxTenantVoices500JSONResponse) VisitSyncMiniMaxTenantVoicesResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9656,11 +10480,184 @@ func (response SyncMiniMaxTenantVoices500JSONResponse) VisitSyncMiniMaxTenantVoi
 	return ctx.JSON(&response)
 }
 
-type SyncMiniMaxTenantVoices502JSONResponse apitypes.ErrorResponse
+type SyncMiniMaxTenantVoices502JSONResponse externalRef0.ErrorResponse
 
 func (response SyncMiniMaxTenantVoices502JSONResponse) VisitSyncMiniMaxTenantVoicesResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(502)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteResourceRequestObject struct {
+	Kind ResourceKind `json:"kind"`
+	Name ResourceName `json:"name"`
+}
+
+type DeleteResourceResponseObject interface {
+	VisitDeleteResourceResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteResource200JSONResponse externalRef0.Resource
+
+func (response DeleteResource200JSONResponse) VisitDeleteResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteResource400JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteResource400JSONResponse) VisitDeleteResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteResource404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteResource404JSONResponse) VisitDeleteResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteResource409JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteResource409JSONResponse) VisitDeleteResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteResource500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteResource500JSONResponse) VisitDeleteResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetResourceRequestObject struct {
+	Kind ResourceKind `json:"kind"`
+	Name ResourceName `json:"name"`
+}
+
+type GetResourceResponseObject interface {
+	VisitGetResourceResponse(ctx *fiber.Ctx) error
+}
+
+type GetResource200JSONResponse externalRef0.Resource
+
+func (response GetResource200JSONResponse) VisitGetResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetResource400JSONResponse externalRef0.ErrorResponse
+
+func (response GetResource400JSONResponse) VisitGetResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type GetResource404JSONResponse externalRef0.ErrorResponse
+
+func (response GetResource404JSONResponse) VisitGetResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetResource500JSONResponse externalRef0.ErrorResponse
+
+func (response GetResource500JSONResponse) VisitGetResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetResource501JSONResponse externalRef0.ErrorResponse
+
+func (response GetResource501JSONResponse) VisitGetResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(501)
+
+	return ctx.JSON(&response)
+}
+
+type PutResourceRequestObject struct {
+	Kind     ResourceKind `json:"kind"`
+	Name     ResourceName `json:"name"`
+	JSONBody *PutResourceJSONRequestBody
+	Body     io.Reader
+}
+
+type PutResourceResponseObject interface {
+	VisitPutResourceResponse(ctx *fiber.Ctx) error
+}
+
+type PutResource200JSONResponse externalRef0.Resource
+
+func (response PutResource200JSONResponse) VisitPutResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutResource400JSONResponse externalRef0.ErrorResponse
+
+func (response PutResource400JSONResponse) VisitPutResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutResource404JSONResponse externalRef0.ErrorResponse
+
+func (response PutResource404JSONResponse) VisitPutResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type PutResource409JSONResponse externalRef0.ErrorResponse
+
+func (response PutResource409JSONResponse) VisitPutResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type PutResource500JSONResponse externalRef0.ErrorResponse
+
+func (response PutResource500JSONResponse) VisitPutResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutResource501JSONResponse externalRef0.ErrorResponse
+
+func (response PutResource501JSONResponse) VisitPutResourceResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(501)
 
 	return ctx.JSON(&response)
 }
@@ -9682,7 +10679,7 @@ func (response ListVoices200JSONResponse) VisitListVoicesResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type ListVoices500JSONResponse apitypes.ErrorResponse
+type ListVoices500JSONResponse externalRef0.ErrorResponse
 
 func (response ListVoices500JSONResponse) VisitListVoicesResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9699,7 +10696,7 @@ type CreateVoiceResponseObject interface {
 	VisitCreateVoiceResponse(ctx *fiber.Ctx) error
 }
 
-type CreateVoice200JSONResponse apitypes.Voice
+type CreateVoice200JSONResponse externalRef0.Voice
 
 func (response CreateVoice200JSONResponse) VisitCreateVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9708,7 +10705,7 @@ func (response CreateVoice200JSONResponse) VisitCreateVoiceResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type CreateVoice400JSONResponse apitypes.ErrorResponse
+type CreateVoice400JSONResponse externalRef0.ErrorResponse
 
 func (response CreateVoice400JSONResponse) VisitCreateVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9717,7 +10714,7 @@ func (response CreateVoice400JSONResponse) VisitCreateVoiceResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type CreateVoice409JSONResponse apitypes.ErrorResponse
+type CreateVoice409JSONResponse externalRef0.ErrorResponse
 
 func (response CreateVoice409JSONResponse) VisitCreateVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9726,7 +10723,7 @@ func (response CreateVoice409JSONResponse) VisitCreateVoiceResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type CreateVoice500JSONResponse apitypes.ErrorResponse
+type CreateVoice500JSONResponse externalRef0.ErrorResponse
 
 func (response CreateVoice500JSONResponse) VisitCreateVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9743,7 +10740,7 @@ type DeleteVoiceResponseObject interface {
 	VisitDeleteVoiceResponse(ctx *fiber.Ctx) error
 }
 
-type DeleteVoice200JSONResponse apitypes.Voice
+type DeleteVoice200JSONResponse externalRef0.Voice
 
 func (response DeleteVoice200JSONResponse) VisitDeleteVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9752,7 +10749,7 @@ func (response DeleteVoice200JSONResponse) VisitDeleteVoiceResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type DeleteVoice404JSONResponse apitypes.ErrorResponse
+type DeleteVoice404JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteVoice404JSONResponse) VisitDeleteVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9761,7 +10758,7 @@ func (response DeleteVoice404JSONResponse) VisitDeleteVoiceResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type DeleteVoice500JSONResponse apitypes.ErrorResponse
+type DeleteVoice500JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteVoice500JSONResponse) VisitDeleteVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9778,7 +10775,7 @@ type GetVoiceResponseObject interface {
 	VisitGetVoiceResponse(ctx *fiber.Ctx) error
 }
 
-type GetVoice200JSONResponse apitypes.Voice
+type GetVoice200JSONResponse externalRef0.Voice
 
 func (response GetVoice200JSONResponse) VisitGetVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9787,7 +10784,7 @@ func (response GetVoice200JSONResponse) VisitGetVoiceResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
-type GetVoice404JSONResponse apitypes.ErrorResponse
+type GetVoice404JSONResponse externalRef0.ErrorResponse
 
 func (response GetVoice404JSONResponse) VisitGetVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9796,7 +10793,7 @@ func (response GetVoice404JSONResponse) VisitGetVoiceResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
-type GetVoice500JSONResponse apitypes.ErrorResponse
+type GetVoice500JSONResponse externalRef0.ErrorResponse
 
 func (response GetVoice500JSONResponse) VisitGetVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9814,7 +10811,7 @@ type PutVoiceResponseObject interface {
 	VisitPutVoiceResponse(ctx *fiber.Ctx) error
 }
 
-type PutVoice200JSONResponse apitypes.Voice
+type PutVoice200JSONResponse externalRef0.Voice
 
 func (response PutVoice200JSONResponse) VisitPutVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9823,7 +10820,7 @@ func (response PutVoice200JSONResponse) VisitPutVoiceResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
-type PutVoice400JSONResponse apitypes.ErrorResponse
+type PutVoice400JSONResponse externalRef0.ErrorResponse
 
 func (response PutVoice400JSONResponse) VisitPutVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9832,7 +10829,7 @@ func (response PutVoice400JSONResponse) VisitPutVoiceResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
-type PutVoice409JSONResponse apitypes.ErrorResponse
+type PutVoice409JSONResponse externalRef0.ErrorResponse
 
 func (response PutVoice409JSONResponse) VisitPutVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9841,7 +10838,7 @@ func (response PutVoice409JSONResponse) VisitPutVoiceResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
-type PutVoice500JSONResponse apitypes.ErrorResponse
+type PutVoice500JSONResponse externalRef0.ErrorResponse
 
 func (response PutVoice500JSONResponse) VisitPutVoiceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9867,7 +10864,7 @@ func (response ListWorkspaceTemplates200JSONResponse) VisitListWorkspaceTemplate
 	return ctx.JSON(&response)
 }
 
-type ListWorkspaceTemplates500JSONResponse apitypes.ErrorResponse
+type ListWorkspaceTemplates500JSONResponse externalRef0.ErrorResponse
 
 func (response ListWorkspaceTemplates500JSONResponse) VisitListWorkspaceTemplatesResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9884,7 +10881,7 @@ type CreateWorkspaceTemplateResponseObject interface {
 	VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error
 }
 
-type CreateWorkspaceTemplate200JSONResponse apitypes.WorkflowTemplateDocument
+type CreateWorkspaceTemplate200JSONResponse externalRef0.WorkflowTemplateDocument
 
 func (response CreateWorkspaceTemplate200JSONResponse) VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9893,7 +10890,7 @@ func (response CreateWorkspaceTemplate200JSONResponse) VisitCreateWorkspaceTempl
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspaceTemplate400JSONResponse apitypes.ErrorResponse
+type CreateWorkspaceTemplate400JSONResponse externalRef0.ErrorResponse
 
 func (response CreateWorkspaceTemplate400JSONResponse) VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9902,7 +10899,7 @@ func (response CreateWorkspaceTemplate400JSONResponse) VisitCreateWorkspaceTempl
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspaceTemplate409JSONResponse apitypes.ErrorResponse
+type CreateWorkspaceTemplate409JSONResponse externalRef0.ErrorResponse
 
 func (response CreateWorkspaceTemplate409JSONResponse) VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9911,7 +10908,7 @@ func (response CreateWorkspaceTemplate409JSONResponse) VisitCreateWorkspaceTempl
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspaceTemplate500JSONResponse apitypes.ErrorResponse
+type CreateWorkspaceTemplate500JSONResponse externalRef0.ErrorResponse
 
 func (response CreateWorkspaceTemplate500JSONResponse) VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9928,7 +10925,7 @@ type DeleteWorkspaceTemplateResponseObject interface {
 	VisitDeleteWorkspaceTemplateResponse(ctx *fiber.Ctx) error
 }
 
-type DeleteWorkspaceTemplate200JSONResponse apitypes.WorkflowTemplateDocument
+type DeleteWorkspaceTemplate200JSONResponse externalRef0.WorkflowTemplateDocument
 
 func (response DeleteWorkspaceTemplate200JSONResponse) VisitDeleteWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9937,7 +10934,7 @@ func (response DeleteWorkspaceTemplate200JSONResponse) VisitDeleteWorkspaceTempl
 	return ctx.JSON(&response)
 }
 
-type DeleteWorkspaceTemplate404JSONResponse apitypes.ErrorResponse
+type DeleteWorkspaceTemplate404JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteWorkspaceTemplate404JSONResponse) VisitDeleteWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9946,7 +10943,7 @@ func (response DeleteWorkspaceTemplate404JSONResponse) VisitDeleteWorkspaceTempl
 	return ctx.JSON(&response)
 }
 
-type DeleteWorkspaceTemplate500JSONResponse apitypes.ErrorResponse
+type DeleteWorkspaceTemplate500JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteWorkspaceTemplate500JSONResponse) VisitDeleteWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9963,7 +10960,7 @@ type GetWorkspaceTemplateResponseObject interface {
 	VisitGetWorkspaceTemplateResponse(ctx *fiber.Ctx) error
 }
 
-type GetWorkspaceTemplate200JSONResponse apitypes.WorkflowTemplateDocument
+type GetWorkspaceTemplate200JSONResponse externalRef0.WorkflowTemplateDocument
 
 func (response GetWorkspaceTemplate200JSONResponse) VisitGetWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9972,7 +10969,7 @@ func (response GetWorkspaceTemplate200JSONResponse) VisitGetWorkspaceTemplateRes
 	return ctx.JSON(&response)
 }
 
-type GetWorkspaceTemplate404JSONResponse apitypes.ErrorResponse
+type GetWorkspaceTemplate404JSONResponse externalRef0.ErrorResponse
 
 func (response GetWorkspaceTemplate404JSONResponse) VisitGetWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9981,7 +10978,7 @@ func (response GetWorkspaceTemplate404JSONResponse) VisitGetWorkspaceTemplateRes
 	return ctx.JSON(&response)
 }
 
-type GetWorkspaceTemplate500JSONResponse apitypes.ErrorResponse
+type GetWorkspaceTemplate500JSONResponse externalRef0.ErrorResponse
 
 func (response GetWorkspaceTemplate500JSONResponse) VisitGetWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -9999,7 +10996,7 @@ type PutWorkspaceTemplateResponseObject interface {
 	VisitPutWorkspaceTemplateResponse(ctx *fiber.Ctx) error
 }
 
-type PutWorkspaceTemplate200JSONResponse apitypes.WorkflowTemplateDocument
+type PutWorkspaceTemplate200JSONResponse externalRef0.WorkflowTemplateDocument
 
 func (response PutWorkspaceTemplate200JSONResponse) VisitPutWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10008,7 +11005,7 @@ func (response PutWorkspaceTemplate200JSONResponse) VisitPutWorkspaceTemplateRes
 	return ctx.JSON(&response)
 }
 
-type PutWorkspaceTemplate400JSONResponse apitypes.ErrorResponse
+type PutWorkspaceTemplate400JSONResponse externalRef0.ErrorResponse
 
 func (response PutWorkspaceTemplate400JSONResponse) VisitPutWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10017,7 +11014,7 @@ func (response PutWorkspaceTemplate400JSONResponse) VisitPutWorkspaceTemplateRes
 	return ctx.JSON(&response)
 }
 
-type PutWorkspaceTemplate500JSONResponse apitypes.ErrorResponse
+type PutWorkspaceTemplate500JSONResponse externalRef0.ErrorResponse
 
 func (response PutWorkspaceTemplate500JSONResponse) VisitPutWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10043,7 +11040,7 @@ func (response ListWorkspaces200JSONResponse) VisitListWorkspacesResponse(ctx *f
 	return ctx.JSON(&response)
 }
 
-type ListWorkspaces500JSONResponse apitypes.ErrorResponse
+type ListWorkspaces500JSONResponse externalRef0.ErrorResponse
 
 func (response ListWorkspaces500JSONResponse) VisitListWorkspacesResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10060,7 +11057,7 @@ type CreateWorkspaceResponseObject interface {
 	VisitCreateWorkspaceResponse(ctx *fiber.Ctx) error
 }
 
-type CreateWorkspace200JSONResponse apitypes.Workspace
+type CreateWorkspace200JSONResponse externalRef0.Workspace
 
 func (response CreateWorkspace200JSONResponse) VisitCreateWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10069,7 +11066,7 @@ func (response CreateWorkspace200JSONResponse) VisitCreateWorkspaceResponse(ctx 
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspace400JSONResponse apitypes.ErrorResponse
+type CreateWorkspace400JSONResponse externalRef0.ErrorResponse
 
 func (response CreateWorkspace400JSONResponse) VisitCreateWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10078,7 +11075,7 @@ func (response CreateWorkspace400JSONResponse) VisitCreateWorkspaceResponse(ctx 
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspace409JSONResponse apitypes.ErrorResponse
+type CreateWorkspace409JSONResponse externalRef0.ErrorResponse
 
 func (response CreateWorkspace409JSONResponse) VisitCreateWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10087,7 +11084,7 @@ func (response CreateWorkspace409JSONResponse) VisitCreateWorkspaceResponse(ctx 
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspace500JSONResponse apitypes.ErrorResponse
+type CreateWorkspace500JSONResponse externalRef0.ErrorResponse
 
 func (response CreateWorkspace500JSONResponse) VisitCreateWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10104,7 +11101,7 @@ type DeleteWorkspaceResponseObject interface {
 	VisitDeleteWorkspaceResponse(ctx *fiber.Ctx) error
 }
 
-type DeleteWorkspace200JSONResponse apitypes.Workspace
+type DeleteWorkspace200JSONResponse externalRef0.Workspace
 
 func (response DeleteWorkspace200JSONResponse) VisitDeleteWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10113,7 +11110,7 @@ func (response DeleteWorkspace200JSONResponse) VisitDeleteWorkspaceResponse(ctx 
 	return ctx.JSON(&response)
 }
 
-type DeleteWorkspace404JSONResponse apitypes.ErrorResponse
+type DeleteWorkspace404JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteWorkspace404JSONResponse) VisitDeleteWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10122,7 +11119,7 @@ func (response DeleteWorkspace404JSONResponse) VisitDeleteWorkspaceResponse(ctx 
 	return ctx.JSON(&response)
 }
 
-type DeleteWorkspace500JSONResponse apitypes.ErrorResponse
+type DeleteWorkspace500JSONResponse externalRef0.ErrorResponse
 
 func (response DeleteWorkspace500JSONResponse) VisitDeleteWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10139,7 +11136,7 @@ type GetWorkspaceResponseObject interface {
 	VisitGetWorkspaceResponse(ctx *fiber.Ctx) error
 }
 
-type GetWorkspace200JSONResponse apitypes.Workspace
+type GetWorkspace200JSONResponse externalRef0.Workspace
 
 func (response GetWorkspace200JSONResponse) VisitGetWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10148,7 +11145,7 @@ func (response GetWorkspace200JSONResponse) VisitGetWorkspaceResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type GetWorkspace404JSONResponse apitypes.ErrorResponse
+type GetWorkspace404JSONResponse externalRef0.ErrorResponse
 
 func (response GetWorkspace404JSONResponse) VisitGetWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10157,7 +11154,7 @@ func (response GetWorkspace404JSONResponse) VisitGetWorkspaceResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type GetWorkspace500JSONResponse apitypes.ErrorResponse
+type GetWorkspace500JSONResponse externalRef0.ErrorResponse
 
 func (response GetWorkspace500JSONResponse) VisitGetWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10175,7 +11172,7 @@ type PutWorkspaceResponseObject interface {
 	VisitPutWorkspaceResponse(ctx *fiber.Ctx) error
 }
 
-type PutWorkspace200JSONResponse apitypes.Workspace
+type PutWorkspace200JSONResponse externalRef0.Workspace
 
 func (response PutWorkspace200JSONResponse) VisitPutWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10184,7 +11181,7 @@ func (response PutWorkspace200JSONResponse) VisitPutWorkspaceResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type PutWorkspace400JSONResponse apitypes.ErrorResponse
+type PutWorkspace400JSONResponse externalRef0.ErrorResponse
 
 func (response PutWorkspace400JSONResponse) VisitPutWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10193,7 +11190,7 @@ func (response PutWorkspace400JSONResponse) VisitPutWorkspaceResponse(ctx *fiber
 	return ctx.JSON(&response)
 }
 
-type PutWorkspace500JSONResponse apitypes.ErrorResponse
+type PutWorkspace500JSONResponse externalRef0.ErrorResponse
 
 func (response PutWorkspace500JSONResponse) VisitPutWorkspaceResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -10204,6 +11201,9 @@ func (response PutWorkspace500JSONResponse) VisitPutWorkspaceResponse(ctx *fiber
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
+	// Apply an admin resource
+	// (POST /@apply)
+	ApplyResource(ctx context.Context, request ApplyResourceRequestObject) (ApplyResourceResponseObject, error)
 	// List stored credentials
 	// (GET /credentials)
 	ListCredentials(ctx context.Context, request ListCredentialsRequestObject) (ListCredentialsResponseObject, error)
@@ -10306,6 +11306,15 @@ type StrictServerInterface interface {
 	// Sync voices from a MiniMax tenant into the global voice catalog
 	// (POST /minimax-tenants/{name}/@sync-voices)
 	SyncMiniMaxTenantVoices(ctx context.Context, request SyncMiniMaxTenantVoicesRequestObject) (SyncMiniMaxTenantVoicesResponseObject, error)
+	// Delete an admin resource
+	// (DELETE /resources/{kind}/{name})
+	DeleteResource(ctx context.Context, request DeleteResourceRequestObject) (DeleteResourceResponseObject, error)
+	// Get an admin resource
+	// (GET /resources/{kind}/{name})
+	GetResource(ctx context.Context, request GetResourceRequestObject) (GetResourceResponseObject, error)
+	// Create or update an admin resource
+	// (PUT /resources/{kind}/{name})
+	PutResource(ctx context.Context, request PutResourceRequestObject) (PutResourceResponseObject, error)
 	// List all voices
 	// (GET /voices)
 	ListVoices(ctx context.Context, request ListVoicesRequestObject) (ListVoicesResponseObject, error)
@@ -10364,6 +11373,44 @@ func NewStrictHandler(ssi StrictServerInterface, middlewares []StrictMiddlewareF
 type strictHandler struct {
 	ssi         StrictServerInterface
 	middlewares []StrictMiddlewareFunc
+}
+
+// ApplyResource operation middleware
+func (sh *strictHandler) ApplyResource(ctx *fiber.Ctx) error {
+	var request ApplyResourceRequestObject
+
+	if strings.HasPrefix(string(ctx.Request().Header.ContentType()), "application/json") {
+
+		var body ApplyResourceJSONRequestBody
+		if err := ctx.BodyParser(&body); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+		request.JSONBody = &body
+
+	}
+	if strings.HasPrefix(string(ctx.Request().Header.ContentType()), "application/yaml") {
+		request.Body = bytes.NewReader(ctx.Request().Body())
+	}
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ApplyResource(ctx.UserContext(), request.(ApplyResourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ApplyResource")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ApplyResourceResponseObject); ok {
+		if err := validResponse.VisitApplyResourceResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
 }
 
 // ListCredentials operation middleware
@@ -10736,7 +11783,7 @@ func (sh *strictHandler) ListGears(ctx *fiber.Ctx, params ListGearsParams) error
 }
 
 // ListByCertification operation middleware
-func (sh *strictHandler) ListByCertification(ctx *fiber.Ctx, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string, params ListByCertificationParams) error {
+func (sh *strictHandler) ListByCertification(ctx *fiber.Ctx, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params ListByCertificationParams) error {
 	var request ListByCertificationRequestObject
 
 	request.Type = pType
@@ -10766,7 +11813,7 @@ func (sh *strictHandler) ListByCertification(ctx *fiber.Ctx, pType apitypes.Gear
 }
 
 // ListByFirmware operation middleware
-func (sh *strictHandler) ListByFirmware(ctx *fiber.Ctx, depot string, channel apitypes.GearFirmwareChannel, params ListByFirmwareParams) error {
+func (sh *strictHandler) ListByFirmware(ctx *fiber.Ctx, depot string, channel externalRef0.GearFirmwareChannel, params ListByFirmwareParams) error {
 	var request ListByFirmwareRequestObject
 
 	request.Depot = depot
@@ -11324,6 +12371,102 @@ func (sh *strictHandler) SyncMiniMaxTenantVoices(ctx *fiber.Ctx, name MiniMaxTen
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(SyncMiniMaxTenantVoicesResponseObject); ok {
 		if err := validResponse.VisitSyncMiniMaxTenantVoicesResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteResource operation middleware
+func (sh *strictHandler) DeleteResource(ctx *fiber.Ctx, kind ResourceKind, name ResourceName) error {
+	var request DeleteResourceRequestObject
+
+	request.Kind = kind
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteResource(ctx.UserContext(), request.(DeleteResourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteResource")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteResourceResponseObject); ok {
+		if err := validResponse.VisitDeleteResourceResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetResource operation middleware
+func (sh *strictHandler) GetResource(ctx *fiber.Ctx, kind ResourceKind, name ResourceName) error {
+	var request GetResourceRequestObject
+
+	request.Kind = kind
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetResource(ctx.UserContext(), request.(GetResourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetResource")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetResourceResponseObject); ok {
+		if err := validResponse.VisitGetResourceResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutResource operation middleware
+func (sh *strictHandler) PutResource(ctx *fiber.Ctx, kind ResourceKind, name ResourceName) error {
+	var request PutResourceRequestObject
+
+	request.Kind = kind
+	request.Name = name
+	if strings.HasPrefix(string(ctx.Request().Header.ContentType()), "application/json") {
+
+		var body PutResourceJSONRequestBody
+		if err := ctx.BodyParser(&body); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+		request.JSONBody = &body
+
+	}
+	if strings.HasPrefix(string(ctx.Request().Header.ContentType()), "application/yaml") {
+		request.Body = bytes.NewReader(ctx.Request().Body())
+	}
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutResource(ctx.UserContext(), request.(PutResourceRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutResource")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutResourceResponseObject); ok {
+		if err := validResponse.VisitPutResourceResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

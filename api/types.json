@@ -9,859 +9,217 @@
   "components": {
     "schemas": {
       "Configuration": {
-        "type": "object",
-        "properties": {
-          "certifications": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GearCertification"
-            }
-          },
-          "firmware": {
-            "$ref": "#/components/schemas/FirmwareConfig"
-          }
-        }
+        "$ref": "./type/configuration.json#/components/schemas/Configuration"
       },
       "DepotFile": {
-        "type": "object",
-        "required": [
-          "path",
-          "sha256",
-          "md5"
-        ],
-        "properties": {
-          "path": {
-            "type": "string"
-          },
-          "sha256": {
-            "type": "string"
-          },
-          "md5": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/depot_file.json#/components/schemas/DepotFile"
       },
       "DeviceInfo": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "sn": {
-            "type": "string"
-          },
-          "hardware": {
-            "$ref": "#/components/schemas/HardwareInfo"
-          }
-        }
+        "$ref": "./type/device_info.json#/components/schemas/DeviceInfo"
       },
       "ErrorPayload": {
-        "type": "object",
-        "required": [
-          "code",
-          "message"
-        ],
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "details": {
-            "type": "object",
-            "additionalProperties": true
-          }
-        }
+        "$ref": "./type/error_payload.json#/components/schemas/ErrorPayload"
       },
       "ErrorResponse": {
-        "type": "object",
-        "required": [
-          "error"
-        ],
-        "properties": {
-          "error": {
-            "$ref": "#/components/schemas/ErrorPayload"
-          }
-        }
+        "$ref": "./type/error_response.json#/components/schemas/ErrorResponse"
       },
       "FirmwareConfig": {
-        "type": "object",
-        "properties": {
-          "channel": {
-            "$ref": "#/components/schemas/GearFirmwareChannel"
-          }
-        }
+        "$ref": "./type/firmware_config.json#/components/schemas/FirmwareConfig"
       },
       "Gear": {
-        "type": "object",
-        "required": [
-          "public_key",
-          "role",
-          "status",
-          "device",
-          "configuration",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "public_key": {
-            "type": "string"
-          },
-          "role": {
-            "$ref": "#/components/schemas/GearRole"
-          },
-          "status": {
-            "$ref": "#/components/schemas/GearStatus"
-          },
-          "device": {
-            "$ref": "#/components/schemas/DeviceInfo"
-          },
-          "configuration": {
-            "$ref": "#/components/schemas/Configuration"
-          },
-          "auto_registered": {
-            "type": "boolean"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "approved_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "$ref": "./type/gear.json#/components/schemas/Gear"
       },
       "GearCertification": {
-        "type": "object",
-        "required": [
-          "type",
-          "authority",
-          "id"
-        ],
-        "properties": {
-          "type": {
-            "$ref": "#/components/schemas/GearCertificationType"
-          },
-          "authority": {
-            "$ref": "#/components/schemas/GearCertificationAuthority"
-          },
-          "id": {
-            "type": "string"
-          },
-          "authority_name": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/gear_certification.json#/components/schemas/GearCertification"
       },
       "GearCertificationAuthority": {
-        "type": "string",
-        "enum": [
-          "unknown",
-          "ccc",
-          "ce",
-          "fcc",
-          "miit",
-          "srrc",
-          "rohs",
-          "internal"
-        ]
+        "$ref": "./type/gear_certification_authority.json#/components/schemas/GearCertificationAuthority"
       },
       "GearCertificationType": {
-        "type": "string",
-        "enum": [
-          "license",
-          "certification"
-        ]
+        "$ref": "./type/gear_certification_type.json#/components/schemas/GearCertificationType"
       },
       "GearFirmwareChannel": {
-        "type": "string"
+        "$ref": "./type/gear_firmware_channel.json#/components/schemas/GearFirmwareChannel"
       },
       "GearIMEI": {
-        "type": "object",
-        "required": [
-          "tac",
-          "serial"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "tac": {
-            "type": "string"
-          },
-          "serial": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/gear_imei.json#/components/schemas/GearIMEI"
       },
       "GearLabel": {
-        "type": "object",
-        "required": [
-          "key",
-          "value"
-        ],
-        "properties": {
-          "key": {
-            "type": "string"
-          },
-          "value": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/gear_label.json#/components/schemas/GearLabel"
       },
       "GearRole": {
-        "type": "string",
-        "enum": [
-          "unspecified",
-          "admin",
-          "peer",
-          "device"
-        ]
+        "$ref": "./type/gear_role.json#/components/schemas/GearRole"
       },
       "GearStatus": {
-        "type": "string",
-        "enum": [
-          "unspecified",
-          "active",
-          "blocked"
-        ]
+        "$ref": "./type/gear_status.json#/components/schemas/GearStatus"
       },
       "HardwareInfo": {
-        "type": "object",
-        "properties": {
-          "manufacturer": {
-            "type": "string"
-          },
-          "model": {
-            "type": "string"
-          },
-          "hardware_revision": {
-            "type": "string"
-          },
-          "depot": {
-            "type": "string"
-          },
-          "firmware_semver": {
-            "type": "string"
-          },
-          "imeis": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GearIMEI"
-            }
-          },
-          "labels": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GearLabel"
-            }
-          }
-        }
+        "$ref": "./type/hardware_info.json#/components/schemas/HardwareInfo"
       },
       "OTASummary": {
-        "type": "object",
-        "required": [
-          "depot",
-          "channel",
-          "firmware_semver",
-          "files"
-        ],
-        "properties": {
-          "depot": {
-            "type": "string"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "firmware_semver": {
-            "type": "string"
-          },
-          "files": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DepotFile"
-            }
-          }
-        }
+        "$ref": "./type/ota_summary.json#/components/schemas/OTASummary"
       },
       "Registration": {
-        "type": "object",
-        "required": [
-          "public_key",
-          "role",
-          "status",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "public_key": {
-            "type": "string"
-          },
-          "role": {
-            "$ref": "#/components/schemas/GearRole"
-          },
-          "status": {
-            "$ref": "#/components/schemas/GearStatus"
-          },
-          "auto_registered": {
-            "type": "boolean"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "approved_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "$ref": "./type/registration.json#/components/schemas/Registration"
       },
       "Runtime": {
-        "type": "object",
-        "required": [
-          "online",
-          "last_seen_at"
-        ],
-        "properties": {
-          "online": {
-            "type": "boolean"
-          },
-          "last_seen_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "last_addr": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/runtime.json#/components/schemas/Runtime"
       },
       "Channel": {
-        "type": "string"
+        "$ref": "./type/channel.json#/components/schemas/Channel"
       },
       "Depot": {
-        "type": "object",
-        "required": [
-          "name",
-          "info",
-          "rollback",
-          "stable",
-          "beta",
-          "testing"
-        ],
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "info": {
-            "$ref": "#/components/schemas/DepotInfo"
-          },
-          "rollback": {
-            "$ref": "#/components/schemas/DepotRelease"
-          },
-          "stable": {
-            "$ref": "#/components/schemas/DepotRelease"
-          },
-          "beta": {
-            "$ref": "#/components/schemas/DepotRelease"
-          },
-          "testing": {
-            "$ref": "#/components/schemas/DepotRelease"
-          }
-        }
+        "$ref": "./type/depot.json#/components/schemas/Depot"
       },
       "DepotInfo": {
-        "type": "object",
-        "properties": {
-          "files": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DepotInfoFile"
-            }
-          }
-        }
+        "$ref": "./type/depot_info.json#/components/schemas/DepotInfo"
       },
       "DepotInfoFile": {
-        "type": "object",
-        "required": [
-          "path"
-        ],
-        "properties": {
-          "path": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/depot_info_file.json#/components/schemas/DepotInfoFile"
       },
       "DepotRelease": {
-        "type": "object",
-        "required": [
-          "firmware_semver"
-        ],
-        "properties": {
-          "firmware_semver": {
-            "type": "string"
-          },
-          "channel": {
-            "type": "string"
-          },
-          "files": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/DepotFile"
-            }
-          }
-        }
+        "$ref": "./type/depot_release.json#/components/schemas/DepotRelease"
       },
       "ServerInfo": {
-        "type": "object",
-        "required": [
-          "public_key",
-          "server_time",
-          "build_commit"
-        ],
-        "properties": {
-          "public_key": {
-            "type": "string"
-          },
-          "server_time": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "build_commit": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/server_info.json#/components/schemas/ServerInfo"
       },
       "RefreshInfo": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "manufacturer": {
-            "type": "string"
-          },
-          "model": {
-            "type": "string"
-          },
-          "hardware_revision": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/refresh_info.json#/components/schemas/RefreshInfo"
       },
       "RefreshIdentifiers": {
-        "type": "object",
-        "properties": {
-          "sn": {
-            "type": "string"
-          },
-          "imeis": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GearIMEI"
-            }
-          },
-          "labels": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GearLabel"
-            }
-          }
-        }
+        "$ref": "./type/refresh_identifiers.json#/components/schemas/RefreshIdentifiers"
       },
       "RefreshVersion": {
-        "type": "object",
-        "properties": {
-          "depot": {
-            "type": "string"
-          },
-          "firmware_semver": {
-            "type": "string"
-          }
-        }
+        "$ref": "./type/refresh_version.json#/components/schemas/RefreshVersion"
       },
       "CredentialProvider": {
-        "type": "string",
-        "description": "Credential provider name"
+        "$ref": "./type/credential_provider.json#/components/schemas/CredentialProvider"
       },
       "CredentialMethod": {
-        "type": "string",
-        "description": "Credential authentication method",
-        "enum": [
-          "api_key",
-          "token",
-          "app_id_token"
-        ]
+        "$ref": "./type/credential_method.json#/components/schemas/CredentialMethod"
       },
       "CredentialName": {
-        "type": "string",
-        "description": "Credential name"
+        "$ref": "./type/credential_name.json#/components/schemas/CredentialName"
       },
       "Credential": {
-        "type": "object",
-        "required": [
-          "name",
-          "provider",
-          "method",
-          "body",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "name": {
-            "$ref": "#/components/schemas/CredentialName"
-          },
-          "provider": {
-            "$ref": "#/components/schemas/CredentialProvider"
-          },
-          "method": {
-            "$ref": "#/components/schemas/CredentialMethod"
-          },
-          "body": {
-            "$ref": "#/components/schemas/CredentialBody"
-          },
-          "description": {
-            "type": "string",
-            "example": "primary openai credential"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "$ref": "./type/credential.json#/components/schemas/Credential"
       },
       "CredentialBody": {
-        "type": "object",
-        "additionalProperties": true,
-        "example": {
-          "api_key": "sk-..."
-        }
+        "$ref": "./type/credential_body.json#/components/schemas/CredentialBody"
       },
       "MiniMaxTenantName": {
-        "type": "string",
-        "description": "MiniMax tenant name",
-        "example": "main-cn"
+        "$ref": "./type/minimax_tenant_name.json#/components/schemas/MiniMaxTenantName"
       },
       "MiniMaxAppID": {
-        "type": "string",
-        "description": "MiniMax app identifier",
-        "example": "app-123"
+        "$ref": "./type/minimax_app_id.json#/components/schemas/MiniMaxAppID"
       },
       "MiniMaxGroupID": {
-        "type": "string",
-        "description": "MiniMax group identifier",
-        "example": "group-123"
+        "$ref": "./type/minimax_group_id.json#/components/schemas/MiniMaxGroupID"
       },
       "VoiceID": {
-        "type": "string",
-        "description": "Global voice identifier",
-        "example": "voice-01"
+        "$ref": "./type/voice_id.json#/components/schemas/VoiceID"
       },
       "VoiceSource": {
-        "type": "string",
-        "description": "How the voice entered the global catalog",
-        "enum": [
-          "sync",
-          "manual"
-        ],
-        "example": "sync"
+        "$ref": "./type/voice_source.json#/components/schemas/VoiceSource"
       },
       "VoiceProviderKind": {
-        "type": "string",
-        "description": "Voice provider kind",
-        "example": "minimax-tenant"
+        "$ref": "./type/voice_provider_kind.json#/components/schemas/VoiceProviderKind"
       },
       "VoiceProviderName": {
-        "type": "string",
-        "description": "Voice provider instance name",
-        "example": "main-cn"
+        "$ref": "./type/voice_provider_name.json#/components/schemas/VoiceProviderName"
       },
       "VoiceProvider": {
-        "type": "object",
-        "required": [
-          "kind",
-          "name"
-        ],
-        "properties": {
-          "kind": {
-            "$ref": "#/components/schemas/VoiceProviderKind"
-          },
-          "name": {
-            "$ref": "#/components/schemas/VoiceProviderName"
-          }
-        }
+        "$ref": "./type/voice_provider.json#/components/schemas/VoiceProvider"
       },
       "MiniMaxTenant": {
-        "type": "object",
-        "required": [
-          "name",
-          "app_id",
-          "group_id",
-          "credential_name",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "name": {
-            "$ref": "#/components/schemas/MiniMaxTenantName"
-          },
-          "app_id": {
-            "$ref": "#/components/schemas/MiniMaxAppID"
-          },
-          "group_id": {
-            "$ref": "#/components/schemas/MiniMaxGroupID"
-          },
-          "credential_name": {
-            "$ref": "#/components/schemas/CredentialName"
-          },
-          "base_url": {
-            "type": "string",
-            "format": "uri",
-            "example": "https://api.minimax.chat"
-          },
-          "description": {
-            "type": "string",
-            "example": "primary MiniMax tenant for CN voices"
-          },
-          "last_synced_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "$ref": "./type/minimax_tenant.json#/components/schemas/MiniMaxTenant"
       },
       "Voice": {
-        "type": "object",
-        "required": [
-          "id",
-          "source",
-          "provider",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "id": {
-            "$ref": "#/components/schemas/VoiceID"
-          },
-          "source": {
-            "$ref": "#/components/schemas/VoiceSource"
-          },
-          "provider": {
-            "$ref": "#/components/schemas/VoiceProvider"
-          },
-          "provider_voice_id": {
-            "type": "string",
-            "description": "Upstream provider voice identifier. Present for synced voices.",
-            "example": "voice-system-1"
-          },
-          "name": {
-            "type": "string",
-            "example": "calm narrator"
-          },
-          "description": {
-            "type": "string",
-            "example": "calm female narrator"
-          },
-          "provider_voice_type": {
-            "type": "string",
-            "description": "Provider-specific voice type",
-            "example": "voice_cloning"
-          },
-          "raw": {
-            "type": "object",
-            "additionalProperties": true,
-            "example": {
-              "gender": "female"
-            }
-          },
-          "synced_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "$ref": "./type/voice.json#/components/schemas/Voice"
       },
       "WorkspaceTemplateName": {
-        "type": "string",
-        "description": "Workspace template name"
+        "$ref": "./type/workspace_template_name.json#/components/schemas/WorkspaceTemplateName"
       },
       "WorkspaceName": {
-        "type": "string",
-        "description": "Workspace name"
+        "$ref": "./type/workspace_name.json#/components/schemas/WorkspaceName"
+      },
+      "ResourceAPIVersion": {
+        "$ref": "./resource/resource.json#/components/schemas/ResourceAPIVersion"
+      },
+      "ResourceKind": {
+        "$ref": "./resource/resource.json#/components/schemas/ResourceKind"
+      },
+      "ResourceMetadata": {
+        "$ref": "./resource/resource.json#/components/schemas/ResourceMetadata"
+      },
+      "Resource": {
+        "$ref": "./resource/resource.json#/components/schemas/Resource"
+      },
+      "ResourceList": {
+        "$ref": "./resource/resource_list.json#/components/schemas/ResourceListResource"
+      },
+      "CredentialResource": {
+        "$ref": "./resource/credential.json#/components/schemas/CredentialResource"
+      },
+      "MiniMaxTenantResource": {
+        "$ref": "./resource/minimax_tenant.json#/components/schemas/MiniMaxTenantResource"
+      },
+      "VoiceResource": {
+        "$ref": "./resource/voice.json#/components/schemas/VoiceResource"
+      },
+      "WorkspaceTemplateResource": {
+        "$ref": "./resource/workspace_template.json#/components/schemas/WorkspaceTemplateResource"
+      },
+      "WorkspaceResource": {
+        "$ref": "./resource/workspace.json#/components/schemas/WorkspaceResource"
+      },
+      "GearConfigResource": {
+        "$ref": "./resource/gear_config.json#/components/schemas/GearConfigResource"
+      },
+      "CredentialSpec": {
+        "$ref": "./type/credential_spec.json#/components/schemas/CredentialSpec"
+      },
+      "MiniMaxTenantSpec": {
+        "$ref": "./type/minimax_tenant_spec.json#/components/schemas/MiniMaxTenantSpec"
+      },
+      "VoiceSpec": {
+        "$ref": "./type/voice_spec.json#/components/schemas/VoiceSpec"
+      },
+      "WorkspaceSpec": {
+        "$ref": "./type/workspace_spec.json#/components/schemas/WorkspaceSpec"
+      },
+      "ResourceListSpec": {
+        "$ref": "./type/resource_list_spec.json#/components/schemas/ResourceListSpec"
+      },
+      "ApplyResource": {
+        "$ref": "./resource/resource.json#/components/schemas/Resource"
+      },
+      "ApplyAction": {
+        "$ref": "./resource/resource.json#/components/schemas/ApplyAction"
+      },
+      "ApplyResult": {
+        "$ref": "./resource/resource.json#/components/schemas/ApplyResult"
       },
       "Workspace": {
-        "type": "object",
-        "required": [
-          "name",
-          "workspace_template_name",
-          "created_at",
-          "updated_at"
-        ],
-        "properties": {
-          "name": {
-            "$ref": "#/components/schemas/WorkspaceName"
-          },
-          "workspace_template_name": {
-            "$ref": "#/components/schemas/WorkspaceTemplateName"
-          },
-          "parameters": {
-            "type": "object",
-            "additionalProperties": true,
-            "example": {}
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
+        "$ref": "./type/workspace.json#/components/schemas/Workspace"
       },
       "WorkflowTemplateDocument": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/SingleAgentGraphWorkflowTemplate"
-          },
-          {
-            "$ref": "#/components/schemas/MultiAgentGraphWorkflowTemplate"
-          }
-        ],
-        "discriminator": {
-          "propertyName": "kind",
-          "mapping": {
-            "SingleAgentGraphWorkflowTemplate": "#/components/schemas/SingleAgentGraphWorkflowTemplate",
-            "MultiAgentGraphWorkflowTemplate": "#/components/schemas/MultiAgentGraphWorkflowTemplate"
-          }
-        }
+        "$ref": "./type/workflow_template_document.json#/components/schemas/WorkflowTemplateDocument"
       },
       "TemplateMetadata": {
-        "type": "object",
-        "required": [
-          "name"
-        ],
-        "properties": {
-          "name": {
-            "type": "string",
-            "example": "demo-assistant"
-          },
-          "description": {
-            "type": "string",
-            "example": "single-agent graph workflow"
-          }
-        }
+        "$ref": "./type/template_metadata.json#/components/schemas/TemplateMetadata"
       },
       "SingleAgentGraphWorkflowTemplate": {
-        "type": "object",
-        "required": [
-          "apiVersion",
-          "kind",
-          "metadata",
-          "spec"
-        ],
-        "properties": {
-          "apiVersion": {
-            "type": "string",
-            "enum": [
-              "gizclaw.flowcraft/v1alpha1"
-            ]
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "SingleAgentGraphWorkflowTemplate"
-            ]
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/TemplateMetadata"
-          },
-          "spec": {
-            "$ref": "#/components/schemas/SingleAgentGraphWorkflowSpec"
-          }
-        },
-        "example": {
-          "apiVersion": "gizclaw.flowcraft/v1alpha1",
-          "kind": "SingleAgentGraphWorkflowTemplate",
-          "metadata": {
-            "name": "demo-assistant",
-            "description": "single-agent graph workflow"
-          },
-          "spec": {}
-        }
+        "$ref": "./type/single_agent_graph_workflow_template.json#/components/schemas/SingleAgentGraphWorkflowTemplate"
       },
       "SingleAgentGraphWorkflowSpec": {
-        "type": "object",
-        "example": {}
+        "$ref": "./type/single_agent_graph_workflow_spec.json#/components/schemas/SingleAgentGraphWorkflowSpec"
       },
       "MultiAgentGraphWorkflowTemplate": {
-        "type": "object",
-        "required": [
-          "apiVersion",
-          "kind",
-          "metadata",
-          "spec"
-        ],
-        "properties": {
-          "apiVersion": {
-            "type": "string",
-            "enum": [
-              "gizclaw.flowcraft/v1alpha1"
-            ]
-          },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "MultiAgentGraphWorkflowTemplate"
-            ]
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/TemplateMetadata"
-          },
-          "spec": {
-            "$ref": "#/components/schemas/MultiAgentGraphWorkflowSpec"
-          }
-        },
-        "example": {
-          "apiVersion": "gizclaw.flowcraft/v1alpha1",
-          "kind": "MultiAgentGraphWorkflowTemplate",
-          "metadata": {
-            "name": "demo-team",
-            "description": "multi-agent graph workflow"
-          },
-          "spec": {}
-        }
+        "$ref": "./type/multi_agent_graph_workflow_template.json#/components/schemas/MultiAgentGraphWorkflowTemplate"
       },
       "MultiAgentGraphWorkflowSpec": {
-        "type": "object",
-        "example": {}
+        "$ref": "./type/multi_agent_graph_workflow_spec.json#/components/schemas/MultiAgentGraphWorkflowSpec"
       }
     }
   }

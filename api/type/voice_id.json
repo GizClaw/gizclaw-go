@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Voice ID Type",
+    "description": "VoiceID schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VoiceID": {
+        "type": "string",
+        "description": "Global voice identifier",
+        "example": "voice-01"
+      }
+    }
+  }
+}

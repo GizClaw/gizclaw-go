@@ -1,0 +1,16 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gear Firmware Channel Type",
+    "description": "GearFirmwareChannel schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GearFirmwareChannel": {
+        "type": "string"
+      }
+    }
+  }
+}

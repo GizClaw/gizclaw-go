@@ -1,0 +1,26 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gear Certification Authority Type",
+    "description": "GearCertificationAuthority schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GearCertificationAuthority": {
+        "type": "string",
+        "enum": [
+          "unknown",
+          "ccc",
+          "ce",
+          "fcc",
+          "miit",
+          "srrc",
+          "rohs",
+          "internal"
+        ]
+      }
+    }
+  }
+}

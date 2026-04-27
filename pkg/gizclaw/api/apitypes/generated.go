@@ -11,21 +11,60 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// Defines values for ApplyAction.
+const (
+	ApplyActionApplied   ApplyAction = "applied"
+	ApplyActionCreated   ApplyAction = "created"
+	ApplyActionUnchanged ApplyAction = "unchanged"
+	ApplyActionUpdated   ApplyAction = "updated"
+)
+
+// Valid indicates whether the value is a known member of the ApplyAction enum.
+func (e ApplyAction) Valid() bool {
+	switch e {
+	case ApplyActionApplied:
+		return true
+	case ApplyActionCreated:
+		return true
+	case ApplyActionUnchanged:
+		return true
+	case ApplyActionUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CredentialMethod.
 const (
-	ApiKey     CredentialMethod = "api_key"
-	AppIdToken CredentialMethod = "app_id_token"
-	Token      CredentialMethod = "token"
+	CredentialMethodApiKey     CredentialMethod = "api_key"
+	CredentialMethodAppIdToken CredentialMethod = "app_id_token"
+	CredentialMethodToken      CredentialMethod = "token"
 )
 
 // Valid indicates whether the value is a known member of the CredentialMethod enum.
 func (e CredentialMethod) Valid() bool {
 	switch e {
-	case ApiKey:
+	case CredentialMethodApiKey:
 		return true
-	case AppIdToken:
+	case CredentialMethodAppIdToken:
 		return true
-	case Token:
+	case CredentialMethodToken:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CredentialResourceKind.
+const (
+	CredentialResourceKindCredential CredentialResourceKind = "Credential"
+)
+
+// Valid indicates whether the value is a known member of the CredentialResourceKind enum.
+func (e CredentialResourceKind) Valid() bool {
+	switch e {
+	case CredentialResourceKindCredential:
 		return true
 	default:
 		return false
@@ -34,34 +73,34 @@ func (e CredentialMethod) Valid() bool {
 
 // Defines values for GearCertificationAuthority.
 const (
-	Ccc      GearCertificationAuthority = "ccc"
-	Ce       GearCertificationAuthority = "ce"
-	Fcc      GearCertificationAuthority = "fcc"
-	Internal GearCertificationAuthority = "internal"
-	Miit     GearCertificationAuthority = "miit"
-	Rohs     GearCertificationAuthority = "rohs"
-	Srrc     GearCertificationAuthority = "srrc"
-	Unknown  GearCertificationAuthority = "unknown"
+	GearCertificationAuthorityCcc      GearCertificationAuthority = "ccc"
+	GearCertificationAuthorityCe       GearCertificationAuthority = "ce"
+	GearCertificationAuthorityFcc      GearCertificationAuthority = "fcc"
+	GearCertificationAuthorityInternal GearCertificationAuthority = "internal"
+	GearCertificationAuthorityMiit     GearCertificationAuthority = "miit"
+	GearCertificationAuthorityRohs     GearCertificationAuthority = "rohs"
+	GearCertificationAuthoritySrrc     GearCertificationAuthority = "srrc"
+	GearCertificationAuthorityUnknown  GearCertificationAuthority = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the GearCertificationAuthority enum.
 func (e GearCertificationAuthority) Valid() bool {
 	switch e {
-	case Ccc:
+	case GearCertificationAuthorityCcc:
 		return true
-	case Ce:
+	case GearCertificationAuthorityCe:
 		return true
-	case Fcc:
+	case GearCertificationAuthorityFcc:
 		return true
-	case Internal:
+	case GearCertificationAuthorityInternal:
 		return true
-	case Miit:
+	case GearCertificationAuthorityMiit:
 		return true
-	case Rohs:
+	case GearCertificationAuthorityRohs:
 		return true
-	case Srrc:
+	case GearCertificationAuthoritySrrc:
 		return true
-	case Unknown:
+	case GearCertificationAuthorityUnknown:
 		return true
 	default:
 		return false
@@ -70,16 +109,31 @@ func (e GearCertificationAuthority) Valid() bool {
 
 // Defines values for GearCertificationType.
 const (
-	Certification GearCertificationType = "certification"
-	License       GearCertificationType = "license"
+	GearCertificationTypeCertification GearCertificationType = "certification"
+	GearCertificationTypeLicense       GearCertificationType = "license"
 )
 
 // Valid indicates whether the value is a known member of the GearCertificationType enum.
 func (e GearCertificationType) Valid() bool {
 	switch e {
-	case Certification:
+	case GearCertificationTypeCertification:
 		return true
-	case License:
+	case GearCertificationTypeLicense:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GearConfigResourceKind.
+const (
+	GearConfigResourceKindGearConfig GearConfigResourceKind = "GearConfig"
+)
+
+// Valid indicates whether the value is a known member of the GearConfigResourceKind enum.
+func (e GearConfigResourceKind) Valid() bool {
+	switch e {
+	case GearConfigResourceKindGearConfig:
 		return true
 	default:
 		return false
@@ -131,15 +185,15 @@ func (e GearStatus) Valid() bool {
 	}
 }
 
-// Defines values for MultiAgentGraphWorkflowTemplateApiVersion.
+// Defines values for MiniMaxTenantResourceKind.
 const (
-	MultiAgentGraphWorkflowTemplateApiVersionGizclawFlowcraftv1alpha1 MultiAgentGraphWorkflowTemplateApiVersion = "gizclaw.flowcraft/v1alpha1"
+	MiniMaxTenantResourceKindMiniMaxTenant MiniMaxTenantResourceKind = "MiniMaxTenant"
 )
 
-// Valid indicates whether the value is a known member of the MultiAgentGraphWorkflowTemplateApiVersion enum.
-func (e MultiAgentGraphWorkflowTemplateApiVersion) Valid() bool {
+// Valid indicates whether the value is a known member of the MiniMaxTenantResourceKind enum.
+func (e MiniMaxTenantResourceKind) Valid() bool {
 	switch e {
-	case MultiAgentGraphWorkflowTemplateApiVersionGizclawFlowcraftv1alpha1:
+	case MiniMaxTenantResourceKindMiniMaxTenant:
 		return true
 	default:
 		return false
@@ -161,15 +215,63 @@ func (e MultiAgentGraphWorkflowTemplateKind) Valid() bool {
 	}
 }
 
-// Defines values for SingleAgentGraphWorkflowTemplateApiVersion.
+// Defines values for ResourceAPIVersion.
 const (
-	SingleAgentGraphWorkflowTemplateApiVersionGizclawFlowcraftv1alpha1 SingleAgentGraphWorkflowTemplateApiVersion = "gizclaw.flowcraft/v1alpha1"
+	ResourceAPIVersionGizclawAdminv1alpha1 ResourceAPIVersion = "gizclaw.admin/v1alpha1"
 )
 
-// Valid indicates whether the value is a known member of the SingleAgentGraphWorkflowTemplateApiVersion enum.
-func (e SingleAgentGraphWorkflowTemplateApiVersion) Valid() bool {
+// Valid indicates whether the value is a known member of the ResourceAPIVersion enum.
+func (e ResourceAPIVersion) Valid() bool {
 	switch e {
-	case SingleAgentGraphWorkflowTemplateApiVersionGizclawFlowcraftv1alpha1:
+	case ResourceAPIVersionGizclawAdminv1alpha1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResourceKind.
+const (
+	ResourceKindCredential        ResourceKind = "Credential"
+	ResourceKindGearConfig        ResourceKind = "GearConfig"
+	ResourceKindMiniMaxTenant     ResourceKind = "MiniMaxTenant"
+	ResourceKindResourceList      ResourceKind = "ResourceList"
+	ResourceKindVoice             ResourceKind = "Voice"
+	ResourceKindWorkspace         ResourceKind = "Workspace"
+	ResourceKindWorkspaceTemplate ResourceKind = "WorkspaceTemplate"
+)
+
+// Valid indicates whether the value is a known member of the ResourceKind enum.
+func (e ResourceKind) Valid() bool {
+	switch e {
+	case ResourceKindCredential:
+		return true
+	case ResourceKindGearConfig:
+		return true
+	case ResourceKindMiniMaxTenant:
+		return true
+	case ResourceKindResourceList:
+		return true
+	case ResourceKindVoice:
+		return true
+	case ResourceKindWorkspace:
+		return true
+	case ResourceKindWorkspaceTemplate:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ResourceListResourceKind.
+const (
+	ResourceListResourceKindResourceList ResourceListResourceKind = "ResourceList"
+)
+
+// Valid indicates whether the value is a known member of the ResourceListResourceKind enum.
+func (e ResourceListResourceKind) Valid() bool {
+	switch e {
+	case ResourceListResourceKindResourceList:
 		return true
 	default:
 		return false
@@ -191,22 +293,105 @@ func (e SingleAgentGraphWorkflowTemplateKind) Valid() bool {
 	}
 }
 
+// Defines values for VoiceResourceKind.
+const (
+	VoiceResourceKindVoice VoiceResourceKind = "Voice"
+)
+
+// Valid indicates whether the value is a known member of the VoiceResourceKind enum.
+func (e VoiceResourceKind) Valid() bool {
+	switch e {
+	case VoiceResourceKindVoice:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for VoiceSource.
 const (
-	Manual VoiceSource = "manual"
-	Sync   VoiceSource = "sync"
+	VoiceSourceManual VoiceSource = "manual"
+	VoiceSourceSync   VoiceSource = "sync"
 )
 
 // Valid indicates whether the value is a known member of the VoiceSource enum.
 func (e VoiceSource) Valid() bool {
 	switch e {
-	case Manual:
+	case VoiceSourceManual:
 		return true
-	case Sync:
+	case VoiceSourceSync:
 		return true
 	default:
 		return false
 	}
+}
+
+// Defines values for WorkflowTemplateAPIVersion.
+const (
+	WorkflowTemplateAPIVersionGizclawFlowcraftv1alpha1 WorkflowTemplateAPIVersion = "gizclaw.flowcraft/v1alpha1"
+)
+
+// Valid indicates whether the value is a known member of the WorkflowTemplateAPIVersion enum.
+func (e WorkflowTemplateAPIVersion) Valid() bool {
+	switch e {
+	case WorkflowTemplateAPIVersionGizclawFlowcraftv1alpha1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkspaceResourceKind.
+const (
+	WorkspaceResourceKindWorkspace WorkspaceResourceKind = "Workspace"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceResourceKind enum.
+func (e WorkspaceResourceKind) Valid() bool {
+	switch e {
+	case WorkspaceResourceKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkspaceTemplateResourceKind.
+const (
+	WorkspaceTemplateResourceKindWorkspaceTemplate WorkspaceTemplateResourceKind = "WorkspaceTemplate"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceTemplateResourceKind enum.
+func (e WorkspaceTemplateResourceKind) Valid() bool {
+	switch e {
+	case WorkspaceTemplateResourceKindWorkspaceTemplate:
+		return true
+	default:
+		return false
+	}
+}
+
+// ApplyAction Result of applying the resource.
+type ApplyAction string
+
+// ApplyResource defines model for ApplyResource.
+type ApplyResource = Resource
+
+// ApplyResult defines model for ApplyResult.
+type ApplyResult struct {
+	// Action Result of applying the resource.
+	Action ApplyAction `json:"action"`
+
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion `json:"apiVersion"`
+
+	// Items Nested apply results for ResourceList resources.
+	Items *[]ApplyResult `json:"items,omitempty"`
+
+	// Kind Declarative GizClaw resource kind.
+	Kind    ResourceKind `json:"kind"`
+	Message *string      `json:"message,omitempty"`
+	Name    string       `json:"name"`
 }
 
 // Channel defines model for Channel.
@@ -246,6 +431,30 @@ type CredentialName = string
 
 // CredentialProvider Credential provider name
 type CredentialProvider = string
+
+// CredentialResource defines model for CredentialResource.
+type CredentialResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion     `json:"apiVersion"`
+	Kind       CredentialResourceKind `json:"kind"`
+	Metadata   ResourceMetadata       `json:"metadata"`
+	Spec       CredentialSpec         `json:"spec"`
+}
+
+// CredentialResourceKind defines model for CredentialResource.Kind.
+type CredentialResourceKind string
+
+// CredentialSpec defines model for CredentialSpec.
+type CredentialSpec struct {
+	Body        CredentialBody `json:"body"`
+	Description *string        `json:"description,omitempty"`
+
+	// Method Credential authentication method
+	Method CredentialMethod `json:"method"`
+
+	// Provider Credential provider name
+	Provider CredentialProvider `json:"provider"`
+}
 
 // Depot defines model for Depot.
 type Depot struct {
@@ -332,6 +541,18 @@ type GearCertificationAuthority string
 // GearCertificationType defines model for GearCertificationType.
 type GearCertificationType string
 
+// GearConfigResource defines model for GearConfigResource.
+type GearConfigResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion     `json:"apiVersion"`
+	Kind       GearConfigResourceKind `json:"kind"`
+	Metadata   ResourceMetadata       `json:"metadata"`
+	Spec       Configuration          `json:"spec"`
+}
+
+// GearConfigResourceKind defines model for GearConfigResource.Kind.
+type GearConfigResourceKind string
+
 // GearFirmwareChannel defines model for GearFirmwareChannel.
 type GearFirmwareChannel = string
 
@@ -394,19 +615,42 @@ type MiniMaxTenant struct {
 // MiniMaxTenantName MiniMax tenant name
 type MiniMaxTenantName = string
 
+// MiniMaxTenantResource defines model for MiniMaxTenantResource.
+type MiniMaxTenantResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion        `json:"apiVersion"`
+	Kind       MiniMaxTenantResourceKind `json:"kind"`
+	Metadata   ResourceMetadata          `json:"metadata"`
+	Spec       MiniMaxTenantSpec         `json:"spec"`
+}
+
+// MiniMaxTenantResourceKind defines model for MiniMaxTenantResource.Kind.
+type MiniMaxTenantResourceKind string
+
+// MiniMaxTenantSpec defines model for MiniMaxTenantSpec.
+type MiniMaxTenantSpec struct {
+	// AppId MiniMax app identifier
+	AppId   MiniMaxAppID `json:"app_id"`
+	BaseUrl *string      `json:"base_url,omitempty"`
+
+	// CredentialName Credential name
+	CredentialName CredentialName `json:"credential_name"`
+	Description    *string        `json:"description,omitempty"`
+
+	// GroupId MiniMax group identifier
+	GroupId MiniMaxGroupID `json:"group_id"`
+}
+
 // MultiAgentGraphWorkflowSpec defines model for MultiAgentGraphWorkflowSpec.
 type MultiAgentGraphWorkflowSpec = map[string]interface{}
 
 // MultiAgentGraphWorkflowTemplate defines model for MultiAgentGraphWorkflowTemplate.
 type MultiAgentGraphWorkflowTemplate struct {
-	ApiVersion MultiAgentGraphWorkflowTemplateApiVersion `json:"apiVersion"`
-	Kind       MultiAgentGraphWorkflowTemplateKind       `json:"kind"`
-	Metadata   TemplateMetadata                          `json:"metadata"`
-	Spec       MultiAgentGraphWorkflowSpec               `json:"spec"`
+	ApiVersion WorkflowTemplateAPIVersion          `json:"apiVersion"`
+	Kind       MultiAgentGraphWorkflowTemplateKind `json:"kind"`
+	Metadata   TemplateMetadata                    `json:"metadata"`
+	Spec       MultiAgentGraphWorkflowSpec         `json:"spec"`
 }
-
-// MultiAgentGraphWorkflowTemplateApiVersion defines model for MultiAgentGraphWorkflowTemplate.ApiVersion.
-type MultiAgentGraphWorkflowTemplateApiVersion string
 
 // MultiAgentGraphWorkflowTemplateKind defines model for MultiAgentGraphWorkflowTemplate.Kind.
 type MultiAgentGraphWorkflowTemplateKind string
@@ -451,6 +695,46 @@ type Registration struct {
 	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
+// Resource defines model for Resource.
+type Resource struct {
+	union json.RawMessage
+}
+
+// ResourceAPIVersion API version for declarative GizClaw resources.
+type ResourceAPIVersion string
+
+// ResourceKind Declarative GizClaw resource kind.
+type ResourceKind string
+
+// ResourceList defines model for ResourceList.
+type ResourceList = ResourceListResource
+
+// ResourceListResource defines model for ResourceListResource.
+type ResourceListResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion       `json:"apiVersion"`
+	Kind       ResourceListResourceKind `json:"kind"`
+	Metadata   ResourceMetadata         `json:"metadata"`
+	Spec       ResourceListSpec         `json:"spec"`
+}
+
+// ResourceListResourceKind defines model for ResourceListResource.Kind.
+type ResourceListResourceKind string
+
+// ResourceListSpec defines model for ResourceListSpec.
+type ResourceListSpec struct {
+	Items []Resource `json:"items"`
+}
+
+// ResourceMetadata defines model for ResourceMetadata.
+type ResourceMetadata struct {
+	Annotations *map[string]string `json:"annotations,omitempty"`
+	Labels      *map[string]string `json:"labels,omitempty"`
+
+	// Name Resource name. For GearConfig this is the gear public key.
+	Name string `json:"name"`
+}
+
 // Runtime defines model for Runtime.
 type Runtime struct {
 	LastAddr   *string   `json:"last_addr,omitempty"`
@@ -470,14 +754,11 @@ type SingleAgentGraphWorkflowSpec = map[string]interface{}
 
 // SingleAgentGraphWorkflowTemplate defines model for SingleAgentGraphWorkflowTemplate.
 type SingleAgentGraphWorkflowTemplate struct {
-	ApiVersion SingleAgentGraphWorkflowTemplateApiVersion `json:"apiVersion"`
-	Kind       SingleAgentGraphWorkflowTemplateKind       `json:"kind"`
-	Metadata   TemplateMetadata                           `json:"metadata"`
-	Spec       SingleAgentGraphWorkflowSpec               `json:"spec"`
+	ApiVersion WorkflowTemplateAPIVersion           `json:"apiVersion"`
+	Kind       SingleAgentGraphWorkflowTemplateKind `json:"kind"`
+	Metadata   TemplateMetadata                     `json:"metadata"`
+	Spec       SingleAgentGraphWorkflowSpec         `json:"spec"`
 }
-
-// SingleAgentGraphWorkflowTemplateApiVersion defines model for SingleAgentGraphWorkflowTemplate.ApiVersion.
-type SingleAgentGraphWorkflowTemplateApiVersion string
 
 // SingleAgentGraphWorkflowTemplateKind defines model for SingleAgentGraphWorkflowTemplate.Kind.
 type SingleAgentGraphWorkflowTemplateKind string
@@ -529,8 +810,40 @@ type VoiceProviderKind = string
 // VoiceProviderName Voice provider instance name
 type VoiceProviderName = string
 
+// VoiceResource defines model for VoiceResource.
+type VoiceResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion `json:"apiVersion"`
+	Kind       VoiceResourceKind  `json:"kind"`
+	Metadata   ResourceMetadata   `json:"metadata"`
+	Spec       VoiceSpec          `json:"spec"`
+}
+
+// VoiceResourceKind defines model for VoiceResource.Kind.
+type VoiceResourceKind string
+
 // VoiceSource How the voice entered the global catalog
 type VoiceSource string
+
+// VoiceSpec defines model for VoiceSpec.
+type VoiceSpec struct {
+	Description *string       `json:"description,omitempty"`
+	Name        *string       `json:"name,omitempty"`
+	Provider    VoiceProvider `json:"provider"`
+
+	// ProviderVoiceId Upstream provider voice identifier. Present for synced voices.
+	ProviderVoiceId *string `json:"provider_voice_id,omitempty"`
+
+	// ProviderVoiceType Provider-specific voice type
+	ProviderVoiceType *string                 `json:"provider_voice_type,omitempty"`
+	Raw               *map[string]interface{} `json:"raw,omitempty"`
+
+	// Source How the voice entered the global catalog
+	Source VoiceSource `json:"source"`
+}
+
+// WorkflowTemplateAPIVersion defines model for WorkflowTemplateAPIVersion.
+type WorkflowTemplateAPIVersion string
 
 // WorkflowTemplateDocument defines model for WorkflowTemplateDocument.
 type WorkflowTemplateDocument struct {
@@ -553,8 +866,279 @@ type Workspace struct {
 // WorkspaceName Workspace name
 type WorkspaceName = string
 
+// WorkspaceResource defines model for WorkspaceResource.
+type WorkspaceResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion    `json:"apiVersion"`
+	Kind       WorkspaceResourceKind `json:"kind"`
+	Metadata   ResourceMetadata      `json:"metadata"`
+	Spec       WorkspaceSpec         `json:"spec"`
+}
+
+// WorkspaceResourceKind defines model for WorkspaceResource.Kind.
+type WorkspaceResourceKind string
+
+// WorkspaceSpec defines model for WorkspaceSpec.
+type WorkspaceSpec struct {
+	Parameters *map[string]interface{} `json:"parameters,omitempty"`
+
+	// WorkspaceTemplateName Workspace template name
+	WorkspaceTemplateName WorkspaceTemplateName `json:"workspace_template_name"`
+}
+
 // WorkspaceTemplateName Workspace template name
 type WorkspaceTemplateName = string
+
+// WorkspaceTemplateResource defines model for WorkspaceTemplateResource.
+type WorkspaceTemplateResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion            `json:"apiVersion"`
+	Kind       WorkspaceTemplateResourceKind `json:"kind"`
+	Metadata   ResourceMetadata              `json:"metadata"`
+	Spec       WorkflowTemplateDocument      `json:"spec"`
+}
+
+// WorkspaceTemplateResourceKind defines model for WorkspaceTemplateResource.Kind.
+type WorkspaceTemplateResourceKind string
+
+// AsCredentialResource returns the union data inside the Resource as a CredentialResource
+func (t Resource) AsCredentialResource() (CredentialResource, error) {
+	var body CredentialResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCredentialResource overwrites any union data inside the Resource as the provided CredentialResource
+func (t *Resource) FromCredentialResource(v CredentialResource) error {
+	v.Kind = "CredentialResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCredentialResource performs a merge with any union data inside the Resource, using the provided CredentialResource
+func (t *Resource) MergeCredentialResource(v CredentialResource) error {
+	v.Kind = "CredentialResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsMiniMaxTenantResource returns the union data inside the Resource as a MiniMaxTenantResource
+func (t Resource) AsMiniMaxTenantResource() (MiniMaxTenantResource, error) {
+	var body MiniMaxTenantResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromMiniMaxTenantResource overwrites any union data inside the Resource as the provided MiniMaxTenantResource
+func (t *Resource) FromMiniMaxTenantResource(v MiniMaxTenantResource) error {
+	v.Kind = "MiniMaxTenantResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeMiniMaxTenantResource performs a merge with any union data inside the Resource, using the provided MiniMaxTenantResource
+func (t *Resource) MergeMiniMaxTenantResource(v MiniMaxTenantResource) error {
+	v.Kind = "MiniMaxTenantResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsVoiceResource returns the union data inside the Resource as a VoiceResource
+func (t Resource) AsVoiceResource() (VoiceResource, error) {
+	var body VoiceResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromVoiceResource overwrites any union data inside the Resource as the provided VoiceResource
+func (t *Resource) FromVoiceResource(v VoiceResource) error {
+	v.Kind = "VoiceResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeVoiceResource performs a merge with any union data inside the Resource, using the provided VoiceResource
+func (t *Resource) MergeVoiceResource(v VoiceResource) error {
+	v.Kind = "VoiceResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsWorkspaceTemplateResource returns the union data inside the Resource as a WorkspaceTemplateResource
+func (t Resource) AsWorkspaceTemplateResource() (WorkspaceTemplateResource, error) {
+	var body WorkspaceTemplateResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromWorkspaceTemplateResource overwrites any union data inside the Resource as the provided WorkspaceTemplateResource
+func (t *Resource) FromWorkspaceTemplateResource(v WorkspaceTemplateResource) error {
+	v.Kind = "WorkspaceTemplateResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeWorkspaceTemplateResource performs a merge with any union data inside the Resource, using the provided WorkspaceTemplateResource
+func (t *Resource) MergeWorkspaceTemplateResource(v WorkspaceTemplateResource) error {
+	v.Kind = "WorkspaceTemplateResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsWorkspaceResource returns the union data inside the Resource as a WorkspaceResource
+func (t Resource) AsWorkspaceResource() (WorkspaceResource, error) {
+	var body WorkspaceResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromWorkspaceResource overwrites any union data inside the Resource as the provided WorkspaceResource
+func (t *Resource) FromWorkspaceResource(v WorkspaceResource) error {
+	v.Kind = "WorkspaceResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeWorkspaceResource performs a merge with any union data inside the Resource, using the provided WorkspaceResource
+func (t *Resource) MergeWorkspaceResource(v WorkspaceResource) error {
+	v.Kind = "WorkspaceResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGearConfigResource returns the union data inside the Resource as a GearConfigResource
+func (t Resource) AsGearConfigResource() (GearConfigResource, error) {
+	var body GearConfigResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGearConfigResource overwrites any union data inside the Resource as the provided GearConfigResource
+func (t *Resource) FromGearConfigResource(v GearConfigResource) error {
+	v.Kind = "GearConfigResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGearConfigResource performs a merge with any union data inside the Resource, using the provided GearConfigResource
+func (t *Resource) MergeGearConfigResource(v GearConfigResource) error {
+	v.Kind = "GearConfigResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsResourceListResource returns the union data inside the Resource as a ResourceListResource
+func (t Resource) AsResourceListResource() (ResourceListResource, error) {
+	var body ResourceListResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromResourceListResource overwrites any union data inside the Resource as the provided ResourceListResource
+func (t *Resource) FromResourceListResource(v ResourceListResource) error {
+	v.Kind = "ResourceListResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeResourceListResource performs a merge with any union data inside the Resource, using the provided ResourceListResource
+func (t *Resource) MergeResourceListResource(v ResourceListResource) error {
+	v.Kind = "ResourceListResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Resource) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kind"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t Resource) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "CredentialResource":
+		return t.AsCredentialResource()
+	case "GearConfigResource":
+		return t.AsGearConfigResource()
+	case "MiniMaxTenantResource":
+		return t.AsMiniMaxTenantResource()
+	case "ResourceListResource":
+		return t.AsResourceListResource()
+	case "VoiceResource":
+		return t.AsVoiceResource()
+	case "WorkspaceResource":
+		return t.AsWorkspaceResource()
+	case "WorkspaceTemplateResource":
+		return t.AsWorkspaceTemplateResource()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t Resource) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *Resource) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // AsSingleAgentGraphWorkflowTemplate returns the union data inside the WorkflowTemplateDocument as a SingleAgentGraphWorkflowTemplate
 func (t WorkflowTemplateDocument) AsSingleAgentGraphWorkflowTemplate() (SingleAgentGraphWorkflowTemplate, error) {

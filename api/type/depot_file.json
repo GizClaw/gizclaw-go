@@ -1,0 +1,32 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Depot File Type",
+    "description": "DepotFile schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "DepotFile": {
+        "type": "object",
+        "required": [
+          "path",
+          "sha256",
+          "md5"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "md5": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

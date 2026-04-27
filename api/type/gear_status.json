@@ -1,0 +1,21 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gear Status Type",
+    "description": "GearStatus schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GearStatus": {
+        "type": "string",
+        "enum": [
+          "unspecified",
+          "active",
+          "blocked"
+        ]
+      }
+    }
+  }
+}

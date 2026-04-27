@@ -1,0 +1,28 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Voice Provider Type",
+    "description": "VoiceProvider schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VoiceProvider": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "./voice_provider_kind.json#/components/schemas/VoiceProviderKind"
+          },
+          "name": {
+            "$ref": "./voice_provider_name.json#/components/schemas/VoiceProviderName"
+          }
+        }
+      }
+    }
+  }
+}

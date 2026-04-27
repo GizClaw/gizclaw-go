@@ -42,6 +42,9 @@ func TestRootHelp(t *testing.T) {
 	if !strings.Contains(out, "play") {
 		t.Fatalf("help missing 'play': %s", out)
 	}
+	if !strings.Contains(out, "server-info") {
+		t.Fatalf("help missing 'server-info': %s", out)
+	}
 }
 
 func TestServeHelp(t *testing.T) {
@@ -103,6 +106,12 @@ func TestContextHelp(t *testing.T) {
 	if !strings.Contains(out, "list") {
 		t.Fatalf("context help missing 'list': %s", out)
 	}
+	if !strings.Contains(out, "info") {
+		t.Fatalf("context help missing 'info': %s", out)
+	}
+	if !strings.Contains(out, "show") {
+		t.Fatalf("context help missing 'show': %s", out)
+	}
 }
 
 func TestPingHelp(t *testing.T) {
@@ -128,6 +137,58 @@ func TestAdminHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
+	for _, want := range []string{"apply", "delete", "show", "gears", "firmware", "credentials", "minimax-tenants", "voices", "workspace-templates", "workspaces"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("admin help missing %q: %s", want, out)
+		}
+	}
+	if !strings.Contains(out, "--listen") {
+		t.Fatalf("admin help missing '--listen': %s", out)
+	}
+}
+
+func TestAdminResourceHelp(t *testing.T) {
+	for _, tc := range []struct {
+		args     []string
+		wants    []string
+		notWants []string
+	}{
+		{[]string{"admin", "credentials", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete"}},
+		{[]string{"admin", "minimax-tenants", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete", "sync-voices"}},
+		{[]string{"admin", "voices", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete"}},
+		{[]string{"admin", "workspace-templates", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete"}},
+		{[]string{"admin", "workspaces", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete"}},
+	} {
+		root := New()
+		var buf bytes.Buffer
+		root.SetOut(&buf)
+		root.SetArgs(tc.args)
+		if err := root.Execute(); err != nil {
+			t.Fatal(err)
+		}
+		out := buf.String()
+		for _, want := range tc.wants {
+			if !strings.Contains(out, want) {
+				t.Fatalf("%v help missing %q: %s", tc.args, want, out)
+			}
+		}
+		for _, notWant := range tc.notWants {
+			if strings.Contains(out, "\n  "+notWant) || strings.Contains(out, "\n    "+notWant) {
+				t.Fatalf("%v help should not include write command %q: %s", tc.args, notWant, out)
+			}
+		}
+	}
+}
+
+func TestAdminHelpShowsListen(t *testing.T) {
+	root := New()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetArgs([]string{"admin", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
 	if !strings.Contains(out, "gears") || !strings.Contains(out, "firmware") {
 		t.Fatalf("admin help missing subcommands: %s", out)
 	}
@@ -145,8 +206,10 @@ func TestPlayHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "serve") || !strings.Contains(out, "register") {
-		t.Fatalf("play help missing subcommands: %s", out)
+	for _, removed := range []string{"register", "config", "ota", "serve"} {
+		if strings.Contains(out, "\n  "+removed) || strings.Contains(out, "\n    "+removed) {
+			t.Fatalf("play help should not mention removed %q subcommand: %s", removed, out)
+		}
 	}
 	if !strings.Contains(out, "--listen") {
 		t.Fatalf("play help missing '--listen': %s", out)
@@ -171,6 +234,7 @@ func TestAdminGearsHelp(t *testing.T) {
 		"info",
 		"config",
 		"put-config",
+		"set-firmware-channel",
 		"runtime",
 		"ota",
 	} {

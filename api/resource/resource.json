@@ -1,0 +1,137 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GizClaw Resource Types",
+    "description": "Declarative resource envelope schemas used by admin apply.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ResourceAPIVersion": {
+        "type": "string",
+        "description": "API version for declarative GizClaw resources.",
+        "enum": [
+          "gizclaw.admin/v1alpha1"
+        ]
+      },
+      "ResourceKind": {
+        "type": "string",
+        "description": "Declarative GizClaw resource kind.",
+        "enum": [
+          "Credential",
+          "MiniMaxTenant",
+          "Voice",
+          "WorkspaceTemplate",
+          "Workspace",
+          "GearConfig",
+          "ResourceList"
+        ]
+      },
+      "ResourceMetadata": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Resource name. For GearConfig this is the gear public key."
+          },
+          "annotations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Resource": {
+        "oneOf": [
+          {
+            "$ref": "./credential.json#/components/schemas/CredentialResource"
+          },
+          {
+            "$ref": "./minimax_tenant.json#/components/schemas/MiniMaxTenantResource"
+          },
+          {
+            "$ref": "./voice.json#/components/schemas/VoiceResource"
+          },
+          {
+            "$ref": "./workspace_template.json#/components/schemas/WorkspaceTemplateResource"
+          },
+          {
+            "$ref": "./workspace.json#/components/schemas/WorkspaceResource"
+          },
+          {
+            "$ref": "./gear_config.json#/components/schemas/GearConfigResource"
+          },
+          {
+            "$ref": "./resource_list.json#/components/schemas/ResourceListResource"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind",
+          "mapping": {
+            "Credential": "./credential.json#/components/schemas/CredentialResource",
+            "MiniMaxTenant": "./minimax_tenant.json#/components/schemas/MiniMaxTenantResource",
+            "Voice": "./voice.json#/components/schemas/VoiceResource",
+            "WorkspaceTemplate": "./workspace_template.json#/components/schemas/WorkspaceTemplateResource",
+            "Workspace": "./workspace.json#/components/schemas/WorkspaceResource",
+            "GearConfig": "./gear_config.json#/components/schemas/GearConfigResource",
+            "ResourceList": "./resource_list.json#/components/schemas/ResourceListResource"
+          }
+        }
+      },
+      "ApplyAction": {
+        "type": "string",
+        "description": "Result of applying the resource.",
+        "enum": [
+          "created",
+          "updated",
+          "unchanged",
+          "applied"
+        ]
+      },
+      "ApplyResult": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "kind",
+          "name",
+          "action"
+        ],
+        "properties": {
+          "apiVersion": {
+            "$ref": "#/components/schemas/ResourceAPIVersion"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ResourceKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "action": {
+            "$ref": "#/components/schemas/ApplyAction"
+          },
+          "message": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "description": "Nested apply results for ResourceList resources.",
+            "items": {
+              "$ref": "#/components/schemas/ApplyResult"
+            }
+          }
+        }
+      }
+    }
+  }
+}

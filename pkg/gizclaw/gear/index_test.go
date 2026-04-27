@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
 func TestIndexDedupeHelpers(t *testing.T) {

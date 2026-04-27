@@ -1,0 +1,29 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workspace Spec Type",
+    "description": "WorkspaceSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "WorkspaceSpec": {
+        "type": "object",
+        "required": [
+          "workspace_template_name"
+        ],
+        "properties": {
+          "workspace_template_name": {
+            "$ref": "./workspace_template_name.json#/components/schemas/WorkspaceTemplateName"
+          },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": true,
+            "example": {}
+          }
+        }
+      }
+    }
+  }
+}

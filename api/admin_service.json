@@ -12,6 +12,14 @@
   ],
   "tags": [
     {
+      "name": "Apply",
+      "description": "Declarative admin resource apply operations"
+    },
+    {
+      "name": "Resources",
+      "description": "Declarative admin resource get, put, and delete operations"
+    },
+    {
       "name": "Depots",
       "description": "Firmware depot operations"
     },
@@ -49,6 +57,314 @@
     }
   ],
   "paths": {
+    "/@apply": {
+      "post": {
+        "operationId": "applyResource",
+        "summary": "Apply an admin resource",
+        "description": "Create or update a declarative admin resource described by apiVersion, kind, metadata, and spec.",
+        "tags": [
+          "Apply"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./types.json#/components/schemas/ApplyResource"
+              }
+            },
+            "application/yaml": {
+              "schema": {
+                "$ref": "./types.json#/components/schemas/ApplyResource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Applied resource result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ApplyResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid apply resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Apply is defined but not implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resources/{kind}/{name}": {
+      "get": {
+        "operationId": "getResource",
+        "summary": "Get an admin resource",
+        "description": "Get a named declarative admin resource by kind and name.",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/resourceKind"
+          },
+          {
+            "$ref": "#/components/parameters/resourceName"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Declarative resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Resource"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid resource kind or name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Resource get is defined but not implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putResource",
+        "summary": "Create or update an admin resource",
+        "description": "Create or update a named declarative admin resource. The request body's kind and metadata.name must match the path parameters.",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/resourceKind"
+          },
+          {
+            "$ref": "#/components/parameters/resourceName"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./types.json#/components/schemas/Resource"
+              }
+            },
+            "application/yaml": {
+              "schema": {
+                "$ref": "./types.json#/components/schemas/Resource"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored declarative resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Resource"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Backing resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Resource put is defined but not implemented",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteResource",
+        "summary": "Delete an admin resource",
+        "description": "Delete a named declarative admin resource by kind and name. ResourceList and resources without delete semantics are rejected.",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/resourceKind"
+          },
+          {
+            "$ref": "#/components/parameters/resourceName"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted declarative resource",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Resource"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or unsupported resource delete",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Resource conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/depots": {
       "get": {
         "operationId": "listDepots",
@@ -2803,6 +3119,24 @@
         "description": "Filter credentials by provider",
         "schema": {
           "$ref": "./types.json#/components/schemas/CredentialProvider"
+        }
+      },
+      "resourceKind": {
+        "name": "kind",
+        "in": "path",
+        "required": true,
+        "description": "Declarative resource kind",
+        "schema": {
+          "$ref": "./types.json#/components/schemas/ResourceKind"
+        }
+      },
+      "resourceName": {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "Declarative resource metadata.name",
+        "schema": {
+          "type": "string"
         }
       },
       "miniMaxTenantName": {

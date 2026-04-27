@@ -1,0 +1,22 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gear Role Type",
+    "description": "GearRole schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GearRole": {
+        "type": "string",
+        "enum": [
+          "unspecified",
+          "admin",
+          "peer",
+          "device"
+        ]
+      }
+    }
+  }
+}

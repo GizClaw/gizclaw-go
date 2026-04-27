@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -22,7 +22,7 @@ func TestServerMiniMaxTenantsCRUD(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Method:    apitypes.Token,
+		Method:    apitypes.CredentialMethodToken,
 		Body:      apitypes.CredentialBody{"token": "tok-main"},
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
@@ -108,7 +108,7 @@ func TestServerMiniMaxTenantsCRUD(t *testing.T) {
 			Name: apitypes.VoiceProviderName("tenant-a"),
 		},
 		ProviderVoiceId: stringPtr("voice-1"),
-		Source:          apitypes.Sync,
+		Source:          apitypes.VoiceSourceSync,
 		SyncedAt:        timePtr(created.CreatedAt),
 		UpdatedAt:       created.CreatedAt,
 	}
@@ -122,7 +122,7 @@ func TestServerMiniMaxTenantsCRUD(t *testing.T) {
 			Kind: miniMaxVoiceProviderKind,
 			Name: apitypes.VoiceProviderName("tenant-a"),
 		},
-		Source:    apitypes.Manual,
+		Source:    apitypes.VoiceSourceManual,
 		UpdatedAt: created.CreatedAt,
 	}
 	if err := writeVoice(ctx, srv.Store, manualVoice, nil); err != nil {
@@ -152,7 +152,7 @@ func TestServerMiniMaxTenantsPaginationAndValidation(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Method:    apitypes.Token,
+		Method:    apitypes.CredentialMethodToken,
 		Body:      apitypes.CredentialBody{"token": "tok-main"},
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
@@ -268,7 +268,7 @@ func TestServerVoicesCRUDAndFilters(t *testing.T) {
 	if !ok {
 		t.Fatalf("CreateVoice() response = %#v", createResp)
 	}
-	if created.Id != "manual:voice-2" || created.Source != apitypes.Manual {
+	if created.Id != "manual:voice-2" || created.Source != apitypes.VoiceSourceManual {
 		t.Fatalf("CreateVoice() voice = %#v", created)
 	}
 
@@ -284,7 +284,7 @@ func TestServerVoicesCRUDAndFilters(t *testing.T) {
 		t.Fatalf("ListVoices() items = %#v", listed.Items)
 	}
 
-	source := adminservice.VoiceSource(apitypes.Manual)
+	source := adminservice.VoiceSource(apitypes.VoiceSourceManual)
 	filteredResp, err := srv.ListVoices(ctx, adminservice.ListVoicesRequestObject{
 		Params: adminservice.ListVoicesParams{Source: &source},
 	})
@@ -326,7 +326,7 @@ func TestServerVoicesCRUDAndFilters(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetVoice() response = %#v", getResp)
 	}
-	if got.Id != created.Id || got.Source != apitypes.Manual {
+	if got.Id != created.Id || got.Source != apitypes.VoiceSourceManual {
 		t.Fatalf("GetVoice() voice = %#v", got)
 	}
 
@@ -455,7 +455,7 @@ func TestServerVoicesRejectSyncWritesButAllowDelete(t *testing.T) {
 		},
 		ProviderVoiceId:   stringPtr("voice-1"),
 		ProviderVoiceType: stringPtr("system"),
-		Source:            apitypes.Sync,
+		Source:            apitypes.VoiceSourceSync,
 		SyncedAt:          timePtr(now),
 		UpdatedAt:         now,
 	}
@@ -600,7 +600,7 @@ func TestServerMiniMaxCredentialValidation(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "openai",
-		Method:    apitypes.ApiKey,
+		Method:    apitypes.CredentialMethodApiKey,
 		Body:      apitypes.CredentialBody{"api_key": "sk-test"},
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
@@ -612,7 +612,7 @@ func TestServerMiniMaxCredentialValidation(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Method:    apitypes.ApiKey,
+		Method:    apitypes.CredentialMethodApiKey,
 		Body:      apitypes.CredentialBody{"other": "value"},
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
@@ -655,7 +655,7 @@ func TestServerMiniMaxHelpers(t *testing.T) {
 	if rawEqual(nil, &right) || rawEqual(&left, nil) {
 		t.Fatalf("rawEqual(nil) = true, want false")
 	}
-	if matchesVoiceFilters(apitypes.Voice{Source: apitypes.Manual}, voiceFilters{source: stringPtr("sync")}) {
+	if matchesVoiceFilters(apitypes.Voice{Source: apitypes.VoiceSourceManual}, voiceFilters{source: stringPtr("sync")}) {
 		t.Fatalf("matchesVoiceFilters(source mismatch) = true, want false")
 	}
 }
@@ -703,7 +703,7 @@ func TestServerMiniMaxTenantValidationAndConflictPaths(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Method:    apitypes.Token,
+		Method:    apitypes.CredentialMethodToken,
 		Body:      apitypes.CredentialBody{"token": "tok-main"},
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
@@ -804,7 +804,7 @@ func TestServerSyncMiniMaxTenantVoicesUsesTenantBaseURL(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Method:    apitypes.ApiKey,
+		Method:    apitypes.CredentialMethodApiKey,
 		Body:      apitypes.CredentialBody{"api_key": "mmx-key", "base_url": "https://models.example.invalid"},
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
@@ -843,7 +843,7 @@ func TestServerSyncMiniMaxTenantVoicesUsesTenantBaseURL(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetVoice(sync voice) response = %#v", voiceResp)
 	}
-	if voice.Source != apitypes.Sync || voice.ProviderVoiceId == nil || *voice.ProviderVoiceId != "voice-1" {
+	if voice.Source != apitypes.VoiceSourceSync || voice.ProviderVoiceId == nil || *voice.ProviderVoiceId != "voice-1" {
 		t.Fatalf("stored sync voice = %#v", voice)
 	}
 	if voice.Raw == nil || (*voice.Raw)["gender"] != "female" {
@@ -883,7 +883,7 @@ func TestServerSyncMiniMaxTenantVoicesReconcile(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Method:    apitypes.ApiKey,
+		Method:    apitypes.CredentialMethodApiKey,
 		Body:      apitypes.CredentialBody{"api_key": "mmx-key", "base_url": "https://models.example.invalid"},
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
@@ -905,7 +905,7 @@ func TestServerSyncMiniMaxTenantVoicesReconcile(t *testing.T) {
 			Kind: miniMaxVoiceProviderKind,
 			Name: apitypes.VoiceProviderName("tenant-a"),
 		},
-		Source:    apitypes.Manual,
+		Source:    apitypes.VoiceSourceManual,
 		UpdatedAt: srv.now(),
 	}
 	if err := writeVoice(ctx, srv.Store, manualVoice, nil); err != nil {
@@ -1018,7 +1018,7 @@ func TestServerSyncMiniMaxTenantVoicesFetchesAllVoiceTypes(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Method:    apitypes.ApiKey,
+		Method:    apitypes.CredentialMethodApiKey,
 		Body:      apitypes.CredentialBody{"api_key": "mmx-key", "base_url": "https://models.example.invalid"},
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),

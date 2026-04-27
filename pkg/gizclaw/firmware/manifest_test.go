@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
 func TestManifestChannelHelpers(t *testing.T) {

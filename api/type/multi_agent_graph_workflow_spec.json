@@ -1,0 +1,17 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Multi Agent Graph Workflow Spec Type",
+    "description": "MultiAgentGraphWorkflowSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "MultiAgentGraphWorkflowSpec": {
+        "type": "object",
+        "example": {}
+      }
+    }
+  }
+}

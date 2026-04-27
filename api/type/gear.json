@@ -1,0 +1,57 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gear Type",
+    "description": "Gear schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Gear": {
+        "type": "object",
+        "required": [
+          "public_key",
+          "role",
+          "status",
+          "device",
+          "configuration",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "public_key": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "./gear_role.json#/components/schemas/GearRole"
+          },
+          "status": {
+            "$ref": "./gear_status.json#/components/schemas/GearStatus"
+          },
+          "device": {
+            "$ref": "./device_info.json#/components/schemas/DeviceInfo"
+          },
+          "configuration": {
+            "$ref": "./configuration.json#/components/schemas/Configuration"
+          },
+          "auto_registered": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

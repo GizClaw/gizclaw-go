@@ -1,0 +1,41 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Mini Max Tenant Spec Type",
+    "description": "MiniMaxTenantSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "MiniMaxTenantSpec": {
+        "type": "object",
+        "required": [
+          "app_id",
+          "group_id",
+          "credential_name"
+        ],
+        "properties": {
+          "app_id": {
+            "$ref": "./minimax_app_id.json#/components/schemas/MiniMaxAppID"
+          },
+          "group_id": {
+            "$ref": "./minimax_group_id.json#/components/schemas/MiniMaxGroupID"
+          },
+          "credential_name": {
+            "$ref": "./credential_name.json#/components/schemas/CredentialName"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://api.minimax.chat"
+          },
+          "description": {
+            "type": "string",
+            "example": "primary MiniMax tenant for CN voices"
+          }
+        }
+      }
+    }
+  }
+}

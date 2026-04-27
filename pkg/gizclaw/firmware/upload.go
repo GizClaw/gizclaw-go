@@ -4,7 +4,7 @@ import (
 	"archive/tar"
 	"errors"
 	"fmt"
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"io"
 	"io/fs"
 	"path"

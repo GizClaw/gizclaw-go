@@ -113,6 +113,12 @@ Cases:
   - create contexts in one story sandbox
   - verify another story sandbox starts empty
   - status: implemented
+- `104-context-info-show`
+  - show current context details
+  - show a named context after listing contexts
+  - verify `server-info` uses a selected context
+  - verify the legacy `ctx` alias is unavailable
+  - status: implemented
 
 ### `200-*` Server Workspace Lifecycle
 
@@ -144,22 +150,24 @@ Cases:
 ### `300-*` Single-Client Public Flows
 
 Purpose:
-- cover a realistic sequential device/client workflow through CLI commands
+- validate one registered client context and its public device-facing flows
+  without depending on removed `play` CLI subcommands
 
 Cases:
 - `300-client-public-read-sequence`
-  - create one client context
-  - run a sequence of public read commands against one server
-  - verify outputs stay consistent across repeated calls
+  - register one device/client against the server through the harness API
+  - read public device configuration through the gear public API
+  - verify the context remains usable through `ping`
   - status: implemented
 - `301-client-register-then-read`
   - register one device/client against the server
-  - read back registration/config/runtime info through CLI
+  - read back registration info through admin CLI
   - verify user-visible state transitions
   - status: implemented
 - `302-client-public-retryable-reads`
-  - exercise repeated public reads on the same context
-  - verify no accidental state corruption or context drift
+  - register one device/client against the server through the harness API
+  - repeat public device configuration reads
+  - verify `ping` remains stable between reads
   - status: implemented
 
 ### `400-*` Multi-Client Coordination
@@ -209,6 +217,24 @@ Cases:
   - run the smallest end-to-end config or firmware workflow exposed by CLI
   - verify both happy-path and user-visible failure messages
   - status: implemented
+- `504-admin-credentials`
+  - verify credential list/get through admin CLI
+  - status: implemented
+- `505-admin-minimax-tenants`
+  - verify MiniMax tenant list/get through admin CLI
+  - status: implemented
+- `506-admin-voices`
+  - verify voice list/get and filters through admin CLI
+  - status: implemented
+- `507-admin-workspace-templates`
+  - verify workspace template list/get through admin CLI
+  - status: implemented
+- `508-admin-workspaces`
+  - verify workspace list/get through admin CLI
+  - status: implemented
+- `509-admin-resources`
+  - verify declarative resource apply create/update, show missing/existing, and delete through the generic admin API
+  - status: implemented
 
 ### `600-*` Idempotency And Repeatability
 
@@ -229,9 +255,9 @@ Cases:
   - verify the workspace remains reusable and identity persists
   - status: implemented
 - `603-repeat-command-after-partial-state`
-  - create a partial state such as an existing context or existing workspace
-  - repeat the command
-  - verify either safe reuse or a clean explicit failure
+  - register one context through the harness API
+  - repeat the same registration request
+  - verify the duplicate registration fails predictably and the context remains usable
   - status: implemented
 
 ### `700-*` Failure And Recovery
@@ -260,6 +286,14 @@ Cases:
   - fail a client command while the server is down
   - restart the server
   - verify the same context works again
+  - status: implemented
+- `705-serve-vs-service-managed-workspace`
+  - verify `serve` and `serve -f` reject service-managed workspaces
+  - status: implemented
+- `706-play-ui-only`
+  - verify `play` exposes only the UI `--listen` entry
+  - verify removed `play` subcommands fail as unknown commands
+  - verify `play --listen` automatically registers the selected context
   - status: implemented
 
 ## Ordering Strategy

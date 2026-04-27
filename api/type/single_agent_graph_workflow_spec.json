@@ -1,0 +1,17 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Single Agent Graph Workflow Spec Type",
+    "description": "SingleAgentGraphWorkflowSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "SingleAgentGraphWorkflowSpec": {
+        "type": "object",
+        "example": {}
+      }
+    }
+  }
+}

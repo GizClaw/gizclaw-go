@@ -1,0 +1,45 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hardware Info Type",
+    "description": "HardwareInfo schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "HardwareInfo": {
+        "type": "object",
+        "properties": {
+          "manufacturer": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "hardware_revision": {
+            "type": "string"
+          },
+          "depot": {
+            "type": "string"
+          },
+          "firmware_semver": {
+            "type": "string"
+          },
+          "imeis": {
+            "type": "array",
+            "items": {
+              "$ref": "./gear_imei.json#/components/schemas/GearIMEI"
+            }
+          },
+          "labels": {
+            "type": "array",
+            "items": {
+              "$ref": "./gear_label.json#/components/schemas/GearLabel"
+            }
+          }
+        }
+      }
+    }
+  }
+}

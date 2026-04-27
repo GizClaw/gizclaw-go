@@ -1,0 +1,33 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Depot Release Type",
+    "description": "DepotRelease schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "DepotRelease": {
+        "type": "object",
+        "required": [
+          "firmware_semver"
+        ],
+        "properties": {
+          "firmware_semver": {
+            "type": "string"
+          },
+          "channel": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "./depot_file.json#/components/schemas/DepotFile"
+            }
+          }
+        }
+      }
+    }
+  }
+}

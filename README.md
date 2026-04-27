@@ -7,7 +7,6 @@
 ## Layout
 
 - `cmd/`: CLI entrypoint and command implementations
-- `cmd/docs/`: operator-facing CLI and server documentation
 - `pkg/store/`: storage primitives such as KV, graph, filesystem, and vector stores
 - `pkg/agent/`: agent-side runtime packages such as `embed`, `memory`, `ncnn`, and `recall`
 - `pkg/genx/`: model/generation abstractions and integrations
@@ -56,10 +55,8 @@ BENCH_NET_LOSS_RATES=0,0.01,0.05 go test ./pkg/giznet/internal/benchmark -run '^
 
 For the full transport benchmark guide, matrix options, and `run.sh` profiles, see `pkg/giznet/internal/benchmark/README.md`.
 
-## Docs
+## Docs And Skills
 
-- CLI overview: `cmd/docs/README.md`
-- Server usage: `cmd/docs/server/README.md`
-- Client usage: `cmd/docs/client/README.md`
+- GizClaw CLI skill: `skills/gizclaw-cli/SKILL.md`
 - GenX example: `examples/genx/README.md`
 

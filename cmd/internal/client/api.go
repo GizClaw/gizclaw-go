@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
@@ -630,6 +630,465 @@ func RefreshGear(ctx context.Context, c *gizclaw.Client, publicKey string) (admi
 		return *resp.JSON200, nil
 	}
 	return adminservice.RefreshResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON409, resp.JSON502)
+}
+
+func ListCredentials(ctx context.Context, c *gizclaw.Client, provider string) ([]apitypes.Credential, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return nil, err
+	}
+	var providerFilter *adminservice.CredentialProvider
+	if provider != "" {
+		value := adminservice.CredentialProvider(provider)
+		providerFilter = &value
+	}
+	return collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[apitypes.Credential], error) {
+		resp, err := api.ListCredentialsWithResponse(ctx, &adminservice.ListCredentialsParams{
+			Provider: providerFilter,
+			Cursor:   cursor,
+			Limit:    limit,
+		})
+		if err != nil {
+			return pagedItems[apitypes.Credential]{}, err
+		}
+		if resp.JSON200 == nil {
+			return pagedItems[apitypes.Credential]{}, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
+		}
+		return pagedItems[apitypes.Credential]{
+			HasNext:    resp.JSON200.HasNext,
+			Items:      resp.JSON200.Items,
+			NextCursor: resp.JSON200.NextCursor,
+		}, nil
+	})
+}
+
+func CreateCredential(ctx context.Context, c *gizclaw.Client, req adminservice.CredentialUpsert) (apitypes.Credential, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Credential{}, err
+	}
+	resp, err := api.CreateCredentialWithResponse(ctx, req)
+	if err != nil {
+		return apitypes.Credential{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Credential{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
+}
+
+func GetCredential(ctx context.Context, c *gizclaw.Client, name string) (apitypes.Credential, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Credential{}, err
+	}
+	resp, err := api.GetCredentialWithResponse(ctx, adminservice.CredentialName(name))
+	if err != nil {
+		return apitypes.Credential{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Credential{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func PutCredential(ctx context.Context, c *gizclaw.Client, name string, req adminservice.CredentialUpsert) (apitypes.Credential, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Credential{}, err
+	}
+	resp, err := api.PutCredentialWithResponse(ctx, adminservice.CredentialName(name), req)
+	if err != nil {
+		return apitypes.Credential{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Credential{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON500)
+}
+
+func DeleteCredential(ctx context.Context, c *gizclaw.Client, name string) (apitypes.Credential, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Credential{}, err
+	}
+	resp, err := api.DeleteCredentialWithResponse(ctx, adminservice.CredentialName(name))
+	if err != nil {
+		return apitypes.Credential{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Credential{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func ListMiniMaxTenants(ctx context.Context, c *gizclaw.Client) ([]apitypes.MiniMaxTenant, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return nil, err
+	}
+	return collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[apitypes.MiniMaxTenant], error) {
+		resp, err := api.ListMiniMaxTenantsWithResponse(ctx, &adminservice.ListMiniMaxTenantsParams{
+			Cursor: cursor,
+			Limit:  limit,
+		})
+		if err != nil {
+			return pagedItems[apitypes.MiniMaxTenant]{}, err
+		}
+		if resp.JSON200 == nil {
+			return pagedItems[apitypes.MiniMaxTenant]{}, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
+		}
+		return pagedItems[apitypes.MiniMaxTenant]{
+			HasNext:    resp.JSON200.HasNext,
+			Items:      resp.JSON200.Items,
+			NextCursor: resp.JSON200.NextCursor,
+		}, nil
+	})
+}
+
+func CreateMiniMaxTenant(ctx context.Context, c *gizclaw.Client, req adminservice.MiniMaxTenantUpsert) (apitypes.MiniMaxTenant, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.MiniMaxTenant{}, err
+	}
+	resp, err := api.CreateMiniMaxTenantWithResponse(ctx, req)
+	if err != nil {
+		return apitypes.MiniMaxTenant{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.MiniMaxTenant{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
+}
+
+func GetMiniMaxTenant(ctx context.Context, c *gizclaw.Client, name string) (apitypes.MiniMaxTenant, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.MiniMaxTenant{}, err
+	}
+	resp, err := api.GetMiniMaxTenantWithResponse(ctx, adminservice.MiniMaxTenantName(name))
+	if err != nil {
+		return apitypes.MiniMaxTenant{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.MiniMaxTenant{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func PutMiniMaxTenant(ctx context.Context, c *gizclaw.Client, name string, req adminservice.MiniMaxTenantUpsert) (apitypes.MiniMaxTenant, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.MiniMaxTenant{}, err
+	}
+	resp, err := api.PutMiniMaxTenantWithResponse(ctx, adminservice.MiniMaxTenantName(name), req)
+	if err != nil {
+		return apitypes.MiniMaxTenant{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.MiniMaxTenant{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON500)
+}
+
+func DeleteMiniMaxTenant(ctx context.Context, c *gizclaw.Client, name string) (apitypes.MiniMaxTenant, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.MiniMaxTenant{}, err
+	}
+	resp, err := api.DeleteMiniMaxTenantWithResponse(ctx, adminservice.MiniMaxTenantName(name))
+	if err != nil {
+		return apitypes.MiniMaxTenant{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.MiniMaxTenant{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func SyncMiniMaxTenantVoices(ctx context.Context, c *gizclaw.Client, name string) (adminservice.MiniMaxSyncVoicesResult, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return adminservice.MiniMaxSyncVoicesResult{}, err
+	}
+	resp, err := api.SyncMiniMaxTenantVoicesWithResponse(ctx, adminservice.MiniMaxTenantName(name))
+	if err != nil {
+		return adminservice.MiniMaxSyncVoicesResult{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return adminservice.MiniMaxSyncVoicesResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404, resp.JSON500, resp.JSON502)
+}
+
+func ListVoices(ctx context.Context, c *gizclaw.Client, source, providerKind, providerName string) ([]apitypes.Voice, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return nil, err
+	}
+	var sourceFilter *adminservice.VoiceSource
+	if source != "" {
+		value := adminservice.VoiceSource(source)
+		sourceFilter = &value
+	}
+	var providerKindFilter *adminservice.VoiceProviderKind
+	if providerKind != "" {
+		value := adminservice.VoiceProviderKind(providerKind)
+		providerKindFilter = &value
+	}
+	var providerNameFilter *adminservice.VoiceProviderName
+	if providerName != "" {
+		value := adminservice.VoiceProviderName(providerName)
+		providerNameFilter = &value
+	}
+	return collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[apitypes.Voice], error) {
+		resp, err := api.ListVoicesWithResponse(ctx, &adminservice.ListVoicesParams{
+			Source:       sourceFilter,
+			ProviderKind: providerKindFilter,
+			ProviderName: providerNameFilter,
+			Cursor:       cursor,
+			Limit:        limit,
+		})
+		if err != nil {
+			return pagedItems[apitypes.Voice]{}, err
+		}
+		if resp.JSON200 == nil {
+			return pagedItems[apitypes.Voice]{}, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
+		}
+		return pagedItems[apitypes.Voice]{
+			HasNext:    resp.JSON200.HasNext,
+			Items:      resp.JSON200.Items,
+			NextCursor: resp.JSON200.NextCursor,
+		}, nil
+	})
+}
+
+func CreateVoice(ctx context.Context, c *gizclaw.Client, req adminservice.VoiceUpsert) (apitypes.Voice, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Voice{}, err
+	}
+	resp, err := api.CreateVoiceWithResponse(ctx, req)
+	if err != nil {
+		return apitypes.Voice{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Voice{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
+}
+
+func GetVoice(ctx context.Context, c *gizclaw.Client, id string) (apitypes.Voice, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Voice{}, err
+	}
+	resp, err := api.GetVoiceWithResponse(ctx, adminservice.VoiceID(id))
+	if err != nil {
+		return apitypes.Voice{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Voice{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func PutVoice(ctx context.Context, c *gizclaw.Client, id string, req adminservice.VoiceUpsert) (apitypes.Voice, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Voice{}, err
+	}
+	resp, err := api.PutVoiceWithResponse(ctx, adminservice.VoiceID(id), req)
+	if err != nil {
+		return apitypes.Voice{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Voice{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
+}
+
+func DeleteVoice(ctx context.Context, c *gizclaw.Client, id string) (apitypes.Voice, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Voice{}, err
+	}
+	resp, err := api.DeleteVoiceWithResponse(ctx, adminservice.VoiceID(id))
+	if err != nil {
+		return apitypes.Voice{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Voice{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func ListWorkspaceTemplates(ctx context.Context, c *gizclaw.Client) ([]apitypes.WorkflowTemplateDocument, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return nil, err
+	}
+	return collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[apitypes.WorkflowTemplateDocument], error) {
+		resp, err := api.ListWorkspaceTemplatesWithResponse(ctx, &adminservice.ListWorkspaceTemplatesParams{
+			Cursor: cursor,
+			Limit:  limit,
+		})
+		if err != nil {
+			return pagedItems[apitypes.WorkflowTemplateDocument]{}, err
+		}
+		if resp.JSON200 == nil {
+			return pagedItems[apitypes.WorkflowTemplateDocument]{}, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
+		}
+		return pagedItems[apitypes.WorkflowTemplateDocument]{
+			HasNext:    resp.JSON200.HasNext,
+			Items:      resp.JSON200.Items,
+			NextCursor: resp.JSON200.NextCursor,
+		}, nil
+	})
+}
+
+func CreateWorkspaceTemplate(ctx context.Context, c *gizclaw.Client, req apitypes.WorkflowTemplateDocument) (apitypes.WorkflowTemplateDocument, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.WorkflowTemplateDocument{}, err
+	}
+	resp, err := api.CreateWorkspaceTemplateWithResponse(ctx, req)
+	if err != nil {
+		return apitypes.WorkflowTemplateDocument{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.WorkflowTemplateDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
+}
+
+func GetWorkspaceTemplate(ctx context.Context, c *gizclaw.Client, name string) (apitypes.WorkflowTemplateDocument, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.WorkflowTemplateDocument{}, err
+	}
+	resp, err := api.GetWorkspaceTemplateWithResponse(ctx, adminservice.WorkspaceTemplateName(name))
+	if err != nil {
+		return apitypes.WorkflowTemplateDocument{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.WorkflowTemplateDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func PutWorkspaceTemplate(ctx context.Context, c *gizclaw.Client, name string, req apitypes.WorkflowTemplateDocument) (apitypes.WorkflowTemplateDocument, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.WorkflowTemplateDocument{}, err
+	}
+	resp, err := api.PutWorkspaceTemplateWithResponse(ctx, adminservice.WorkspaceTemplateName(name), req)
+	if err != nil {
+		return apitypes.WorkflowTemplateDocument{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.WorkflowTemplateDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON500)
+}
+
+func DeleteWorkspaceTemplate(ctx context.Context, c *gizclaw.Client, name string) (apitypes.WorkflowTemplateDocument, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.WorkflowTemplateDocument{}, err
+	}
+	resp, err := api.DeleteWorkspaceTemplateWithResponse(ctx, adminservice.WorkspaceTemplateName(name))
+	if err != nil {
+		return apitypes.WorkflowTemplateDocument{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.WorkflowTemplateDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func ListWorkspaces(ctx context.Context, c *gizclaw.Client) ([]apitypes.Workspace, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return nil, err
+	}
+	return collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[apitypes.Workspace], error) {
+		resp, err := api.ListWorkspacesWithResponse(ctx, &adminservice.ListWorkspacesParams{
+			Cursor: cursor,
+			Limit:  limit,
+		})
+		if err != nil {
+			return pagedItems[apitypes.Workspace]{}, err
+		}
+		if resp.JSON200 == nil {
+			return pagedItems[apitypes.Workspace]{}, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
+		}
+		return pagedItems[apitypes.Workspace]{
+			HasNext:    resp.JSON200.HasNext,
+			Items:      resp.JSON200.Items,
+			NextCursor: resp.JSON200.NextCursor,
+		}, nil
+	})
+}
+
+func CreateWorkspace(ctx context.Context, c *gizclaw.Client, req adminservice.WorkspaceUpsert) (apitypes.Workspace, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Workspace{}, err
+	}
+	resp, err := api.CreateWorkspaceWithResponse(ctx, req)
+	if err != nil {
+		return apitypes.Workspace{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Workspace{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
+}
+
+func GetWorkspace(ctx context.Context, c *gizclaw.Client, name string) (apitypes.Workspace, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Workspace{}, err
+	}
+	resp, err := api.GetWorkspaceWithResponse(ctx, adminservice.WorkspaceName(name))
+	if err != nil {
+		return apitypes.Workspace{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Workspace{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func PutWorkspace(ctx context.Context, c *gizclaw.Client, name string, req adminservice.WorkspaceUpsert) (apitypes.Workspace, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Workspace{}, err
+	}
+	resp, err := api.PutWorkspaceWithResponse(ctx, adminservice.WorkspaceName(name), req)
+	if err != nil {
+		return apitypes.Workspace{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Workspace{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON500)
+}
+
+func DeleteWorkspace(ctx context.Context, c *gizclaw.Client, name string) (apitypes.Workspace, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.Workspace{}, err
+	}
+	resp, err := api.DeleteWorkspaceWithResponse(ctx, adminservice.WorkspaceName(name))
+	if err != nil {
+		return apitypes.Workspace{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.Workspace{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
 }
 
 func responseError(status int, body []byte, errs ...interface{}) error {

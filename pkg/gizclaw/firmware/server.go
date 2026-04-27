@@ -11,7 +11,7 @@ import (
 	"path"
 	"sync"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
@@ -67,13 +67,13 @@ var _ FirmwareServerPublic = (*Server)(nil)
 func (s *Server) ListDepots(_ context.Context, _ adminservice.ListDepotsRequestObject) (adminservice.ListDepotsResponseObject, error) {
 	names, err := s.scanDepotNames()
 	if err != nil {
-		return adminservice.ListDepots500JSONResponse(adminError("DIRECTORY_SCAN_FAILED", err.Error())), nil
+		return adminservice.ListDepots500JSONResponse(apitypes.NewErrorResponse("DIRECTORY_SCAN_FAILED", err.Error())), nil
 	}
 	items := make([]apitypes.Depot, 0, len(names))
 	for _, name := range names {
 		depot, err := s.scanDepot(name)
 		if err != nil {
-			return adminservice.ListDepots500JSONResponse(adminError("DIRECTORY_SCAN_FAILED", err.Error())), nil
+			return adminservice.ListDepots500JSONResponse(apitypes.NewErrorResponse("DIRECTORY_SCAN_FAILED", err.Error())), nil
 		}
 		items = append(items, depot)
 	}
@@ -88,7 +88,7 @@ func (s *Server) GetDepot(_ context.Context, request adminservice.GetDepotReques
 	}
 	depot, err := s.scanDepot(depotName)
 	if err != nil {
-		return adminservice.GetDepot404JSONResponse(adminError("DEPOT_NOT_FOUND", err.Error())), nil
+		return adminservice.GetDepot404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.GetDepot200JSONResponse(depot), nil
 }
@@ -96,7 +96,7 @@ func (s *Server) GetDepot(_ context.Context, request adminservice.GetDepotReques
 // PutDepotInfo implements `adminservice.StrictServerInterface.PutDepotInfo`.
 func (s *Server) PutDepotInfo(_ context.Context, request adminservice.PutDepotInfoRequestObject) (adminservice.PutDepotInfoResponseObject, error) {
 	if request.Body == nil {
-		return adminservice.PutDepotInfo400JSONResponse(adminError("INVALID_JSON", "request body required")), nil
+		return adminservice.PutDepotInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_JSON", "request body required")), nil
 	}
 	depotName, err := url.PathUnescape(request.Depot)
 	if err != nil {
@@ -109,7 +109,7 @@ func (s *Server) PutDepotInfo(_ context.Context, request adminservice.PutDepotIn
 		return nil, err
 	}
 	if err := validateDepotInfo(info); err != nil {
-		return adminservice.PutDepotInfo400JSONResponse(adminError("INVALID_JSON", err.Error())), nil
+		return adminservice.PutDepotInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_JSON", err.Error())), nil
 	}
 	if current, err := s.scanDepot(depotName); err == nil {
 		for _, channel := range allChannels() {
@@ -118,16 +118,16 @@ func (s *Server) PutDepotInfo(_ context.Context, request adminservice.PutDepotIn
 				continue
 			}
 			if !sameInfoFiles(info, release) {
-				return adminservice.PutDepotInfo409JSONResponse(adminError("INFO_FILES_MISMATCH", "firmware files mismatch")), nil
+				return adminservice.PutDepotInfo409JSONResponse(apitypes.NewErrorResponse("INFO_FILES_MISMATCH", "firmware files mismatch")), nil
 			}
 		}
 	}
 	if err := writeInfo(s.store(), s.infoPath(depotName), info); err != nil {
-		return adminservice.PutDepotInfo400JSONResponse(adminError("INVALID_JSON", err.Error())), nil
+		return adminservice.PutDepotInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_JSON", err.Error())), nil
 	}
 	depot, err := s.scanDepot(depotName)
 	if err != nil {
-		return adminservice.PutDepotInfo500JSONResponse(adminError("DIRECTORY_SCAN_FAILED", err.Error())), nil
+		return adminservice.PutDepotInfo500JSONResponse(apitypes.NewErrorResponse("DIRECTORY_SCAN_FAILED", err.Error())), nil
 	}
 	return adminservice.PutDepotInfo200JSONResponse(depot), nil
 }
@@ -140,11 +140,11 @@ func (s *Server) GetChannel(_ context.Context, request adminservice.GetChannelRe
 	}
 	depot, err := s.scanDepot(depotName)
 	if err != nil {
-		return adminservice.GetChannel404JSONResponse(adminError("DEPOT_NOT_FOUND", err.Error())), nil
+		return adminservice.GetChannel404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
 	}
 	release, ok := depotRelease(depot, Channel(request.Channel))
 	if !ok {
-		return adminservice.GetChannel404JSONResponse(adminError("CHANNEL_NOT_FOUND", "channel not found")), nil
+		return adminservice.GetChannel404JSONResponse(apitypes.NewErrorResponse("CHANNEL_NOT_FOUND", "channel not found")), nil
 	}
 	return adminservice.GetChannel200JSONResponse(release), nil
 }
@@ -157,7 +157,7 @@ func (s *Server) PutChannel(_ context.Context, request adminservice.PutChannelRe
 	}
 	release, err := s.uploadTar(depotName, Channel(request.Channel), request.Body)
 	if err != nil {
-		return adminservice.PutChannel409JSONResponse(adminError("MANIFEST_INVALID", err.Error())), nil
+		return adminservice.PutChannel409JSONResponse(apitypes.NewErrorResponse("MANIFEST_INVALID", err.Error())), nil
 	}
 	return adminservice.PutChannel200JSONResponse(release), nil
 }
@@ -172,11 +172,11 @@ func (s *Server) ReleaseDepot(_ context.Context, request adminservice.ReleaseDep
 	if err != nil {
 		switch {
 		case errors.Is(err, errDepotNotFound):
-			return adminservice.ReleaseDepot404JSONResponse(adminError("DEPOT_NOT_FOUND", err.Error())), nil
+			return adminservice.ReleaseDepot404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
 		case errors.Is(err, errChannelNotFound):
-			return adminservice.ReleaseDepot409JSONResponse(adminError("RELEASE_NOT_READY", err.Error())), nil
+			return adminservice.ReleaseDepot409JSONResponse(apitypes.NewErrorResponse("RELEASE_NOT_READY", err.Error())), nil
 		default:
-			return adminservice.ReleaseDepot500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+			return adminservice.ReleaseDepot500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 		}
 	}
 	return adminservice.ReleaseDepot200JSONResponse(depot), nil
@@ -192,11 +192,11 @@ func (s *Server) RollbackDepot(_ context.Context, request adminservice.RollbackD
 	if err != nil {
 		switch {
 		case errors.Is(err, errDepotNotFound):
-			return adminservice.RollbackDepot404JSONResponse(adminError("DEPOT_NOT_FOUND", err.Error())), nil
+			return adminservice.RollbackDepot404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
 		case errors.Is(err, errChannelNotFound):
-			return adminservice.RollbackDepot409JSONResponse(adminError("ROLLBACK_NOT_AVAILABLE", err.Error())), nil
+			return adminservice.RollbackDepot409JSONResponse(apitypes.NewErrorResponse("ROLLBACK_NOT_AVAILABLE", err.Error())), nil
 		default:
-			return adminservice.RollbackDepot500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+			return adminservice.RollbackDepot500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 		}
 	}
 	return adminservice.RollbackDepot200JSONResponse(depot), nil
@@ -206,7 +206,7 @@ func (s *Server) RollbackDepot(_ context.Context, request adminservice.RollbackD
 // OTA is colocated here because firmware storage owns the underlying data.
 func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTARequestObject) (adminservice.GetGearOTAResponseObject, error) {
 	if s.ResolveGearTarget == nil {
-		return adminservice.GetGearOTA404JSONResponse(adminError("OTA_NOT_AVAILABLE", "gear target resolver not configured")), nil
+		return adminservice.GetGearOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", "gear target resolver not configured")), nil
 	}
 	publicKey, err := url.PathUnescape(string(request.PublicKey))
 	if err != nil {
@@ -217,15 +217,15 @@ func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTA
 		if err == nil {
 			err = fmt.Errorf("missing depot or channel")
 		}
-		return adminservice.GetGearOTA404JSONResponse(adminError("OTA_NOT_AVAILABLE", err.Error())), nil
+		return adminservice.GetGearOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
 	ota, err := s.resolveOTA(depotName, channel)
 	if err != nil {
-		return adminservice.GetGearOTA404JSONResponse(adminError("FIRMWARE_NOT_FOUND", err.Error())), nil
+		return adminservice.GetGearOTA404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", err.Error())), nil
 	}
 	out, err := convertViaJSON[apitypes.OTASummary](ota)
 	if err != nil {
-		return getGearOTA500JSONResponse(adminError("INTERNAL_ERROR", err.Error())), nil
+		return getGearOTA500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
 	return adminservice.GetGearOTA200JSONResponse(out), nil
 }
@@ -234,11 +234,11 @@ func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTA
 func (s *Server) GetOTA(ctx context.Context, _ gearservice.GetOTARequestObject) (gearservice.GetOTAResponseObject, error) {
 	depotName, channel, err := s.resolveCallerTarget(ctx)
 	if err != nil {
-		return gearservice.GetOTA404JSONResponse(gearError("OTA_NOT_AVAILABLE", err.Error())), nil
+		return gearservice.GetOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
 	ota, err := s.resolveOTA(depotName, channel)
 	if err != nil {
-		return gearservice.GetOTA404JSONResponse(gearError("FIRMWARE_NOT_FOUND", err.Error())), nil
+		return gearservice.GetOTA404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", err.Error())), nil
 	}
 	return gearservice.GetOTA200JSONResponse(ota), nil
 }
@@ -247,21 +247,21 @@ func (s *Server) GetOTA(ctx context.Context, _ gearservice.GetOTARequestObject) 
 func (s *Server) DownloadFirmware(ctx context.Context, request gearservice.DownloadFirmwareRequestObject) (gearservice.DownloadFirmwareResponseObject, error) {
 	depotName, channel, err := s.resolveCallerTarget(ctx)
 	if err != nil {
-		return gearservice.DownloadFirmware404JSONResponse(gearError("OTA_NOT_AVAILABLE", err.Error())), nil
+		return gearservice.DownloadFirmware404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
 	filePath, err := url.PathUnescape(request.Path)
 	if err != nil {
-		return gearservice.DownloadFirmware400JSONResponse(gearError("INVALID_PARAMS", err.Error())), nil
+		return gearservice.DownloadFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
 	body, contentLength, headers, err := s.resolveOTAFile(depotName, channel, filePath)
 	if err != nil {
 		switch {
 		case errors.Is(err, errInvalidPath):
-			return gearservice.DownloadFirmware400JSONResponse(gearError("INVALID_PARAMS", err.Error())), nil
+			return gearservice.DownloadFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 		case errors.Is(err, errFirmwareNotFound), errors.Is(err, errDepotNotFound), errors.Is(err, errChannelNotFound):
-			return gearservice.DownloadFirmware404JSONResponse(gearError("FIRMWARE_FILE_NOT_FOUND", err.Error())), nil
+			return gearservice.DownloadFirmware404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_FILE_NOT_FOUND", err.Error())), nil
 		default:
-			return downloadFirmware500JSONResponse(gearError("INTERNAL_ERROR", err.Error())), nil
+			return downloadFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 		}
 	}
 	return gearservice.DownloadFirmware200ApplicationoctetStreamResponse{
@@ -332,14 +332,6 @@ func (s *Server) resolveOTAFile(depotName string, channel Channel, relativePath 
 		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, err
 	}
 	return file, info.Size(), headers, nil
-}
-
-func adminError(code, message string) apitypes.ErrorResponse {
-	return apitypes.ErrorResponse{Error: apitypes.ErrorPayload{Code: code, Message: message}}
-}
-
-func gearError(code, message string) apitypes.ErrorResponse {
-	return apitypes.ErrorResponse{Error: apitypes.ErrorPayload{Code: code, Message: message}}
 }
 
 type getGearOTA500JSONResponse apitypes.ErrorResponse

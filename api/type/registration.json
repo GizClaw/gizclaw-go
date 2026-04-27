@@ -1,0 +1,49 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Registration Type",
+    "description": "Gear registration state schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Registration": {
+        "type": "object",
+        "required": [
+          "public_key",
+          "role",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "public_key": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "./gear_role.json#/components/schemas/GearRole"
+          },
+          "status": {
+            "$ref": "./gear_status.json#/components/schemas/GearStatus"
+          },
+          "auto_registered": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

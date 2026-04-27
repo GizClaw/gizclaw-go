@@ -3,7 +3,7 @@ package gear
 import (
 	"testing"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
 func TestValidateGear(t *testing.T) {

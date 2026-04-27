@@ -1,0 +1,21 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Firmware Config Type",
+    "description": "FirmwareConfig schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "FirmwareConfig": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "$ref": "./gear_firmware_channel.json#/components/schemas/GearFirmwareChannel"
+          }
+        }
+      }
+    }
+  }
+}

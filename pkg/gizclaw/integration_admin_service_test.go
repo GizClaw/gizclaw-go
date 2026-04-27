@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	apitypes "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
@@ -269,7 +269,7 @@ func TestIntegrationAdminServiceCredentialLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateCredential error: %v", err)
 	}
-	if created.Name != "openai-primary" || created.Method != apitypes.ApiKey {
+	if created.Name != "openai-primary" || created.Method != apitypes.CredentialMethodApiKey {
 		t.Fatalf("CreateCredential = %#v", created)
 	}
 	if created.Body["api_key"] != "sk-test" {
@@ -306,7 +306,7 @@ func TestIntegrationAdminServiceCredentialLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PutCredential error: %v", err)
 	}
-	if updated.Provider != "minimax" || updated.Method != apitypes.AppIdToken {
+	if updated.Provider != "minimax" || updated.Method != apitypes.CredentialMethodAppIdToken {
 		t.Fatalf("PutCredential = %#v", updated)
 	}
 	if updated.Body["app_id"] != "app-123" || updated.Body["token"] != "tok-123" {

@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Voice Provider Kind Type",
+    "description": "VoiceProviderKind schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VoiceProviderKind": {
+        "type": "string",
+        "description": "Voice provider kind",
+        "example": "minimax-tenant"
+      }
+    }
+  }
+}

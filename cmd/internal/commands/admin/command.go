@@ -4,8 +4,13 @@ import (
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	credentialscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/credentials"
 	firmwarecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/firmware"
 	gearscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/gears"
+	minimaxtenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/minimaxtenants"
+	voicescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/voices"
+	workspacescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/workspaces"
+	workspacetemplatescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/workspacetemplates"
 	"github.com/spf13/cobra"
 )
 
@@ -27,8 +32,16 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&ctxName, "context", "", "context name (default: current)")
 	cmd.Flags().StringVar(&listenAddr, "listen", "", "listen address or port for the admin web UI")
 	cmd.AddCommand(
+		newApplyCmd(&ctxName),
+		newDeleteCmd(&ctxName),
+		newShowCmd(&ctxName),
 		gearscmd.NewCmd(),
 		firmwarecmd.NewCmd(),
+		credentialscmd.NewCmd(),
+		minimaxtenantscmd.NewCmd(),
+		voicescmd.NewCmd(),
+		workspacetemplatescmd.NewCmd(),
+		workspacescmd.NewCmd(),
 	)
 	return cmd
 }

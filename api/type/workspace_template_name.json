@@ -1,0 +1,17 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workspace Template Name Type",
+    "description": "WorkspaceTemplateName schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "WorkspaceTemplateName": {
+        "type": "string",
+        "description": "Workspace template name"
+      }
+    }
+  }
+}

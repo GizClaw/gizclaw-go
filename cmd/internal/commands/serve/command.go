@@ -10,7 +10,8 @@ func NewCmd() *cobra.Command {
 	var serviceManaged bool
 	cmd := &cobra.Command{
 		Use:   "serve <dir>",
-		Short: "Start the GizClaw server",
+		Short: "Start the GizClaw server in the foreground",
+		Long:  "Start the GizClaw server in the foreground for a non-service-managed workspace.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return server.ServeWithOptions(args[0], server.ServeOptions{
@@ -19,7 +20,7 @@ func NewCmd() *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().BoolVarP(&force, "force", "f", false, "stop the previous server for this workspace before starting")
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "stop the previous foreground server for this workspace before starting")
 	cmd.Flags().BoolVar(&serviceManaged, "service-managed", false, "internal flag for service-managed foreground runs")
 	_ = cmd.Flags().MarkHidden("service-managed")
 	return cmd
