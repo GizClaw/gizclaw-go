@@ -1,6 +1,7 @@
 package firmware
 
 import (
+	"context"
 	"errors"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"io/fs"
@@ -13,7 +14,7 @@ func TestReleaseDepot(t *testing.T) {
 	t.Run("missing depot", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		if _, err := env.srv.releaseDepot("missing"); !errors.Is(err, errDepotNotFound) {
+		if _, err := env.srv.releaseDepot(context.Background(), "missing"); !errors.Is(err, errDepotNotFound) {
 			t.Fatalf("releaseDepot() error = %v", err)
 		}
 	})
@@ -25,7 +26,7 @@ func TestReleaseDepot(t *testing.T) {
 		env.writeRelease("depot", Beta, "1.1.0", map[string]string{"fw.bin": "beta"})
 		env.writeRelease("depot", Testing, "1.2.0", map[string]string{"fw.bin": "testing"})
 
-		depot, err := env.srv.releaseDepot("depot")
+		depot, err := env.srv.releaseDepot(context.Background(), "depot")
 		if err != nil {
 			t.Fatalf("releaseDepot() unexpected error: %v", err)
 		}
@@ -44,7 +45,7 @@ func TestReleaseDepot(t *testing.T) {
 		env.writeRelease("depot", Beta, "1.1.0", map[string]string{"fw.bin": "beta"})
 		env.writeRelease("depot", Testing, "1.2.0", map[string]string{"fw.bin": "testing"})
 
-		depot, err := env.srv.releaseDepot("depot")
+		depot, err := env.srv.releaseDepot(context.Background(), "depot")
 		if err != nil {
 			t.Fatalf("releaseDepot() unexpected error: %v", err)
 		}
@@ -57,7 +58,7 @@ func TestReleaseDepot(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Testing, "1.2.0", map[string]string{"fw.bin": "testing"})
-		if _, err := env.srv.releaseDepot("depot"); !errors.Is(err, errChannelNotFound) {
+		if _, err := env.srv.releaseDepot(context.Background(), "depot"); !errors.Is(err, errChannelNotFound) {
 			t.Fatalf("releaseDepot() error = %v", err)
 		}
 	})
@@ -66,7 +67,7 @@ func TestReleaseDepot(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Beta, "1.1.0", map[string]string{"fw.bin": "beta"})
-		if _, err := env.srv.releaseDepot("depot"); !errors.Is(err, errChannelNotFound) {
+		if _, err := env.srv.releaseDepot(context.Background(), "depot"); !errors.Is(err, errChannelNotFound) {
 			t.Fatalf("releaseDepot() error = %v", err)
 		}
 	})
@@ -80,8 +81,8 @@ func TestReleaseDepot(t *testing.T) {
 		store := newMockStore(t)
 		store.base = env.store
 		store.rename = func(oldName, newName string) error { return errors.New("boom") }
-		srv := &Server{Store: store}
-		if _, err := srv.releaseDepot("depot"); err == nil {
+		srv := &Server{Store: store, MetadataStore: env.meta}
+		if _, err := srv.releaseDepot(context.Background(), "depot"); err == nil {
 			t.Fatal("releaseDepot() expected prepareSwitch error")
 		}
 	})
@@ -93,7 +94,7 @@ func TestReleaseDepot(t *testing.T) {
 		env.writeRelease("depot", Beta, "1.1.0", map[string]string{"fw.bin": "beta"})
 		env.writeFile("depot/testing/manifest.json", `{`)
 		env.writeFile("depot/testing/fw.bin", "testing")
-		if _, err := env.srv.releaseDepot("depot"); err == nil {
+		if _, err := env.srv.releaseDepot(context.Background(), "depot"); err == nil {
 			t.Fatal("releaseDepot() expected rewrite manifest error")
 		}
 	})
@@ -105,7 +106,7 @@ func TestRollbackDepot(t *testing.T) {
 	t.Run("missing depot", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		if _, err := env.srv.rollbackDepot("missing"); !errors.Is(err, errDepotNotFound) {
+		if _, err := env.srv.rollbackDepot(context.Background(), "missing"); !errors.Is(err, errDepotNotFound) {
 			t.Fatalf("rollbackDepot() error = %v", err)
 		}
 	})
@@ -116,7 +117,7 @@ func TestRollbackDepot(t *testing.T) {
 		env.writeRelease("depot", Stable, "1.1.0", map[string]string{"fw.bin": "stable"})
 		env.writeRelease("depot", Rollback, "1.0.0", map[string]string{"fw.bin": "rollback"})
 
-		depot, err := env.srv.rollbackDepot("depot")
+		depot, err := env.srv.rollbackDepot(context.Background(), "depot")
 		if err != nil {
 			t.Fatalf("rollbackDepot() unexpected error: %v", err)
 		}
@@ -130,7 +131,7 @@ func TestRollbackDepot(t *testing.T) {
 		env := newTestEnv(t)
 		env.writeRelease("depot", Rollback, "1.0.0", map[string]string{"fw.bin": "rollback"})
 
-		depot, err := env.srv.rollbackDepot("depot")
+		depot, err := env.srv.rollbackDepot(context.Background(), "depot")
 		if err != nil {
 			t.Fatalf("rollbackDepot() unexpected error: %v", err)
 		}
@@ -143,7 +144,7 @@ func TestRollbackDepot(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Stable, "1.1.0", map[string]string{"fw.bin": "stable"})
-		if _, err := env.srv.rollbackDepot("depot"); !errors.Is(err, errChannelNotFound) {
+		if _, err := env.srv.rollbackDepot(context.Background(), "depot"); !errors.Is(err, errChannelNotFound) {
 			t.Fatalf("rollbackDepot() error = %v", err)
 		}
 	})
@@ -156,8 +157,8 @@ func TestRollbackDepot(t *testing.T) {
 		store := newMockStore(t)
 		store.base = env.store
 		store.rename = func(oldName, newName string) error { return errors.New("boom") }
-		srv := &Server{Store: store}
-		if _, err := srv.rollbackDepot("depot"); err == nil {
+		srv := &Server{Store: store, MetadataStore: env.meta}
+		if _, err := srv.rollbackDepot(context.Background(), "depot"); err == nil {
 			t.Fatal("rollbackDepot() expected prepareSwitch error")
 		}
 	})
@@ -168,7 +169,7 @@ func TestRollbackDepot(t *testing.T) {
 		env.writeRelease("depot", Stable, "1.1.0", map[string]string{"fw.bin": "stable"})
 		env.writeFile("depot/rollback/manifest.json", `{`)
 		env.writeFile("depot/rollback/fw.bin", "rollback")
-		if _, err := env.srv.rollbackDepot("depot"); err == nil {
+		if _, err := env.srv.rollbackDepot(context.Background(), "depot"); err == nil {
 			t.Fatal("rollbackDepot() expected rewrite manifest error")
 		}
 	})
@@ -249,7 +250,7 @@ func TestPrepareSwitchErrors(t *testing.T) {
 		store.rename = func(oldName, newName string) error {
 			return errors.New("boom")
 		}
-		srv := &Server{Store: store}
+		srv := &Server{Store: store, MetadataStore: env.meta}
 		if _, _, err := srv.prepareSwitch("depot", map[string]string{"stable": "depot/stable"}, map[string]string{}); err == nil {
 			t.Fatal("prepareSwitch() expected rename error")
 		}

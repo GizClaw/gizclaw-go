@@ -6,12 +6,14 @@ import (
 	"errors"
 	"io"
 	"io/fs"
+	"iter"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -35,9 +37,13 @@ func TestListDepotsHandler(t *testing.T) {
 
 	t.Run("store error", func(t *testing.T) {
 		t.Parallel()
-		store := newMockStore(t)
-		store.walkDir = func(root string, fn fs.WalkDirFunc) error { return errors.New("boom") }
-		srv := &Server{Store: store}
+		meta := newMockKVStore()
+		meta.list = func(context.Context, kv.Key) iter.Seq2[kv.Entry, error] {
+			return func(yield func(kv.Entry, error) bool) {
+				yield(kv.Entry{}, errors.New("boom"))
+			}
+		}
+		srv := &Server{Store: newMockStore(t), MetadataStore: meta}
 
 		resp, err := srv.ListDepots(context.Background(), adminservice.ListDepotsRequestObject{})
 		if err != nil {
@@ -51,7 +57,9 @@ func TestListDepotsHandler(t *testing.T) {
 	t.Run("scan depot error", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		env.writeFile("depot/stable/manifest.json", `{`)
+		if err := env.meta.Set(context.Background(), depotMetadataKey("depot"), []byte(`{"name":"bad:name"}`)); err != nil {
+			t.Fatalf("seed bad metadata: %v", err)
+		}
 		resp, err := env.srv.ListDepots(context.Background(), adminservice.ListDepotsRequestObject{})
 		if err != nil {
 			t.Fatalf("ListDepots() unexpected error: %v", err)
@@ -138,14 +146,9 @@ func TestAdminHandlers(t *testing.T) {
 	t.Run("put depot info internal error", func(t *testing.T) {
 		t.Parallel()
 		store := newMockStore(t)
-		base := store.base
-		store.readFile = func(name string) ([]byte, error) {
-			if name == "depot/info.json" {
-				return nil, errors.New("boom")
-			}
-			return base.ReadFile(name)
-		}
-		srv := &Server{Store: store}
+		meta := newMockKVStore()
+		meta.set = func(context.Context, kv.Key, []byte) error { return errors.New("boom") }
+		srv := &Server{Store: store, MetadataStore: meta}
 		info := depotInfo("fw.bin")
 		resp, err := srv.PutDepotInfo(ctx, adminservice.PutDepotInfoRequestObject{Depot: "depot", Body: &info})
 		if err != nil {
@@ -322,9 +325,13 @@ func TestAdminHandlers(t *testing.T) {
 
 	t.Run("release internal error and rollback invalid path", func(t *testing.T) {
 		t.Parallel()
+		env := newTestEnv(t)
+		env.writeRelease("depot", Beta, "1.1.0", map[string]string{"fw.bin": "beta"})
+		env.writeRelease("depot", Testing, "1.2.0", map[string]string{"fw.bin": "testing"})
 		store := newMockStore(t)
+		store.base = env.store
 		store.stat = func(name string) (fs.FileInfo, error) { return nil, errors.New("boom") }
-		srv := &Server{Store: store}
+		srv := &Server{Store: store, MetadataStore: env.meta}
 
 		releaseResp, err := srv.ReleaseDepot(ctx, adminservice.ReleaseDepotRequestObject{Depot: "depot"})
 		if err != nil {
@@ -356,9 +363,12 @@ func TestAdminHandlers(t *testing.T) {
 
 	t.Run("rollback internal error", func(t *testing.T) {
 		t.Parallel()
+		env := newTestEnv(t)
+		env.writeRelease("depot", Rollback, "1.0.0", map[string]string{"fw.bin": "rollback"})
 		store := newMockStore(t)
+		store.base = env.store
 		store.stat = func(name string) (fs.FileInfo, error) { return nil, errors.New("boom") }
-		srv := &Server{Store: store}
+		srv := &Server{Store: store, MetadataStore: env.meta}
 		resp, err := srv.RollbackDepot(ctx, adminservice.RollbackDepotRequestObject{Depot: "depot"})
 		if err != nil {
 			t.Fatalf("RollbackDepot() unexpected error: %v", err)
@@ -600,7 +610,8 @@ func TestServerPublicDownloadFirmware(t *testing.T) {
 		store.base = env.store
 		store.open = func(name string) (fs.File, error) { return nil, errors.New("boom") }
 		srv := &Server{
-			Store: store,
+			Store:         store,
+			MetadataStore: env.meta,
 			ResolveGearTarget: func(ctx context.Context, publicKey string) (string, Channel, error) {
 				return "depot", Stable, nil
 			},
@@ -677,7 +688,7 @@ func TestResolveOTAFile(t *testing.T) {
 	t.Run("invalid path", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		if _, _, _, err := env.srv.resolveOTAFile("depot", Stable, "../bad"); !errors.Is(err, errInvalidPath) {
+		if _, _, _, err := env.srv.resolveOTAFile(context.Background(), "depot", Stable, "../bad"); !errors.Is(err, errInvalidPath) {
 			t.Fatalf("resolveOTAFile() error = %v", err)
 		}
 	})
@@ -685,7 +696,7 @@ func TestResolveOTAFile(t *testing.T) {
 	t.Run("missing depot", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		if _, _, _, err := env.srv.resolveOTAFile("missing", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
+		if _, _, _, err := env.srv.resolveOTAFile(context.Background(), "missing", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
 			t.Fatalf("resolveOTAFile() error = %v", err)
 		}
 	})
@@ -694,7 +705,7 @@ func TestResolveOTAFile(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeDepotInfo("depot", "fw.bin")
-		if _, _, _, err := env.srv.resolveOTAFile("depot", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
+		if _, _, _, err := env.srv.resolveOTAFile(context.Background(), "depot", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
 			t.Fatalf("resolveOTAFile() error = %v", err)
 		}
 	})
@@ -706,8 +717,8 @@ func TestResolveOTAFile(t *testing.T) {
 		store := newMockStore(t)
 		store.base = env.store
 		store.open = func(name string) (fs.File, error) { return nil, fs.ErrNotExist }
-		srv := &Server{Store: store}
-		if _, _, _, err := srv.resolveOTAFile("depot", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
+		srv := &Server{Store: store, MetadataStore: env.meta}
+		if _, _, _, err := srv.resolveOTAFile(context.Background(), "depot", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
 			t.Fatalf("resolveOTAFile() error = %v", err)
 		}
 	})
@@ -721,8 +732,8 @@ func TestResolveOTAFile(t *testing.T) {
 		store.open = func(name string) (fs.File, error) {
 			return statErrorFile{Reader: bytes.NewReader(nil)}, nil
 		}
-		srv := &Server{Store: store}
-		if _, _, _, err := srv.resolveOTAFile("depot", Stable, "fw.bin"); err == nil {
+		srv := &Server{Store: store, MetadataStore: env.meta}
+		if _, _, _, err := srv.resolveOTAFile(context.Background(), "depot", Stable, "fw.bin"); err == nil {
 			t.Fatal("resolveOTAFile() expected stat error")
 		}
 	})
@@ -731,7 +742,7 @@ func TestResolveOTAFile(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"fw.bin": "firmware"})
-		body, contentLength, headers, err := env.srv.resolveOTAFile("depot", Stable, "fw.bin")
+		body, contentLength, headers, err := env.srv.resolveOTAFile(context.Background(), "depot", Stable, "fw.bin")
 		if err != nil {
 			t.Fatalf("resolveOTAFile() unexpected error: %v", err)
 		}

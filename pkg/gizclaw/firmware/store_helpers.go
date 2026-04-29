@@ -1,6 +1,7 @@
 package firmware
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -17,14 +18,17 @@ func (s *Server) ensureDepot(depot string) error {
 	return s.store().MkdirAll(s.depotPath(depot))
 }
 
-func (s *Server) validateDepot(depot string) error {
+func (s *Server) validateDepot(ctx context.Context, depot string) error {
 	if err := validateDepotName(depot); err != nil {
+		return err
+	}
+	if _, err := s.getDepotMetadata(ctx, depot); err != nil {
 		return err
 	}
 	info, err := s.store().Stat(s.depotPath(depot))
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return errDepotNotFound
+			return fmt.Errorf("firmware: depot files missing for %s: %w", depot, err)
 		}
 		return err
 	}

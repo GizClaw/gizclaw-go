@@ -16,11 +16,13 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 	"github.com/gofiber/fiber/v2"
 )
 
 type Server struct {
-	Store depotstore.Store
+	Store         depotstore.Store
+	MetadataStore kv.Store
 
 	// ResolveGearTarget maps a gear public key to the OTA depot/channel it should read from.
 	ResolveGearTarget func(ctx context.Context, publicKey string) (depot string, channel Channel, err error)
@@ -64,16 +66,16 @@ var _ FirmwareGearService = (*Server)(nil)
 var _ FirmwareServerPublic = (*Server)(nil)
 
 // ListDepots implements `adminservice.StrictServerInterface.ListDepots`.
-func (s *Server) ListDepots(_ context.Context, _ adminservice.ListDepotsRequestObject) (adminservice.ListDepotsResponseObject, error) {
-	names, err := s.scanDepotNames()
+func (s *Server) ListDepots(ctx context.Context, _ adminservice.ListDepotsRequestObject) (adminservice.ListDepotsResponseObject, error) {
+	names, err := s.scanDepotNames(ctx)
 	if err != nil {
-		return adminservice.ListDepots500JSONResponse(apitypes.NewErrorResponse("DIRECTORY_SCAN_FAILED", err.Error())), nil
+		return adminservice.ListDepots500JSONResponse(apitypes.NewErrorResponse("DEPOT_METADATA_FAILED", err.Error())), nil
 	}
 	items := make([]apitypes.Depot, 0, len(names))
 	for _, name := range names {
-		depot, err := s.scanDepot(name)
+		depot, err := s.getDepotMetadata(ctx, name)
 		if err != nil {
-			return adminservice.ListDepots500JSONResponse(apitypes.NewErrorResponse("DIRECTORY_SCAN_FAILED", err.Error())), nil
+			return adminservice.ListDepots500JSONResponse(apitypes.NewErrorResponse("DEPOT_METADATA_FAILED", err.Error())), nil
 		}
 		items = append(items, depot)
 	}
@@ -81,12 +83,12 @@ func (s *Server) ListDepots(_ context.Context, _ adminservice.ListDepotsRequestO
 }
 
 // GetDepot implements `adminservice.StrictServerInterface.GetDepot`.
-func (s *Server) GetDepot(_ context.Context, request adminservice.GetDepotRequestObject) (adminservice.GetDepotResponseObject, error) {
+func (s *Server) GetDepot(ctx context.Context, request adminservice.GetDepotRequestObject) (adminservice.GetDepotResponseObject, error) {
 	depotName, err := url.PathUnescape(request.Depot)
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	depot, err := s.scanDepot(depotName)
+	depot, err := s.scanDepot(ctx, depotName)
 	if err != nil {
 		return adminservice.GetDepot404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
 	}
@@ -94,7 +96,7 @@ func (s *Server) GetDepot(_ context.Context, request adminservice.GetDepotReques
 }
 
 // PutDepotInfo implements `adminservice.StrictServerInterface.PutDepotInfo`.
-func (s *Server) PutDepotInfo(_ context.Context, request adminservice.PutDepotInfoRequestObject) (adminservice.PutDepotInfoResponseObject, error) {
+func (s *Server) PutDepotInfo(ctx context.Context, request adminservice.PutDepotInfoRequestObject) (adminservice.PutDepotInfoResponseObject, error) {
 	if request.Body == nil {
 		return adminservice.PutDepotInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_JSON", "request body required")), nil
 	}
@@ -111,7 +113,7 @@ func (s *Server) PutDepotInfo(_ context.Context, request adminservice.PutDepotIn
 	if err := validateDepotInfo(info); err != nil {
 		return adminservice.PutDepotInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_JSON", err.Error())), nil
 	}
-	if current, err := s.scanDepot(depotName); err == nil {
+	if current, err := s.scanDepot(ctx, depotName); err == nil {
 		for _, channel := range allChannels() {
 			release, ok := depotRelease(current, channel)
 			if !ok {
@@ -122,23 +124,27 @@ func (s *Server) PutDepotInfo(_ context.Context, request adminservice.PutDepotIn
 			}
 		}
 	}
-	if err := writeInfo(s.store(), s.infoPath(depotName), info); err != nil {
-		return adminservice.PutDepotInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_JSON", err.Error())), nil
-	}
-	depot, err := s.scanDepot(depotName)
+	depot, err := s.scanDepot(ctx, depotName)
 	if err != nil {
-		return adminservice.PutDepotInfo500JSONResponse(apitypes.NewErrorResponse("DIRECTORY_SCAN_FAILED", err.Error())), nil
+		if !errors.Is(err, errDepotNotFound) {
+			return adminservice.PutDepotInfo500JSONResponse(apitypes.NewErrorResponse("DEPOT_METADATA_FAILED", err.Error())), nil
+		}
+		depot = apitypes.Depot{Name: depotName}
+	}
+	depot.Info = info
+	if err := s.writeDepotMetadata(ctx, depot); err != nil {
+		return adminservice.PutDepotInfo500JSONResponse(apitypes.NewErrorResponse("DEPOT_METADATA_FAILED", err.Error())), nil
 	}
 	return adminservice.PutDepotInfo200JSONResponse(depot), nil
 }
 
 // GetChannel implements `adminservice.StrictServerInterface.GetChannel`.
-func (s *Server) GetChannel(_ context.Context, request adminservice.GetChannelRequestObject) (adminservice.GetChannelResponseObject, error) {
+func (s *Server) GetChannel(ctx context.Context, request adminservice.GetChannelRequestObject) (adminservice.GetChannelResponseObject, error) {
 	depotName, err := url.PathUnescape(request.Depot)
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	depot, err := s.scanDepot(depotName)
+	depot, err := s.scanDepot(ctx, depotName)
 	if err != nil {
 		return adminservice.GetChannel404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
 	}
@@ -150,12 +156,12 @@ func (s *Server) GetChannel(_ context.Context, request adminservice.GetChannelRe
 }
 
 // PutChannel implements `adminservice.StrictServerInterface.PutChannel`.
-func (s *Server) PutChannel(_ context.Context, request adminservice.PutChannelRequestObject) (adminservice.PutChannelResponseObject, error) {
+func (s *Server) PutChannel(ctx context.Context, request adminservice.PutChannelRequestObject) (adminservice.PutChannelResponseObject, error) {
 	depotName, err := url.PathUnescape(request.Depot)
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	release, err := s.uploadTar(depotName, Channel(request.Channel), request.Body)
+	release, err := s.uploadTar(ctx, depotName, Channel(request.Channel), request.Body)
 	if err != nil {
 		return adminservice.PutChannel409JSONResponse(apitypes.NewErrorResponse("MANIFEST_INVALID", err.Error())), nil
 	}
@@ -163,12 +169,12 @@ func (s *Server) PutChannel(_ context.Context, request adminservice.PutChannelRe
 }
 
 // ReleaseDepot implements `adminservice.StrictServerInterface.ReleaseDepot`.
-func (s *Server) ReleaseDepot(_ context.Context, request adminservice.ReleaseDepotRequestObject) (adminservice.ReleaseDepotResponseObject, error) {
+func (s *Server) ReleaseDepot(ctx context.Context, request adminservice.ReleaseDepotRequestObject) (adminservice.ReleaseDepotResponseObject, error) {
 	depotName, err := url.PathUnescape(request.Depot)
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	depot, err := s.releaseDepot(depotName)
+	depot, err := s.releaseDepot(ctx, depotName)
 	if err != nil {
 		switch {
 		case errors.Is(err, errDepotNotFound):
@@ -183,12 +189,12 @@ func (s *Server) ReleaseDepot(_ context.Context, request adminservice.ReleaseDep
 }
 
 // RollbackDepot implements `adminservice.StrictServerInterface.RollbackDepot`.
-func (s *Server) RollbackDepot(_ context.Context, request adminservice.RollbackDepotRequestObject) (adminservice.RollbackDepotResponseObject, error) {
+func (s *Server) RollbackDepot(ctx context.Context, request adminservice.RollbackDepotRequestObject) (adminservice.RollbackDepotResponseObject, error) {
 	depotName, err := url.PathUnescape(request.Depot)
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	depot, err := s.rollbackDepot(depotName)
+	depot, err := s.rollbackDepot(ctx, depotName)
 	if err != nil {
 		switch {
 		case errors.Is(err, errDepotNotFound):
@@ -219,7 +225,7 @@ func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTA
 		}
 		return adminservice.GetGearOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
-	ota, err := s.resolveOTA(depotName, channel)
+	ota, err := s.resolveOTA(ctx, depotName, channel)
 	if err != nil {
 		return adminservice.GetGearOTA404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", err.Error())), nil
 	}
@@ -236,7 +242,7 @@ func (s *Server) GetOTA(ctx context.Context, _ gearservice.GetOTARequestObject) 
 	if err != nil {
 		return gearservice.GetOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
-	ota, err := s.resolveOTA(depotName, channel)
+	ota, err := s.resolveOTA(ctx, depotName, channel)
 	if err != nil {
 		return gearservice.GetOTA404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", err.Error())), nil
 	}
@@ -253,7 +259,7 @@ func (s *Server) DownloadFirmware(ctx context.Context, request gearservice.Downl
 	if err != nil {
 		return gearservice.DownloadFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
-	body, contentLength, headers, err := s.resolveOTAFile(depotName, channel, filePath)
+	body, contentLength, headers, err := s.resolveOTAFile(ctx, depotName, channel, filePath)
 	if err != nil {
 		switch {
 		case errors.Is(err, errInvalidPath):
@@ -289,11 +295,11 @@ func (s *Server) resolveCallerTarget(ctx context.Context) (string, Channel, erro
 	return depotName, channel, nil
 }
 
-func (s *Server) resolveOTAFile(depotName string, channel Channel, relativePath string) (io.Reader, int64, gearservice.DownloadFirmware200ResponseHeaders, error) {
+func (s *Server) resolveOTAFile(ctx context.Context, depotName string, channel Channel, relativePath string) (io.Reader, int64, gearservice.DownloadFirmware200ResponseHeaders, error) {
 	if err := validateRelativePath(relativePath); err != nil {
 		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, err
 	}
-	depot, err := s.scanDepot(depotName)
+	depot, err := s.scanDepot(ctx, depotName)
 	if err != nil {
 		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
 	}

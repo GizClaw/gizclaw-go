@@ -1,9 +1,7 @@
 package depotstore
 
 import (
-	"io/fs"
 	"path/filepath"
-	"slices"
 	"testing"
 )
 
@@ -49,21 +47,6 @@ func TestDirStoreOperations(t *testing.T) {
 	}
 	if _, err := store.Stat("demo/stable/fw.bin"); err != nil {
 		t.Fatalf("Stat renamed file error = %v", err)
-	}
-
-	var walked []string
-	err = store.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		walked = append(walked, path)
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("WalkDir error = %v", err)
-	}
-	if !slices.Contains(walked, filepath.ToSlash("demo/stable/fw.bin")) {
-		t.Fatalf("WalkDir paths = %v", walked)
 	}
 
 	if got := store.abs("./demo/manifest.json"); got != filepath.Join(root, "demo", "manifest.json") {

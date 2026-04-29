@@ -2,17 +2,17 @@ package firmware
 
 import (
 	"archive/tar"
+	"context"
 	"errors"
 	"fmt"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"io"
-	"io/fs"
 	"path"
 
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 )
 
-func (s *Server) uploadTar(depot string, channel Channel, r io.Reader) (apitypes.DepotRelease, error) {
+func (s *Server) uploadTar(ctx context.Context, depot string, channel Channel, r io.Reader) (apitypes.DepotRelease, error) {
 	if !isValidChannel(channel) {
 		return apitypes.DepotRelease{}, fmt.Errorf("firmware: invalid channel %q", channel)
 	}
@@ -32,16 +32,16 @@ func (s *Server) uploadTar(depot string, channel Channel, r io.Reader) (apitypes
 	if err != nil {
 		return apitypes.DepotRelease{}, err
 	}
-	if data, err := s.store().ReadFile(s.infoPath(depot)); err == nil {
-		info, err := parseInfo(data)
-		if err != nil {
+	snapshot, err := s.scanDepot(ctx, depot)
+	if err != nil {
+		if !errors.Is(err, errDepotNotFound) {
 			return apitypes.DepotRelease{}, err
 		}
-		if !sameInfoFiles(info, release) {
+		snapshot = apitypes.Depot{Name: depot}
+	} else if len(infoFiles(snapshot.Info)) > 0 {
+		if !sameInfoFiles(snapshot.Info, release) {
 			return apitypes.DepotRelease{}, fmt.Errorf("firmware: info files mismatch")
 		}
-	} else if !errors.Is(err, fs.ErrNotExist) {
-		return apitypes.DepotRelease{}, err
 	}
 
 	targetPath := s.channelPath(depot, string(channel))
@@ -61,24 +61,16 @@ func (s *Server) uploadTar(depot string, channel Channel, r io.Reader) (apitypes
 		return apitypes.DepotRelease{}, err
 	}
 
-	snapshot, err := s.scanDepot(depot)
-	if err != nil {
+	setDepotRelease(&snapshot, channel, normalizeDepotRelease(release))
+	if err := s.writeDepotMetadata(ctx, snapshot); err != nil {
 		_ = s.store().RemoveAll(targetPath)
 		if hadPrevious {
 			_ = s.store().Rename(swapPath, targetPath)
 		}
 		return apitypes.DepotRelease{}, err
 	}
-	uploaded, ok := depotRelease(snapshot, channel)
-	if !ok {
-		_ = s.store().RemoveAll(targetPath)
-		if hadPrevious {
-			_ = s.store().Rename(swapPath, targetPath)
-		}
-		return apitypes.DepotRelease{}, errChannelNotFound
-	}
 	_ = s.store().RemoveAll(swapPath)
-	return uploaded, nil
+	return normalizeDepotRelease(release), nil
 }
 
 func extractTar(store depotstore.Store, dst string, wantChannel Channel, r io.Reader) (apitypes.DepotRelease, error) {

@@ -12,14 +12,6 @@ type Dir string
 
 var _ Store = Dir("")
 
-func (d Dir) WalkDir(root string, fn fs.WalkDirFunc) error {
-	start := root
-	if start == "" {
-		start = "."
-	}
-	return fs.WalkDir(os.DirFS(string(d)), start, fn)
-}
-
 func (d Dir) ReadFile(name string) ([]byte, error) {
 	return os.ReadFile(d.abs(name))
 }

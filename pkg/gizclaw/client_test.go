@@ -23,6 +23,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
 func TestClientDialAndServeValidation(t *testing.T) {
@@ -107,7 +108,7 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 		ServerPublicKey: "server-pk",
 	}
 	manager := NewManager(gearServer)
-	firmwareServer := &firmware.Server{Store: depotstore.Dir(t.TempDir())}
+	firmwareServer := &firmware.Server{Store: depotstore.Dir(t.TempDir()), MetadataStore: kv.NewMemory(nil)}
 	service := &PeerService{
 		peerManager: manager,
 		admin: &adminService{

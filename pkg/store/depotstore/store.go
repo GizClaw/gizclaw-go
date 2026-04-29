@@ -2,11 +2,10 @@ package depotstore
 
 import "io/fs"
 
-// Store provides the directory-tree operations needed by depot-based firmware storage.
+// Store provides the file operations needed by depot-based firmware storage.
 //
 // Paths are relative slash-separated names under the store root.
 type Store interface {
-	WalkDir(root string, fn fs.WalkDirFunc) error
 	Open(name string) (fs.File, error)
 	ReadFile(name string) ([]byte, error)
 	WriteFile(name string, data []byte) error

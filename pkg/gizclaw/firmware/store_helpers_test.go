@@ -1,9 +1,12 @@
 package firmware
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"testing"
+
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
 func TestStoreHelpersPathsAndAccessors(t *testing.T) {
@@ -34,7 +37,7 @@ func TestEnsureValidateAndLockDepot(t *testing.T) {
 	t.Parallel()
 
 	env := newTestEnv(t)
-	if err := env.srv.validateDepot("missing"); !errors.Is(err, errDepotNotFound) {
+	if err := env.srv.validateDepot(context.Background(), "missing"); !errors.Is(err, errDepotNotFound) {
 		t.Fatalf("validateDepot(missing) = %v", err)
 	}
 	if err := env.srv.ensureDepot("bad/../name"); err == nil {
@@ -43,12 +46,14 @@ func TestEnsureValidateAndLockDepot(t *testing.T) {
 	if err := env.srv.ensureDepot("depot"); err != nil {
 		t.Fatalf("ensureDepot() unexpected error: %v", err)
 	}
-	if err := env.srv.validateDepot("depot"); err != nil {
+	env.writeDepotInfo("depot")
+	if err := env.srv.validateDepot(context.Background(), "depot"); err != nil {
 		t.Fatalf("validateDepot() unexpected error: %v", err)
 	}
 
+	env.writeDepotMetadata(apitypes.Depot{Name: "filedepot"})
 	env.writeFile("filedepot", "x")
-	if err := env.srv.validateDepot("filedepot"); err == nil {
+	if err := env.srv.validateDepot(context.Background(), "filedepot"); err == nil {
 		t.Fatal("validateDepot() expected non-directory error")
 	}
 
@@ -63,10 +68,12 @@ func TestEnsureValidateAndLockDepot(t *testing.T) {
 func TestValidateDepotPropagatesStoreError(t *testing.T) {
 	t.Parallel()
 
+	env := newTestEnv(t)
+	env.writeDepotInfo("depot")
 	store := newMockStore(t)
 	store.stat = func(name string) (fs.FileInfo, error) { return nil, errors.New("boom") }
-	srv := &Server{Store: store}
-	if err := srv.validateDepot("depot"); err == nil || err.Error() != "boom" {
+	srv := &Server{Store: store, MetadataStore: env.meta}
+	if err := srv.validateDepot(context.Background(), "depot"); err == nil || err.Error() != "boom" {
 		t.Fatalf("validateDepot() error = %v", err)
 	}
 }

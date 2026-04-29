@@ -54,7 +54,8 @@ type WorkspaceTemplatesConfig struct {
 }
 
 type DepotsConfig struct {
-	Store string `yaml:"store"`
+	Store         string `yaml:"store"`
+	MetadataStore string `yaml:"metadata-store"`
 }
 
 type ConfigFile struct {
@@ -119,6 +120,9 @@ func mergeGearsConfig(runtime GearsConfig, file GearsConfig) GearsConfig {
 func mergeDepotsConfig(runtime DepotsConfig, file DepotsConfig) DepotsConfig {
 	if runtime.Store == "" {
 		runtime.Store = file.Store
+	}
+	if runtime.MetadataStore == "" {
+		runtime.MetadataStore = file.MetadataStore
 	}
 	return runtime
 }
@@ -208,6 +212,9 @@ func (cfg Config) validate() error {
 	}
 	if cfg.WorkspaceTemplates.Store == "" {
 		return fmt.Errorf("server: workspace-templates.store is required")
+	}
+	if cfg.Depots.MetadataStore == "" {
+		return fmt.Errorf("server: depots.metadata-store is required")
 	}
 	return nil
 }

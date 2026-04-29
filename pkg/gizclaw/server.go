@@ -56,6 +56,7 @@ type Server struct {
 	BuildCommit            string
 	ServerPublicKey        string
 	DepotStore             depotstore.Store
+	DepotMetadataStore     kv.Store
 	StoreCloser            interface{ Close() error }
 
 	manager     *Manager
@@ -253,7 +254,8 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 		s.MiniMaxCredentialStore == nil &&
 		s.WorkspaceStore == nil &&
 		s.TemplateStore == nil &&
-		s.WorkspaceTemplateStore == nil
+		s.WorkspaceTemplateStore == nil &&
+		s.DepotMetadataStore == nil
 	gearStore := s.GearStore
 	if legacySharedStore {
 		gearStore = kv.Prefixed(s.GearStore, kv.Key{"gears"})
@@ -265,6 +267,7 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 	workspaceStore := moduleStore(s.WorkspaceStore, s.GearStore, "workspaces")
 	templateStore := moduleStore(s.TemplateStore, s.GearStore, "workspace-templates")
 	workspaceTemplateStore := moduleStore(s.WorkspaceTemplateStore, templateStore, "")
+	depotMetadataStore := moduleStore(s.DepotMetadataStore, s.GearStore, "firmware-depots")
 
 	gearsServer := &gear.Server{
 		Store:              gearStore,
@@ -276,7 +279,8 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 	gearsServer.PeerManager = manager
 
 	firmwareServer := &firmware.Server{
-		Store: s.DepotStore,
+		Store:         s.DepotStore,
+		MetadataStore: depotMetadataStore,
 		ResolveGearTarget: func(ctx context.Context, publicKey string) (string, firmware.Channel, error) {
 			return resolveGearTarget(ctx, gearsServer, publicKey)
 		},

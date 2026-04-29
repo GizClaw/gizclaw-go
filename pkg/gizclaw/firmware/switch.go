@@ -1,17 +1,23 @@
 package firmware
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"io/fs"
 	"path"
+
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
-func (s *Server) releaseDepot(depot string) (apitypes.Depot, error) {
+func (s *Server) releaseDepot(ctx context.Context, depot string) (apitypes.Depot, error) {
 	unlock := s.lockDepot(depot)
 	defer unlock()
-	if err := s.validateDepot(depot); err != nil {
+	if err := s.validateDepot(ctx, depot); err != nil {
+		return apitypes.Depot{}, err
+	}
+	current, err := s.scanDepot(ctx, depot)
+	if err != nil {
 		return apitypes.Depot{}, err
 	}
 	paths := map[string]string{
@@ -20,17 +26,22 @@ func (s *Server) releaseDepot(depot string) (apitypes.Depot, error) {
 		string(Beta):     s.channelPath(depot, string(Beta)),
 		string(Testing):  s.channelPath(depot, string(Testing)),
 	}
-	if _, err := s.store().Stat(paths[string(Beta)]); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return apitypes.Depot{}, fmt.Errorf("%w: %s", errChannelNotFound, Beta)
+	if _, err := s.scanRelease(ctx, depot, Beta); err != nil {
+		if !errors.Is(err, errChannelNotFound) {
+			return apitypes.Depot{}, err
 		}
-		return apitypes.Depot{}, err
+		return apitypes.Depot{}, fmt.Errorf("%w: %s", errChannelNotFound, Beta)
 	}
-	if _, err := s.store().Stat(paths[string(Testing)]); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return apitypes.Depot{}, fmt.Errorf("%w: %s", errChannelNotFound, Testing)
+	if _, err := s.scanRelease(ctx, depot, Testing); err != nil {
+		if !errors.Is(err, errChannelNotFound) {
+			return apitypes.Depot{}, err
 		}
-		return apitypes.Depot{}, err
+		return apitypes.Depot{}, fmt.Errorf("%w: %s", errChannelNotFound, Testing)
+	}
+	if _, ok := depotRelease(current, Stable); ok {
+		if _, err := s.scanRelease(ctx, depot, Stable); err != nil {
+			return apitypes.Depot{}, err
+		}
 	}
 	backups, restore, err := s.prepareSwitch(
 		depot,
@@ -55,28 +66,41 @@ func (s *Server) releaseDepot(depot string) (apitypes.Depot, error) {
 			return apitypes.Depot{}, err
 		}
 	}
-	snapshot, err := s.scanDepot(depot)
-	if err != nil {
+	next := current
+	next.Rollback = releaseWithChannel(current.Stable, Rollback)
+	next.Stable = releaseWithChannel(current.Beta, Stable)
+	next.Beta = releaseWithChannel(current.Testing, Beta)
+	next.Testing = apitypes.DepotRelease{}
+	if err := s.writeDepotMetadata(ctx, next); err != nil {
 		return apitypes.Depot{}, err
 	}
 	commit = true
 	s.cleanupBackups(backups)
-	return snapshot, nil
+	return next, nil
 }
 
-func (s *Server) rollbackDepot(depot string) (apitypes.Depot, error) {
+func (s *Server) rollbackDepot(ctx context.Context, depot string) (apitypes.Depot, error) {
 	unlock := s.lockDepot(depot)
 	defer unlock()
-	if err := s.validateDepot(depot); err != nil {
+	if err := s.validateDepot(ctx, depot); err != nil {
+		return apitypes.Depot{}, err
+	}
+	current, err := s.scanDepot(ctx, depot)
+	if err != nil {
 		return apitypes.Depot{}, err
 	}
 	rollbackPath := s.channelPath(depot, string(Rollback))
 	stablePath := s.channelPath(depot, string(Stable))
-	if _, err := s.store().Stat(rollbackPath); err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return apitypes.Depot{}, fmt.Errorf("%w: %s", errChannelNotFound, Rollback)
+	if _, err := s.scanRelease(ctx, depot, Rollback); err != nil {
+		if !errors.Is(err, errChannelNotFound) {
+			return apitypes.Depot{}, err
 		}
-		return apitypes.Depot{}, err
+		return apitypes.Depot{}, fmt.Errorf("%w: %s", errChannelNotFound, Rollback)
+	}
+	if _, ok := depotRelease(current, Stable); ok {
+		if _, err := s.scanRelease(ctx, depot, Stable); err != nil {
+			return apitypes.Depot{}, err
+		}
 	}
 	backups, restore, err := s.prepareSwitch(
 		depot,
@@ -104,13 +128,15 @@ func (s *Server) rollbackDepot(depot string) (apitypes.Depot, error) {
 	if err := s.rewriteManifestChannel(depot, Rollback); err != nil && !errors.Is(err, errChannelNotFound) {
 		return apitypes.Depot{}, err
 	}
-	snapshot, err := s.scanDepot(depot)
-	if err != nil {
+	next := current
+	next.Stable = releaseWithChannel(current.Rollback, Stable)
+	next.Rollback = releaseWithChannel(current.Stable, Rollback)
+	if err := s.writeDepotMetadata(ctx, next); err != nil {
 		return apitypes.Depot{}, err
 	}
 	commit = true
 	s.cleanupBackups(backups)
-	return snapshot, nil
+	return next, nil
 }
 
 func (s *Server) prepareSwitch(depot string, paths map[string]string, layout map[string]string) (map[string]string, func() error, error) {

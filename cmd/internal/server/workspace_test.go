@@ -54,6 +54,10 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: workspace-templates
+  firmware-depots:
+    kind: keyvalue
+    storage: memory
+    prefix: firmware-depots
   firmware:
     kind: depotstore
     storage: firmware-depot
@@ -76,6 +80,7 @@ workspace-templates:
   store: workspace-templates
 depots:
   store: firmware
+  metadata-store: firmware-depots
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
@@ -144,6 +149,10 @@ storage:
     kind: depotstore
     depot-fs: {}
 stores:
+  fw-meta:
+    kind: keyvalue
+    storage: memory
+    prefix: firmware-depots
   fw:
     kind: depotstore
     storage: fw
@@ -166,6 +175,7 @@ workspace-templates:
   store: fw
 depots:
   store: fw
+  metadata-store: fw-meta
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
@@ -300,6 +310,10 @@ stores:
     kind: keyvalue
     storage: main-kv
     prefix: workspace-templates
+  firmware-depots:
+    kind: keyvalue
+    storage: main-kv
+    prefix: firmware-depots
   firmware:
     kind: depotstore
     storage: firmware-depot
@@ -322,6 +336,7 @@ workspace-templates:
   store: workspace-templates
 depots:
   store: firmware
+  metadata-store: firmware-depots
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile config error = %v", err)
 	}

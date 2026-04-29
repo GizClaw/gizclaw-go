@@ -35,6 +35,10 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: workspace-templates
+  firmware-depots:
+    kind: keyvalue
+    storage: memory
+    prefix: firmware-depots
   firmware:
     kind: depotstore
     storage: firmware-depot
@@ -62,3 +66,4 @@ workspace-templates:
   store: workspace-templates
 depots:
   store: firmware
+  metadata-store: firmware-depots

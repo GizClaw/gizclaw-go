@@ -3,10 +3,12 @@ package firmware
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
-	"io/fs"
 	"testing"
+
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
 func TestExtractTar(t *testing.T) {
@@ -133,7 +135,7 @@ func TestUploadTar(t *testing.T) {
 	t.Run("invalid channel", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		if _, err := env.srv.uploadTar("depot", Channel("dev"), bytes.NewReader(nil)); err == nil {
+		if _, err := env.srv.uploadTar(context.Background(), "depot", Channel("dev"), bytes.NewReader(nil)); err == nil {
 			t.Fatal("uploadTar() expected invalid channel error")
 		}
 	})
@@ -148,7 +150,7 @@ func TestUploadTar(t *testing.T) {
 			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.1.0", map[string]string{"fw.bin": "new"}))},
 			tarEntry{Name: "fw.bin", Data: []byte("new")},
 		)
-		release, err := env.srv.uploadTar("depot", Beta, bytes.NewReader(data))
+		release, err := env.srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data))
 		if err != nil {
 			t.Fatalf("uploadTar() unexpected error: %v", err)
 		}
@@ -168,7 +170,7 @@ func TestUploadTar(t *testing.T) {
 			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.0.0", map[string]string{"fw.bin": "new"}))},
 			tarEntry{Name: "fw.bin", Data: []byte("new")},
 		)
-		if _, err := env.srv.uploadTar("depot", Beta, bytes.NewReader(data)); err == nil {
+		if _, err := env.srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data)); err == nil {
 			t.Fatal("uploadTar() expected info mismatch")
 		}
 	})
@@ -184,41 +186,38 @@ func TestUploadTar(t *testing.T) {
 		}
 		srv := &Server{Store: store}
 		data := buildTar(t)
-		if _, err := srv.uploadTar("depot", Beta, bytes.NewReader(data)); err == nil {
+		if _, err := srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data)); err == nil {
 			t.Fatal("uploadTar() expected mkdir error")
 		}
 	})
 
-	t.Run("info read error", func(t *testing.T) {
+	t.Run("metadata read error", func(t *testing.T) {
 		t.Parallel()
 		store := newMockStore(t)
-		base := store.base
-		store.readFile = func(name string) ([]byte, error) {
-			if name == "depot/info.json" {
-				return nil, errors.New("boom")
-			}
-			return base.ReadFile(name)
-		}
-		srv := &Server{Store: store}
+		meta := newMockKVStore()
+		meta.get = func(context.Context, kv.Key) ([]byte, error) { return nil, errors.New("boom") }
+		srv := &Server{Store: store, MetadataStore: meta}
 		data := buildTar(t,
 			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.0.0", map[string]string{"fw.bin": "new"}))},
 			tarEntry{Name: "fw.bin", Data: []byte("new")},
 		)
-		if _, err := srv.uploadTar("depot", Beta, bytes.NewReader(data)); err == nil {
-			t.Fatal("uploadTar() expected info read error")
+		if _, err := srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data)); err == nil {
+			t.Fatal("uploadTar() expected metadata read error")
 		}
 	})
 
-	t.Run("info parse error", func(t *testing.T) {
+	t.Run("metadata parse error", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		env.writeFile("depot/info.json", `{`)
+		if err := env.meta.Set(context.Background(), depotMetadataKey("depot"), []byte("{")); err != nil {
+			t.Fatalf("seed bad metadata: %v", err)
+		}
 		data := buildTar(t,
 			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.0.0", map[string]string{"fw.bin": "new"}))},
 			tarEntry{Name: "fw.bin", Data: []byte("new")},
 		)
-		if _, err := env.srv.uploadTar("depot", Beta, bytes.NewReader(data)); err == nil {
-			t.Fatal("uploadTar() expected info parse error")
+		if _, err := env.srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data)); err == nil {
+			t.Fatal("uploadTar() expected metadata parse error")
 		}
 	})
 
@@ -235,12 +234,12 @@ func TestUploadTar(t *testing.T) {
 			}
 			return baseRename(oldName, newName)
 		}
-		srv := &Server{Store: store}
+		srv := &Server{Store: store, MetadataStore: env.meta}
 		data := buildTar(t,
 			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.1.0", map[string]string{"fw.bin": "new"}))},
 			tarEntry{Name: "fw.bin", Data: []byte("new")},
 		)
-		if _, err := srv.uploadTar("depot", Beta, bytes.NewReader(data)); err == nil {
+		if _, err := srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data)); err == nil {
 			t.Fatal("uploadTar() expected swap rename error")
 		}
 	})
@@ -255,12 +254,12 @@ func TestUploadTar(t *testing.T) {
 			}
 			return baseRename(oldName, newName)
 		}
-		srv := &Server{Store: store}
+		srv := &Server{Store: store, MetadataStore: kv.NewMemory(nil)}
 		data := buildTar(t,
 			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.0.0", map[string]string{"fw.bin": "new"}))},
 			tarEntry{Name: "fw.bin", Data: []byte("new")},
 		)
-		if _, err := srv.uploadTar("depot", Beta, bytes.NewReader(data)); err == nil {
+		if _, err := srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data)); err == nil {
 			t.Fatal("uploadTar() expected rename error")
 		}
 	})
@@ -278,12 +277,12 @@ func TestUploadTar(t *testing.T) {
 			}
 			return baseRename(oldName, newName)
 		}
-		srv := &Server{Store: store}
+		srv := &Server{Store: store, MetadataStore: env.meta}
 		data := buildTar(t,
 			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.1.0", map[string]string{"fw.bin": "new"}))},
 			tarEntry{Name: "fw.bin", Data: []byte("new")},
 		)
-		if _, err := srv.uploadTar("depot", Beta, bytes.NewReader(data)); err == nil {
+		if _, err := srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data)); err == nil {
 			t.Fatal("uploadTar() expected rename error")
 		}
 		if got := string(env.readFile("depot/beta/fw.bin")); got != "old" {
@@ -291,61 +290,23 @@ func TestUploadTar(t *testing.T) {
 		}
 	})
 
-	t.Run("scan after rename error", func(t *testing.T) {
+	t.Run("metadata write error after rename", func(t *testing.T) {
 		t.Parallel()
 		store := newMockStore(t)
 		base := store.base
 		baseRename := base.Rename
-		var renamed bool
 		store.rename = func(oldName, newName string) error {
-			err := baseRename(oldName, newName)
-			if err == nil && oldName == "depot/.tmp-beta" && newName == "depot/beta" {
-				renamed = true
-			}
-			return err
+			return baseRename(oldName, newName)
 		}
-		store.readFile = func(name string) ([]byte, error) {
-			if renamed && name == "depot/beta/manifest.json" {
-				return nil, errors.New("boom")
-			}
-			return base.ReadFile(name)
-		}
-		srv := &Server{Store: store}
+		meta := newMockKVStore()
+		meta.set = func(context.Context, kv.Key, []byte) error { return errors.New("boom") }
+		srv := &Server{Store: store, MetadataStore: meta}
 		data := buildTar(t,
 			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.0.0", map[string]string{"fw.bin": "new"}))},
 			tarEntry{Name: "fw.bin", Data: []byte("new")},
 		)
-		if _, err := srv.uploadTar("depot", Beta, bytes.NewReader(data)); err == nil {
-			t.Fatal("uploadTar() expected scan error after rename")
-		}
-	})
-
-	t.Run("uploaded release missing after scan", func(t *testing.T) {
-		t.Parallel()
-		store := newMockStore(t)
-		base := store.base
-		baseRename := base.Rename
-		var renamed bool
-		store.rename = func(oldName, newName string) error {
-			err := baseRename(oldName, newName)
-			if err == nil && oldName == "depot/.tmp-beta" && newName == "depot/beta" {
-				renamed = true
-			}
-			return err
-		}
-		store.readFile = func(name string) ([]byte, error) {
-			if renamed && name == "depot/beta/manifest.json" {
-				return nil, fs.ErrNotExist
-			}
-			return base.ReadFile(name)
-		}
-		srv := &Server{Store: store}
-		data := buildTar(t,
-			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.0.0", map[string]string{"fw.bin": "new"}))},
-			tarEntry{Name: "fw.bin", Data: []byte("new")},
-		)
-		if _, err := srv.uploadTar("depot", Beta, bytes.NewReader(data)); !errors.Is(err, errChannelNotFound) {
-			t.Fatalf("uploadTar() error = %v", err)
+		if _, err := srv.uploadTar(context.Background(), "depot", Beta, bytes.NewReader(data)); err == nil {
+			t.Fatal("uploadTar() expected metadata write error")
 		}
 	})
 }

@@ -237,6 +237,9 @@ func validateDepotName(depot string) error {
 	if strings.Contains(depot, `\`) {
 		return fmt.Errorf("firmware: invalid depot name %q", depot)
 	}
+	if strings.Contains(depot, ":") {
+		return fmt.Errorf("firmware: invalid depot name %q", depot)
+	}
 	if path.IsAbs(depot) || strings.HasPrefix(depot, "/") {
 		return fmt.Errorf("firmware: invalid depot name %q", depot)
 	}

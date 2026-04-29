@@ -69,6 +69,10 @@ func New(cfg Config) (*gizclaw.Server, error) {
 			_ = ss.Close()
 			return nil, fmt.Errorf("server: workspace template reference store: %w", err)
 		}
+		if srv.DepotMetadataStore, err = ss.KV(cfg.Depots.MetadataStore); err != nil {
+			_ = ss.Close()
+			return nil, fmt.Errorf("server: firmware metadata store: %w", err)
+		}
 		if srv.TemplateStore, err = ss.KV(cfg.WorkspaceTemplates.Store); err != nil {
 			_ = ss.Close()
 			return nil, fmt.Errorf("server: workspace templates store: %w", err)

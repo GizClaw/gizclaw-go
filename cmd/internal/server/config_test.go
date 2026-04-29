@@ -31,7 +31,7 @@ func TestNewWithLayeredStorageConfig(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = srv.Close() })
 
-	if srv.GearStore == nil || srv.CredentialStore == nil || srv.MiniMaxTenantStore == nil || srv.VoiceStore == nil || srv.WorkspaceStore == nil || srv.WorkspaceTemplateStore == nil || srv.TemplateStore == nil {
+	if srv.GearStore == nil || srv.CredentialStore == nil || srv.MiniMaxTenantStore == nil || srv.VoiceStore == nil || srv.WorkspaceStore == nil || srv.WorkspaceTemplateStore == nil || srv.TemplateStore == nil || srv.DepotMetadataStore == nil {
 		t.Fatalf("module stores not wired: %+v", srv)
 	}
 	if srv.DepotStore == nil {
@@ -94,6 +94,12 @@ func TestNewWithLayeredStorageReportsStoreErrors(t *testing.T) {
 	missingTemplatesCfg.WorkspaceTemplates.Store = "missing"
 	if _, err := New(missingTemplatesCfg); err == nil || !strings.Contains(err.Error(), "server: workspace templates store:") {
 		t.Fatalf("New(missing templates store) = %v", err)
+	}
+
+	missingFirmwareMetadataCfg := validLayeredConfig(dir)
+	missingFirmwareMetadataCfg.Depots.MetadataStore = "missing"
+	if _, err := New(missingFirmwareMetadataCfg); err == nil || !strings.Contains(err.Error(), "server: firmware metadata store:") {
+		t.Fatalf("New(missing firmware metadata store) = %v", err)
 	}
 }
 
@@ -270,7 +276,7 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 		MiniMax:            MiniMaxConfig{TenantsStore: "minimax-tenants", VoicesStore: "voices", CredentialsStore: "credentials"},
 		Workspaces:         WorkspacesConfig{Store: "workspaces", TemplatesStore: "workspace-templates"},
 		WorkspaceTemplates: WorkspaceTemplatesConfig{Store: "workspace-templates"},
-		Depots:             DepotsConfig{Store: "firmware"},
+		Depots:             DepotsConfig{Store: "firmware", MetadataStore: "firmware-depots"},
 	}
 	tests := []struct {
 		name string
@@ -284,6 +290,7 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 		{"missing workspaces", func(c *Config) { c.Workspaces.Store = "" }, "server: workspaces.store is required"},
 		{"missing workspace template reference", func(c *Config) { c.Workspaces.TemplatesStore = "" }, "server: workspaces.templates-store is required"},
 		{"missing workspace templates", func(c *Config) { c.WorkspaceTemplates.Store = "" }, "server: workspace-templates.store is required"},
+		{"missing depot metadata", func(c *Config) { c.Depots.MetadataStore = "" }, "server: depots.metadata-store is required"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -392,6 +399,7 @@ func validLayeredConfig(dir string) Config {
 			"voices":              {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "voices"},
 			"workspaces":          {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workspaces"},
 			"workspace-templates": {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workspace-templates"},
+			"firmware-depots":     {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "firmware-depots"},
 			"firmware": {
 				Kind:    stores.KindDepotStore,
 				Storage: "firmware-depot",
@@ -409,6 +417,6 @@ func validLayeredConfig(dir string) Config {
 		},
 		Workspaces:         WorkspacesConfig{Store: "workspaces", TemplatesStore: "workspace-templates"},
 		WorkspaceTemplates: WorkspaceTemplatesConfig{Store: "workspace-templates"},
-		Depots:             DepotsConfig{Store: "firmware"},
+		Depots:             DepotsConfig{Store: "firmware", MetadataStore: "firmware-depots"},
 	}
 }

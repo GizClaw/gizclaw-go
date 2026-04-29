@@ -3,11 +3,14 @@ package firmware
 import (
 	"archive/tar"
 	"bytes"
+	"context"
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io/fs"
+	"iter"
 	"path"
 	"sort"
 	"testing"
@@ -15,12 +18,14 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
 type testEnv struct {
 	t     *testing.T
 	root  string
 	store depotstore.Store
+	meta  kv.Store
 	srv   *Server
 }
 
@@ -29,11 +34,13 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	root := t.TempDir()
 	store := depotstore.Dir(root)
+	meta := kv.NewMemory(nil)
 	return &testEnv{
 		t:     t,
 		root:  root,
 		store: store,
-		srv:   &Server{Store: store},
+		meta:  meta,
+		srv:   &Server{Store: store, MetadataStore: meta},
 	}
 }
 
@@ -68,7 +75,12 @@ func (e *testEnv) readFile(name string) []byte {
 func (e *testEnv) writeDepotInfo(depot string, paths ...string) apitypes.DepotInfo {
 	e.t.Helper()
 	info := depotInfo(paths...)
-	e.writeJSON(path.Join(depot, "info.json"), info)
+	if err := e.store.MkdirAll(depot); err != nil {
+		e.t.Fatalf("mkdir depot %s: %v", depot, err)
+	}
+	current := e.depotMetadata(depot)
+	current.Info = info
+	e.writeDepotMetadata(current)
 	return info
 }
 
@@ -79,7 +91,29 @@ func (e *testEnv) writeRelease(depot string, channel Channel, version string, fi
 		e.writeFile(path.Join(depot, string(channel), filePath), content)
 	}
 	e.writeJSON(path.Join(depot, string(channel), "manifest.json"), release)
+	current := e.depotMetadata(depot)
+	setDepotRelease(&current, channel, release)
+	e.writeDepotMetadata(current)
 	return release
+}
+
+func (e *testEnv) depotMetadata(depot string) apitypes.Depot {
+	e.t.Helper()
+	current, err := e.srv.scanDepot(context.Background(), depot)
+	if err != nil {
+		if !errors.Is(err, errDepotNotFound) {
+			e.t.Fatalf("read depot metadata %s: %v", depot, err)
+		}
+		current = apitypes.Depot{Name: depot}
+	}
+	return current
+}
+
+func (e *testEnv) writeDepotMetadata(depot apitypes.Depot) {
+	e.t.Helper()
+	if err := e.srv.writeDepotMetadata(context.Background(), depot); err != nil {
+		e.t.Fatalf("write depot metadata %s: %v", depot.Name, err)
+	}
 }
 
 func depotInfo(paths ...string) apitypes.DepotInfo {
@@ -161,7 +195,6 @@ func buildTar(t *testing.T, entries ...tarEntry) []byte {
 type mockStore struct {
 	base      depotstore.Store
 	open      func(name string) (fs.File, error)
-	walkDir   func(root string, fn fs.WalkDirFunc) error
 	readFile  func(name string) ([]byte, error)
 	writeFile func(name string, data []byte) error
 	stat      func(name string) (fs.FileInfo, error)
@@ -185,13 +218,6 @@ func (m *mockStore) Open(name string) (fs.File, error) {
 		return opener.Open(name)
 	}
 	return nil, fs.ErrInvalid
-}
-
-func (m *mockStore) WalkDir(root string, fn fs.WalkDirFunc) error {
-	if m.walkDir != nil {
-		return m.walkDir(root, fn)
-	}
-	return m.base.WalkDir(root, fn)
 }
 
 func (m *mockStore) ReadFile(name string) ([]byte, error) {
@@ -234,4 +260,54 @@ func (m *mockStore) RemoveAll(name string) error {
 		return m.removeAll(name)
 	}
 	return m.base.RemoveAll(name)
+}
+
+type mockKVStore struct {
+	base kv.Store
+	get  func(context.Context, kv.Key) ([]byte, error)
+	set  func(context.Context, kv.Key, []byte) error
+	list func(context.Context, kv.Key) iter.Seq2[kv.Entry, error]
+}
+
+var _ kv.Store = (*mockKVStore)(nil)
+
+func newMockKVStore() *mockKVStore {
+	return &mockKVStore{base: kv.NewMemory(nil)}
+}
+
+func (m *mockKVStore) Get(ctx context.Context, key kv.Key) ([]byte, error) {
+	if m.get != nil {
+		return m.get(ctx, key)
+	}
+	return m.base.Get(ctx, key)
+}
+
+func (m *mockKVStore) Set(ctx context.Context, key kv.Key, value []byte) error {
+	if m.set != nil {
+		return m.set(ctx, key, value)
+	}
+	return m.base.Set(ctx, key, value)
+}
+
+func (m *mockKVStore) Delete(ctx context.Context, key kv.Key) error {
+	return m.base.Delete(ctx, key)
+}
+
+func (m *mockKVStore) List(ctx context.Context, prefix kv.Key) iter.Seq2[kv.Entry, error] {
+	if m.list != nil {
+		return m.list(ctx, prefix)
+	}
+	return m.base.List(ctx, prefix)
+}
+
+func (m *mockKVStore) BatchSet(ctx context.Context, entries []kv.Entry) error {
+	return m.base.BatchSet(ctx, entries)
+}
+
+func (m *mockKVStore) BatchDelete(ctx context.Context, keys []kv.Key) error {
+	return m.base.BatchDelete(ctx, keys)
+}
+
+func (m *mockKVStore) Close() error {
+	return m.base.Close()
 }
