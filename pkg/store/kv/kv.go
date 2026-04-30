@@ -11,12 +11,15 @@ import (
 	"errors"
 	"iter"
 	"strings"
+	"time"
 )
 
 // Sentinel errors.
 var (
 	// ErrNotFound is returned when a key does not exist in the store.
 	ErrNotFound = errors.New("kv: not found")
+	// ErrInvalidDeadline is returned when an entry deadline is already expired.
+	ErrInvalidDeadline = errors.New("kv: invalid deadline")
 )
 
 // Key is a hierarchical path represented as a slice of string segments.
@@ -36,6 +39,8 @@ func (k Key) String() string {
 type Entry struct {
 	Key   Key
 	Value []byte
+	// Deadline sets an absolute expiration time for writes. A zero Deadline means the entry does not expire.
+	Deadline time.Time
 }
 
 // Store is the interface for a key-value store with path-based keys.

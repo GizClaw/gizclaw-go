@@ -11,7 +11,7 @@ func TestAdminContextProvisionUserStory(t *testing.T) {
 	h.StartServerFromFixture("server_config.yaml")
 
 	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "admin_default", "--sn", "admin-sn").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 
 	after := h.RunCLI("admin", "gears", "list", "--context", "admin-a")
 	after.MustSucceed(t)

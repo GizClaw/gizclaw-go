@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 )
@@ -18,9 +18,8 @@ func TestIntegrationAdminServiceFirmwareLifecycle(t *testing.T) {
 	ts := startTestServer(t)
 
 	admin := newTestClient(t, ts)
-	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
-		RegistrationToken: strPtr("admin_default"),
+	if _, err := register(context.Background(), admin, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("admin")},
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
 	}
@@ -99,9 +98,8 @@ func TestIntegrationAdminServiceWorkspaceTemplateLifecycle(t *testing.T) {
 	ts := startTestServer(t)
 
 	admin := newTestClient(t, ts)
-	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
-		RegistrationToken: strPtr("admin_default"),
+	if _, err := register(context.Background(), admin, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("admin")},
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
 	}
@@ -180,9 +178,8 @@ func TestIntegrationAdminServiceWorkspaceLifecycle(t *testing.T) {
 	ts := startTestServer(t)
 
 	admin := newTestClient(t, ts)
-	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
-		RegistrationToken: strPtr("admin_default"),
+	if _, err := register(context.Background(), admin, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("admin")},
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
 	}
@@ -251,9 +248,8 @@ func TestIntegrationAdminServiceCredentialLifecycle(t *testing.T) {
 	ts := startTestServer(t)
 
 	admin := newTestClient(t, ts)
-	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
-		RegistrationToken: strPtr("admin_default"),
+	if _, err := register(context.Background(), admin, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("admin")},
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
 	}

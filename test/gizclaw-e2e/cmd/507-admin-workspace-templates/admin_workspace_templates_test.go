@@ -14,7 +14,7 @@ func TestAdminWorkspaceTemplatesUserStory(t *testing.T) {
 	h := clitest.NewHarness(t, "507-admin-workspace-templates")
 	h.StartServerFromFixture("server_config.yaml")
 	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "admin_default", "--sn", "admin-sn").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 
 	seedWorkspaceTemplates(t, h)
 

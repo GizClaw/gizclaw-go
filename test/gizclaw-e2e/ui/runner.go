@@ -22,7 +22,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	adminui "github.com/GizClaw/gizclaw-go/ui/apps/admin"
 	playui "github.com/GizClaw/gizclaw-go/ui/apps/play"
@@ -267,7 +267,7 @@ func startSeededUI(t testing.TB) Seed {
 	if err != nil {
 		t.Fatalf("load admin registration seed: %v", err)
 	}
-	registerGear(t, adminClient, itest.RegistrationRequest(adminCtx.KeyPair.Public.String(), adminSeed))
+	registerGear(t, adminClient, adminCtx.KeyPair.Public.String(), itest.RegistrationRequest(adminCtx.KeyPair.Public.String(), adminSeed))
 
 	adminAPI, err := adminClient.ServerAdminClient()
 	if err != nil {
@@ -290,9 +290,9 @@ func startSeededUI(t testing.TB) Seed {
 	if err != nil {
 		t.Fatalf("load device registration seed: %v", err)
 	}
-	registerGear(t, deviceClient, itest.RegistrationRequest(deviceCtx.KeyPair.Public.String(), deviceSeed))
-	registerGear(t, actionDeviceClient, itest.RegistrationRequest(actionDeviceCtx.KeyPair.Public.String(), deviceSeed))
-	registerGear(t, deleteDeviceClient, itest.RegistrationRequest(deleteDeviceCtx.KeyPair.Public.String(), deviceSeed))
+	registerGear(t, deviceClient, deviceCtx.KeyPair.Public.String(), itest.RegistrationRequest(deviceCtx.KeyPair.Public.String(), deviceSeed))
+	registerGear(t, actionDeviceClient, actionDeviceCtx.KeyPair.Public.String(), itest.RegistrationRequest(actionDeviceCtx.KeyPair.Public.String(), deviceSeed))
+	registerGear(t, deleteDeviceClient, deleteDeviceCtx.KeyPair.Public.String(), itest.RegistrationRequest(deleteDeviceCtx.KeyPair.Public.String(), deviceSeed))
 
 	seedCtx, cancel := context.WithTimeout(context.Background(), itest.ReadyTimeout)
 	defer cancel()
@@ -323,23 +323,23 @@ func startSeededUI(t testing.TB) Seed {
 	}
 }
 
-func registerGear(t testing.TB, client *gizclaw.Client, request serverpublic.RegistrationRequest) {
+func registerGear(t testing.TB, client *gizclaw.Client, publicKey string, request gearservice.RegistrationRequest) {
 	t.Helper()
 
-	api, err := client.ServerPublicClient()
+	api, err := client.GearServiceClient()
 	if err != nil {
-		t.Fatalf("create public API client: %v", err)
+		t.Fatalf("create gear API client: %v", err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), itest.ReadyTimeout)
 	defer cancel()
 	resp, err := api.RegisterGearWithResponse(ctx, request)
 	if err != nil {
-		t.Fatalf("register %q: %v", request.PublicKey, err)
+		t.Fatalf("register %q: %v", publicKey, err)
 	}
 	if resp.JSON200 != nil || resp.StatusCode() == http.StatusConflict {
 		return
 	}
-	t.Fatalf("register %q got status %d: %s", request.PublicKey, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
+	t.Fatalf("register %q got status %d: %s", publicKey, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
 }
 
 func approveGear(t testing.TB, ctx context.Context, api *adminservice.ClientWithResponses, publicKey string) {

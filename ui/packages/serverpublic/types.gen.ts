@@ -4,26 +4,10 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
-export type RegistrationRequest = {
-    public_key: string;
-    device: DeviceInfo;
-    registration_token?: string;
-};
-
-export type RegistrationResult = {
-    gear: Gear;
-    registration: Registration;
-};
-
-export type Configuration = {
-    certifications?: Array<GearCertification>;
-    firmware?: FirmwareConfig;
-};
-
-export type DeviceInfo = {
-    name?: string;
-    sn?: string;
-    hardware?: HardwareInfo;
+export type LoginResult = {
+    access_token: string;
+    token_type: 'Bearer';
+    expires_at: number;
 };
 
 export type ErrorPayload = {
@@ -38,75 +22,40 @@ export type ErrorResponse = {
     error: ErrorPayload;
 };
 
-export type FirmwareConfig = {
-    channel?: GearFirmwareChannel;
-};
-
-export type Gear = {
-    public_key: string;
-    role: GearRole;
-    status: GearStatus;
-    device: DeviceInfo;
-    configuration: Configuration;
-    auto_registered?: boolean;
-    created_at: string;
-    updated_at: string;
-    approved_at?: string;
-};
-
-export type GearCertification = {
-    type: GearCertificationType;
-    authority: GearCertificationAuthority;
-    id: string;
-    authority_name?: string;
-};
-
-export type GearCertificationAuthority = 'unknown' | 'ccc' | 'ce' | 'fcc' | 'miit' | 'srrc' | 'rohs' | 'internal';
-
-export type GearCertificationType = 'license' | 'certification';
-
-export type GearFirmwareChannel = string;
-
-export type GearImei = {
-    name?: string;
-    tac: string;
-    serial: string;
-};
-
-export type GearLabel = {
-    key: string;
-    value: string;
-};
-
-export type GearRole = 'unspecified' | 'admin' | 'peer' | 'device';
-
-export type GearStatus = 'unspecified' | 'active' | 'blocked';
-
-export type HardwareInfo = {
-    manufacturer?: string;
-    model?: string;
-    hardware_revision?: string;
-    depot?: string;
-    firmware_semver?: string;
-    imeis?: Array<GearImei>;
-    labels?: Array<GearLabel>;
-};
-
-export type Registration = {
-    public_key: string;
-    role: GearRole;
-    status: GearStatus;
-    auto_registered?: boolean;
-    created_at: string;
-    updated_at: string;
-    approved_at?: string;
-};
-
 export type ServerInfo = {
     public_key: string;
     server_time: number;
     build_commit: string;
 };
+
+export type LoginData = {
+    body?: never;
+    headers: {
+        'X-Public-Key': string;
+        Authorization: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/login';
+};
+
+export type LoginErrors = {
+    /**
+     * Invalid assertion
+     */
+    401: ErrorResponse;
+};
+
+export type LoginError = LoginErrors[keyof LoginErrors];
+
+export type LoginResponses = {
+    /**
+     * Login result
+     */
+    200: LoginResult;
+};
+
+export type LoginResponse = LoginResponses[keyof LoginResponses];
 
 export type GetServerInfoData = {
     body?: never;
@@ -132,32 +81,3 @@ export type GetServerInfoResponses = {
 };
 
 export type GetServerInfoResponse = GetServerInfoResponses[keyof GetServerInfoResponses];
-
-export type RegisterGearData = {
-    body: RegistrationRequest;
-    path?: never;
-    query?: never;
-    url: '/register';
-};
-
-export type RegisterGearErrors = {
-    /**
-     * Invalid params
-     */
-    400: ErrorResponse;
-    /**
-     * Gear already exists
-     */
-    409: ErrorResponse;
-};
-
-export type RegisterGearError = RegisterGearErrors[keyof RegisterGearErrors];
-
-export type RegisterGearResponses = {
-    /**
-     * Registration result
-     */
-    200: RegistrationResult;
-};
-
-export type RegisterGearResponse = RegisterGearResponses[keyof RegisterGearResponses];

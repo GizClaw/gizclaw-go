@@ -48,9 +48,6 @@ stores:
         base-dir: firmware
 gears:
   store: gears
-  registration-tokens:
-    device_default:
-      role: device
 credentials:
   store: credentials
 minimax:

@@ -14,9 +14,9 @@ func TestAdminConfigOrFirmwareFlowUserStory(t *testing.T) {
 	h.StartServerFromFixture("server_config.yaml")
 
 	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "admin_default", "--sn", "admin-sn").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 	h.CreateContext("device-a").MustSucceed(t)
-	h.RegisterContext("device-a", "admin_default", "--sn", "device-sn", "--depot", "demo", "--firmware-semver", "1.0.0").MustSucceed(t)
+	h.RegisterContext("device-a", "--sn", "device-sn", "--depot", "demo", "--firmware-semver", "1.0.0").MustSucceed(t)
 	devicePubKey := h.ContextPublicKey("device-a")
 
 	listBefore := h.RunCLI("admin", "firmware", "list", "--context", "admin-a")

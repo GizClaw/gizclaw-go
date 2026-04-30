@@ -12,10 +12,10 @@ func TestRepeatCommandAfterPartialStateUserStory(t *testing.T) {
 	h.StartServerFromFixture("server_config.yaml")
 
 	h.CreateContext("device-a").MustSucceed(t)
-	first := h.RegisterContext("device-a", "device_default", "--sn", "device-a")
+	first := h.RegisterContext("device-a", "--sn", "device-a")
 	first.MustSucceed(t)
 
-	second := h.RegisterContext("device-a", "device_default", "--sn", "device-a")
+	second := h.RegisterContext("device-a", "--sn", "device-a")
 	if second.Err == nil {
 		t.Fatalf("expected second register to fail:\nstdout:\n%s\nstderr:\n%s", second.Stdout, second.Stderr)
 	}

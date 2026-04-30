@@ -4,6 +4,15 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type RegistrationRequest = {
+    device: DeviceInfo;
+};
+
+export type RegistrationResult = {
+    gear: Gear;
+    registration: Registration;
+};
+
 export type Configuration = {
     certifications?: Array<GearCertification>;
     firmware?: FirmwareConfig;
@@ -35,6 +44,18 @@ export type ErrorResponse = {
 
 export type FirmwareConfig = {
     channel?: GearFirmwareChannel;
+};
+
+export type Gear = {
+    public_key: string;
+    role: GearRole;
+    status: GearStatus;
+    device: DeviceInfo;
+    configuration: Configuration;
+    auto_registered?: boolean;
+    created_at: string;
+    updated_at: string;
+    approved_at?: string;
 };
 
 export type GearCertification = {
@@ -176,6 +197,35 @@ export type GetRegistrationResponses = {
 };
 
 export type GetRegistrationResponse = GetRegistrationResponses[keyof GetRegistrationResponses];
+
+export type RegisterGearData = {
+    body: RegistrationRequest;
+    path?: never;
+    query?: never;
+    url: '/registration';
+};
+
+export type RegisterGearErrors = {
+    /**
+     * Invalid params
+     */
+    400: ErrorResponse;
+    /**
+     * Gear already exists
+     */
+    409: ErrorResponse;
+};
+
+export type RegisterGearError = RegisterGearErrors[keyof RegisterGearErrors];
+
+export type RegisterGearResponses = {
+    /**
+     * Registration result
+     */
+    200: RegistrationResult;
+};
+
+export type RegisterGearResponse = RegisterGearResponses[keyof RegisterGearResponses];
 
 export type GetRuntimeData = {
     body?: never;

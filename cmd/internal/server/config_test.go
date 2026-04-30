@@ -113,9 +113,6 @@ func TestNewWithPreparedConfig(t *testing.T) {
 		},
 		Gears: GearsConfig{
 			Store: "mem",
-			RegistrationTokens: map[string]RegistrationTokenConfig{
-				"admin_default": {Role: apitypes.GearRoleAdmin},
-			},
 		},
 		Depots: DepotsConfig{Store: "fw"},
 	})
@@ -168,9 +165,6 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		},
 		Gears: GearsConfig{
 			Store: "runtime-gears",
-			RegistrationTokens: map[string]RegistrationTokenConfig{
-				"runtime": {Role: apitypes.GearRoleAdmin},
-			},
 		},
 		Credentials: CredentialsConfig{Store: "runtime-credentials"},
 		MiniMax: MiniMaxConfig{
@@ -192,9 +186,6 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		},
 		Gears: GearsConfig{
 			Store: "file-gears",
-			RegistrationTokens: map[string]RegistrationTokenConfig{
-				"file": {Role: apitypes.GearRoleAdmin},
-			},
 		},
 		Credentials: CredentialsConfig{Store: "file-credentials"},
 		MiniMax: MiniMaxConfig{
@@ -219,9 +210,6 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	}
 	if merged.Gears.Store != "runtime-gears" {
 		t.Fatalf("Gears.Store = %q", merged.Gears.Store)
-	}
-	if len(merged.Gears.RegistrationTokens) != 1 || merged.Gears.RegistrationTokens["runtime"].Role != apitypes.GearRoleAdmin {
-		t.Fatalf("RegistrationTokens = %+v", merged.Gears.RegistrationTokens)
 	}
 	if merged.Depots.Store != "runtime-depots" {
 		t.Fatalf("Depots.Store = %q", merged.Depots.Store)

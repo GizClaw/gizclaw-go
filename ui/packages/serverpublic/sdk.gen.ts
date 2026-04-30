@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetServerInfoData, GetServerInfoErrors, GetServerInfoResponses, RegisterGearData, RegisterGearErrors, RegisterGearResponses } from './types.gen';
+import type { GetServerInfoData, GetServerInfoErrors, GetServerInfoResponses, LoginData, LoginErrors, LoginResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -19,18 +19,11 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
+ * Exchange a device assertion for a bearer session
+ */
+export const login = <ThrowOnError extends boolean = false>(options: Options<LoginData, ThrowOnError>) => (options.client ?? client).post<LoginResponses, LoginErrors, ThrowOnError>({ url: '/login', ...options });
+
+/**
  * Get server information
  */
 export const getServerInfo = <ThrowOnError extends boolean = false>(options?: Options<GetServerInfoData, ThrowOnError>) => (options?.client ?? client).get<GetServerInfoResponses, GetServerInfoErrors, ThrowOnError>({ url: '/server-info', ...options });
-
-/**
- * Register a gear
- */
-export const registerGear = <ThrowOnError extends boolean = false>(options: Options<RegisterGearData, ThrowOnError>) => (options.client ?? client).post<RegisterGearResponses, RegisterGearErrors, ThrowOnError>({
-    url: '/register',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});

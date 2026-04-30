@@ -6,6 +6,7 @@ import (
 	"iter"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
@@ -163,6 +164,32 @@ func TestPrefixedStoreBatchOperations(t *testing.T) {
 		if _, err := base.Get(ctx, key); !errors.Is(err, kv.ErrNotFound) {
 			t.Fatalf("%v should be deleted, got %v", key, err)
 		}
+	}
+}
+
+func TestPrefixedStoreBatchSetPreservesDeadline(t *testing.T) {
+	ctx := context.Background()
+	base := kv.NewMemory(nil)
+	store := kv.Prefixed(base, kv.Key{"service", "sessions"})
+
+	if err := store.BatchSet(ctx, []kv.Entry{
+		{Key: kv.Key{"session", "expired"}, Value: []byte("gone"), Deadline: time.Now().Add(20 * time.Millisecond)},
+		{Key: kv.Key{"session", "kept"}, Value: []byte("kept")},
+	}); err != nil {
+		t.Fatalf("BatchSet deadline entry: %v", err)
+	}
+	time.Sleep(30 * time.Millisecond)
+
+	_, err := base.Get(ctx, kv.Key{"service", "sessions", "session", "expired"})
+	if !errors.Is(err, kv.ErrNotFound) {
+		t.Fatalf("base Get expired prefixed key err = %v, want ErrNotFound", err)
+	}
+	got, err := base.Get(ctx, kv.Key{"service", "sessions", "session", "kept"})
+	if err != nil {
+		t.Fatalf("base Get kept prefixed key: %v", err)
+	}
+	if string(got) != "kept" {
+		t.Fatalf("base Get kept prefixed key = %q, want kept", got)
 	}
 }
 

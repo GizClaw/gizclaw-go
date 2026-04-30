@@ -14,7 +14,7 @@ func TestClientPublicRetryableReadsUserStory(t *testing.T) {
 	h.StartServerFromFixture("server_config.yaml")
 
 	h.CreateContext("device-a").MustSucceed(t)
-	h.RegisterContext("device-a", "device_default", "--sn", "device-a-sn").MustSucceed(t)
+	h.RegisterContext("device-a", "--sn", "device-a-sn").MustSucceed(t)
 
 	for i := 0; i < 4; i++ {
 		c := h.ConnectClientFromContext("device-a")

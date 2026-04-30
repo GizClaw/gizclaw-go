@@ -3,8 +3,6 @@ package server
 import (
 	"fmt"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
@@ -36,13 +34,12 @@ func New(cfg Config) (*gizclaw.Server, error) {
 	}
 
 	srv := &gizclaw.Server{
-		KeyPair:            cfg.KeyPair,
-		GearStore:          gearsKV,
-		RegistrationTokens: registrationTokenRoles(cfg.Gears.RegistrationTokens),
-		BuildCommit:        BuildCommit,
-		ServerPublicKey:    cfg.KeyPair.Public.String(),
-		DepotStore:         fwStore,
-		StoreCloser:        ss,
+		KeyPair:         cfg.KeyPair,
+		GearStore:       gearsKV,
+		BuildCommit:     BuildCommit,
+		ServerPublicKey: cfg.KeyPair.Public.String(),
+		DepotStore:      fwStore,
+		StoreCloser:     ss,
 	}
 	if len(cfg.Storage) > 0 {
 		if srv.CredentialStore, err = ss.KV(cfg.Credentials.Store); err != nil {
@@ -94,15 +91,4 @@ func newStoreRegistry(cfg Config) (*stores.Stores, error) {
 		return nil, err
 	}
 	return ss, nil
-}
-
-func registrationTokenRoles(tokens map[string]RegistrationTokenConfig) map[string]apitypes.GearRole {
-	if len(tokens) == 0 {
-		return nil
-	}
-	out := make(map[string]apitypes.GearRole, len(tokens))
-	for name, token := range tokens {
-		out[name] = token.Role
-	}
-	return out
 }

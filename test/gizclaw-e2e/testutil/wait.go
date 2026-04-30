@@ -15,13 +15,22 @@ const (
 
 func AllocateUDPAddr(t testing.TB) string {
 	t.Helper()
-	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("allocateUDPAddr: %v", err)
+	for attempt := 0; attempt < 20; attempt++ {
+		l, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("allocateUDPAddr tcp: %v", err)
+		}
+		port := l.Addr().(*net.TCPAddr).Port
+		pc, err := net.ListenPacket("udp", fmt.Sprintf("127.0.0.1:%d", port))
+		if err == nil {
+			_ = pc.Close()
+			_ = l.Close()
+			return fmt.Sprintf("127.0.0.1:%d", port)
+		}
+		_ = l.Close()
 	}
-	addr := pc.LocalAddr().(*net.UDPAddr)
-	_ = pc.Close()
-	return fmt.Sprintf("127.0.0.1:%d", addr.Port)
+	t.Fatalf("allocateUDPAddr: could not find a TCP/UDP-free port")
+	return ""
 }
 
 func WaitUntil(timeout time.Duration, check func() error) error {

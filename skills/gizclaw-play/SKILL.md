@@ -35,6 +35,6 @@ Use this skill for the Play UI.
 
 - `play` is UI-only.
 - `play --listen` automatically registers the current context before serving the UI. If the context is already registered, it continues normally.
-- The automatic registration does not require a registration token; the server stores the gear as `auto_registered` with an unspecified role/status until an admin approves or configures it.
+- The automatic registration stores the gear as `auto_registered` and active.
 - Device-side registration, config, OTA, and reverse API workflows belong in the Play UI.
 - Do not try to use CLI subcommands for those Play workflows.

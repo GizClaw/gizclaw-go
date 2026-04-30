@@ -32,7 +32,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		Store: mustBadgerInMemory(t, nil),
 	}
 
-	ctx := serverpublic.WithCallerPublicKey(context.Background(), "peer-gear")
+	ctx := gearservice.WithCallerPublicKey(context.Background(), "peer-gear")
 	sn := "sn-gear"
 	depot := "depot-gear"
 	tac := "12345678"
@@ -41,8 +41,8 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	labelValue := "cn"
 	certID := "cert-gear"
 
-	_, err := server.RegisterGear(ctx, serverpublic.RegisterGearRequestObject{
-		Body: &serverpublic.RegisterGearJSONRequestBody{
+	_, err := server.RegisterGear(ctx, gearservice.RegisterGearRequestObject{
+		Body: &gearservice.RegisterGearJSONRequestBody{
 			Device: apitypes.DeviceInfo{
 				Sn: &sn,
 				Hardware: &apitypes.HardwareInfo{
@@ -251,9 +251,9 @@ func TestServerListGearsPagination(t *testing.T) {
 	}
 
 	registerGear := func(publicKey, labelValue string) {
-		ctx := serverpublic.WithCallerPublicKey(context.Background(), publicKey)
-		_, err := server.RegisterGear(ctx, serverpublic.RegisterGearRequestObject{
-			Body: &serverpublic.RegisterGearJSONRequestBody{
+		ctx := gearservice.WithCallerPublicKey(context.Background(), publicKey)
+		_, err := server.RegisterGear(ctx, gearservice.RegisterGearRequestObject{
+			Body: &gearservice.RegisterGearJSONRequestBody{
 				Device: apitypes.DeviceInfo{
 					Hardware: &apitypes.HardwareInfo{
 						Labels: &[]apitypes.GearLabel{{Key: "region", Value: labelValue}},
@@ -337,9 +337,9 @@ func TestServerListGearsPaginationPreservesCreationOrder(t *testing.T) {
 	}
 
 	registerGear := func(publicKey string) {
-		ctx := serverpublic.WithCallerPublicKey(context.Background(), publicKey)
-		_, err := server.RegisterGear(ctx, serverpublic.RegisterGearRequestObject{
-			Body: &serverpublic.RegisterGearJSONRequestBody{
+		ctx := gearservice.WithCallerPublicKey(context.Background(), publicKey)
+		_, err := server.RegisterGear(ctx, gearservice.RegisterGearRequestObject{
+			Body: &gearservice.RegisterGearJSONRequestBody{
 				Device: apitypes.DeviceInfo{},
 			},
 		})
@@ -393,9 +393,9 @@ func TestServerListGearsLimitClampsToConfiguredBounds(t *testing.T) {
 		Store: mustBadgerInMemory(t, nil),
 	}
 	for _, publicKey := range []string{"gear-a", "gear-b", "gear-c"} {
-		ctx := serverpublic.WithCallerPublicKey(context.Background(), publicKey)
-		_, err := server.RegisterGear(ctx, serverpublic.RegisterGearRequestObject{
-			Body: &serverpublic.RegisterGearJSONRequestBody{Device: apitypes.DeviceInfo{}},
+		ctx := gearservice.WithCallerPublicKey(context.Background(), publicKey)
+		_, err := server.RegisterGear(ctx, gearservice.RegisterGearRequestObject{
+			Body: &gearservice.RegisterGearJSONRequestBody{Device: apitypes.DeviceInfo{}},
 		})
 		if err != nil {
 			t.Fatalf("RegisterGear(%q) error: %v", publicKey, err)
@@ -456,10 +456,10 @@ func TestServerRuntimeHandlers(t *testing.T) {
 		},
 	}
 
-	registerCtx := serverpublic.WithCallerPublicKey(context.Background(), "peer-3")
+	registerCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-3")
 	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-3")
-	_, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
-		Body: &serverpublic.RegisterGearJSONRequestBody{Device: apitypes.DeviceInfo{}},
+	_, err := server.RegisterGear(registerCtx, gearservice.RegisterGearRequestObject{
+		Body: &gearservice.RegisterGearJSONRequestBody{Device: apitypes.DeviceInfo{}},
 	})
 	if err != nil {
 		t.Fatalf("RegisterGear error: %v", err)
@@ -509,24 +509,21 @@ func TestServerRuntimeHandlers(t *testing.T) {
 func TestServerPublicHandlers(t *testing.T) {
 	before := time.Now()
 	server := &Server{
-		Store:              mustBadgerInMemory(t, nil),
-		RegistrationTokens: map[string]apitypes.GearRole{"admin": apitypes.GearRoleAdmin},
-		BuildCommit:        "deadbeef",
-		ServerPublicKey:    "server-pk",
+		Store:           mustBadgerInMemory(t, nil),
+		BuildCommit:     "deadbeef",
+		ServerPublicKey: "server-pk",
 	}
 
-	registerCtx := serverpublic.WithCallerPublicKey(context.Background(), "peer-1")
+	registerCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-1")
 	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-1")
-	token := "admin"
 	name := "gear-a"
 	sn := "sn-1"
 	depot := "alpha"
 	labelKey := "region"
 	labelValue := "cn"
 
-	registerResp, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
-		Body: &serverpublic.RegisterGearJSONRequestBody{
-			RegistrationToken: &token,
+	registerResp, err := server.RegisterGear(registerCtx, gearservice.RegisterGearRequestObject{
+		Body: &gearservice.RegisterGearJSONRequestBody{
 			Device: apitypes.DeviceInfo{
 				Name: &name,
 				Sn:   &sn,
@@ -541,20 +538,20 @@ func TestServerPublicHandlers(t *testing.T) {
 		t.Fatalf("RegisterGear error: %v", err)
 	}
 
-	registered, ok := registerResp.(serverpublic.RegisterGear200JSONResponse)
+	registered, ok := registerResp.(gearservice.RegisterGear200JSONResponse)
 	if !ok {
 		t.Fatalf("RegisterGear response type = %T", registerResp)
 	}
 	if registered.Registration.PublicKey != "peer-1" {
 		t.Fatalf("PublicKey = %q", registered.Registration.PublicKey)
 	}
-	if registered.Registration.Role != apitypes.GearRole(apitypes.GearRoleAdmin) {
+	if registered.Registration.Role != apitypes.GearRole(apitypes.GearRoleUnspecified) {
 		t.Fatalf("Role = %q", registered.Registration.Role)
 	}
 	if registered.Registration.Status != apitypes.GearStatus(apitypes.GearStatusActive) {
 		t.Fatalf("Status = %q", registered.Registration.Status)
 	}
-	if registered.Registration.ApprovedAt == nil || registered.Registration.ApprovedAt.Before(before) || registered.Registration.ApprovedAt.After(time.Now().Add(time.Second)) {
+	if registered.Registration.ApprovedAt != nil {
 		t.Fatalf("ApprovedAt = %v", registered.Registration.ApprovedAt)
 	}
 
@@ -578,7 +575,7 @@ func TestServerPublicHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetRegistration response type = %T", getRegistrationResp)
 	}
-	if publicRegistration.Role != apitypes.GearRole(apitypes.GearRoleAdmin) {
+	if publicRegistration.Role != apitypes.GearRole(apitypes.GearRoleUnspecified) {
 		t.Fatalf("GetRegistration role = %q", publicRegistration.Role)
 	}
 
@@ -612,12 +609,12 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 		},
 	}
 
-	registerCtx := serverpublic.WithCallerPublicKey(context.Background(), "peer-public")
+	registerCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-public")
 	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-public")
 	sn := "sn-old"
 	depot := "depot-public"
-	_, err := server.RegisterGear(registerCtx, serverpublic.RegisterGearRequestObject{
-		Body: &serverpublic.RegisterGearJSONRequestBody{
+	_, err := server.RegisterGear(registerCtx, gearservice.RegisterGearRequestObject{
+		Body: &gearservice.RegisterGearJSONRequestBody{
 			Device: apitypes.DeviceInfo{
 				Sn: &sn,
 				Hardware: &apitypes.HardwareInfo{

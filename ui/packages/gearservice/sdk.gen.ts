@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DownloadFirmwareData, DownloadFirmwareErrors, DownloadFirmwareResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetInfoData, GetInfoErrors, GetInfoResponses, GetOtaData, GetOtaErrors, GetOtaResponses, GetRegistrationData, GetRegistrationErrors, GetRegistrationResponses, GetRuntimeData, GetRuntimeErrors, GetRuntimeResponses, PutInfoData, PutInfoErrors, PutInfoResponses } from './types.gen';
+import type { DownloadFirmwareData, DownloadFirmwareErrors, DownloadFirmwareResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetInfoData, GetInfoErrors, GetInfoResponses, GetOtaData, GetOtaErrors, GetOtaResponses, GetRegistrationData, GetRegistrationErrors, GetRegistrationResponses, GetRuntimeData, GetRuntimeErrors, GetRuntimeResponses, PutInfoData, PutInfoErrors, PutInfoResponses, RegisterGearData, RegisterGearErrors, RegisterGearResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -39,6 +39,18 @@ export const putInfo = <ThrowOnError extends boolean = false>(options: Options<P
  * Get gear registration
  */
 export const getRegistration = <ThrowOnError extends boolean = false>(options?: Options<GetRegistrationData, ThrowOnError>) => (options?.client ?? client).get<GetRegistrationResponses, GetRegistrationErrors, ThrowOnError>({ url: '/registration', ...options });
+
+/**
+ * Register a gear
+ */
+export const registerGear = <ThrowOnError extends boolean = false>(options: Options<RegisterGearData, ThrowOnError>) => (options.client ?? client).post<RegisterGearResponses, RegisterGearErrors, ThrowOnError>({
+    url: '/registration',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Get runtime status

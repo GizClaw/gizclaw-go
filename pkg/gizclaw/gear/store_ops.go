@@ -6,17 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
-func (s *Server) register(ctx context.Context, request serverpublic.RegistrationRequest) (apitypes.Gear, error) {
-	publicKey := normalizePublicKey(request.PublicKey)
+func (s *Server) register(ctx context.Context, publicKey string, request gearservice.RegistrationRequest) (apitypes.Gear, error) {
+	publicKey = normalizePublicKey(publicKey)
 	if publicKey == "" {
 		return apitypes.Gear{}, fmt.Errorf("gear: empty public key")
 	}
@@ -36,24 +35,10 @@ func (s *Server) register(ctx context.Context, request serverpublic.Registration
 	gear := apitypes.Gear{
 		PublicKey:      publicKey,
 		Role:           apitypes.GearRoleUnspecified,
-		Status:         apitypes.GearStatusUnspecified,
+		Status:         apitypes.GearStatusActive,
 		Device:         device,
 		Configuration:  apitypes.Configuration{},
 		AutoRegistered: &autoRegistered,
-	}
-
-	if request.RegistrationToken != nil {
-		tokenName := strings.TrimSpace(*request.RegistrationToken)
-		if tokenName != "" {
-			role, ok := s.RegistrationTokens[tokenName]
-			if !ok {
-				return apitypes.Gear{}, fmt.Errorf("gear: unknown registration token")
-			}
-			approvedAt := time.Now()
-			gear.Role = apitypes.GearRole(role)
-			gear.Status = apitypes.GearStatusActive
-			gear.ApprovedAt = &approvedAt
-		}
 	}
 
 	created, err := s.create(ctx, gear)

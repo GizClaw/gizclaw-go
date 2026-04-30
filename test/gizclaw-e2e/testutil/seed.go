@@ -16,7 +16,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 )
 
 const (
@@ -32,8 +32,7 @@ const (
 var seedFS embed.FS
 
 type RegistrationSeed struct {
-	RegistrationToken string              `json:"registration_token"`
-	Device            apitypes.DeviceInfo `json:"device"`
+	Device apitypes.DeviceInfo `json:"device"`
 }
 
 func LoadRegistrationSeed(name string) (RegistrationSeed, error) {
@@ -44,15 +43,10 @@ func LoadRegistrationSeed(name string) (RegistrationSeed, error) {
 	return seed, nil
 }
 
-func RegistrationRequest(publicKey string, seed RegistrationSeed) serverpublic.RegistrationRequest {
-	request := serverpublic.RegistrationRequest{
-		Device:    seed.Device,
-		PublicKey: publicKey,
+func RegistrationRequest(_ string, seed RegistrationSeed) gearservice.RegistrationRequest {
+	return gearservice.RegistrationRequest{
+		Device: seed.Device,
 	}
-	if strings.TrimSpace(seed.RegistrationToken) != "" {
-		request.RegistrationToken = &seed.RegistrationToken
-	}
-	return request
 }
 
 func LoadDeviceConfigSeed() (apitypes.Configuration, error) {

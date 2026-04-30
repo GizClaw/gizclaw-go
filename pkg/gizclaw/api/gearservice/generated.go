@@ -13,13 +13,27 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	externalRef0 "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/oapi-codegen/runtime"
 )
 
+// RegistrationRequest defines model for RegistrationRequest.
+type RegistrationRequest struct {
+	Device externalRef0.DeviceInfo `json:"device"`
+}
+
+// RegistrationResult defines model for RegistrationResult.
+type RegistrationResult struct {
+	Gear         externalRef0.Gear         `json:"gear"`
+	Registration externalRef0.Registration `json:"registration"`
+}
+
 // PutInfoJSONRequestBody defines body for PutInfo for application/json ContentType.
-type PutInfoJSONRequestBody = apitypes.DeviceInfo
+type PutInfoJSONRequestBody = externalRef0.DeviceInfo
+
+// RegisterGearJSONRequestBody defines body for RegisterGear for application/json ContentType.
+type RegisterGearJSONRequestBody = RegistrationRequest
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -114,6 +128,11 @@ type ClientInterface interface {
 	// GetRegistration request
 	GetRegistration(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// RegisterGearWithBody request with any body
+	RegisterGearWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	RegisterGear(ctx context.Context, body RegisterGearJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetRuntime request
 	GetRuntime(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
@@ -192,6 +211,30 @@ func (c *Client) GetOTA(ctx context.Context, reqEditors ...RequestEditorFn) (*ht
 
 func (c *Client) GetRegistration(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetRegistrationRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterGearWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRegisterGearRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RegisterGear(ctx context.Context, body RegisterGearJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRegisterGearRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -396,6 +439,46 @@ func NewGetRegistrationRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
+// NewRegisterGearRequest calls the generic RegisterGear builder with application/json body
+func NewRegisterGearRequest(server string, body RegisterGearJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewRegisterGearRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewRegisterGearRequestWithBody generates requests for RegisterGear with any type of body
+func NewRegisterGearRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/registration")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewGetRuntimeRequest generates requests for GetRuntime
 func NewGetRuntimeRequest(server string) (*http.Request, error) {
 	var err error
@@ -486,6 +569,11 @@ type ClientWithResponsesInterface interface {
 	// GetRegistrationWithResponse request
 	GetRegistrationWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetRegistrationResponse, error)
 
+	// RegisterGearWithBodyWithResponse request with any body
+	RegisterGearWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterGearResponse, error)
+
+	RegisterGearWithResponse(ctx context.Context, body RegisterGearJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterGearResponse, error)
+
 	// GetRuntimeWithResponse request
 	GetRuntimeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetRuntimeResponse, error)
 }
@@ -493,8 +581,8 @@ type ClientWithResponsesInterface interface {
 type GetConfigResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Configuration
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Configuration
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -516,8 +604,8 @@ func (r GetConfigResponse) StatusCode() int {
 type DownloadFirmwareResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON400      *apitypes.ErrorResponse
-	JSON404      *apitypes.ErrorResponse
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -539,8 +627,8 @@ func (r DownloadFirmwareResponse) StatusCode() int {
 type GetInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.DeviceInfo
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.DeviceInfo
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -562,9 +650,9 @@ func (r GetInfoResponse) StatusCode() int {
 type PutInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.DeviceInfo
-	JSON400      *apitypes.ErrorResponse
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.DeviceInfo
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -586,8 +674,8 @@ func (r PutInfoResponse) StatusCode() int {
 type GetOTAResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.OTASummary
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.OTASummary
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -609,8 +697,8 @@ func (r GetOTAResponse) StatusCode() int {
 type GetRegistrationResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Registration
-	JSON404      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Registration
+	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -629,11 +717,35 @@ func (r GetRegistrationResponse) StatusCode() int {
 	return 0
 }
 
+type RegisterGearResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *RegistrationResult
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r RegisterGearResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r RegisterGearResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type GetRuntimeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.Runtime
-	JSON400      *apitypes.ErrorResponse
+	JSON200      *externalRef0.Runtime
+	JSON400      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -714,6 +826,23 @@ func (c *ClientWithResponses) GetRegistrationWithResponse(ctx context.Context, r
 	return ParseGetRegistrationResponse(rsp)
 }
 
+// RegisterGearWithBodyWithResponse request with arbitrary body returning *RegisterGearResponse
+func (c *ClientWithResponses) RegisterGearWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterGearResponse, error) {
+	rsp, err := c.RegisterGearWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRegisterGearResponse(rsp)
+}
+
+func (c *ClientWithResponses) RegisterGearWithResponse(ctx context.Context, body RegisterGearJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterGearResponse, error) {
+	rsp, err := c.RegisterGear(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRegisterGearResponse(rsp)
+}
+
 // GetRuntimeWithResponse request returning *GetRuntimeResponse
 func (c *ClientWithResponses) GetRuntimeWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetRuntimeResponse, error) {
 	rsp, err := c.GetRuntime(ctx, reqEditors...)
@@ -738,14 +867,14 @@ func ParseGetConfigResponse(rsp *http.Response) (*GetConfigResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Configuration
+		var dest externalRef0.Configuration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -771,14 +900,14 @@ func ParseDownloadFirmwareResponse(rsp *http.Response) (*DownloadFirmwareRespons
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -804,14 +933,14 @@ func ParseGetInfoResponse(rsp *http.Response) (*GetInfoResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.DeviceInfo
+		var dest externalRef0.DeviceInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -837,21 +966,21 @@ func ParsePutInfoResponse(rsp *http.Response) (*PutInfoResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.DeviceInfo
+		var dest externalRef0.DeviceInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -877,14 +1006,14 @@ func ParseGetOTAResponse(rsp *http.Response) (*GetOTAResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.OTASummary
+		var dest externalRef0.OTASummary
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -910,18 +1039,58 @@ func ParseGetRegistrationResponse(rsp *http.Response) (*GetRegistrationResponse,
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Registration
+		var dest externalRef0.Registration
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON404 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseRegisterGearResponse parses an HTTP response from a RegisterGearWithResponse call
+func ParseRegisterGearResponse(rsp *http.Response) (*RegisterGearResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &RegisterGearResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest RegistrationResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
 
 	}
 
@@ -943,14 +1112,14 @@ func ParseGetRuntimeResponse(rsp *http.Response) (*GetRuntimeResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.Runtime
+		var dest externalRef0.Runtime
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -981,6 +1150,9 @@ type ServerInterface interface {
 	// Get gear registration
 	// (GET /registration)
 	GetRegistration(c *fiber.Ctx) error
+	// Register a gear
+	// (POST /registration)
+	RegisterGear(c *fiber.Ctx) error
 	// Get runtime status
 	// (GET /runtime)
 	GetRuntime(c *fiber.Ctx) error
@@ -1039,6 +1211,12 @@ func (siw *ServerInterfaceWrapper) GetRegistration(c *fiber.Ctx) error {
 	return siw.Handler.GetRegistration(c)
 }
 
+// RegisterGear operation middleware
+func (siw *ServerInterfaceWrapper) RegisterGear(c *fiber.Ctx) error {
+
+	return siw.Handler.RegisterGear(c)
+}
+
 // GetRuntime operation middleware
 func (siw *ServerInterfaceWrapper) GetRuntime(c *fiber.Ctx) error {
 
@@ -1078,6 +1256,8 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Get(options.BaseURL+"/registration", wrapper.GetRegistration)
 
+	router.Post(options.BaseURL+"/registration", wrapper.RegisterGear)
+
 	router.Get(options.BaseURL+"/runtime", wrapper.GetRuntime)
 
 }
@@ -1089,7 +1269,7 @@ type GetConfigResponseObject interface {
 	VisitGetConfigResponse(ctx *fiber.Ctx) error
 }
 
-type GetConfig200JSONResponse apitypes.Configuration
+type GetConfig200JSONResponse externalRef0.Configuration
 
 func (response GetConfig200JSONResponse) VisitGetConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1098,7 +1278,7 @@ func (response GetConfig200JSONResponse) VisitGetConfigResponse(ctx *fiber.Ctx) 
 	return ctx.JSON(&response)
 }
 
-type GetConfig404JSONResponse apitypes.ErrorResponse
+type GetConfig404JSONResponse externalRef0.ErrorResponse
 
 func (response GetConfig404JSONResponse) VisitGetConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1142,7 +1322,7 @@ func (response DownloadFirmware200ApplicationoctetStreamResponse) VisitDownloadF
 	return err
 }
 
-type DownloadFirmware400JSONResponse apitypes.ErrorResponse
+type DownloadFirmware400JSONResponse externalRef0.ErrorResponse
 
 func (response DownloadFirmware400JSONResponse) VisitDownloadFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1151,7 +1331,7 @@ func (response DownloadFirmware400JSONResponse) VisitDownloadFirmwareResponse(ct
 	return ctx.JSON(&response)
 }
 
-type DownloadFirmware404JSONResponse apitypes.ErrorResponse
+type DownloadFirmware404JSONResponse externalRef0.ErrorResponse
 
 func (response DownloadFirmware404JSONResponse) VisitDownloadFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1167,7 +1347,7 @@ type GetInfoResponseObject interface {
 	VisitGetInfoResponse(ctx *fiber.Ctx) error
 }
 
-type GetInfo200JSONResponse apitypes.DeviceInfo
+type GetInfo200JSONResponse externalRef0.DeviceInfo
 
 func (response GetInfo200JSONResponse) VisitGetInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1176,7 +1356,7 @@ func (response GetInfo200JSONResponse) VisitGetInfoResponse(ctx *fiber.Ctx) erro
 	return ctx.JSON(&response)
 }
 
-type GetInfo404JSONResponse apitypes.ErrorResponse
+type GetInfo404JSONResponse externalRef0.ErrorResponse
 
 func (response GetInfo404JSONResponse) VisitGetInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1193,7 +1373,7 @@ type PutInfoResponseObject interface {
 	VisitPutInfoResponse(ctx *fiber.Ctx) error
 }
 
-type PutInfo200JSONResponse apitypes.DeviceInfo
+type PutInfo200JSONResponse externalRef0.DeviceInfo
 
 func (response PutInfo200JSONResponse) VisitPutInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1202,7 +1382,7 @@ func (response PutInfo200JSONResponse) VisitPutInfoResponse(ctx *fiber.Ctx) erro
 	return ctx.JSON(&response)
 }
 
-type PutInfo400JSONResponse apitypes.ErrorResponse
+type PutInfo400JSONResponse externalRef0.ErrorResponse
 
 func (response PutInfo400JSONResponse) VisitPutInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1211,7 +1391,7 @@ func (response PutInfo400JSONResponse) VisitPutInfoResponse(ctx *fiber.Ctx) erro
 	return ctx.JSON(&response)
 }
 
-type PutInfo404JSONResponse apitypes.ErrorResponse
+type PutInfo404JSONResponse externalRef0.ErrorResponse
 
 func (response PutInfo404JSONResponse) VisitPutInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1227,7 +1407,7 @@ type GetOTAResponseObject interface {
 	VisitGetOTAResponse(ctx *fiber.Ctx) error
 }
 
-type GetOTA200JSONResponse apitypes.OTASummary
+type GetOTA200JSONResponse externalRef0.OTASummary
 
 func (response GetOTA200JSONResponse) VisitGetOTAResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1236,7 +1416,7 @@ func (response GetOTA200JSONResponse) VisitGetOTAResponse(ctx *fiber.Ctx) error 
 	return ctx.JSON(&response)
 }
 
-type GetOTA404JSONResponse apitypes.ErrorResponse
+type GetOTA404JSONResponse externalRef0.ErrorResponse
 
 func (response GetOTA404JSONResponse) VisitGetOTAResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1252,7 +1432,7 @@ type GetRegistrationResponseObject interface {
 	VisitGetRegistrationResponse(ctx *fiber.Ctx) error
 }
 
-type GetRegistration200JSONResponse apitypes.Registration
+type GetRegistration200JSONResponse externalRef0.Registration
 
 func (response GetRegistration200JSONResponse) VisitGetRegistrationResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1261,11 +1441,46 @@ func (response GetRegistration200JSONResponse) VisitGetRegistrationResponse(ctx 
 	return ctx.JSON(&response)
 }
 
-type GetRegistration404JSONResponse apitypes.ErrorResponse
+type GetRegistration404JSONResponse externalRef0.ErrorResponse
 
 func (response GetRegistration404JSONResponse) VisitGetRegistrationResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type RegisterGearRequestObject struct {
+	Body *RegisterGearJSONRequestBody
+}
+
+type RegisterGearResponseObject interface {
+	VisitRegisterGearResponse(ctx *fiber.Ctx) error
+}
+
+type RegisterGear200JSONResponse RegistrationResult
+
+func (response RegisterGear200JSONResponse) VisitRegisterGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type RegisterGear400JSONResponse externalRef0.ErrorResponse
+
+func (response RegisterGear400JSONResponse) VisitRegisterGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type RegisterGear409JSONResponse externalRef0.ErrorResponse
+
+func (response RegisterGear409JSONResponse) VisitRegisterGearResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
 
 	return ctx.JSON(&response)
 }
@@ -1277,7 +1492,7 @@ type GetRuntimeResponseObject interface {
 	VisitGetRuntimeResponse(ctx *fiber.Ctx) error
 }
 
-type GetRuntime200JSONResponse apitypes.Runtime
+type GetRuntime200JSONResponse externalRef0.Runtime
 
 func (response GetRuntime200JSONResponse) VisitGetRuntimeResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1286,7 +1501,7 @@ func (response GetRuntime200JSONResponse) VisitGetRuntimeResponse(ctx *fiber.Ctx
 	return ctx.JSON(&response)
 }
 
-type GetRuntime400JSONResponse apitypes.ErrorResponse
+type GetRuntime400JSONResponse externalRef0.ErrorResponse
 
 func (response GetRuntime400JSONResponse) VisitGetRuntimeResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -1315,6 +1530,9 @@ type StrictServerInterface interface {
 	// Get gear registration
 	// (GET /registration)
 	GetRegistration(ctx context.Context, request GetRegistrationRequestObject) (GetRegistrationResponseObject, error)
+	// Register a gear
+	// (POST /registration)
+	RegisterGear(ctx context.Context, request RegisterGearRequestObject) (RegisterGearResponseObject, error)
 	// Get runtime status
 	// (GET /runtime)
 	GetRuntime(ctx context.Context, request GetRuntimeRequestObject) (GetRuntimeResponseObject, error)
@@ -1483,6 +1701,37 @@ func (sh *strictHandler) GetRegistration(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(GetRegistrationResponseObject); ok {
 		if err := validResponse.VisitGetRegistrationResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// RegisterGear operation middleware
+func (sh *strictHandler) RegisterGear(ctx *fiber.Ctx) error {
+	var request RegisterGearRequestObject
+
+	var body RegisterGearJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.RegisterGear(ctx.UserContext(), request.(RegisterGearRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RegisterGear")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(RegisterGearResponseObject); ok {
+		if err := validResponse.VisitRegisterGearResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

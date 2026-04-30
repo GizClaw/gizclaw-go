@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 )
 
 func TestStoreOpsHelpers(t *testing.T) {
@@ -28,22 +28,22 @@ func TestStoreOpsHelpers(t *testing.T) {
 
 func TestStoreOpsRegisterValidation(t *testing.T) {
 	server := &Server{
-		Store:              mustBadgerInMemory(t, nil),
-		RegistrationTokens: map[string]apitypes.GearRole{},
+		Store: mustBadgerInMemory(t, nil),
 	}
 
-	_, err := server.register(context.Background(), serverpublic.RegistrationRequest{})
+	_, err := server.register(context.Background(), "", gearservice.RegistrationRequest{})
 	if err == nil || !strings.Contains(err.Error(), "empty public key") {
 		t.Fatalf("empty public key err = %v", err)
 	}
 
-	token := "missing"
-	_, err = server.register(context.Background(), serverpublic.RegistrationRequest{
-		PublicKey:         "peer",
-		RegistrationToken: &token,
+	registered, err := server.register(context.Background(), "peer", gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{},
 	})
-	if err == nil || !strings.Contains(err.Error(), "unknown registration token") {
-		t.Fatalf("unknown token err = %v", err)
+	if err != nil {
+		t.Fatalf("register without token error = %v", err)
+	}
+	if registered.Status != apitypes.GearStatusActive || registered.Role != apitypes.GearRoleUnspecified {
+		t.Fatalf("registered gear = %+v", registered)
 	}
 }
 

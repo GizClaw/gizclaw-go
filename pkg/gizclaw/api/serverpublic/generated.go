@@ -4,7 +4,6 @@
 package serverpublic
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -13,25 +12,41 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	externalRef0 "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/gofiber/fiber/v2"
+	"github.com/oapi-codegen/runtime"
 )
 
-// RegistrationRequest defines model for RegistrationRequest.
-type RegistrationRequest struct {
-	Device            apitypes.DeviceInfo `json:"device"`
-	PublicKey         string              `json:"public_key"`
-	RegistrationToken *string             `json:"registration_token,omitempty"`
+// Defines values for LoginResultTokenType.
+const (
+	Bearer LoginResultTokenType = "Bearer"
+)
+
+// Valid indicates whether the value is a known member of the LoginResultTokenType enum.
+func (e LoginResultTokenType) Valid() bool {
+	switch e {
+	case Bearer:
+		return true
+	default:
+		return false
+	}
 }
 
-// RegistrationResult defines model for RegistrationResult.
-type RegistrationResult struct {
-	Gear         apitypes.Gear         `json:"gear"`
-	Registration apitypes.Registration `json:"registration"`
+// LoginResult defines model for LoginResult.
+type LoginResult struct {
+	AccessToken string               `json:"access_token"`
+	ExpiresAt   int64                `json:"expires_at"`
+	TokenType   LoginResultTokenType `json:"token_type"`
 }
 
-// RegisterGearJSONRequestBody defines body for RegisterGear for application/json ContentType.
-type RegisterGearJSONRequestBody = RegistrationRequest
+// LoginResultTokenType defines model for LoginResult.TokenType.
+type LoginResultTokenType string
+
+// LoginParams defines parameters for Login.
+type LoginParams struct {
+	XPublicKey    string `json:"X-Public-Key"`
+	Authorization string `json:"Authorization"`
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -106,29 +121,15 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
-	// RegisterGearWithBody request with any body
-	RegisterGearWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	RegisterGear(ctx context.Context, body RegisterGearJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// Login request
+	Login(ctx context.Context, params *LoginParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetServerInfo request
 	GetServerInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
-func (c *Client) RegisterGearWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRegisterGearRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RegisterGear(ctx context.Context, body RegisterGearJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRegisterGearRequest(c.Server, body)
+func (c *Client) Login(ctx context.Context, params *LoginParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewLoginRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -151,19 +152,8 @@ func (c *Client) GetServerInfo(ctx context.Context, reqEditors ...RequestEditorF
 	return c.Client.Do(req)
 }
 
-// NewRegisterGearRequest calls the generic RegisterGear builder with application/json body
-func NewRegisterGearRequest(server string, body RegisterGearJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewRegisterGearRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewRegisterGearRequestWithBody generates requests for RegisterGear with any type of body
-func NewRegisterGearRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewLoginRequest generates requests for Login
+func NewLoginRequest(server string, params *LoginParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -171,7 +161,7 @@ func NewRegisterGearRequestWithBody(server string, contentType string, body io.R
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/register")
+	operationPath := fmt.Sprintf("/login")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -181,12 +171,32 @@ func NewRegisterGearRequestWithBody(server string, contentType string, body io.R
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", queryURL.String(), body)
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Add("Content-Type", contentType)
+	if params != nil {
+
+		var headerParam0 string
+
+		headerParam0, err = runtime.StyleParamWithOptions("simple", false, "X-Public-Key", params.XPublicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("X-Public-Key", headerParam0)
+
+		var headerParam1 string
+
+		headerParam1, err = runtime.StyleParamWithOptions("simple", false, "Authorization", params.Authorization, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationHeader, Type: "string", Format: ""})
+		if err != nil {
+			return nil, err
+		}
+
+		req.Header.Set("Authorization", headerParam1)
+
+	}
 
 	return req, nil
 }
@@ -261,25 +271,22 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
-	// RegisterGearWithBodyWithResponse request with any body
-	RegisterGearWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterGearResponse, error)
-
-	RegisterGearWithResponse(ctx context.Context, body RegisterGearJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterGearResponse, error)
+	// LoginWithResponse request
+	LoginWithResponse(ctx context.Context, params *LoginParams, reqEditors ...RequestEditorFn) (*LoginResponse, error)
 
 	// GetServerInfoWithResponse request
 	GetServerInfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetServerInfoResponse, error)
 }
 
-type RegisterGearResponse struct {
+type LoginResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *RegistrationResult
-	JSON400      *apitypes.ErrorResponse
-	JSON409      *apitypes.ErrorResponse
+	JSON200      *LoginResult
+	JSON401      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r RegisterGearResponse) Status() string {
+func (r LoginResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -287,7 +294,7 @@ func (r RegisterGearResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r RegisterGearResponse) StatusCode() int {
+func (r LoginResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -297,8 +304,8 @@ func (r RegisterGearResponse) StatusCode() int {
 type GetServerInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.ServerInfo
-	JSON400      *apitypes.ErrorResponse
+	JSON200      *externalRef0.ServerInfo
+	JSON400      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -317,21 +324,13 @@ func (r GetServerInfoResponse) StatusCode() int {
 	return 0
 }
 
-// RegisterGearWithBodyWithResponse request with arbitrary body returning *RegisterGearResponse
-func (c *ClientWithResponses) RegisterGearWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterGearResponse, error) {
-	rsp, err := c.RegisterGearWithBody(ctx, contentType, body, reqEditors...)
+// LoginWithResponse request returning *LoginResponse
+func (c *ClientWithResponses) LoginWithResponse(ctx context.Context, params *LoginParams, reqEditors ...RequestEditorFn) (*LoginResponse, error) {
+	rsp, err := c.Login(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseRegisterGearResponse(rsp)
-}
-
-func (c *ClientWithResponses) RegisterGearWithResponse(ctx context.Context, body RegisterGearJSONRequestBody, reqEditors ...RequestEditorFn) (*RegisterGearResponse, error) {
-	rsp, err := c.RegisterGear(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRegisterGearResponse(rsp)
+	return ParseLoginResponse(rsp)
 }
 
 // GetServerInfoWithResponse request returning *GetServerInfoResponse
@@ -343,40 +342,33 @@ func (c *ClientWithResponses) GetServerInfoWithResponse(ctx context.Context, req
 	return ParseGetServerInfoResponse(rsp)
 }
 
-// ParseRegisterGearResponse parses an HTTP response from a RegisterGearWithResponse call
-func ParseRegisterGearResponse(rsp *http.Response) (*RegisterGearResponse, error) {
+// ParseLoginResponse parses an HTTP response from a LoginWithResponse call
+func ParseLoginResponse(rsp *http.Response) (*LoginResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &RegisterGearResponse{
+	response := &LoginResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest RegistrationResult
+		var dest LoginResult
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 401:
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON400 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
-		var dest apitypes.ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON409 = &dest
+		response.JSON401 = &dest
 
 	}
 
@@ -398,14 +390,14 @@ func ParseGetServerInfoResponse(rsp *http.Response) (*GetServerInfoResponse, err
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.ServerInfo
+		var dest externalRef0.ServerInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest apitypes.ErrorResponse
+		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -418,9 +410,9 @@ func ParseGetServerInfoResponse(rsp *http.Response) (*GetServerInfoResponse, err
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Register a gear
-	// (POST /register)
-	RegisterGear(c *fiber.Ctx) error
+	// Exchange a device assertion for a bearer session
+	// (POST /login)
+	Login(c *fiber.Ctx, params LoginParams) error
 	// Get server information
 	// (GET /server-info)
 	GetServerInfo(c *fiber.Ctx) error
@@ -433,10 +425,57 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc fiber.Handler
 
-// RegisterGear operation middleware
-func (siw *ServerInterfaceWrapper) RegisterGear(c *fiber.Ctx) error {
+// Login operation middleware
+func (siw *ServerInterfaceWrapper) Login(c *fiber.Ctx) error {
 
-	return siw.Handler.RegisterGear(c)
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params LoginParams
+
+	headers := c.GetReqHeaders()
+
+	// ------------- Required header parameter "X-Public-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("X-Public-Key")]; found {
+		var XPublicKey string
+		n := len(valueList)
+		if n != 1 {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Too many values for ParamName X-Public-Key, 1 is required, but %d found", n))
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "X-Public-Key", valueList[0], &XPublicKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter X-Public-Key: %w", err).Error())
+		}
+
+		params.XPublicKey = XPublicKey
+
+	} else {
+		err = fmt.Errorf("Header parameter X-Public-Key is required, but not found: %w", err)
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	// ------------- Required header parameter "Authorization" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Authorization")]; found {
+		var Authorization string
+		n := len(valueList)
+		if n != 1 {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Too many values for ParamName Authorization, 1 is required, but %d found", n))
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Authorization", valueList[0], &Authorization, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter Authorization: %w", err).Error())
+		}
+
+		params.Authorization = Authorization
+
+	} else {
+		err = fmt.Errorf("Header parameter Authorization is required, but not found: %w", err)
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	return siw.Handler.Login(c, params)
 }
 
 // GetServerInfo operation middleware
@@ -466,43 +505,34 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 		router.Use(fiber.Handler(m))
 	}
 
-	router.Post(options.BaseURL+"/register", wrapper.RegisterGear)
+	router.Post(options.BaseURL+"/login", wrapper.Login)
 
 	router.Get(options.BaseURL+"/server-info", wrapper.GetServerInfo)
 
 }
 
-type RegisterGearRequestObject struct {
-	Body *RegisterGearJSONRequestBody
+type LoginRequestObject struct {
+	Params LoginParams
 }
 
-type RegisterGearResponseObject interface {
-	VisitRegisterGearResponse(ctx *fiber.Ctx) error
+type LoginResponseObject interface {
+	VisitLoginResponse(ctx *fiber.Ctx) error
 }
 
-type RegisterGear200JSONResponse RegistrationResult
+type Login200JSONResponse LoginResult
 
-func (response RegisterGear200JSONResponse) VisitRegisterGearResponse(ctx *fiber.Ctx) error {
+func (response Login200JSONResponse) VisitLoginResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type RegisterGear400JSONResponse apitypes.ErrorResponse
+type Login401JSONResponse externalRef0.ErrorResponse
 
-func (response RegisterGear400JSONResponse) VisitRegisterGearResponse(ctx *fiber.Ctx) error {
+func (response Login401JSONResponse) VisitLoginResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(400)
-
-	return ctx.JSON(&response)
-}
-
-type RegisterGear409JSONResponse apitypes.ErrorResponse
-
-func (response RegisterGear409JSONResponse) VisitRegisterGearResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(409)
+	ctx.Status(401)
 
 	return ctx.JSON(&response)
 }
@@ -514,7 +544,7 @@ type GetServerInfoResponseObject interface {
 	VisitGetServerInfoResponse(ctx *fiber.Ctx) error
 }
 
-type GetServerInfo200JSONResponse apitypes.ServerInfo
+type GetServerInfo200JSONResponse externalRef0.ServerInfo
 
 func (response GetServerInfo200JSONResponse) VisitGetServerInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -523,7 +553,7 @@ func (response GetServerInfo200JSONResponse) VisitGetServerInfoResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type GetServerInfo400JSONResponse apitypes.ErrorResponse
+type GetServerInfo400JSONResponse externalRef0.ErrorResponse
 
 func (response GetServerInfo400JSONResponse) VisitGetServerInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -534,9 +564,9 @@ func (response GetServerInfo400JSONResponse) VisitGetServerInfoResponse(ctx *fib
 
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
-	// Register a gear
-	// (POST /register)
-	RegisterGear(ctx context.Context, request RegisterGearRequestObject) (RegisterGearResponseObject, error)
+	// Exchange a device assertion for a bearer session
+	// (POST /login)
+	Login(ctx context.Context, request LoginRequestObject) (LoginResponseObject, error)
 	// Get server information
 	// (GET /server-info)
 	GetServerInfo(ctx context.Context, request GetServerInfoRequestObject) (GetServerInfoResponseObject, error)
@@ -555,29 +585,25 @@ type strictHandler struct {
 	middlewares []StrictMiddlewareFunc
 }
 
-// RegisterGear operation middleware
-func (sh *strictHandler) RegisterGear(ctx *fiber.Ctx) error {
-	var request RegisterGearRequestObject
+// Login operation middleware
+func (sh *strictHandler) Login(ctx *fiber.Ctx, params LoginParams) error {
+	var request LoginRequestObject
 
-	var body RegisterGearJSONRequestBody
-	if err := ctx.BodyParser(&body); err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-	request.Body = &body
+	request.Params = params
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.RegisterGear(ctx.UserContext(), request.(RegisterGearRequestObject))
+		return sh.ssi.Login(ctx.UserContext(), request.(LoginRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RegisterGear")
+		handler = middleware(handler, "Login")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(RegisterGearResponseObject); ok {
-		if err := validResponse.VisitRegisterGearResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(LoginResponseObject); ok {
+		if err := validResponse.VisitLoginResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

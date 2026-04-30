@@ -14,9 +14,63 @@
     {
       "name": "Public",
       "description": "Public gear operations"
+    },
+    {
+      "name": "Auth",
+      "description": "Public HTTP authentication"
     }
   ],
   "paths": {
+    "/login": {
+      "post": {
+        "operationId": "login",
+        "summary": "Exchange a device assertion for a bearer session",
+        "tags": [
+          "Auth"
+        ],
+        "parameters": [
+          {
+            "name": "X-Public-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer .+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Login result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid assertion",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/server-info": {
       "get": {
         "operationId": "getServerInfo",
@@ -47,91 +101,30 @@
           }
         }
       }
-    },
-    "/register": {
-      "post": {
-        "operationId": "registerGear",
-        "summary": "Register a gear",
-        "tags": [
-          "Public"
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegistrationRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Registration result",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegistrationResult"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid params",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Gear already exists",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
-      "RegistrationRequest": {
+      "LoginResult": {
         "type": "object",
         "required": [
-          "public_key",
-          "device"
+          "access_token",
+          "token_type",
+          "expires_at"
         ],
         "properties": {
-          "public_key": {
+          "access_token": {
             "type": "string"
           },
-          "device": {
-            "$ref": "./types.json#/components/schemas/DeviceInfo"
+          "token_type": {
+            "type": "string",
+            "enum": [
+              "Bearer"
+            ]
           },
-          "registration_token": {
-            "type": "string"
-          }
-        }
-      },
-      "RegistrationResult": {
-        "type": "object",
-        "required": [
-          "gear",
-          "registration"
-        ],
-        "properties": {
-          "gear": {
-            "$ref": "./types.json#/components/schemas/Gear"
-          },
-          "registration": {
-            "$ref": "./types.json#/components/schemas/Registration"
+          "expires_at": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       }

@@ -32,11 +32,10 @@ type PeerManager interface {
 }
 
 type Server struct {
-	Store              kv.Store
-	RegistrationTokens map[string]apitypes.GearRole
-	BuildCommit        string
-	ServerPublicKey    string
-	PeerManager        PeerManager
+	Store           kv.Store
+	BuildCommit     string
+	ServerPublicKey string
+	PeerManager     PeerManager
 
 	mu sync.Mutex
 }
@@ -64,11 +63,11 @@ type GearsGearService interface {
 	GetInfo(context.Context, gearservice.GetInfoRequestObject) (gearservice.GetInfoResponseObject, error)
 	PutInfo(context.Context, gearservice.PutInfoRequestObject) (gearservice.PutInfoResponseObject, error)
 	GetRegistration(context.Context, gearservice.GetRegistrationRequestObject) (gearservice.GetRegistrationResponseObject, error)
+	RegisterGear(context.Context, gearservice.RegisterGearRequestObject) (gearservice.RegisterGearResponseObject, error)
 	GetRuntime(context.Context, gearservice.GetRuntimeRequestObject) (gearservice.GetRuntimeResponseObject, error)
 }
 
 type GearsServerPublic interface {
-	RegisterGear(context.Context, serverpublic.RegisterGearRequestObject) (serverpublic.RegisterGearResponseObject, error)
 	GetServerInfo(context.Context, serverpublic.GetServerInfoRequestObject) (serverpublic.GetServerInfoResponseObject, error)
 }
 
@@ -340,25 +339,23 @@ func (s *Server) PutInfo(ctx context.Context, request gearservice.PutInfoRequest
 	return gearservice.PutInfo200JSONResponse(out), nil
 }
 
-// RegisterGear implements `serverpublic.StrictServerInterface.RegisterGear`.
-func (s *Server) RegisterGear(ctx context.Context, request serverpublic.RegisterGearRequestObject) (serverpublic.RegisterGearResponseObject, error) {
+// RegisterGear implements `gearservice.StrictServerInterface.RegisterGear`.
+func (s *Server) RegisterGear(ctx context.Context, request gearservice.RegisterGearRequestObject) (gearservice.RegisterGearResponseObject, error) {
 	if request.Body == nil {
-		return serverpublic.RegisterGear400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", "request body required")), nil
+		return gearservice.RegisterGear400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", "request body required")), nil
 	}
-	body := *request.Body
-	body.PublicKey = serverpublic.CallerPublicKey(ctx)
-	gear, err := s.register(ctx, body)
+	gear, err := s.register(ctx, gearservice.CallerPublicKey(ctx), *request.Body)
 	if err != nil {
 		if errors.Is(err, ErrGearAlreadyExists) {
-			return serverpublic.RegisterGear409JSONResponse(apitypes.NewErrorResponse("GEAR_ALREADY_EXISTS", err.Error())), nil
+			return gearservice.RegisterGear409JSONResponse(apitypes.NewErrorResponse("GEAR_ALREADY_EXISTS", err.Error())), nil
 		}
-		return serverpublic.RegisterGear400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
+		return gearservice.RegisterGear400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
 	out, err := toPublicRegistrationResult(gear)
 	if err != nil {
 		return registerGear500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	return serverpublic.RegisterGear200JSONResponse(out), nil
+	return gearservice.RegisterGear200JSONResponse(out), nil
 }
 
 // GetRegistration implements `gearservice.StrictServerInterface.GetRegistration`.

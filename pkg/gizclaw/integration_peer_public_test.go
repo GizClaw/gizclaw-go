@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
@@ -19,17 +19,15 @@ func TestIntegrationPeerPublicRefresh(t *testing.T) {
 	ts := startTestServer(t)
 
 	admin := newTestClient(t, ts)
-	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
-		RegistrationToken: strPtr("admin_default"),
+	if _, err := register(context.Background(), admin, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("admin")},
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
 	}
 
 	device := newTestClient(t, ts)
-	deviceResult, err := register(context.Background(), device, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("device")},
-		RegistrationToken: strPtr("device_default"),
+	deviceResult, err := register(context.Background(), device, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("device")},
 	})
 	if err != nil {
 		t.Fatalf("device register error: %v", err)
@@ -58,17 +56,15 @@ func TestIntegrationPeerPublicRefreshReportsOfflineWhenDeviceDisconnected(t *tes
 	ts := startTestServer(t)
 
 	admin := newTestClient(t, ts)
-	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
-		RegistrationToken: strPtr("admin_default"),
+	if _, err := register(context.Background(), admin, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("admin")},
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
 	}
 
 	device := newTestClient(t, ts)
-	deviceResult, err := register(context.Background(), device, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("device")},
-		RegistrationToken: strPtr("device_default"),
+	deviceResult, err := register(context.Background(), device, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("device")},
 	})
 	if err != nil {
 		t.Fatalf("device register error: %v", err)

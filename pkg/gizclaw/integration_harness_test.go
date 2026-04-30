@@ -20,7 +20,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 )
@@ -80,12 +80,8 @@ func startTestServer(t *testing.T) *testServer {
 	}
 
 	srv := &gizclaw.Server{
-		KeyPair:   keyPair,
-		GearStore: mustBadgerInMemory(t, nil),
-		RegistrationTokens: map[string]apitypes.GearRole{
-			"admin_default":  apitypes.GearRoleAdmin,
-			"device_default": apitypes.GearRoleDevice,
-		},
+		KeyPair:    keyPair,
+		GearStore:  mustBadgerInMemory(t, nil),
 		DepotStore: depotstore.Dir(firmwareRoot),
 	}
 
@@ -197,22 +193,19 @@ func probeServerPublicReady(c *gizclaw.Client) error {
 	return err
 }
 
-func register(ctx context.Context, c *gizclaw.Client, req serverpublic.RegistrationRequest) (serverpublic.RegistrationResult, error) {
-	api, err := c.ServerPublicClient()
+func register(ctx context.Context, c *gizclaw.Client, req gearservice.RegistrationRequest) (gearservice.RegistrationResult, error) {
+	api, err := c.GearServiceClient()
 	if err != nil {
-		return serverpublic.RegistrationResult{}, err
-	}
-	if req.PublicKey == "" && c != nil && c.KeyPair != nil {
-		req.PublicKey = c.KeyPair.Public.String()
+		return gearservice.RegistrationResult{}, err
 	}
 	resp, err := api.RegisterGearWithResponse(ctx, req)
 	if err != nil {
-		return serverpublic.RegistrationResult{}, err
+		return gearservice.RegistrationResult{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return serverpublic.RegistrationResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409)
+	return gearservice.RegistrationResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409)
 }
 
 func getServerInfo(ctx context.Context, c *gizclaw.Client) (apitypes.ServerInfo, error) {

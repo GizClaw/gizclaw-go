@@ -5,7 +5,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 )
 
 func convertViaJSON[T any](in any) (T, error) {
@@ -122,12 +122,12 @@ func toPublicGear(in apitypes.Gear) (apitypes.Gear, error) {
 	}, nil
 }
 
-func toPublicRegistrationResult(gear apitypes.Gear) (serverpublic.RegistrationResult, error) {
+func toPublicRegistrationResult(gear apitypes.Gear) (gearservice.RegistrationResult, error) {
 	publicGear, err := toPublicGear(gear)
 	if err != nil {
-		return serverpublic.RegistrationResult{}, err
+		return gearservice.RegistrationResult{}, err
 	}
-	return serverpublic.RegistrationResult{
+	return gearservice.RegistrationResult{
 		Gear:         publicGear,
 		Registration: toPublicRegistration(gear),
 	}, nil

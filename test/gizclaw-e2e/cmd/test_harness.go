@@ -19,7 +19,8 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	itest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/testutil"
 	"github.com/goccy/go-yaml"
@@ -251,10 +252,10 @@ func (h *Harness) EnsureContext(name string) Result {
 	return h.UseContext(name)
 }
 
-func (h *Harness) RegisterContext(name, token string, extraArgs ...string) Result {
+func (h *Harness) RegisterContext(name string, extraArgs ...string) Result {
 	h.t.Helper()
 
-	req, err := h.registrationRequest(name, token, extraArgs...)
+	req, err := h.registrationRequest(name, extraArgs...)
 	if err != nil {
 		return Result{Args: append([]string{"register-context", name}, extraArgs...), Err: err, Stderr: err.Error()}
 	}
@@ -263,7 +264,7 @@ func (h *Harness) RegisterContext(name, token string, extraArgs ...string) Resul
 		return Result{Args: []string{"register-context", name}, Err: err, Stderr: err.Error()}
 	}
 	defer c.Close()
-	api, err := c.ServerPublicClient()
+	api, err := c.GearServiceClient()
 	if err != nil {
 		return Result{Args: []string{"register-context", name}, Err: err, Stderr: err.Error()}
 	}
@@ -284,23 +285,18 @@ func (h *Harness) RegisterContext(name, token string, extraArgs ...string) Resul
 	return Result{Args: append([]string{"register-context", name}, extraArgs...), Stdout: string(data)}
 }
 
-func (h *Harness) registrationRequest(name, token string, extraArgs ...string) (serverpublic.RegistrationRequest, error) {
-	req := serverpublic.RegistrationRequest{
-		PublicKey: h.ContextPublicKey(name),
-	}
-	if token != "" {
-		req.RegistrationToken = &token
-	}
+func (h *Harness) registrationRequest(_ string, extraArgs ...string) (gearservice.RegistrationRequest, error) {
+	req := gearservice.RegistrationRequest{}
 	device := apitypes.DeviceInfo{
 		Hardware: &apitypes.HardwareInfo{},
 	}
 	for i := 0; i < len(extraArgs); i++ {
 		flag := extraArgs[i]
 		if !strings.HasPrefix(flag, "--") {
-			return serverpublic.RegistrationRequest{}, fmt.Errorf("unexpected register arg %q", flag)
+			return gearservice.RegistrationRequest{}, fmt.Errorf("unexpected register arg %q", flag)
 		}
 		if i+1 >= len(extraArgs) {
-			return serverpublic.RegistrationRequest{}, fmt.Errorf("missing value for %s", flag)
+			return gearservice.RegistrationRequest{}, fmt.Errorf("missing value for %s", flag)
 		}
 		value := extraArgs[i+1]
 		i++
@@ -320,7 +316,7 @@ func (h *Harness) registrationRequest(name, token string, extraArgs ...string) (
 		case "--firmware-semver":
 			device.Hardware.FirmwareSemver = &value
 		default:
-			return serverpublic.RegistrationRequest{}, fmt.Errorf("unsupported register arg %q", flag)
+			return gearservice.RegistrationRequest{}, fmt.Errorf("unsupported register arg %q", flag)
 		}
 	}
 	req.Device = device
@@ -348,11 +344,55 @@ func (h *Harness) ListContexts() Result {
 func (h *Harness) ContextPublicKey(name string) string {
 	h.t.Helper()
 
+	keyPair := h.ContextKeyPair(name)
+	return keyPair.Public.String()
+}
+
+func (h *Harness) ContextKeyPair(name string) *giznet.KeyPair {
+	h.t.Helper()
+
 	keyPair, err := loadIdentity(filepath.Join(h.contextRoot(), name, "identity.key"))
 	if err != nil {
 		h.t.Fatalf("load context %q identity: %v", name, err)
 	}
-	return keyPair.Public.String()
+	return keyPair
+}
+
+func (h *Harness) PublicHTTPURL() string {
+	return "http://" + h.ServerAddr
+}
+
+func (h *Harness) PublicHTTPLogin(name string) publiclogin.LoginResponse {
+	h.t.Helper()
+
+	serverPublicKey, err := giznet.KeyFromHex(h.ServerPublicKey)
+	if err != nil {
+		h.t.Fatalf("parse server public key: %v", err)
+	}
+	assertion, err := publiclogin.NewLoginAssertion(h.ContextKeyPair(name), serverPublicKey, time.Minute)
+	if err != nil {
+		h.t.Fatalf("create login assertion: %v", err)
+	}
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, h.PublicHTTPURL()+"/api/public/login", nil)
+	if err != nil {
+		h.t.Fatalf("create login request: %v", err)
+	}
+	req.Header.Set("X-Public-Key", h.ContextPublicKey(name))
+	req.Header.Set("Authorization", "Bearer "+assertion)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		h.t.Fatalf("public http login: %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		h.t.Fatalf("public http login status = %d body=%s", resp.StatusCode, string(body))
+	}
+	var result publiclogin.LoginResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		h.t.Fatalf("decode public http login response: %v", err)
+	}
+	return result
 }
 
 func (h *Harness) ConnectClientFromContext(name string) *gizclaw.Client {

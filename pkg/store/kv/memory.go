@@ -6,13 +6,19 @@ import (
 	"iter"
 	"sort"
 	"sync"
+	"time"
 )
+
+type memoryEntry struct {
+	value     []byte
+	expiresAt time.Time
+}
 
 // Memory is an in-memory Store implementation backed by a sorted map.
 // It is safe for concurrent use and intended primarily for testing.
 type Memory struct {
 	mu   sync.RWMutex
-	data map[string][]byte
+	data map[string]memoryEntry
 	opts *Options
 }
 
@@ -20,7 +26,7 @@ type Memory struct {
 // Pass nil for default options.
 func NewMemory(opts *Options) *Memory {
 	return &Memory{
-		data: make(map[string][]byte),
+		data: make(map[string]memoryEntry),
 		opts: opts,
 	}
 }
@@ -31,13 +37,21 @@ func (m *Memory) Get(ctx context.Context, key Key) ([]byte, error) {
 	}
 	k := string(m.opts.encode(key))
 	m.mu.RLock()
-	v, ok := m.data[k]
+	entry, ok := m.data[k]
 	m.mu.RUnlock()
 	if !ok {
 		return nil, ErrNotFound
 	}
-	cp := make([]byte, len(v))
-	copy(cp, v)
+	if entry.expired(time.Now()) {
+		m.mu.Lock()
+		if current, ok := m.data[k]; ok && current.expired(time.Now()) {
+			delete(m.data, k)
+		}
+		m.mu.Unlock()
+		return nil, ErrNotFound
+	}
+	cp := make([]byte, len(entry.value))
+	copy(cp, entry.value)
 	return cp, nil
 }
 
@@ -49,7 +63,7 @@ func (m *Memory) Set(ctx context.Context, key Key, value []byte) error {
 	cp := make([]byte, len(value))
 	copy(cp, value)
 	m.mu.Lock()
-	m.data[k] = cp
+	m.data[k] = memoryEntry{value: cp}
 	m.mu.Unlock()
 	return nil
 }
@@ -84,10 +98,14 @@ func (m *Memory) List(ctx context.Context, prefix Key) iter.Seq2[Entry, error] {
 			val []byte
 		}
 		var matches []pair
-		for k, v := range m.data {
+		now := time.Now()
+		for k, entry := range m.data {
+			if entry.expired(now) {
+				continue
+			}
 			if len(prefixBytes) == 0 || bytes.HasPrefix([]byte(k), prefixBytes) {
-				cp := make([]byte, len(v))
-				copy(cp, v)
+				cp := make([]byte, len(entry.value))
+				copy(cp, entry.value)
 				matches = append(matches, pair{key: k, val: cp})
 			}
 		}
@@ -143,13 +161,27 @@ func (m *Memory) BatchSet(ctx context.Context, entries []Entry) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	m.mu.Lock()
-	defer m.mu.Unlock()
+	now := time.Now()
+	type preparedEntry struct {
+		key   string
+		entry memoryEntry
+	}
+	prepared := make([]preparedEntry, 0, len(entries))
 	for _, e := range entries {
+		if !e.Deadline.IsZero() && !e.Deadline.After(now) {
+			return ErrInvalidDeadline
+		}
 		k := string(m.opts.encode(e.Key))
 		cp := make([]byte, len(e.Value))
 		copy(cp, e.Value)
-		m.data[k] = cp
+		entry := memoryEntry{value: cp}
+		entry.expiresAt = e.Deadline
+		prepared = append(prepared, preparedEntry{key: k, entry: entry})
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, e := range prepared {
+		m.data[e.key] = e.entry
 	}
 	return nil
 }
@@ -169,6 +201,10 @@ func (m *Memory) BatchDelete(ctx context.Context, keys []Key) error {
 
 func (m *Memory) Close() error {
 	return nil
+}
+
+func (e memoryEntry) expired(now time.Time) bool {
+	return !e.expiresAt.IsZero() && !now.Before(e.expiresAt)
 }
 
 var _ Store = (*Memory)(nil)

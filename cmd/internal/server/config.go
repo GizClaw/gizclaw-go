@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -26,12 +24,7 @@ type Config struct {
 }
 
 type GearsConfig struct {
-	Store              string                             `yaml:"store"`
-	RegistrationTokens map[string]RegistrationTokenConfig `yaml:"registration-tokens"`
-}
-
-type RegistrationTokenConfig struct {
-	Role apitypes.GearRole `yaml:"role"`
+	Store string `yaml:"store"`
 }
 
 type CredentialsConfig struct {
@@ -110,9 +103,6 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) Config {
 func mergeGearsConfig(runtime GearsConfig, file GearsConfig) GearsConfig {
 	if runtime.Store == "" {
 		runtime.Store = file.Store
-	}
-	if len(runtime.RegistrationTokens) == 0 {
-		runtime.RegistrationTokens = file.RegistrationTokens
 	}
 	return runtime
 }

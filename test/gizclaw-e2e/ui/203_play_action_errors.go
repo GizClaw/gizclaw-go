@@ -1,5 +1,5 @@
-// User story: As a Play UI user, the error fixture still renders the WebRTC
-// dial shell without relying on legacy proxied HTTP action buttons.
+// User story: As a Play UI user, I can see useful feedback when a proxied gear
+// action fails because no GizClaw client is available.
 package ui_test
 
 import (
@@ -11,7 +11,9 @@ func playActionErrorsStories() []Story {
 		Name: "203-play-action-errors",
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoErrorPlay("/")
-			page.ExpectText("Start Video Call")
+			page.ClickRole("button", "Run Configuration")
+			page.ExpectText("no gizclaw client configured for error scenario")
+			page.ExpectText("No response available")
 		},
 	}}
 }

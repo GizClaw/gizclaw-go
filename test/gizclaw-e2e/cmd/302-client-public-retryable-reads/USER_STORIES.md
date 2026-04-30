@@ -8,7 +8,7 @@ CLI surface.
 
 ## Scenario
 
-1. Start a real server with a device registration token.
+1. Start a real server with registration enabled.
 2. Create and register one device context through the harness API.
 3. Read public gear configuration several times through the gear public API.
 4. Verify `gizclaw ping` still succeeds after each read.

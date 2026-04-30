@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"iter"
+	"time"
 
 	"github.com/dgraph-io/badger/v4"
 )
@@ -197,11 +198,20 @@ func (b *Badger) BatchSet(ctx context.Context, entries []Entry) error {
 		return err
 	}
 	return b.db.Update(func(txn *badger.Txn) error {
+		now := time.Now()
 		for _, e := range entries {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			if err := txn.Set(b.opts.encode(e.Key), e.Value); err != nil {
+			entry := badger.NewEntry(b.opts.encode(e.Key), e.Value)
+			if !e.Deadline.IsZero() {
+				ttl := e.Deadline.Sub(now)
+				if ttl <= 0 {
+					return ErrInvalidDeadline
+				}
+				entry = entry.WithTTL(ttl)
+			}
+			if err := txn.SetEntry(entry); err != nil {
 				return err
 			}
 		}

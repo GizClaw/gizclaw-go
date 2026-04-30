@@ -15,7 +15,7 @@ func TestAdminMiniMaxTenantsUserStory(t *testing.T) {
 	h := clitest.NewHarness(t, "505-admin-minimax-tenants")
 	h.StartServerFromFixture("server_config.yaml")
 	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "admin_default", "--sn", "admin-sn").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 
 	seedMiniMaxTenant(t, h)
 

@@ -7,13 +7,13 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/spf13/cobra"
 )
 
 func NewCmd() *cobra.Command {
 	var ctxName string
-	var req serverpublic.RegistrationRequest
+	var req gearservice.RegistrationRequest
 
 	cmd := &cobra.Command{
 		Use:   "register",
@@ -39,7 +39,6 @@ func NewCmd() *cobra.Command {
 	var hardwareRevision string
 	var depot string
 	var firmwareSemver string
-	var token string
 	cmd.PreRun = func(cmd *cobra.Command, args []string) {
 		req.Device = apitypes.DeviceInfo{
 			Name: optionalString(name),
@@ -52,7 +51,6 @@ func NewCmd() *cobra.Command {
 				FirmwareSemver:   optionalString(firmwareSemver),
 			},
 		}
-		req.RegistrationToken = optionalString(token)
 	}
 	cmd.Flags().StringVar(&name, "name", "", "device name")
 	cmd.Flags().StringVar(&sn, "sn", "", "serial number")
@@ -61,7 +59,6 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&hardwareRevision, "hardware-revision", "", "hardware revision")
 	cmd.Flags().StringVar(&depot, "depot", "", "depot")
 	cmd.Flags().StringVar(&firmwareSemver, "firmware-semver", "", "firmware semver")
-	cmd.Flags().StringVar(&token, "token", "", "registration token")
 	return cmd
 }
 

@@ -7,12 +7,11 @@ import (
 	"net"
 	"sync"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/credential"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/mmx"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspacetemplate"
@@ -52,7 +51,7 @@ type Server struct {
 	WorkspaceStore         kv.Store
 	TemplateStore          kv.Store
 	WorkspaceTemplateStore kv.Store
-	RegistrationTokens     map[string]apitypes.GearRole
+	PublicLoginStore       kv.Store
 	BuildCommit            string
 	ServerPublicKey        string
 	DepotStore             depotstore.Store
@@ -61,6 +60,7 @@ type Server struct {
 
 	manager     *Manager
 	peerService *PeerService
+	sessions    *publiclogin.SessionManager
 
 	mu          sync.Mutex
 	listener    *giznet.Listener
@@ -229,7 +229,7 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.manager != nil && s.peerService != nil {
+	if s.manager != nil && s.peerService != nil && s.sessions != nil {
 		return nil
 	}
 	if s.GearStore == nil {
@@ -255,7 +255,8 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 		s.WorkspaceStore == nil &&
 		s.TemplateStore == nil &&
 		s.WorkspaceTemplateStore == nil &&
-		s.DepotMetadataStore == nil
+		s.DepotMetadataStore == nil &&
+		s.PublicLoginStore == nil
 	gearStore := s.GearStore
 	if legacySharedStore {
 		gearStore = kv.Prefixed(s.GearStore, kv.Key{"gears"})
@@ -268,12 +269,14 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 	templateStore := moduleStore(s.TemplateStore, s.GearStore, "workspace-templates")
 	workspaceTemplateStore := moduleStore(s.WorkspaceTemplateStore, templateStore, "")
 	depotMetadataStore := moduleStore(s.DepotMetadataStore, s.GearStore, "firmware-depots")
+	publicLoginStore := moduleStore(s.PublicLoginStore, s.GearStore, "public-login")
 
+	publicLoginServer := publiclogin.NewServer(s.KeyPair, publicLoginStore)
+	sessions := publicLoginServer.SessionManager()
 	gearsServer := &gear.Server{
-		Store:              gearStore,
-		RegistrationTokens: s.RegistrationTokens,
-		BuildCommit:        s.BuildCommit,
-		ServerPublicKey:    serverPublicKey,
+		Store:           gearStore,
+		BuildCommit:     s.BuildCommit,
+		ServerPublicKey: serverPublicKey,
 	}
 	manager := NewManager(gearsServer)
 	gearsServer.PeerManager = manager
@@ -319,8 +322,10 @@ func (s *Server) initRuntime(serverPublicKey string) error {
 		},
 		public: &serverPublic{
 			GearsServerPublic: gearsServer,
+			ServerPublic:      publicLoginServer,
 		},
 	}
+	s.sessions = sessions
 	return nil
 }
 

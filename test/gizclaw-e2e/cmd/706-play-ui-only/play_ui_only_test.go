@@ -42,7 +42,7 @@ func TestPlayListenAutoRegistersCurrentContext(t *testing.T) {
 	h := clitest.NewHarness(t, "706-play-ui-only")
 	h.StartServerFromFixture("server_config.yaml")
 	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "admin_default", "--sn", "admin-sn").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 	h.CreateContext("play-a").MustSucceed(t)
 
 	listenAddr := freeTCPAddr(t)
@@ -78,7 +78,7 @@ func TestPlayListenDoesNotRegisterWhenListenFails(t *testing.T) {
 	h := clitest.NewHarness(t, "706-play-ui-only")
 	h.StartServerFromFixture("server_config.yaml")
 	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "admin_default", "--sn", "admin-sn").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 	h.CreateContext("play-a").MustSucceed(t)
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

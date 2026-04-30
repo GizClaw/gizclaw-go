@@ -90,11 +90,6 @@ stores:
     dir: firmware
 gears:
   store: gears
-  registration-tokens:
-    admin_default:
-      role: admin
-    device_default:
-      role: device
 depots:
   store: firmware
 ```
@@ -108,7 +103,6 @@ Config rules:
 - `dir` is used by `badger` and `filesystem`; relative paths are under the workspace.
 - SQL stores can use `backend: sqlite` with `dir`, or `backend: postgres` with `dsn`.
 - Graph stores with `backend: kv` use `store` to reference a keyvalue store.
-- `gears.registration-tokens` maps token names to roles: `admin`, `device`, or `peer`.
 - Memory stores lose data after restart.
 
 Service-managed edit flow:

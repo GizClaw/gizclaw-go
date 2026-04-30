@@ -12,12 +12,11 @@ func TestClientRegisterThenReadUserStory(t *testing.T) {
 	h.StartServerFromFixture("server_config.yaml")
 
 	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "admin_default", "--sn", "admin-sn").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 
 	h.CreateContext("device-a").MustSucceed(t)
 	h.RegisterContext(
 		"device-a",
-		"device_default",
 		"--name", "device-a",
 		"--sn", "device-a-sn",
 		"--manufacturer", "Acme",

@@ -7,7 +7,7 @@ exists so retries do not silently corrupt or duplicate resources.
 
 ## Scenario
 
-1. Start a real server with a device registration token.
+1. Start a real server with registration enabled.
 2. Create one device context.
 3. Register that context through the harness API.
 4. Repeat the same registration request.

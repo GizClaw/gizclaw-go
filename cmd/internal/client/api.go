@@ -15,7 +15,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 )
 
 func ConnectFromContext(name string) (*gizclaw.Client, error) {
@@ -59,22 +59,19 @@ func probeServerPublicReady(c *gizclaw.Client) error {
 	return err
 }
 
-func Register(ctx context.Context, c *gizclaw.Client, req serverpublic.RegistrationRequest) (serverpublic.RegistrationResult, error) {
-	api, err := c.ServerPublicClient()
+func Register(ctx context.Context, c *gizclaw.Client, req gearservice.RegistrationRequest) (gearservice.RegistrationResult, error) {
+	api, err := c.GearServiceClient()
 	if err != nil {
-		return serverpublic.RegistrationResult{}, err
-	}
-	if req.PublicKey == "" && c != nil && c.KeyPair != nil {
-		req.PublicKey = c.KeyPair.Public.String()
+		return gearservice.RegistrationResult{}, err
 	}
 	resp, err := api.RegisterGearWithResponse(ctx, req)
 	if err != nil {
-		return serverpublic.RegistrationResult{}, err
+		return gearservice.RegistrationResult{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return serverpublic.RegistrationResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409)
+	return gearservice.RegistrationResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409)
 }
 
 func GetConfig(ctx context.Context, c *gizclaw.Client) (apitypes.Configuration, error) {

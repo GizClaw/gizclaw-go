@@ -16,7 +16,6 @@ func TestClientPublicReadSequenceUserStory(t *testing.T) {
 	h.CreateContext("device-a").MustSucceed(t)
 	h.RegisterContext(
 		"device-a",
-		"device_default",
 		"--name", "device-a",
 		"--sn", "device-a-sn",
 		"--manufacturer", "Acme",

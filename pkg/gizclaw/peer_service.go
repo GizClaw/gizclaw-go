@@ -21,6 +21,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/mmx"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspacetemplate"
@@ -183,6 +184,7 @@ type gearAPIBundle struct {
 
 type serverPublic struct {
 	gear.GearsServerPublic
+	publiclogin.ServerPublic
 }
 
 // PeerService serves one peer connection.
@@ -306,7 +308,11 @@ func fiberHTTPHandler(app *fiber.App) http.Handler {
 			}
 		}
 		req.Header.SetMethod(r.Method)
-		req.SetRequestURI(r.RequestURI)
+		requestURI := r.URL.RequestURI()
+		if requestURI == "" {
+			requestURI = r.RequestURI
+		}
+		req.SetRequestURI(requestURI)
 		req.SetHost(r.Host)
 		req.Header.SetHost(r.Host)
 		for key, values := range r.Header {

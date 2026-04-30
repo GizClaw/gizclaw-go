@@ -1,5 +1,5 @@
-// User story: As a Play UI user, I can open the shell and see the local
-// WebRTC dial button before a call starts.
+// User story: As a Play UI user, I can open the shell and see the available
+// real-service actions for server info, device info, config, and OTA.
 package ui_test
 
 import (
@@ -11,7 +11,10 @@ func playShellStories() []Story {
 		Name: "200-play-shell",
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoPlay("/")
-			page.ExpectText("Start Video Call")
+			page.ExpectText("GizClaw Play")
+			page.ExpectText("Current State")
+			page.ExpectText("Run Server Info")
+			page.ExpectText("Run Device Info")
 		},
 	}}
 }

@@ -81,8 +81,9 @@ func (s *prefixedStore) BatchSet(ctx context.Context, entries []Entry) error {
 	prefixed := make([]Entry, len(entries))
 	for i, entry := range entries {
 		prefixed[i] = Entry{
-			Key:   s.prefixedKey(entry.Key),
-			Value: entry.Value,
+			Key:      s.prefixedKey(entry.Key),
+			Value:    entry.Value,
+			Deadline: entry.Deadline,
 		}
 	}
 	return s.base.BatchSet(ctx, prefixed)

@@ -2,7 +2,10 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -131,25 +134,45 @@ func ServeContext(ctx context.Context, workspace string, opts ServeOptions) erro
 		return err
 	}
 	defer srv.Close()
+	publicHandler, err := srv.PublicHTTPHandler()
+	if err != nil {
+		return err
+	}
+	publicListener, err := net.Listen("tcp", cfg.ListenAddr)
+	if err != nil {
+		return fmt.Errorf("server: listen public http: %w", err)
+	}
+	defer publicListener.Close()
+	publicHTTP := &http.Server{Handler: publicHandler}
 	releasePID, err := acquireWorkspacePID(root, opts.Force)
 	if err != nil {
 		return err
 	}
 	defer releasePID()
 
-	errCh := make(chan error, 1)
+	errCh := make(chan error, 2)
 	go func() {
 		errCh <- srv.ListenAndServe(nil, giznet.WithBindAddr(cfg.ListenAddr))
+	}()
+	go func() {
+		err := publicHTTP.Serve(publicListener)
+		if errors.Is(err, http.ErrServerClosed) || errors.Is(err, net.ErrClosed) {
+			err = nil
+		}
+		errCh <- err
 	}()
 
 	select {
 	case err := <-errCh:
+		_ = publicHTTP.Shutdown(context.Background())
+		_ = srv.Close()
 		return err
 	case <-ctx.Done():
-		if err := srv.Close(); err != nil {
-			return err
-		}
-		return <-errCh
+		shutdownErr := publicHTTP.Shutdown(context.Background())
+		closeErr := srv.Close()
+		err1 := <-errCh
+		err2 := <-errCh
+		return errors.Join(shutdownErr, closeErr, err1, err2)
 	}
 }
 

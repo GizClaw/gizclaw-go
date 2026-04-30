@@ -13,7 +13,7 @@ func TestAdminResourcesUserStory(t *testing.T) {
 	h := clitest.NewHarness(t, "509-admin-resources")
 	h.StartServerFromFixture("server_config.yaml")
 	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "admin_default", "--sn", "admin-sn").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 
 	resourcePath := filepath.Join(h.SandboxDir, "credential-resource.json")
 	if err := os.WriteFile(resourcePath, []byte(`{

@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
@@ -201,6 +202,53 @@ func TestBadgerBatchSetBatchDelete(t *testing.T) {
 	}
 }
 
+func TestBadgerBatchSetDeadlineExpires(t *testing.T) {
+	ctx := context.Background()
+	s := newBadgerStore(t, nil)
+
+	if err := s.BatchSet(ctx, []kv.Entry{
+		{Key: kv.Key{"sessions", "expired"}, Value: []byte("gone"), Deadline: time.Now().Add(2 * time.Second)},
+		{Key: kv.Key{"sessions", "kept"}, Value: []byte("kept")},
+	}); err != nil {
+		t.Fatalf("BatchSet deadline entry: %v", err)
+	}
+	got, err := s.Get(ctx, kv.Key{"sessions", "expired"})
+	if err != nil {
+		t.Fatalf("Get before expiration: %v", err)
+	}
+	if string(got) != "gone" {
+		t.Fatalf("Get before expiration = %q, want gone", got)
+	}
+
+	waitForBadgerNotFound(t, func() error {
+		_, err := s.Get(ctx, kv.Key{"sessions", "expired"})
+		return err
+	})
+
+	var gotKeys []string
+	for entry, err := range s.List(ctx, kv.Key{"sessions"}) {
+		if err != nil {
+			t.Fatalf("List: %v", err)
+		}
+		gotKeys = append(gotKeys, entry.Key.String())
+	}
+	if !slices.Equal(gotKeys, []string{"sessions:kept"}) {
+		t.Fatalf("List after expiration = %v, want [sessions:kept]", gotKeys)
+	}
+}
+
+func TestBadgerBatchSetRejectsExpiredDeadline(t *testing.T) {
+	ctx := context.Background()
+	s := newBadgerStore(t, nil)
+
+	err := s.BatchSet(ctx, []kv.Entry{
+		{Key: kv.Key{"session"}, Value: []byte("value"), Deadline: time.Now().Add(-time.Second)},
+	})
+	if !errors.Is(err, kv.ErrInvalidDeadline) {
+		t.Fatalf("BatchSet expired deadline err = %v, want ErrInvalidDeadline", err)
+	}
+}
+
 func TestBadgerCustomSeparator(t *testing.T) {
 	ctx := context.Background()
 	s := newBadgerStore(t, &kv.Options{Separator: '/'})
@@ -228,6 +276,21 @@ func TestBadgerCustomSeparator(t *testing.T) {
 	}
 	if len(keys) != 1 || keys[0] != "path:to:value" {
 		t.Fatalf("List = %v, want [path:to:value]", keys)
+	}
+}
+
+func waitForBadgerNotFound(t *testing.T, getErr func() error) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		err := getErr()
+		if errors.Is(err, kv.ErrNotFound) {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("timed out waiting for ErrNotFound, last err = %v", err)
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

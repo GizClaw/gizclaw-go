@@ -9,7 +9,7 @@ removed from the CLI.
 
 ## Scenario
 
-1. Start a real GizClaw server with admin and device registration tokens.
+1. Start a real GizClaw server with registration enabled.
 2. Create and provision an admin context.
 3. Create and register a device context with name, serial number, hardware
    metadata, depot, and firmware semver.

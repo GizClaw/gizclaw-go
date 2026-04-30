@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 )
 
 func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
@@ -25,7 +25,7 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 		t.Fatal("PeerConn returned nil")
 	}
 
-	result, err := register(context.Background(), device, serverpublic.RegistrationRequest{
+	result, err := register(context.Background(), device, gearservice.RegistrationRequest{
 		Device: apitypes.DeviceInfo{
 			Name: strPtr("demo-device"),
 			Sn:   strPtr("sn-001"),
@@ -34,7 +34,6 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 				Model:        strPtr("M1"),
 			},
 		},
-		RegistrationToken: strPtr("device_default"),
 	})
 	if err != nil {
 		t.Fatalf("Register error: %v", err)
@@ -55,7 +54,7 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetRegistration error: %v", err)
 	}
-	if registration.Role != apitypes.GearRoleDevice {
+	if registration.Role != apitypes.GearRoleUnspecified {
 		t.Fatalf("role = %q", registration.Role)
 	}
 
@@ -79,9 +78,8 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	}
 
 	admin := newTestClient(t, ts)
-	if _, err := register(context.Background(), admin, serverpublic.RegistrationRequest{
-		Device:            apitypes.DeviceInfo{Name: strPtr("admin")},
-		RegistrationToken: strPtr("admin_default"),
+	if _, err := register(context.Background(), admin, gearservice.RegistrationRequest{
+		Device: apitypes.DeviceInfo{Name: strPtr("admin")},
 	}); err != nil {
 		t.Fatalf("admin register error: %v", err)
 	}
