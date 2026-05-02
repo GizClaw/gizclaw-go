@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/internal/noise"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/internal/timer"
+	"golang.org/x/sync/singleflight"
 )
 
 // recvBufferPool is a pool for receive buffers to reduce allocations.
@@ -61,6 +63,10 @@ func (s ConnState) String() string {
 // automatically via the inbound channel.
 type Conn struct {
 	mu sync.RWMutex
+
+	tickGroup singleflight.Group
+
+	tickTimer *timer.Timer
 
 	// Configuration
 	localKey   *noise.KeyPair
@@ -124,7 +130,7 @@ func newConn(localKey *noise.KeyPair, transport net.PacketConn, remoteAddr net.A
 	}
 
 	now := time.Now()
-	return &Conn{
+	c := &Conn{
 		localKey:       localKey,
 		remotePK:       remotePK,
 		transport:      transport,
@@ -135,7 +141,13 @@ func newConn(localKey *noise.KeyPair, transport net.PacketConn, remoteAddr net.A
 		lastSent:       now,
 		lastReceived:   now,
 		pendingPackets: make([][]byte, 0),
-	}, nil
+	}
+	c.tickTimer = timer.New(func() {
+		if err := c.tick(false); err == ErrConnClosed {
+			return
+		}
+	})
+	return c, nil
 }
 
 // accept processes an incoming handshake initiation and completes the handshake.
@@ -258,6 +270,7 @@ func (c *Conn) completeHandshake(remoteIdx uint32, remotePK *noise.PublicKey) er
 	if hasPending {
 		c.flushPendingPackets()
 	}
+	_ = c.tick(false)
 
 	return nil
 }
@@ -300,7 +313,11 @@ func (c *Conn) Send(protocol byte, payload []byte) error {
 	}
 
 	plaintext := EncodePayload(protocol, payload)
-	return c.sendPayload(plaintext, false)
+	if err := c.sendPayload(plaintext, false); err != nil {
+		return err
+	}
+	_ = c.tick(false)
+	return nil
 }
 
 // SendKeepalive sends an empty keepalive message to maintain the connection.
@@ -528,6 +545,7 @@ func (c *Conn) handleTransportMessage(msg *noise.TransportMessage) (byte, []byte
 	c.mu.Lock()
 	c.lastReceived = now
 	c.mu.Unlock()
+	_ = c.tick(false)
 
 	// Check if we should trigger rekey on receive (initiator only)
 	// WireGuard: trigger at RekeyOnRecvThreshold (165s) if not already triggered
@@ -647,6 +665,7 @@ func (c *Conn) handleHandshakeResponse(resp *noise.HandshakeRespMessage, fromAdd
 
 	// Return empty payload to indicate handshake completion
 	// Caller should continue receiving to get actual data
+	_ = c.tick(false)
 	return 0, nil, nil
 }
 
@@ -748,6 +767,7 @@ func (c *Conn) handleHandshakeInit(init *noise.HandshakeInitMessage, fromAddr ne
 	c.mu.Unlock()
 
 	// Return empty payload to indicate handshake completion
+	_ = c.tick(false)
 	return 0, nil, nil
 }
 
@@ -770,7 +790,52 @@ func (c *Conn) Tick() error {
 // tick is the internal implementation of Tick.
 // If skipKeepalive is true, the keepalive sending is skipped (used by Send).
 func (c *Conn) tick(skipKeepalive bool) error {
+	_, err, _ := c.tickGroup.Do("tick", func() (any, error) {
+		return nil, c.doTick(skipKeepalive)
+	})
+	return err
+}
+
+func (c *Conn) doTick(skipKeepalive bool) (err error) {
 	now := time.Now()
+	var next time.Time
+
+	addDeadline := func(t time.Time) {
+		if t.IsZero() {
+			return
+		}
+		if next.IsZero() || t.Before(next) {
+			next = t
+		}
+	}
+	after := func(t time.Time, d time.Duration) time.Time {
+		return t.Add(d + time.Nanosecond)
+	}
+	addAfter := func(t time.Time, d time.Duration) {
+		if t.IsZero() {
+			return
+		}
+		addDeadline(after(t, d))
+	}
+	scheduleHandshake := func(attemptStart, sentAt time.Time, hasHandshake bool) {
+		addAfter(attemptStart, RekeyAttemptTime)
+		if hasHandshake {
+			addAfter(sentAt, RekeyTimeout)
+		}
+	}
+	scheduleEstablished := func(sentAt, receivedAt, createdAt time.Time, initiator, rekeyDone bool) {
+		addAfter(receivedAt, SessionCleanupTime)
+		if initiator {
+			addAfter(receivedAt, KeepaliveTimeout+RekeyTimeout)
+			if !rekeyDone {
+				addAfter(createdAt, RekeyAfterTime)
+			}
+		}
+		keepaliveAt := after(sentAt, KeepaliveTimeout)
+		if !sentAt.IsZero() && !receivedAt.IsZero() && receivedAt.Add(KeepaliveTimeout).After(keepaliveAt) {
+			addDeadline(keepaliveAt)
+		}
+	}
 
 	c.mu.RLock()
 	state := c.state
@@ -782,14 +847,36 @@ func (c *Conn) tick(skipKeepalive bool) error {
 	lastHandshakeSent := c.lastHandshakeSent
 	hsState := c.hsState
 	session := c.current
+	hasSession := c.current != nil || c.previous != nil
+	rekeyTriggered := c.rekeyTriggered
 	c.mu.RUnlock()
+
+	defer func() {
+		if err != nil {
+			return
+		}
+		if next.IsZero() {
+			c.tickTimer.Reset(time.Time{})
+			return
+		}
+		c.tickTimer.Reset(next)
+	}()
 
 	switch state {
 	case ConnStateNew:
+		if hasSession {
+			addAfter(lastReceived, SessionCleanupTime)
+			if now.Sub(lastReceived) > SessionCleanupTime {
+				c.cleanupSessions()
+				next = time.Time{}
+			}
+		}
 		// Nothing to do for new connections
 		return nil
 
 	case ConnStateHandshaking:
+		scheduleHandshake(handshakeAttemptStart, lastHandshakeSent, hsState != nil)
+
 		// Check if handshake attempt has exceeded RekeyAttemptTime (90s)
 		if !handshakeAttemptStart.IsZero() && now.Sub(handshakeAttemptStart) > RekeyAttemptTime {
 			return ErrHandshakeTimeout
@@ -801,10 +888,20 @@ func (c *Conn) tick(skipKeepalive bool) error {
 			if err := c.retransmitHandshake(); err != nil {
 				return err
 			}
+			next = time.Time{}
+			scheduleHandshake(handshakeAttemptStart, time.Now(), true)
 		}
 		return nil
 
 	case ConnStateEstablished:
+		scheduleEstablished(lastSent, lastReceived, sessionCreated, isInitiator, rekeyTriggered)
+
+		if hasSession && now.Sub(lastReceived) > SessionCleanupTime {
+			c.cleanupSessions()
+			next = time.Time{}
+			return nil
+		}
+
 		// Check if connection has timed out (no messages received)
 		if now.Sub(lastReceived) > RejectAfterTime {
 			return ErrConnTimeout
@@ -821,6 +918,9 @@ func (c *Conn) tick(skipKeepalive bool) error {
 
 		// Check if we're waiting for rekey response
 		if hsState != nil {
+			next = time.Time{}
+			scheduleHandshake(handshakeAttemptStart, lastHandshakeSent, true)
+
 			// Check if handshake attempt has exceeded RekeyAttemptTime (90s)
 			if !handshakeAttemptStart.IsZero() && now.Sub(handshakeAttemptStart) > RekeyAttemptTime {
 				return ErrHandshakeTimeout
@@ -831,6 +931,8 @@ func (c *Conn) tick(skipKeepalive bool) error {
 				if err := c.retransmitHandshake(); err != nil {
 					return err
 				}
+				next = time.Time{}
+				scheduleHandshake(handshakeAttemptStart, time.Now(), true)
 			}
 			return nil
 		}
@@ -844,14 +946,11 @@ func (c *Conn) tick(skipKeepalive bool) error {
 			if err := c.initiateRekey(); err != nil {
 				return err
 			}
+			next = time.Time{}
+			rekeyStarted := time.Now()
+			scheduleHandshake(rekeyStarted, rekeyStarted, true)
 			return nil
 		}
-
-		// Check if rekey is needed (session too old or too many messages, initiator only)
-		// Only trigger once per session (rekeyTriggered is reset when new session is established)
-		c.mu.RLock()
-		rekeyTriggered := c.rekeyTriggered
-		c.mu.RUnlock()
 
 		if isInitiator && !rekeyTriggered {
 			needsRekey := false
@@ -870,6 +969,9 @@ func (c *Conn) tick(skipKeepalive bool) error {
 				if err := c.initiateRekey(); err != nil {
 					return err
 				}
+				next = time.Time{}
+				rekeyStarted := time.Now()
+				scheduleHandshake(rekeyStarted, rekeyStarted, true)
 				return nil
 			}
 		}
@@ -884,6 +986,8 @@ func (c *Conn) tick(skipKeepalive bool) error {
 				if err := c.SendKeepalive(); err != nil {
 					return err
 				}
+				next = time.Time{}
+				scheduleEstablished(time.Now(), lastReceived, sessionCreated, isInitiator, rekeyTriggered)
 			}
 		}
 
@@ -897,11 +1001,38 @@ func (c *Conn) tick(skipKeepalive bool) error {
 	}
 }
 
+func (c *Conn) cleanupSessions() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if c.current != nil {
+		c.current.Expire()
+		c.current = nil
+	}
+	if c.previous != nil {
+		c.previous.Expire()
+		c.previous = nil
+	}
+	c.pendingPackets = nil
+	c.hsState = nil
+	c.handshakeStarted = time.Time{}
+	c.handshakeAttemptStart = time.Time{}
+	c.lastHandshakeSent = time.Time{}
+	c.rekeyTriggered = false
+	if c.state == ConnStateEstablished {
+		c.state = ConnStateNew
+	}
+}
+
 // initiateRekey starts a new handshake to rekey the connection.
 // This is called when the current session is too old.
 func (c *Conn) initiateRekey() error {
 	// Check if already have pending handshake and copy necessary data
 	c.mu.Lock()
+	if c.state == ConnStateClosed {
+		c.mu.Unlock()
+		return ErrConnClosed
+	}
 	if c.hsState != nil {
 		c.mu.Unlock()
 		return nil
@@ -935,6 +1066,13 @@ func (c *Conn) initiateRekey() error {
 
 	wireMsg := noise.BuildHandshakeInit(newIdx, hs.LocalEphemeral(), msg1[noise.KeySize:])
 
+	c.mu.RLock()
+	closed := c.state == ConnStateClosed
+	c.mu.RUnlock()
+	if closed {
+		return ErrConnClosed
+	}
+
 	// Send outside lock
 	if _, err := transport.WriteTo(wireMsg, remoteAddr); err != nil {
 		return err
@@ -944,6 +1082,10 @@ func (c *Conn) initiateRekey() error {
 	now := time.Now()
 	c.mu.Lock()
 	// Double-check no one else started a handshake while we were working
+	if c.state == ConnStateClosed {
+		c.mu.Unlock()
+		return ErrConnClosed
+	}
 	if c.hsState != nil {
 		c.mu.Unlock()
 		return nil
@@ -965,6 +1107,10 @@ func (c *Conn) initiateRekey() error {
 func (c *Conn) retransmitHandshake() error {
 	// Copy necessary data under lock
 	c.mu.RLock()
+	if c.state == ConnStateClosed {
+		c.mu.RUnlock()
+		return ErrConnClosed
+	}
 	if c.hsState == nil {
 		c.mu.RUnlock()
 		return nil
@@ -994,6 +1140,13 @@ func (c *Conn) retransmitHandshake() error {
 
 	wireMsg := noise.BuildHandshakeInit(localIdx, hs.LocalEphemeral(), msg1[noise.KeySize:])
 
+	c.mu.RLock()
+	closed := c.state == ConnStateClosed
+	c.mu.RUnlock()
+	if closed {
+		return ErrConnClosed
+	}
+
 	// Send outside lock
 	if _, err := transport.WriteTo(wireMsg, remoteAddr); err != nil {
 		return err
@@ -1001,6 +1154,10 @@ func (c *Conn) retransmitHandshake() error {
 
 	// Update state under lock
 	c.mu.Lock()
+	if c.state == ConnStateClosed {
+		c.mu.Unlock()
+		return ErrConnClosed
+	}
 	c.hsState = hs
 	c.lastHandshakeSent = time.Now()
 	c.mu.Unlock()
@@ -1029,6 +1186,13 @@ func (c *Conn) Close() error {
 
 	// Clear pending packets
 	c.pendingPackets = nil
+	c.hsState = nil
+	c.handshakeStarted = time.Time{}
+	c.handshakeAttemptStart = time.Time{}
+	c.lastHandshakeSent = time.Time{}
+	c.rekeyTriggered = false
+
+	c.tickTimer.Close()
 
 	return nil
 }
@@ -1072,7 +1236,6 @@ func (c *Conn) Session() *noise.Session {
 // This also updates the state to Established.
 func (c *Conn) SetSession(s *noise.Session) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
 	c.current = s
 	if s != nil {
 		now := time.Now()
@@ -1082,6 +1245,11 @@ func (c *Conn) SetSession(s *noise.Session) {
 		c.lastSent = now
 		c.lastReceived = now
 		c.rekeyTriggered = false
+	}
+	c.mu.Unlock()
+
+	if s != nil {
+		_ = c.tick(false)
 	}
 }
 

@@ -321,9 +321,13 @@ func (m *ServiceMux) getOrCreateService(service uint64) (*serviceState, error) {
 }
 
 func (m *ServiceMux) ensureKcpMux(state *serviceState) (*kcp.KcpMux, error) {
+	m.mu.RLock()
 	if state.mux != nil {
-		return state.mux, nil
+		mux := state.mux
+		m.mu.RUnlock()
+		return mux, nil
 	}
+	m.mu.RUnlock()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()

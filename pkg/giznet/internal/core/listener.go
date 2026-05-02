@@ -190,12 +190,14 @@ func (l *Listener) handleHandshakeInit(data []byte, addr net.Addr) {
 	resp, err := conn.accept(msg)
 	if err != nil {
 		close(inbound)
+		_ = conn.Close()
 		return
 	}
 
 	// Send the response
 	if _, err := l.transport.WriteTo(resp, addr); err != nil {
 		close(inbound)
+		_ = conn.Close()
 		return
 	}
 

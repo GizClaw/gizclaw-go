@@ -48,6 +48,7 @@ func Dial(ctx context.Context, transport net.PacketConn, addr net.Addr, remotePK
 
 	// Perform the handshake with retry
 	if err := c.dialWithRetry(ctx); err != nil {
+		_ = c.Close()
 		return nil, err
 	}
 
