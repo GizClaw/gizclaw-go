@@ -21,8 +21,8 @@ func TestNilListenerGuard(t *testing.T) {
 		t.Fatalf("Accept(nil listener) err=%v, want %v", err, giznet.ErrNilListener)
 	}
 
-	if _, err := l.Peer(giznet.PublicKey{}); !errors.Is(err, giznet.ErrNilListener) {
-		t.Fatalf("Peer(nil listener) err=%v, want %v", err, giznet.ErrNilListener)
+	if _, ok := l.Peer(giznet.PublicKey{}); ok {
+		t.Fatal("Peer(nil listener) should not find a Conn")
 	}
 
 	if err := l.Close(); !errors.Is(err, giznet.ErrNilListener) {
@@ -50,10 +50,15 @@ func TestListenAndCloseOwnedListener(t *testing.T) {
 	}
 }
 
-func TestListenerPeerErrors(t *testing.T) {
+func TestListenerPeerMissingReturnsFalse(t *testing.T) {
 	key, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair failed: %v", err)
+	}
+
+	unknown, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("Generate unknown key failed: %v", err)
 	}
 
 	l, err := giznet.Listen(key, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
@@ -62,18 +67,8 @@ func TestListenerPeerErrors(t *testing.T) {
 	}
 	defer l.Close()
 
-	unknown, err := giznet.GenerateKeyPair()
-	if err != nil {
-		t.Fatalf("Generate unknown key failed: %v", err)
-	}
-
-	if _, err := l.Peer(unknown.Public); !errors.Is(err, giznet.ErrPeerNotFound) {
-		t.Fatalf("Peer(unknown) err=%v, want %v", err, giznet.ErrPeerNotFound)
-	}
-
-	l.SetPeerEndpoint(unknown.Public, &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: 54321})
-	if _, err := l.Peer(unknown.Public); !errors.Is(err, giznet.ErrNoSession) {
-		t.Fatalf("Peer(no session) err=%v, want %v", err, giznet.ErrNoSession)
+	if _, ok := l.Peer(unknown.Public); ok {
+		t.Fatal("Peer(unknown) should not find a Conn")
 	}
 }
 
@@ -102,6 +97,86 @@ func TestListenerDoesNotAcceptSamePeerAgainOnReconnect(t *testing.T) {
 	case err := <-errCh:
 		t.Fatalf("Listener.Accept failed during reconnect: %v", err)
 	case <-time.After(300 * time.Millisecond):
+	}
+}
+
+// Closing the upper-level Conn is the signal that the Listener may surface a
+// new Conn for the same peer. The lower Noise peer is preserved, so new service
+// data can create the next service mux/Conn generation.
+func TestListenerAcceptsSamePeerAgainAfterConnCloseAndNewData(t *testing.T) {
+	pair := NewConnectedPeerPair(t)
+	defer pair.Close()
+
+	if err := pair.ServerConn.Close(); err != nil {
+		t.Fatalf("server Conn.Close failed: %v", err)
+	}
+	if err := pair.ClientListener.Close(); err != nil {
+		t.Fatalf("client listener Close failed: %v", err)
+	}
+	waitForPeerOffline(t, pair.ServerListener.UDP(), pair.ClientKey.Public)
+
+	acceptCh := make(chan *giznet.Conn, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		conn, err := pair.ServerListener.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		acceptCh <- conn
+	}()
+
+	reconnectedClient := NewTestListener(t, pair.ClientKey)
+	defer reconnectedClient.Close()
+	reconnectedConn, err := reconnectedClient.Dial(pair.ServerKey.Public, pair.ServerListener.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("reconnected client Dial failed: %v", err)
+	}
+
+	var newServerConn *giznet.Conn
+	select {
+	case newServerConn = <-acceptCh:
+		if got := newServerConn.PublicKey(); got != pair.ClientKey.Public {
+			t.Fatalf("accepted public key=%v, want %v", got, pair.ClientKey.Public)
+		}
+	case err := <-errCh:
+		t.Fatalf("Listener.Accept failed after Conn.Close: %v", err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("Listener.Accept timeout after Conn.Close")
+	}
+	rpcListener := newServerConn.ListenService(testServiceRPC)
+	defer rpcListener.Close()
+	rpcAcceptCh := make(chan net.Conn, 1)
+	rpcErrCh := make(chan error, 1)
+	go func() {
+		stream, err := rpcListener.Accept()
+		if err != nil {
+			rpcErrCh <- err
+			return
+		}
+		rpcAcceptCh <- stream
+	}()
+
+	clientStream, err := reconnectedConn.Dial(testServiceRPC)
+	if err != nil {
+		t.Fatalf("reconnected Dial(rpc) failed: %v", err)
+	}
+	defer clientStream.Close()
+	req := []byte(`{"method":"after-conn-close"}`)
+	if _, err := clientStream.Write(req); err != nil {
+		t.Fatalf("reconnected stream write failed: %v", err)
+	}
+
+	select {
+	case serverStream := <-rpcAcceptCh:
+		defer serverStream.Close()
+		if got := ReadExactWithTimeout(t, serverStream, len(req), 5*time.Second); !bytes.Equal(got, req) {
+			t.Fatalf("server stream request mismatch: got=%q want=%q", got, req)
+		}
+	case err := <-rpcErrCh:
+		t.Fatalf("new Conn service listener failed: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("new Conn service listener did not receive reconnected stream")
 	}
 }
 
@@ -287,7 +362,10 @@ func TestListenerAcceptAndConnEventOpus(t *testing.T) {
 		acceptCh <- c
 	}()
 
-	ConnectTestListeners(t, clientListener, clientKey, serverListener, serverKey)
+	clientConn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("clientListener.Dial failed: %v", err)
+	}
 
 	var serverConn *giznet.Conn
 	select {
@@ -296,11 +374,6 @@ func TestListenerAcceptAndConnEventOpus(t *testing.T) {
 		t.Fatalf("Listener.Accept failed: %v", err)
 	case <-time.After(3 * time.Second):
 		t.Fatal("Listener.Accept timeout")
-	}
-
-	clientConn, err := clientListener.Peer(serverKey.Public)
-	if err != nil {
-		t.Fatalf("clientListener.Peer failed: %v", err)
 	}
 
 	evt := testEvent{V: testEventVersion, Name: "hello"}
@@ -342,6 +415,99 @@ func TestListenerAcceptAndConnEventOpus(t *testing.T) {
 	}
 }
 
+// Remote close-control tears down the current service mux, but it is not the
+// same as closing the accepted Conn. Listener ownership stays with that Conn, so
+// a reconnect by the same peer must not create a duplicate Conn. If Accept
+// observes the reconnect event, it returns the existing Conn.
+func TestListenerDoesNotAcceptSamePeerAgainAfterRemoteClose(t *testing.T) {
+	serverKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("Generate server key failed: %v", err)
+	}
+	clientKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("Generate client key failed: %v", err)
+	}
+
+	serverListener := NewTestListener(t, serverKey)
+	defer serverListener.Close()
+	clientListener := NewTestListener(t, clientKey)
+
+	acceptCh := make(chan *giznet.Conn, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		c, err := serverListener.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		acceptCh <- c
+	}()
+
+	if _, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr); err != nil {
+		t.Fatalf("clientListener.Dial failed: %v", err)
+	}
+	var serverConn *giznet.Conn
+	select {
+	case serverConn = <-acceptCh:
+	case err := <-errCh:
+		t.Fatalf("first Accept failed: %v", err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("first Accept timeout")
+	}
+	rpcListener := serverConn.ListenService(testServiceRPC)
+	defer rpcListener.Close()
+
+	if err := clientListener.Close(); err != nil {
+		t.Fatalf("clientListener.Close failed: %v", err)
+	}
+	waitForPeerOffline(t, serverListener.UDP(), clientKey.Public)
+
+	nextAcceptCh := make(chan *giznet.Conn, 1)
+	nextErrCh := make(chan error, 1)
+	go func() {
+		c, err := serverListener.Accept()
+		if err != nil {
+			nextErrCh <- err
+			return
+		}
+		nextAcceptCh <- c
+	}()
+
+	reconnectedClient := NewTestListener(t, clientKey)
+	defer reconnectedClient.Close()
+	reconnectedConn, err := reconnectedClient.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("reconnected client Dial failed: %v", err)
+	}
+	rpcErrCh := make(chan error, 1)
+	go func() {
+		_, err := rpcListener.Accept()
+		rpcErrCh <- err
+	}()
+
+	select {
+	case err := <-rpcErrCh:
+		if !errors.Is(err, net.ErrClosed) {
+			t.Fatalf("old Conn service listener err=%v, want %v", err, net.ErrClosed)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("old Conn service listener did not close after remote close")
+	}
+
+	select {
+	case conn := <-nextAcceptCh:
+		if conn != serverConn {
+			t.Fatalf("Listener.Accept returned duplicate Conn %p, want existing %p", conn, serverConn)
+		}
+	case err := <-nextErrCh:
+		t.Fatalf("Listener.Accept failed after remote close: %v", err)
+	case <-time.After(300 * time.Millisecond):
+	}
+
+	_ = reconnectedConn
+}
+
 func TestConnOpenAcceptRPC(t *testing.T) {
 	serverKey, err := giznet.GenerateKeyPair()
 	if err != nil {
@@ -368,7 +534,10 @@ func TestConnOpenAcceptRPC(t *testing.T) {
 		acceptConnCh <- c
 	}()
 
-	ConnectTestListeners(t, clientListener, clientKey, serverListener, serverKey)
+	clientConn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("clientListener.Dial failed: %v", err)
+	}
 
 	var serverConn *giznet.Conn
 	select {
@@ -377,11 +546,6 @@ func TestConnOpenAcceptRPC(t *testing.T) {
 		t.Fatalf("Listener.Accept failed: %v", err)
 	case <-time.After(3 * time.Second):
 		t.Fatal("Listener.Accept timeout")
-	}
-
-	clientConn, err := clientListener.Peer(serverKey.Public)
-	if err != nil {
-		t.Fatalf("clientListener.Peer failed: %v", err)
 	}
 
 	rpcAcceptCh := make(chan net.Conn, 1)
@@ -474,6 +638,90 @@ func TestConnOpenAcceptRPC(t *testing.T) {
 	}
 	if got := ReadExactWithTimeout(t, serverStream2, len(revResp), 5*time.Second); !bytes.Equal(got, revResp) {
 		t.Fatalf("server stream reverse response mismatch: got=%q want=%q", got, revResp)
+	}
+}
+
+// Noise rekey replaces the transport session but must not close the service
+// mux or KCP streams above it.
+func TestKCPStreamSurvivesNoiseRekey(t *testing.T) {
+	pair := NewConnectedPeerPair(t)
+	defer pair.Close()
+
+	rpcListener := pair.ServerConn.ListenService(testServiceRPC)
+	defer rpcListener.Close()
+
+	rpcAcceptCh := make(chan net.Conn, 1)
+	rpcErrCh := make(chan error, 1)
+	go func() {
+		stream, err := rpcListener.Accept()
+		if err != nil {
+			rpcErrCh <- err
+			return
+		}
+		rpcAcceptCh <- stream
+	}()
+
+	clientStream, err := pair.ClientConn.Dial(testServiceRPC)
+	if err != nil {
+		t.Fatalf("Dial(rpc) failed: %v", err)
+	}
+	defer clientStream.Close()
+
+	beforeRekey := []byte(`{"method":"before-rekey"}`)
+	if _, err := clientStream.Write(beforeRekey); err != nil {
+		t.Fatalf("client stream write before rekey failed: %v", err)
+	}
+
+	var serverStream net.Conn
+	select {
+	case serverStream = <-rpcAcceptCh:
+		defer serverStream.Close()
+	case err := <-rpcErrCh:
+		t.Fatalf("ListenService(rpc).Accept failed: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("ListenService(rpc).Accept timeout")
+	}
+	if got := ReadExactWithTimeout(t, serverStream, len(beforeRekey), 5*time.Second); !bytes.Equal(got, beforeRekey) {
+		t.Fatalf("server stream request before rekey mismatch: got=%q want=%q", got, beforeRekey)
+	}
+
+	acceptCh := make(chan *giznet.Conn, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		conn, err := pair.ServerListener.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		acceptCh <- conn
+	}()
+
+	if err := pair.ClientListener.Connect(pair.ServerKey.Public); err != nil {
+		t.Fatalf("Noise rekey Connect failed: %v", err)
+	}
+
+	afterRekey := []byte(`{"method":"after-rekey"}`)
+	if _, err := clientStream.Write(afterRekey); err != nil {
+		t.Fatalf("client stream write after rekey failed: %v", err)
+	}
+	if got := ReadExactWithTimeout(t, serverStream, len(afterRekey), 5*time.Second); !bytes.Equal(got, afterRekey) {
+		t.Fatalf("server stream request after rekey mismatch: got=%q want=%q", got, afterRekey)
+	}
+
+	resp := []byte(`{"ok":"after-rekey"}`)
+	if _, err := serverStream.Write(resp); err != nil {
+		t.Fatalf("server stream write after rekey failed: %v", err)
+	}
+	if got := ReadExactWithTimeout(t, clientStream, len(resp), 5*time.Second); !bytes.Equal(got, resp) {
+		t.Fatalf("client stream response after rekey mismatch: got=%q want=%q", got, resp)
+	}
+
+	select {
+	case conn := <-acceptCh:
+		t.Fatalf("Listener.Accept unexpectedly returned duplicate peer %v after rekey", conn.PublicKey())
+	case err := <-errCh:
+		t.Fatalf("Listener.Accept failed during rekey: %v", err)
+	case <-time.After(300 * time.Millisecond):
 	}
 }
 
@@ -619,39 +867,125 @@ func TestConnUnderlyingErrorPropagation(t *testing.T) {
 	}
 }
 
-func TestConnCloseIsHandleLocal(t *testing.T) {
+// Listener.Peer returns the active Conn owned by the listener, not a new wrapper.
+func TestListenerPeerReturnsEstablishedConn(t *testing.T) {
 	pair := NewConnectedPeerPair(t)
 	defer pair.Close()
 
-	secondHandle, err := pair.ClientListener.Peer(pair.ServerKey.Public)
-	if err != nil {
-		t.Fatalf("clientListener.Peer failed: %v", err)
+	got, ok := pair.ClientListener.Peer(pair.ServerKey.Public)
+	if !ok {
+		t.Fatal("clientListener.Peer did not find established Conn")
+	}
+	if got != pair.ClientConn {
+		t.Fatal("clientListener.Peer should return the established Conn")
 	}
 
 	if err := pair.ClientConn.Close(); err != nil {
 		t.Fatalf("clientConn.Close failed: %v", err)
 	}
-	if _, err := pair.ClientConn.Dial(testServiceRPC); !errors.Is(err, giznet.ErrConnClosed) {
-		t.Fatalf("Dial(rpc, after Conn.Close) err=%v, want %v", err, giznet.ErrConnClosed)
-	}
-	if _, err := pair.ClientConn.Write(testProtocolEvent, []byte("x")); !errors.Is(err, giznet.ErrConnClosed) {
-		t.Fatalf("Write(after Conn.Close) err=%v, want %v", err, giznet.ErrConnClosed)
-	}
-
-	evt := testEvent{V: testEventVersion, Name: "still-open"}
-	if err := writeTestEvent(secondHandle, evt); err != nil {
-		t.Fatalf("second handle writeTestEvent failed: %v", err)
-	}
-	gotEvent, err := readTestEvent(pair.ServerConn)
-	if err != nil {
-		t.Fatalf("server readTestEvent failed: %v", err)
-	}
-	if gotEvent.Name != evt.Name {
-		t.Fatalf("ReadEvent name=%q, want %q", gotEvent.Name, evt.Name)
+	if _, ok := pair.ClientListener.Peer(pair.ServerKey.Public); ok {
+		t.Fatal("clientListener.Peer should not return closed Conn")
 	}
 }
 
-func TestConnCloseDoesNotAffectOpenRPCStreams(t *testing.T) {
+// Listener.Dial actively establishes the listener's single Conn for a peer.
+// Repeated Dial calls and concurrent Accept observations return that same Conn.
+func TestListenerDialReturnsExistingConnAndAcceptCanObserveIt(t *testing.T) {
+	serverKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("Generate server key failed: %v", err)
+	}
+	clientKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("Generate client key failed: %v", err)
+	}
+
+	serverListener := NewTestListener(t, serverKey)
+	defer serverListener.Close()
+	clientListener := NewTestListener(t, clientKey)
+	defer clientListener.Close()
+
+	clientAcceptCh := make(chan *giznet.Conn, 1)
+	clientAcceptErrCh := make(chan error, 1)
+	go func() {
+		conn, err := clientListener.Accept()
+		if err != nil {
+			clientAcceptErrCh <- err
+			return
+		}
+		clientAcceptCh <- conn
+	}()
+
+	acceptCh := make(chan *giznet.Conn, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		conn, err := serverListener.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		acceptCh <- conn
+	}()
+
+	firstConn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("first Dial failed: %v", err)
+	}
+
+	var clientAcceptedConn *giznet.Conn
+	select {
+	case clientAcceptedConn = <-clientAcceptCh:
+		if clientAcceptedConn != firstConn {
+			t.Fatal("client Accept should return the same Conn established by Dial")
+		}
+	case err := <-clientAcceptErrCh:
+		t.Fatalf("client Accept failed during first Dial: %v", err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("client Accept timeout after first Dial")
+	}
+
+	var serverConn *giznet.Conn
+	select {
+	case serverConn = <-acceptCh:
+	case err := <-errCh:
+		t.Fatalf("server Accept failed: %v", err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("server Accept timeout")
+	}
+
+	first := testEvent{V: testEventVersion, Name: "first-generation"}
+	if err := writeTestEvent(firstConn, first); err != nil {
+		t.Fatalf("first generation write failed: %v", err)
+	}
+	if got, err := readTestEvent(serverConn); err != nil {
+		t.Fatalf("server read first generation failed: %v", err)
+	} else if got.Name != first.Name {
+		t.Fatalf("first generation event=%q, want %q", got.Name, first.Name)
+	}
+
+	secondConn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("second Dial failed: %v", err)
+	}
+	if secondConn != firstConn {
+		t.Fatal("second Dial should return the existing Conn")
+	}
+
+	second := testEvent{V: testEventVersion, Name: "second-dial"}
+	if err := writeTestEvent(secondConn, second); err != nil {
+		t.Fatalf("second Dial write failed: %v", err)
+	}
+	if got, err := readTestEvent(serverConn); err != nil {
+		t.Fatalf("server read second Dial event failed: %v", err)
+	} else if got.Name != second.Name {
+		t.Fatalf("second Dial event=%q, want %q", got.Name, second.Name)
+	}
+}
+
+// Conn.Close closes the service mux but keeps the UDP/Noise peer. Without a
+// rekey, the next client RPC stream should recreate the service mux and allow
+// Listener.Accept to surface a new Conn for the same peer.
+func TestServerConnCloseAllowsNextRPCStreamOnNewConn(t *testing.T) {
 	pair := NewConnectedPeerPair(t)
 	defer pair.Close()
 
@@ -692,14 +1026,118 @@ func TestConnCloseDoesNotAffectOpenRPCStreams(t *testing.T) {
 		t.Fatalf("server stream priming payload mismatch: got=%q want=%q", string(got), "x")
 	}
 
-	if err := pair.ClientConn.Close(); err != nil {
-		t.Fatalf("clientConn.Close failed: %v", err)
+	if err := pair.ServerConn.Close(); err != nil {
+		t.Fatalf("serverConn.Close failed: %v", err)
 	}
 
-	if _, err := clientStream.Write([]byte("y")); err != nil {
-		t.Fatalf("client stream write after Conn.Close failed: %v", err)
+	nextConnCh := make(chan *giznet.Conn, 1)
+	nextConnErrCh := make(chan error, 1)
+	go func() {
+		conn, err := pair.ServerListener.Accept()
+		if err != nil {
+			nextConnErrCh <- err
+			return
+		}
+		nextConnCh <- conn
+	}()
+
+	if err := writeTestEvent(pair.ClientConn, testEvent{V: testEventVersion, Name: "wake-next-conn"}); err != nil {
+		t.Fatalf("client wake write after server Conn.Close failed: %v", err)
 	}
-	if got := ReadExactWithTimeout(t, serverStream, 1, 5*time.Second); !bytes.Equal(got, []byte("y")) {
-		t.Fatalf("server stream payload after Conn.Close mismatch: got=%q want=%q", string(got), "y")
+
+	var nextServerConn *giznet.Conn
+	select {
+	case nextServerConn = <-nextConnCh:
+		if got := nextServerConn.PublicKey(); got != pair.ClientKey.Public {
+			t.Fatalf("next Conn public key=%v, want %v", got, pair.ClientKey.Public)
+		}
+	case err := <-nextConnErrCh:
+		t.Fatalf("Listener.Accept after server Conn.Close failed: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Listener.Accept after server Conn.Close timeout")
+	}
+	if got, err := readTestEvent(nextServerConn); err != nil {
+		t.Fatalf("next Conn read wake event failed: %v", err)
+	} else if got.Name != "wake-next-conn" {
+		t.Fatalf("next Conn wake event=%q, want %q", got.Name, "wake-next-conn")
+	}
+
+	nextRPCListener := nextServerConn.ListenService(testServiceRPC)
+	defer nextRPCListener.Close()
+	nextAcceptCh := make(chan net.Conn, 1)
+	nextErrCh := make(chan error, 1)
+	go func() {
+		stream, err := nextRPCListener.Accept()
+		if err != nil {
+			nextErrCh <- err
+			return
+		}
+		nextAcceptCh <- stream
+	}()
+
+	nextClientStream, err := pair.ClientConn.Dial(testServiceRPC)
+	if err != nil {
+		t.Fatalf("client Dial(rpc) after server Conn.Close failed: %v", err)
+	}
+	defer nextClientStream.Close()
+
+	req := []byte("z")
+	if _, err := nextClientStream.Write(req); err != nil {
+		t.Fatalf("client stream write on next RPC stream failed: %v", err)
+	}
+
+	select {
+	case nextServerStream := <-nextAcceptCh:
+		defer nextServerStream.Close()
+		if got := ReadExactWithTimeout(t, nextServerStream, len(req), 5*time.Second); !bytes.Equal(got, req) {
+			t.Fatalf("next server stream payload mismatch: got=%q want=%q", string(got), string(req))
+		}
+	case err := <-nextErrCh:
+		t.Fatalf("next Conn service listener failed: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("next Conn service listener timeout")
+	}
+}
+
+// This keeps Accept waiting before the Conn is closed, then sends service data
+// immediately after Close returns. It covers the close/new-data handoff without
+// changing the implementation for tighter concurrent races.
+func TestServerConnCloseWithWaitingAcceptAndImmediateData(t *testing.T) {
+	pair := NewConnectedPeerPair(t)
+	defer pair.Close()
+
+	serverConn := pair.ServerConn
+	for i := 0; i < 5; i++ {
+		nextConnCh := make(chan *giznet.Conn, 1)
+		nextErrCh := make(chan error, 1)
+		go func() {
+			conn, err := pair.ServerListener.Accept()
+			if err != nil {
+				nextErrCh <- err
+				return
+			}
+			nextConnCh <- conn
+		}()
+
+		if err := serverConn.Close(); err != nil {
+			t.Fatalf("iteration %d: server Conn.Close failed: %v", i, err)
+		}
+		eventName := fmt.Sprintf("immediate-after-close-%d", i)
+		if err := writeTestEvent(pair.ClientConn, testEvent{V: testEventVersion, Name: eventName}); err != nil {
+			t.Fatalf("iteration %d: client immediate write failed: %v", i, err)
+		}
+
+		select {
+		case serverConn = <-nextConnCh:
+			if got, err := readTestEvent(serverConn); err != nil {
+				t.Fatalf("iteration %d: read immediate event failed: %v", i, err)
+			} else if got.Name != eventName {
+				t.Fatalf("iteration %d: event=%q, want %q", i, got.Name, eventName)
+			}
+		case err := <-nextErrCh:
+			t.Fatalf("iteration %d: Accept failed after immediate write: %v", i, err)
+		case <-time.After(5 * time.Second):
+			t.Fatalf("iteration %d: Accept timeout after immediate write", i)
+		}
 	}
 }

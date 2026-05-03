@@ -220,9 +220,14 @@ func (h *GearPeer) close() error {
 	var closeErr error
 	h.closeOnce.Do(func() {
 		h.closed.Store(true)
+		if h.Conn != nil {
+			if err := h.Conn.Close(); err != nil && !errors.Is(err, giznet.ErrConnClosed) {
+				closeErr = errors.Join(closeErr, err)
+			}
+		}
 		mx := h.mixer
 		if mx != nil {
-			closeErr = mx.Close()
+			closeErr = errors.Join(closeErr, mx.Close())
 		}
 	})
 	return closeErr

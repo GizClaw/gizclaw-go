@@ -732,7 +732,7 @@ func TestIntegration_OPUSFramesOrdered(t *testing.T) {
 	}
 }
 
-// TestIntegration_UnknownPeerOperations verifies that GetServiceMux returns
+// TestIntegration_UnknownPeerOperations verifies that PeerServiceMux returns
 // ErrPeerNotFound for an unknown peer.
 func TestIntegration_UnknownPeerOperations(t *testing.T) {
 	localKey, err := giznet.GenerateKeyPair()
@@ -747,12 +747,12 @@ func TestIntegration_UnknownPeerOperations(t *testing.T) {
 	u := NewUDPNode(t, localKey)
 	defer u.Close()
 
-	if _, err := u.GetServiceMux(unknownKey.Public); err != giznet.ErrPeerNotFound {
-		t.Fatalf("GetServiceMux(unknown peer) err=%v, want %v", err, giznet.ErrPeerNotFound)
+	if _, err := u.PeerServiceMux(unknownKey.Public); err != giznet.ErrPeerNotFound {
+		t.Fatalf("PeerServiceMux(unknown peer) err=%v, want %v", err, giznet.ErrPeerNotFound)
 	}
 }
 
-// TestIntegration_StreamBeforeSession verifies that GetServiceMux returns
+// TestIntegration_StreamBeforeSession verifies that PeerServiceMux returns
 // ErrNoSession when the peer is registered but the handshake is not complete.
 func TestIntegration_StreamBeforeSession(t *testing.T) {
 	serverKey, err := giznet.GenerateKeyPair()
@@ -773,12 +773,12 @@ func TestIntegration_StreamBeforeSession(t *testing.T) {
 	client.SetPeerEndpoint(serverKey.Public, server.HostInfo().Addr)
 	server.SetPeerEndpoint(clientKey.Public, client.HostInfo().Addr)
 
-	if _, err := client.GetServiceMux(serverKey.Public); err != giznet.ErrNoSession {
-		t.Fatalf("GetServiceMux(before session) err=%v, want %v", err, giznet.ErrNoSession)
+	if _, err := client.PeerServiceMux(serverKey.Public); err != giznet.ErrNoSession {
+		t.Fatalf("PeerServiceMux(before session) err=%v, want %v", err, giznet.ErrNoSession)
 	}
 }
 
-// TestIntegration_ClosedNodeOperations verifies that GetServiceMux returns
+// TestIntegration_ClosedNodeOperations verifies that PeerServiceMux returns
 // ErrUDPClosed after the node is closed.
 func TestIntegration_ClosedNodeOperations(t *testing.T) {
 	localKey, err := giznet.GenerateKeyPair()
@@ -795,8 +795,8 @@ func TestIntegration_ClosedNodeOperations(t *testing.T) {
 		t.Fatalf("Close failed: %v", err)
 	}
 
-	if _, err := u.GetServiceMux(peerKey.Public); err != giznet.ErrUDPClosed {
-		t.Fatalf("GetServiceMux(after close) err=%v, want %v", err, giznet.ErrUDPClosed)
+	if _, err := u.PeerServiceMux(peerKey.Public); err != giznet.ErrUDPClosed {
+		t.Fatalf("PeerServiceMux(after close) err=%v, want %v", err, giznet.ErrUDPClosed)
 	}
 }
 

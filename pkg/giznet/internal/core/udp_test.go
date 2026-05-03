@@ -88,6 +88,78 @@ func TestNewUDPWithBindAddr(t *testing.T) {
 	}
 }
 
+func TestUDPClosedChan(t *testing.T) {
+	key, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair failed: %v", err)
+	}
+	u, err := NewUDP(key, WithBindAddr("127.0.0.1:0"))
+	if err != nil {
+		t.Fatalf("NewUDP failed: %v", err)
+	}
+
+	ch := u.closedChan()
+	if ch != u.closeChan {
+		t.Fatalf("closedChan should return internal closeChan")
+	}
+	if err := u.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+
+	select {
+	case <-ch:
+		// expected
+	case <-time.After(1 * time.Second):
+		t.Fatal("close channel not closed in time")
+	}
+}
+
+func TestUDPConnect(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+
+	udp, err := NewUDP(localKey, WithBindAddr("127.0.0.1:0"))
+	if err != nil {
+		t.Fatalf("NewUDP() error = %v", err)
+	}
+	defer udp.Close()
+
+	remoteKey, _ := noise.GenerateKeyPair()
+	err = udp.Connect(remoteKey.Public)
+	if err != ErrPeerNotFound {
+		t.Errorf("Connect() with no peer error = %v, want %v", err, ErrPeerNotFound)
+	}
+
+	remoteAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:12345")
+	udp.SetPeerEndpoint(remoteKey.Public, remoteAddr)
+
+	udp.Close()
+	err = udp.Connect(remoteKey.Public)
+	if err != ErrClosed {
+		t.Errorf("Connect() after close error = %v, want %v", err, ErrClosed)
+	}
+}
+
+func TestPeerStateString(t *testing.T) {
+	tests := []struct {
+		state PeerState
+		want  string
+	}{
+		{PeerStateNew, "new"},
+		{PeerStateConnecting, "connecting"},
+		{PeerStateEstablished, "established"},
+		{PeerStateFailed, "failed"},
+		{PeerStateOffline, "offline"},
+		{PeerState(99), "unknown"},
+	}
+
+	for _, tt := range tests {
+		got := tt.state.String()
+		if got != tt.want {
+			t.Errorf("PeerState(%d).String() = %s, want %s", tt.state, got, tt.want)
+		}
+	}
+}
+
 func TestSetPeerEndpoint(t *testing.T) {
 	key, err := noise.GenerateKeyPair()
 	if err != nil {
@@ -135,13 +207,17 @@ func TestSetPeerEndpoint_IgnoresClosedAndInvalidAddr(t *testing.T) {
 	}
 }
 
-func TestRemovePeer(t *testing.T) {
+func TestClosePeerServiceMux(t *testing.T) {
 	key, err := noise.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair failed: %v", err)
 	}
 
-	udp, err := NewUDP(key)
+	events := make(chan PeerEvent, 1)
+	udp, err := NewUDP(key, WithOnPeerEvent(func(ev PeerEvent) bool {
+		events <- ev
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("NewUDP failed: %v", err)
 	}
@@ -156,14 +232,33 @@ func TestRemovePeer(t *testing.T) {
 		t.Fatalf("Peer should exist")
 	}
 
-	udp.RemovePeer(peerKey.Public)
+	udp.ClosePeerServiceMux(peerKey.Public)
 
-	if udp.PeerInfo(peerKey.Public) != nil {
-		t.Fatalf("Peer should be removed")
+	info := udp.PeerInfo(peerKey.Public)
+	if info == nil {
+		t.Fatal("Peer should remain after offline")
+	}
+	if info.State != PeerStateOffline {
+		t.Fatalf("Peer state = %v, want %v", info.State, PeerStateOffline)
+	}
+	select {
+	case ev := <-events:
+		if ev.PublicKey != peerKey.Public || ev.State != PeerStateOffline {
+			t.Fatalf("ClosePeerServiceMux event = %+v, want offline for %x", ev, peerKey.Public)
+		}
+	default:
+		t.Fatal("ClosePeerServiceMux did not emit offline event")
+	}
+
+	udp.ClosePeerServiceMux(peerKey.Public)
+	select {
+	case ev := <-events:
+		t.Fatalf("second ClosePeerServiceMux emitted duplicate event: %+v", ev)
+	default:
 	}
 }
 
-func TestRemovePeer_CleansSessionAndServiceMux(t *testing.T) {
+func TestClosePeerServiceMux_CleansServiceMuxKeepsSession(t *testing.T) {
 	localKey, err := noise.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(local) failed: %v", err)
@@ -198,16 +293,91 @@ func TestRemovePeer_CleansSessionAndServiceMux(t *testing.T) {
 	}
 	u.byIndex[session.LocalIndex()] = u.peers[peerKey.Public]
 
-	u.RemovePeer(peerKey.Public)
+	u.ClosePeerServiceMux(peerKey.Public)
 
-	if _, ok := u.peers[peerKey.Public]; ok {
-		t.Fatal("peer should be removed from map")
+	peer := u.peers[peerKey.Public]
+	if peer == nil {
+		t.Fatal("peer should remain in map")
 	}
-	if _, ok := u.byIndex[session.LocalIndex()]; ok {
-		t.Fatal("session index should be removed from byIndex")
+	if got := u.byIndex[session.LocalIndex()]; got != peer {
+		t.Fatal("session index should remain mapped to peer")
 	}
 	if _, err := smux.OpenStream(0); err != ErrServiceMuxClosed {
-		t.Fatalf("service mux should be closed after RemovePeer, err=%v", err)
+		t.Fatalf("service mux should be closed after ClosePeerServiceMux, err=%v", err)
+	}
+	peer.mu.RLock()
+	defer peer.mu.RUnlock()
+	if peer.session != session {
+		t.Fatal("session should remain after ClosePeerServiceMux")
+	}
+	if peer.serviceMux != nil {
+		t.Fatal("service mux should be cleared after ClosePeerServiceMux")
+	}
+	if peer.state != PeerStateOffline {
+		t.Fatalf("peer.state=%v, want %v", peer.state, PeerStateOffline)
+	}
+}
+
+func TestPeerServiceMuxReestablishesOfflinePeer(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+	peerKey, _ := noise.GenerateKeyPair()
+	session, err := noise.NewSession(noise.SessionConfig{
+		LocalIndex:  11,
+		RemoteIndex: 22,
+		SendKey:     noise.Key{1},
+		RecvKey:     noise.Key{2},
+		RemotePK:    peerKey.Public,
+	})
+	if err != nil {
+		t.Fatalf("NewSession failed: %v", err)
+	}
+
+	events := make(chan PeerEvent, 2)
+	oldMux := NewServiceMux(peerKey.Public, ServiceMuxConfig{})
+	peer := &peerState{
+		pk:         peerKey.Public,
+		session:    session,
+		serviceMux: oldMux,
+		state:      PeerStateEstablished,
+	}
+	u := &UDP{
+		localKey: localKey,
+		peers: map[noise.PublicKey]*peerState{
+			peerKey.Public: peer,
+		},
+		byIndex: map[uint32]*peerState{
+			session.LocalIndex(): peer,
+		},
+		onPeerEvent: func(ev PeerEvent) bool {
+			events <- ev
+			return true
+		},
+	}
+
+	u.ClosePeerServiceMux(peerKey.Public)
+	if ev := <-events; ev.State != PeerStateOffline {
+		t.Fatalf("ClosePeerServiceMux event = %+v, want offline", ev)
+	}
+
+	newMux, err := u.PeerServiceMux(peerKey.Public)
+	if err != nil {
+		t.Fatalf("PeerServiceMux error = %v", err)
+	}
+	if newMux == nil || newMux == oldMux {
+		t.Fatal("PeerServiceMux should create a new service mux")
+	}
+	peer.mu.RLock()
+	state := peer.state
+	activeMux := peer.serviceMux
+	peer.mu.RUnlock()
+	if state != PeerStateEstablished {
+		t.Fatalf("peer.state=%v, want %v", state, PeerStateEstablished)
+	}
+	if activeMux != newMux {
+		t.Fatal("peer.serviceMux should point at the new service mux")
+	}
+	if ev := <-events; ev.State != PeerStateEstablished {
+		t.Fatalf("PeerServiceMux event = %+v, want established", ev)
 	}
 }
 
@@ -469,6 +639,51 @@ func TestClose(t *testing.T) {
 	}
 }
 
+func TestUDPWriteToErrors(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+	udp, err := NewUDP(localKey, WithBindAddr("127.0.0.1:0"))
+	if err != nil {
+		t.Fatalf("NewUDP() error = %v", err)
+	}
+
+	remoteKey, _ := noise.GenerateKeyPair()
+
+	err = udp.WriteTo(remoteKey.Public, []byte("test"))
+	if err != ErrPeerNotFound {
+		t.Errorf("WriteTo(non-existent) error = %v, want %v", err, ErrPeerNotFound)
+	}
+
+	remoteAddr, _ := net.ResolveUDPAddr("udp", "127.0.0.1:12345")
+	udp.SetPeerEndpoint(remoteKey.Public, remoteAddr)
+
+	err = udp.WriteTo(remoteKey.Public, []byte("test"))
+	if err != ErrNoSession {
+		t.Errorf("WriteTo(no session) error = %v, want %v", err, ErrNoSession)
+	}
+
+	udp.Close()
+	err = udp.WriteTo(remoteKey.Public, []byte("test"))
+	if err != ErrClosed {
+		t.Errorf("WriteTo(closed) error = %v, want %v", err, ErrClosed)
+	}
+}
+
+func TestUDPReadFromClosed(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+	udp, err := NewUDP(localKey, WithBindAddr("127.0.0.1:0"))
+	if err != nil {
+		t.Fatalf("NewUDP() error = %v", err)
+	}
+
+	udp.Close()
+
+	buf := make([]byte, 1024)
+	_, _, err = udp.ReadFrom(buf)
+	if err != ErrClosed {
+		t.Errorf("ReadFrom(closed) error = %v, want %v", err, ErrClosed)
+	}
+}
+
 func TestReadPacket_SkipsErroredPacketsAndReturnsNext(t *testing.T) {
 	u := &UDP{
 		outputChan: make(chan *packet, 2),
@@ -530,10 +745,15 @@ func TestUDPHandleHandshakeResp_Success(t *testing.T) {
 	remoteKey, _ := noise.GenerateKeyPair()
 	initHS, wire := buildHandshakeResponseForUDPTest(t, localKey, remoteKey, 17, 29)
 
+	events := make(chan PeerEvent, 1)
 	done := make(chan error, 1)
 	peer := &peerState{pk: remoteKey.Public, state: PeerStateConnecting}
 	u := &UDP{
 		localKey: localKey,
+		onPeerEvent: func(ev PeerEvent) bool {
+			events <- ev
+			return true
+		},
 		pending: map[uint32]*pendingHandshake{
 			17: {
 				peer:     peer,
@@ -565,6 +785,14 @@ func TestUDPHandleHandshakeResp_Success(t *testing.T) {
 	}
 	if _, ok := u.pending[17]; ok {
 		t.Fatal("pending handshake should be removed after success")
+	}
+	select {
+	case ev := <-events:
+		if ev.PublicKey != remoteKey.Public || ev.State != PeerStateEstablished {
+			t.Fatalf("established event = %+v, want established for %x", ev, remoteKey.Public)
+		}
+	default:
+		t.Fatal("handleHandshakeResp did not emit established event")
 	}
 }
 
@@ -604,7 +832,7 @@ func TestUDPHandleHandshakeResp_FailureMarksPeerFailed(t *testing.T) {
 	}
 }
 
-func TestDecryptTransport_ReturnsPeerNotFoundWhenPeerRemovedMidFlight(t *testing.T) {
+func TestInboundServiceDataReestablishesOfflinePeer(t *testing.T) {
 	localKey, _ := noise.GenerateKeyPair()
 	peerKey, _ := noise.GenerateKeyPair()
 	session, err := noise.NewSession(noise.SessionConfig{
@@ -618,10 +846,12 @@ func TestDecryptTransport_ReturnsPeerNotFoundWhenPeerRemovedMidFlight(t *testing
 		t.Fatalf("NewSession failed: %v", err)
 	}
 
+	events := make(chan PeerEvent, 2)
+	oldMux := NewServiceMux(peerKey.Public, ServiceMuxConfig{})
 	peer := &peerState{
 		pk:         peerKey.Public,
 		session:    session,
-		serviceMux: NewServiceMux(peerKey.Public, ServiceMuxConfig{}),
+		serviceMux: oldMux,
 		state:      PeerStateEstablished,
 	}
 	u := &UDP{
@@ -631,6 +861,10 @@ func TestDecryptTransport_ReturnsPeerNotFoundWhenPeerRemovedMidFlight(t *testing
 		},
 		byIndex: map[uint32]*peerState{
 			session.LocalIndex(): peer,
+		},
+		onPeerEvent: func(ev PeerEvent) bool {
+			events <- ev
+			return true
 		},
 	}
 
@@ -644,26 +878,421 @@ func TestDecryptTransport_ReturnsPeerNotFoundWhenPeerRemovedMidFlight(t *testing
 	pkt := acquirePacket()
 	defer releasePacket(pkt)
 
-	hookStarted := make(chan struct{})
-	hookRelease := make(chan struct{})
-	afterDecryptTransportDecryptHook = func() {
-		close(hookStarted)
-		<-hookRelease
+	u.ClosePeerServiceMux(peerKey.Public)
+	if ev := <-events; ev.State != PeerStateOffline {
+		t.Fatalf("ClosePeerServiceMux event = %+v, want offline", ev)
 	}
-	defer func() { afterDecryptTransportDecryptHook = nil }()
 
-	done := make(chan struct{})
+	u.decryptTransport(pkt, wire, from)
+
+	if pkt.err != nil {
+		t.Fatalf("pkt.err=%v, want nil", pkt.err)
+	}
+	peer.mu.RLock()
+	state := peer.state
+	activeMux := peer.serviceMux
+	peer.mu.RUnlock()
+	if state != PeerStateEstablished {
+		t.Fatalf("peer.state=%v, want %v", state, PeerStateEstablished)
+	}
+	if activeMux == nil || activeMux == oldMux {
+		t.Fatal("inbound service data should create a new service mux")
+	}
+	if ev := <-events; ev.State != PeerStateEstablished {
+		t.Fatalf("inbound service data event = %+v, want established", ev)
+	}
+}
+
+func TestCloseControlMarksPeerOfflineWithoutRemovingPeer(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+	peerKey, _ := noise.GenerateKeyPair()
+	session, err := noise.NewSession(noise.SessionConfig{
+		LocalIndex:  7,
+		RemoteIndex: 9,
+		SendKey:     noise.Key{1},
+		RecvKey:     noise.Key{1},
+		RemotePK:    peerKey.Public,
+	})
+	if err != nil {
+		t.Fatalf("NewSession failed: %v", err)
+	}
+
+	events := make(chan PeerEvent, 1)
+	oldMux := NewServiceMux(peerKey.Public, ServiceMuxConfig{})
+	peer := &peerState{
+		pk:         peerKey.Public,
+		session:    session,
+		serviceMux: oldMux,
+		state:      PeerStateEstablished,
+	}
+	u := &UDP{
+		localKey: localKey,
+		peers: map[noise.PublicKey]*peerState{
+			peerKey.Public: peer,
+		},
+		byIndex: map[uint32]*peerState{
+			session.LocalIndex(): peer,
+		},
+		onPeerEvent: func(ev PeerEvent) bool {
+			events <- ev
+			return true
+		},
+	}
+
+	plaintext := EncodePayload(ProtocolConnCtrl, closeCtrlPayload)
+	ciphertext, counter, err := session.Encrypt(plaintext)
+	if err != nil {
+		t.Fatalf("Encrypt failed: %v", err)
+	}
+	wire := noise.BuildTransportMessage(session.LocalIndex(), counter, ciphertext)
+	from, _ := net.ResolveUDPAddr("udp", "127.0.0.1:9999")
+	pkt := acquirePacket()
+	defer releasePacket(pkt)
+
+	u.decryptTransport(pkt, wire, from)
+
+	if pkt.err != ErrNoData {
+		t.Fatalf("pkt.err=%v, want %v", pkt.err, ErrNoData)
+	}
+	if info := u.PeerInfo(peerKey.Public); info == nil || info.State != PeerStateOffline {
+		t.Fatalf("PeerInfo after close control = %+v, want offline peer", info)
+	}
+	if got := u.byIndex[session.LocalIndex()]; got != peer {
+		t.Fatal("session index should remain mapped to peer")
+	}
+	peer.mu.RLock()
+	activeMux := peer.serviceMux
+	activeSession := peer.session
+	peer.mu.RUnlock()
+	if activeMux != nil {
+		t.Fatal("service mux should be cleared by close control")
+	}
+	if activeSession != session {
+		t.Fatal("session should remain after close control")
+	}
+	if _, err := oldMux.OpenStream(0); err != ErrServiceMuxClosed {
+		t.Fatalf("old service mux should be closed, err=%v", err)
+	}
+	if ev := <-events; ev.State != PeerStateOffline {
+		t.Fatalf("close control event = %+v, want offline", ev)
+	}
+
+}
+
+func TestCloseControlFromPreviousSessionDoesNotCloseCurrentServiceMux(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+	peerKey, _ := noise.GenerateKeyPair()
+	previousSession, err := noise.NewSession(noise.SessionConfig{
+		LocalIndex:  7,
+		RemoteIndex: 9,
+		SendKey:     noise.Key{1},
+		RecvKey:     noise.Key{1},
+		RemotePK:    peerKey.Public,
+	})
+	if err != nil {
+		t.Fatalf("NewSession(previous) failed: %v", err)
+	}
+	currentSession, err := noise.NewSession(noise.SessionConfig{
+		LocalIndex:  8,
+		RemoteIndex: 10,
+		SendKey:     noise.Key{2},
+		RecvKey:     noise.Key{2},
+		RemotePK:    peerKey.Public,
+	})
+	if err != nil {
+		t.Fatalf("NewSession(current) failed: %v", err)
+	}
+
+	events := make(chan PeerEvent, 1)
+	activeMux := NewServiceMux(peerKey.Public, ServiceMuxConfig{})
+	defer activeMux.Close()
+	peer := &peerState{
+		pk:         peerKey.Public,
+		session:    currentSession,
+		previous:   previousSession,
+		serviceMux: activeMux,
+		state:      PeerStateEstablished,
+	}
+	u := &UDP{
+		localKey: localKey,
+		peers: map[noise.PublicKey]*peerState{
+			peerKey.Public: peer,
+		},
+		byIndex: map[uint32]*peerState{
+			previousSession.LocalIndex(): peer,
+			currentSession.LocalIndex():  peer,
+		},
+		onPeerEvent: func(ev PeerEvent) bool {
+			events <- ev
+			return true
+		},
+	}
+
+	plaintext := EncodePayload(ProtocolConnCtrl, closeCtrlPayload)
+	ciphertext, counter, err := previousSession.Encrypt(plaintext)
+	if err != nil {
+		t.Fatalf("Encrypt failed: %v", err)
+	}
+	wire := noise.BuildTransportMessage(previousSession.LocalIndex(), counter, ciphertext)
+	from, _ := net.ResolveUDPAddr("udp", "127.0.0.1:9999")
+	currentEndpoint, _ := net.ResolveUDPAddr("udp", "127.0.0.1:10000")
+	peer.mu.Lock()
+	peer.endpoint = currentEndpoint
+	peer.mu.Unlock()
+	pkt := acquirePacket()
+	defer releasePacket(pkt)
+
+	u.decryptTransport(pkt, wire, from)
+
+	if pkt.err != ErrNoData {
+		t.Fatalf("pkt.err=%v, want %v", pkt.err, ErrNoData)
+	}
+	peer.mu.RLock()
+	gotMux := peer.serviceMux
+	gotState := peer.state
+	gotEndpoint := peer.endpoint
+	peer.mu.RUnlock()
+	if gotMux != activeMux {
+		t.Fatal("previous-session close control should not clear current service mux")
+	}
+	if gotState != PeerStateEstablished {
+		t.Fatalf("peer.state=%v, want %v", gotState, PeerStateEstablished)
+	}
+	if gotEndpoint.String() != currentEndpoint.String() {
+		t.Fatalf("peer.endpoint=%v, want current endpoint %v", gotEndpoint, currentEndpoint)
+	}
+	if err := activeMux.InputPacket(testDirectProtoA, []byte("still-open")); err != nil {
+		t.Fatalf("active mux should remain open, InputPacket err=%v", err)
+	}
+	select {
+	case ev := <-events:
+		t.Fatalf("previous-session close control emitted event: %+v", ev)
+	default:
+	}
+}
+
+func TestDispatchToChannelsDropCounters(t *testing.T) {
+	t.Run("output queue full increments drop counter", func(t *testing.T) {
+		u := &UDP{
+			outputChan:  make(chan *packet), // no receiver: always triggers default drop
+			decryptChan: make(chan *packet, 1),
+			closeChan:   make(chan struct{}),
+		}
+
+		pkt := acquirePacket()
+		u.dispatchToChannels(pkt)
+
+		if got := u.droppedOutputPackets.Load(); got != 1 {
+			t.Fatalf("droppedOutputPackets=%d, want 1", got)
+		}
+		if got := u.droppedDecryptPackets.Load(); got != 0 {
+			t.Fatalf("droppedDecryptPackets=%d, want 0", got)
+		}
+
+		select {
+		case routed := <-u.decryptChan:
+			if routed != pkt {
+				t.Fatal("decrypt queue packet mismatch")
+			}
+			// Only the decrypt ref remains; release manually to avoid pool leak.
+			unrefPacket(routed)
+		default:
+			t.Fatal("packet was not routed to decryptChan")
+		}
+	})
+
+	t.Run("decrypt queue full increments drop counter", func(t *testing.T) {
+		u := &UDP{
+			outputChan:  make(chan *packet, 1),
+			decryptChan: make(chan *packet), // no receiver: always triggers default drop
+			closeChan:   make(chan struct{}),
+		}
+
+		pkt := acquirePacket()
+		u.dispatchToChannels(pkt)
+
+		if got := u.droppedDecryptPackets.Load(); got != 1 {
+			t.Fatalf("droppedDecryptPackets=%d, want 1", got)
+		}
+		if got := u.droppedOutputPackets.Load(); got != 0 {
+			t.Fatalf("droppedOutputPackets=%d, want 0", got)
+		}
+
+		select {
+		case routed := <-u.outputChan:
+			select {
+			case <-routed.ready:
+			default:
+				t.Fatal("routed packet should be marked ready when decrypt path drops")
+			}
+			if routed.err != ErrNoData {
+				t.Fatalf("routed packet err=%v, want %v", routed.err, ErrNoData)
+			}
+			// Only the output ref remains; release manually to avoid pool leak.
+			unrefPacket(routed)
+		default:
+			t.Fatal("packet was not queued to outputChan")
+		}
+	})
+}
+
+func TestRPCRouteErrorCounterOnSmuxInputFailure(t *testing.T) {
+	server, client, serverKey, clientKey := createConnectedPair(t)
+	defer server.Close()
+	defer client.Close()
+
+	server.mu.RLock()
+	serverPeer := server.peers[clientKey.Public]
+	server.mu.RUnlock()
+	if serverPeer == nil {
+		t.Fatal("server peer not found")
+	}
+
+	serverPeer.mu.RLock()
+	smux := serverPeer.serviceMux
+	serverPeer.mu.RUnlock()
+	if smux == nil {
+		t.Fatal("server service mux not initialized")
+	}
+	_ = smux.Close() // subsequent RPC routing will trigger Input errors
+
+	client.mu.RLock()
+	clientPeer := client.peers[serverKey.Public]
+	client.mu.RUnlock()
+	if clientPeer == nil {
+		t.Fatal("client peer not found")
+	}
+
+	before := server.HostInfo().RPCRouteErrors
+	if err := client.sendKCP(clientPeer, 1, []byte{0}); err != nil {
+		t.Fatalf("sendKCP failed: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if got := server.HostInfo().RPCRouteErrors; got > before {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	t.Fatalf("RPCRouteErrors did not increase: before=%d after=%d", before, server.HostInfo().RPCRouteErrors)
+}
+
+func TestInboundDropCounterWhenPeerQueueFull(t *testing.T) {
+	server, client, serverKey, clientKey := createConnectedPair(t)
+	defer server.Close()
+	defer client.Close()
+
+	server.mu.RLock()
+	serverPeer := server.peers[clientKey.Public]
+	server.mu.RUnlock()
+	if serverPeer == nil {
+		t.Fatal("server peer not found")
+	}
+
+	if serverPeer.serviceMux == nil {
+		t.Fatal("server service mux not initialized")
+	}
+
+	for i := 0; i < InboundChanSize; i++ {
+		if err := serverPeer.serviceMux.InputPacket(testDirectProtoA, []byte("seed")); err != nil {
+			t.Fatalf("failed to fill service mux inbound queue at %d: %v", i, err)
+		}
+	}
+
+	before := server.HostInfo().DroppedInboundPackets
+	clientMux, err := client.PeerServiceMux(serverKey.Public)
+	if err != nil {
+		t.Fatalf("client.PeerServiceMux failed: %v", err)
+	}
+	if _, err := clientMux.Write(testDirectProtoA, []byte("drop-me")); err != nil {
+		t.Fatalf("client mux Write(direct) failed: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if got := server.HostInfo().DroppedInboundPackets; got > before {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	t.Fatalf("DroppedInboundPackets did not increase: before=%d after=%d", before, server.HostInfo().DroppedInboundPackets)
+}
+
+func TestPeerServiceMuxAndSendDirectWrapper(t *testing.T) {
+	server, client, serverKey, clientKey := createConnectedPair(t)
+	defer server.Close()
+	defer client.Close()
+
+	if _, err := client.PeerServiceMux(noise.PublicKey{}); err != ErrPeerNotFound {
+		t.Fatalf("PeerServiceMux(non-existent) err=%v, want %v", err, ErrPeerNotFound)
+	}
+
+	smux, err := client.PeerServiceMux(serverKey.Public)
+	if err != nil {
+		t.Fatalf("PeerServiceMux(existing) failed: %v", err)
+	}
+	if smux == nil {
+		t.Fatal("PeerServiceMux(existing) returned nil")
+	}
+
+	client.mu.RLock()
+	peer := client.peers[serverKey.Public]
+	client.mu.RUnlock()
+	if peer == nil {
+		t.Fatal("peer not found in client map")
+	}
+
+	if err := client.sendPayload(peer, testDirectProtoA, []byte("wrapper-path")); err != nil {
+		t.Fatalf("sendPayload failed: %v", err)
+	}
+
+	proto, payload := readPeerWithTimeout(t, server, clientKey.Public, 3*time.Second)
+	if proto != testDirectProtoA {
+		t.Fatalf("server got proto=%d, want %d", proto, testDirectProtoA)
+	}
+	if string(payload) != "wrapper-path" {
+		t.Fatalf("server got payload=%q, want %q", string(payload), "wrapper-path")
+	}
+}
+
+func readPeerWithTimeout(t *testing.T, u *UDP, pk noise.PublicKey, timeout time.Duration) (byte, []byte) {
+	t.Helper()
+
+	type result struct {
+		proto   byte
+		payload []byte
+		err     error
+	}
+
+	ch := make(chan result, 1)
 	go func() {
-		u.decryptTransport(pkt, wire, from)
-		close(done)
+		smux, err := u.PeerServiceMux(pk)
+		if err != nil {
+			ch <- result{err: err}
+			return
+		}
+		buf := make([]byte, 4096)
+		proto, n, err := smux.Read(buf)
+		if err != nil {
+			ch <- result{err: err}
+			return
+		}
+		data := make([]byte, n)
+		copy(data, buf[:n])
+		ch <- result{proto: proto, payload: data}
 	}()
 
-	<-hookStarted
-	u.RemovePeer(peerKey.Public)
-	close(hookRelease)
-	<-done
-
-	if pkt.err != ErrPeerNotFound {
-		t.Fatalf("pkt.err=%v, want %v", pkt.err, ErrPeerNotFound)
+	select {
+	case r := <-ch:
+		if r.err != nil {
+			t.Fatalf("Read failed: %v", r.err)
+		}
+		return r.proto, r.payload
+	case <-time.After(timeout):
+		t.Fatalf("Read timeout after %s", timeout)
+		return 0, nil
 	}
 }

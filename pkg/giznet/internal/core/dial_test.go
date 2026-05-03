@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/internal/noise"
@@ -58,4 +59,35 @@ func TestDialMissingRemoteAddr(t *testing.T) {
 	if err != ErrMissingRemoteAddr {
 		t.Errorf("Dial() error = %v, want ErrMissingRemoteAddr", err)
 	}
+}
+
+func TestIsTimeoutError(t *testing.T) {
+	if isTimeoutError(nil) {
+		t.Error("isTimeoutError(nil) should be false")
+	}
+	if isTimeoutError(errors.New("some error")) {
+		t.Error("isTimeoutError(regular error) should be false")
+	}
+
+	timeoutErr := &timeoutTestError{timeout: true}
+	if !isTimeoutError(timeoutErr) {
+		t.Error("isTimeoutError(timeout error) should be true")
+	}
+
+	nonTimeoutErr := &timeoutTestError{timeout: false}
+	if isTimeoutError(nonTimeoutErr) {
+		t.Error("isTimeoutError(non-timeout error) should be false")
+	}
+}
+
+type timeoutTestError struct {
+	timeout bool
+}
+
+func (e *timeoutTestError) Error() string {
+	return "test timeout error"
+}
+
+func (e *timeoutTestError) Timeout() bool {
+	return e.timeout
 }

@@ -89,6 +89,51 @@ func TestListenerClose(t *testing.T) {
 	}
 }
 
+func TestRemoveConn(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+	transport := NewMockTransport("listener")
+	defer transport.Close()
+
+	listener, err := NewListener(ListenerConfig{
+		LocalKey:  localKey,
+		Transport: transport,
+	})
+	if err != nil {
+		t.Fatalf("NewListener() error = %v", err)
+	}
+	defer listener.Close()
+
+	remoteKey, _ := noise.GenerateKeyPair()
+	conn, err := newConn(localKey, transport, NewMockAddr("remote"), remoteKey.Public)
+	if err != nil {
+		t.Fatalf("newConn() error = %v", err)
+	}
+	localIdx := conn.LocalIndex()
+
+	listener.mu.Lock()
+	listener.conns[localIdx] = conn
+	listener.mu.Unlock()
+
+	listener.mu.Lock()
+	_, exists := listener.conns[localIdx]
+	listener.mu.Unlock()
+	if !exists {
+		t.Error("Connection should exist before RemoveConn")
+	}
+
+	listener.RemoveConn(localIdx)
+
+	listener.mu.Lock()
+	_, exists = listener.conns[localIdx]
+	listener.mu.Unlock()
+	if exists {
+		t.Error("Connection should not exist after RemoveConn")
+	}
+
+	listener.RemoveConn(localIdx)
+	listener.RemoveConn(99999)
+}
+
 func TestListenerAcceptAfterClose(t *testing.T) {
 	key, _ := noise.GenerateKeyPair()
 	transport := NewMockTransport("test")
@@ -455,5 +500,36 @@ func TestListenerHandleTransport_DeliverAndDropPaths(t *testing.T) {
 	}
 
 	inbound <- inboundPacket{}
+	listener.handleTransport(msg, NewMockAddr("remote"))
+}
+
+func TestListenerHandleTransport(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+	transport := NewMockTransport("listener")
+	defer transport.Close()
+
+	listener, err := NewListener(ListenerConfig{
+		LocalKey:  localKey,
+		Transport: transport,
+	})
+	if err != nil {
+		t.Fatalf("NewListener() error = %v", err)
+	}
+	defer listener.Close()
+
+	listener.handleTransport([]byte{1, 2, 3}, NewMockAddr("remote"))
+
+	validMsg := noise.BuildTransportMessage(12345, 0, []byte("test ciphertext"))
+	listener.handleTransport(validMsg, NewMockAddr("remote"))
+
+	remoteKey, _ := noise.GenerateKeyPair()
+	conn, _ := newConn(localKey, transport, NewMockAddr("remote"), remoteKey.Public)
+	localIdx := conn.LocalIndex()
+
+	listener.mu.Lock()
+	listener.conns[localIdx] = conn
+	listener.mu.Unlock()
+
+	msg := noise.BuildTransportMessage(localIdx, 0, []byte("test ciphertext"))
 	listener.handleTransport(msg, NewMockAddr("remote"))
 }

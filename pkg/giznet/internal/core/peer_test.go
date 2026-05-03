@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -472,5 +473,148 @@ func TestPeer_MultiServiceConcurrentBidirectionalNoCrossTalk(t *testing.T) {
 		if !bytes.Equal(got.resp, want) {
 			t.Fatalf("service %d response mismatch: got=%q want=%q", got.service, got.resp, want)
 		}
+	}
+}
+
+func TestKCPOutputErrorCounterFromServiceMux(t *testing.T) {
+	localKey, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(local) failed: %v", err)
+	}
+	remoteKey, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(remote) failed: %v", err)
+	}
+
+	u := &UDP{localKey: localKey}
+	peer := &peerState{pk: remoteKey.Public}
+	smux := u.createServiceMux(peer)
+	defer smux.Close()
+
+	if _, err := smux.OpenStream(0); err == nil {
+		t.Fatal("OpenStream(service=0) should fail without a peer endpoint")
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if got := u.kcpOutputErrors.Load(); got > 0 {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	t.Fatalf("kcpOutputErrors did not increase, got=%d", u.kcpOutputErrors.Load())
+}
+
+func TestPeerCloseServiceMuxDoesNotCloseIfMatchWhenNoActiveMux(t *testing.T) {
+	key, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair failed: %v", err)
+	}
+	events := make(chan PeerEvent, 1)
+	u := &UDP{
+		onPeerEvent: func(ev PeerEvent) bool {
+			events <- ev
+			return true
+		},
+	}
+	ifMatch := NewServiceMux(key.Public, ServiceMuxConfig{})
+	peer := &Peer{
+		udp: u,
+		state: &peerState{
+			pk:    key.Public,
+			state: PeerStateEstablished,
+		},
+	}
+
+	peer.CloseServiceMux(ifMatch)
+
+	if err := ifMatch.InputPacket(testDirectProtoA, []byte("still-open")); err != nil {
+		t.Fatalf("ifMatch token should remain open, InputPacket err=%v", err)
+	}
+	if got := peer.State(); got != PeerStateEstablished {
+		t.Fatalf("peer.State()=%v, want %v", got, PeerStateEstablished)
+	}
+	select {
+	case ev := <-events:
+		t.Fatalf("CloseServiceMux emitted event for unowned target: %+v", ev)
+	default:
+	}
+}
+
+func TestPeerCloseServiceMuxDoesNotCloseMismatchedActiveMux(t *testing.T) {
+	key, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair failed: %v", err)
+	}
+	active := NewServiceMux(key.Public, ServiceMuxConfig{})
+	defer active.Close()
+	ifMatch := NewServiceMux(key.Public, ServiceMuxConfig{})
+	defer ifMatch.Close()
+	peer := &Peer{
+		udp: &UDP{},
+		state: &peerState{
+			pk:         key.Public,
+			serviceMux: active,
+			state:      PeerStateEstablished,
+		},
+	}
+
+	peer.CloseServiceMux(ifMatch)
+	if err := active.InputPacket(testDirectProtoA, []byte("still-open")); err != nil {
+		t.Fatalf("active service mux should remain open, InputPacket err=%v", err)
+	}
+	if err := ifMatch.InputPacket(testDirectProtoA, []byte("still-open")); err != nil {
+		t.Fatalf("ifMatch token should remain open, InputPacket err=%v", err)
+	}
+	if got := peer.State(); got != PeerStateEstablished {
+		t.Fatalf("peer.State()=%v, want %v", got, PeerStateEstablished)
+	}
+}
+
+func TestCreateServiceMux_UsesInjectedPeerAwareOnNewService(t *testing.T) {
+	localKey, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(local) failed: %v", err)
+	}
+	remoteKey, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(remote) failed: %v", err)
+	}
+
+	var gotPeer noise.PublicKey
+	var gotService uint64
+	u := &UDP{
+		localKey: localKey,
+		serviceMuxConfig: ServiceMuxConfig{
+			OnNewService: func(peer noise.PublicKey, service uint64) bool {
+				gotPeer = peer
+				gotService = service
+				return peer == remoteKey.Public && service == 3
+			},
+		},
+	}
+	peer := &peerState{pk: remoteKey.Public}
+	smux := u.createServiceMux(peer)
+	defer smux.Close()
+
+	streamID := uint64(0)
+	if !u.isKCPClient(remoteKey.Public) {
+		streamID = 1
+	}
+	frame := binary.AppendUvarint(nil, streamID)
+	frame = append(frame, 0)
+
+	if err := smux.InputKCP(3, frame); err != nil {
+		t.Fatalf("InputKCP(service=3) failed: %v", err)
+	}
+	if gotPeer != remoteKey.Public {
+		t.Fatalf("OnNewService peer=%v, want %v", gotPeer, remoteKey.Public)
+	}
+	if gotService != 3 {
+		t.Fatalf("OnNewService service=%d, want 3", gotService)
+	}
+	if smux.NumServices() != 1 {
+		t.Fatalf("NumServices=%d, want 1", smux.NumServices())
 	}
 }

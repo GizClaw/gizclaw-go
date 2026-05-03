@@ -29,6 +29,9 @@ func (l *ServiceListener) Accept() (net.Conn, error) {
 	if l.closed.Load() {
 		return nil, net.ErrClosed
 	}
+	if l.conn.peer != nil && l.conn.peer.State() == core.PeerStateOffline {
+		return nil, net.ErrClosed
+	}
 	smux, err := l.conn.serviceMux()
 	if err != nil {
 		if errors.Is(err, ErrConnClosed) || errors.Is(err, ErrClosed) || errors.Is(err, ErrPeerNotFound) {

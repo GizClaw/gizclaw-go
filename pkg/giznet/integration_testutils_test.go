@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	testServiceRPC   uint64 = 4
-	testEventVersion int    = 1
-	testProtocolEvent byte  = 0x03
-	testProtocolOpus  byte  = 0x10
+	testServiceRPC    uint64 = 4
+	testEventVersion  int    = 1
+	testProtocolEvent byte   = 0x03
+	testProtocolOpus  byte   = 0x10
 )
 
 var (
@@ -42,8 +42,8 @@ func (e testEvent) Validate() error {
 	return nil
 }
 
-// ConnectedPeerPair is two Listeners with an accepted server Conn and an
-// established client Peer Conn (Listener / Conn public API).
+// ConnectedPeerPair is two Listeners with an accepted server Conn and a
+// client Conn created by Listener.Dial.
 type ConnectedPeerPair struct {
 	ServerKey *giznet.KeyPair
 	ClientKey *giznet.KeyPair
@@ -56,7 +56,7 @@ type ConnectedPeerPair struct {
 }
 
 // NewConnectedPeerPair connects a client Listener to a server Listener and
-// waits for server Accept plus client Peer.
+// waits for server Accept plus client Dial.
 func NewConnectedPeerPair(t *testing.T) *ConnectedPeerPair {
 	t.Helper()
 
@@ -83,7 +83,12 @@ func NewConnectedPeerPair(t *testing.T) *ConnectedPeerPair {
 		acceptCh <- c
 	}()
 
-	ConnectTestListeners(t, clientListener, clientKey, serverListener, serverKey)
+	clientConn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+	if err != nil {
+		_ = serverListener.Close()
+		_ = clientListener.Close()
+		t.Fatalf("clientListener.Dial failed: %v", err)
+	}
 
 	var serverConn *giznet.Conn
 	select {
@@ -96,13 +101,6 @@ func NewConnectedPeerPair(t *testing.T) *ConnectedPeerPair {
 		_ = serverListener.Close()
 		_ = clientListener.Close()
 		t.Fatal("Listener.Accept timeout")
-	}
-
-	clientConn, err := clientListener.Peer(serverKey.Public)
-	if err != nil {
-		_ = serverListener.Close()
-		_ = clientListener.Close()
-		t.Fatalf("clientListener.Peer failed: %v", err)
 	}
 
 	return &ConnectedPeerPair{
@@ -357,13 +355,32 @@ func waitForPeerEstablished(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) {
 	t.Fatalf("peer %x state=%v, want %v", pk, info.State, giznet.PeerStateEstablished)
 }
 
+func waitForPeerOffline(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		info := u.PeerInfo(pk)
+		if info != nil && info.State == giznet.PeerStateOffline {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	info := u.PeerInfo(pk)
+	if info == nil {
+		t.Fatalf("peer %x was not registered before timeout", pk)
+	}
+	t.Fatalf("peer %x state=%v, want %v", pk, info.State, giznet.PeerStateOffline)
+}
+
 // MustPeerMux returns the service mux for an established peer session.
 func MustPeerMux(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) peerMux {
 	t.Helper()
 
-	smux, err := u.GetServiceMux(pk)
+	smux, err := u.PeerServiceMux(pk)
 	if err != nil {
-		t.Fatalf("GetServiceMux failed: %v", err)
+		t.Fatalf("PeerServiceMux failed: %v", err)
 	}
 	return smux
 }

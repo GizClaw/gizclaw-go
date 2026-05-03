@@ -2,11 +2,14 @@ package gizclaw
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/audio/pcm"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpc"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func TestGearPeerHelpersAndDispatch(t *testing.T) {
@@ -79,6 +82,63 @@ func TestGearPeerHelpersAndDispatch(t *testing.T) {
 			t.Fatalf("dispatchRPC(unknown) response = %+v", resp)
 		}
 	})
+}
+
+func TestGearPeerCloseClosesConn(t *testing.T) {
+	serverKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(server) error = %v", err)
+	}
+	clientKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(client) error = %v", err)
+	}
+	serverListener, err := giznet.Listen(serverKey, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
+	if err != nil {
+		t.Fatalf("Listen(server) error = %v", err)
+	}
+	defer serverListener.Close()
+	go drainUDP(serverListener.UDP())
+	clientListener, err := giznet.Listen(clientKey, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
+	if err != nil {
+		t.Fatalf("Listen(client) error = %v", err)
+	}
+	defer clientListener.Close()
+	go drainUDP(clientListener.UDP())
+
+	acceptCh := make(chan *giznet.Conn, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		conn, err := serverListener.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		acceptCh <- conn
+	}()
+
+	clientConn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("Dial error = %v", err)
+	}
+	defer clientConn.Close()
+
+	var serverConn *giznet.Conn
+	select {
+	case serverConn = <-acceptCh:
+	case err := <-errCh:
+		t.Fatalf("Accept error = %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Accept timeout")
+	}
+
+	peer := &GearPeer{Conn: serverConn}
+	if err := peer.close(); err != nil {
+		t.Fatalf("GearPeer.close() error = %v", err)
+	}
+	if err := serverConn.Close(); !errors.Is(err, giznet.ErrConnClosed) {
+		t.Fatalf("server Conn.Close() after GearPeer.close err=%v, want %v", err, giznet.ErrConnClosed)
+	}
 }
 
 func TestGearPeerPCMChunkToInt16(t *testing.T) {

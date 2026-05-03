@@ -1,4 +1,5 @@
-import { ChevronRight, RefreshCw, Search } from "lucide-react";
+import { Check, ChevronRight, Copy, RefreshCw, Search } from "lucide-react";
+import { useCallback, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Badge } from "../../../../packages/components/badge";
@@ -12,9 +13,10 @@ import { EmptyState } from "../../../../packages/components/empty-state";
 import { PageBreadcrumb } from "../../../../packages/components/page-breadcrumb";
 import { StatusBadge } from "../../../../packages/components/status-badge";
 import { usePeersPage } from "../../hooks/usePeersPage";
-import { formatDate, peerTitle } from "../../lib/format";
+import { formatDate } from "../../lib/format";
 
 export function PeersListPage(): JSX.Element {
+  const [copiedPublicKey, setCopiedPublicKey] = useState<string | null>(null);
   const {
     dashboard,
     peerList,
@@ -26,6 +28,16 @@ export function PeersListPage(): JSX.Element {
     refreshDashboard,
     setFilter,
   } = usePeersPage();
+
+  const handleCopyPublicKey = useCallback(async (publicKey: string) => {
+    try {
+      await navigator.clipboard.writeText(publicKey);
+      setCopiedPublicKey(publicKey);
+      window.setTimeout(() => setCopiedPublicKey((current) => (current === publicKey ? null : current)), 1200);
+    } catch {
+      setCopiedPublicKey(null);
+    }
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -116,7 +128,6 @@ export function PeersListPage(): JSX.Element {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Peer</TableHead>
-                    <TableHead>Public Key</TableHead>
                     <TableHead className="w-24 text-center">Role</TableHead>
                     <TableHead className="w-24 text-center">Status</TableHead>
                     <TableHead>Registration</TableHead>
@@ -126,38 +137,51 @@ export function PeersListPage(): JSX.Element {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredGears.map((gear) => (
-                    <TableRow className="cursor-pointer hover:bg-muted/40" key={gear.public_key}>
-                      <TableCell>
-                        <Link className="font-medium hover:underline" to={`/peers/${encodeURIComponent(gear.public_key)}`}>
-                          {peerTitle(undefined, gear.public_key)}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="max-w-[16rem]">
-                        <div className="truncate font-mono text-xs text-muted-foreground">{gear.public_key}</div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          <Badge variant="outline">{gear.role}</Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          <StatusBadge status={gear.status} />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{gear.auto_registered ? "Auto" : "Manual"}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDate(gear.updated_at)}</TableCell>
-                      <TableCell>
-                        {gear.auto_registered ? <Badge variant="secondary">Auto</Badge> : <span className="text-sm text-muted-foreground">Manual</span>}
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        <Link to={`/peers/${encodeURIComponent(gear.public_key)}`}>
-                          <ChevronRight className="ml-auto size-4" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredGears.map((gear) => {
+                    const name = gear.public_key;
+                    const copied = copiedPublicKey === gear.public_key;
+
+                    return (
+                      <TableRow className="cursor-pointer hover:bg-muted/40" key={gear.public_key}>
+                        <TableCell className="min-w-[20rem]">
+                          <div className="space-y-1">
+                            <Link className="break-all font-medium hover:underline" to={`/peers/${encodeURIComponent(gear.public_key)}`}>
+                              {name}
+                            </Link>
+                            <button
+                              className="flex max-w-full items-center gap-1.5 truncate font-mono text-xs text-muted-foreground hover:text-foreground"
+                              onClick={() => void handleCopyPublicKey(gear.public_key)}
+                              title="Copy public key"
+                              type="button"
+                            >
+                              <span className="truncate">{gear.public_key}</span>
+                              {copied ? <Check className="size-3 shrink-0 text-emerald-600" /> : <Copy className="size-3 shrink-0" />}
+                            </button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex justify-center">
+                            <Badge variant="outline">{gear.role}</Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex justify-center">
+                            <StatusBadge status={gear.status} />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{gear.auto_registered ? "Auto" : "Manual"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{formatDate(gear.updated_at)}</TableCell>
+                        <TableCell>
+                          {gear.auto_registered ? <Badge variant="secondary">Auto</Badge> : <span className="text-sm text-muted-foreground">Manual</span>}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          <Link to={`/peers/${encodeURIComponent(gear.public_key)}`}>
+                            <ChevronRight className="ml-auto size-4" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}

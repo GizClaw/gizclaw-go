@@ -35,18 +35,36 @@ func newListenerNode(t *testing.T, key *giznet.KeyPair, opts ...giznet.Option) *
 	return l
 }
 
-func connectListenerNodes(t *testing.T, client *giznet.Listener, clientKey *giznet.KeyPair, server *giznet.Listener, serverKey *giznet.KeyPair) {
+func connectListenerNodes(t *testing.T, client *giznet.Listener, clientKey *giznet.KeyPair, server *giznet.Listener, serverKey *giznet.KeyPair) (*giznet.Conn, *giznet.Conn) {
 	t.Helper()
 
-	client.SetPeerEndpoint(serverKey.Public, server.HostInfo().Addr)
 	server.SetPeerEndpoint(clientKey.Public, client.HostInfo().Addr)
 
-	if err := client.Connect(serverKey.Public); err != nil {
-		t.Fatalf("Connect failed: %v", err)
+	acceptCh := make(chan *giznet.Conn, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		conn, err := server.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		acceptCh <- conn
+	}()
+
+	clientConn, err := client.Dial(serverKey.Public, server.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("Dial failed: %v", err)
 	}
 
-	waitForPeerEstablished(t, client.UDP(), serverKey.Public)
-	waitForPeerEstablished(t, server.UDP(), clientKey.Public)
+	select {
+	case serverConn := <-acceptCh:
+		return clientConn, serverConn
+	case err := <-errCh:
+		t.Fatalf("Accept failed: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("Accept timeout")
+	}
+	return nil, nil
 }
 
 func waitForPeerEstablished(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) {

@@ -17,4 +17,5 @@ var (
 	ErrUDPClosed         = core.ErrClosed
 	ErrAcceptQueueClosed = core.ErrAcceptQueueClosed
 	ErrKCPMustUseStream  = core.ErrKCPMustUseStream
+	ErrServiceMuxClosed  = core.ErrServiceMuxClosed
 )

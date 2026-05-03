@@ -78,9 +78,9 @@ func waitBenchPeerEstablished(tb testing.TB, u *giznet.UDP, pk giznet.PublicKey)
 func mustPeerBenchMux(tb testing.TB, u *giznet.UDP, pk giznet.PublicKey) peerBenchMux {
 	tb.Helper()
 
-	smux, err := u.GetServiceMux(pk)
+	smux, err := u.PeerServiceMux(pk)
 	if err != nil {
-		tb.Fatalf("GetServiceMux failed: %v", err)
+		tb.Fatalf("PeerServiceMux failed: %v", err)
 	}
 	return smux
 }
@@ -112,15 +112,34 @@ func newBenchListenerNode(tb testing.TB, key *giznet.KeyPair, opts ...giznet.Opt
 	return l
 }
 
-func connectBenchListenerNodes(tb testing.TB, client *giznet.Listener, clientKey *giznet.KeyPair, server *giznet.Listener, serverKey *giznet.KeyPair) {
+func connectBenchListenerNodes(tb testing.TB, client *giznet.Listener, clientKey *giznet.KeyPair, server *giznet.Listener, serverKey *giznet.KeyPair) (*giznet.Conn, *giznet.Conn) {
 	tb.Helper()
 
-	client.SetPeerEndpoint(serverKey.Public, server.HostInfo().Addr)
 	server.SetPeerEndpoint(clientKey.Public, client.HostInfo().Addr)
-	if err := client.Connect(serverKey.Public); err != nil {
-		tb.Fatalf("Connect failed: %v", err)
+
+	acceptCh := make(chan *giznet.Conn, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		conn, err := server.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		acceptCh <- conn
+	}()
+
+	clientConn, err := client.Dial(serverKey.Public, server.HostInfo().Addr)
+	if err != nil {
+		tb.Fatalf("Dial failed: %v", err)
 	}
 
-	waitBenchPeerEstablished(tb, client.UDP(), serverKey.Public)
-	waitBenchPeerEstablished(tb, server.UDP(), clientKey.Public)
+	select {
+	case serverConn := <-acceptCh:
+		return clientConn, serverConn
+	case err := <-errCh:
+		tb.Fatalf("Accept failed: %v", err)
+	case <-time.After(5 * time.Second):
+		tb.Fatal("Accept timeout")
+	}
+	return nil, nil
 }

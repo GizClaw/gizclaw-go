@@ -29,16 +29,7 @@ func BenchmarkPublicHTTPRoundTrip(b *testing.B) {
 				},
 			}))
 			clientListener := newBenchListenerNode(b, clientKey)
-			connectBenchListenerNodes(b, clientListener, clientKey, serverListener, serverKey)
-
-			clientConn, err := clientListener.Peer(serverKey.Public)
-			if err != nil {
-				b.Fatal(err)
-			}
-			serverConn, err := serverListener.Peer(clientKey.Public)
-			if err != nil {
-				b.Fatal(err)
-			}
+			clientConn, serverConn := connectBenchListenerNodes(b, clientListener, clientKey, serverListener, serverKey)
 
 			srv := gizhttp.NewServer(serverConn, 7, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				body, err := io.ReadAll(r.Body)

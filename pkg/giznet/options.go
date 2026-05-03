@@ -5,17 +5,6 @@ import "github.com/GizClaw/gizclaw-go/pkg/giznet/internal/core"
 type Option = core.Option
 type SocketConfig = core.SocketConfig
 type ServiceMuxConfig = core.ServiceMuxConfig
-type PeerState = core.PeerState
-type PeerEvent = core.PeerEvent
-type HostInfo = core.HostInfo
-type UDP = core.UDP
-
-const (
-	PeerStateNew         = core.PeerStateNew
-	PeerStateConnecting  = core.PeerStateConnecting
-	PeerStateEstablished = core.PeerStateEstablished
-	PeerStateFailed      = core.PeerStateFailed
-)
 
 var (
 	WithBindAddr          = core.WithBindAddr

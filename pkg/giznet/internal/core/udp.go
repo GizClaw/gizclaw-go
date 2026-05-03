@@ -26,6 +26,8 @@ const (
 	PeerStateEstablished
 	// PeerStateFailed indicates the connection attempt failed.
 	PeerStateFailed
+	// PeerStateOffline indicates the peer was disconnected or removed.
+	PeerStateOffline
 )
 
 func (s PeerState) String() string {
@@ -38,6 +40,8 @@ func (s PeerState) String() string {
 		return "established"
 	case PeerStateFailed:
 		return "failed"
+	case PeerStateOffline:
+		return "offline"
 	default:
 		return "unknown"
 	}
@@ -75,12 +79,6 @@ type PeerInfo struct {
 	RxBytes   uint64
 	TxBytes   uint64
 	LastSeen  time.Time
-}
-
-// Peer represents a complete peer with info and connection.
-type Peer struct {
-	Info *PeerInfo
-	Conn *Conn
 }
 
 // Errors
@@ -242,9 +240,9 @@ type peerState struct {
 	pk       noise.PublicKey
 	endpoint *net.UDPAddr
 	session  *noise.Session
+	previous *noise.Session
 	hsState  *noise.HandshakeState // during handshake
 	state    PeerState
-	removed  bool
 	rxBytes  uint64
 	txBytes  uint64
 	lastSeen time.Time
@@ -440,50 +438,132 @@ func (u *UDP) SetPeerEndpoint(pk noise.PublicKey, endpoint *net.UDPAddr) {
 	peer.mu.Unlock()
 }
 
-// RemovePeer removes a peer and its associated state.
-func (u *UDP) RemovePeer(pk noise.PublicKey) {
-	var smux *ServiceMux
-	var session *noise.Session
-	var peer *peerState
+// GetPeer returns a handle for an existing UDP peer.
+func (u *UDP) GetPeer(pk noise.PublicKey) (*Peer, error) {
+	if u.closed.Load() || u.closing.Load() {
+		return nil, ErrClosed
+	}
 
-	u.mu.Lock()
-	var exists bool
-	peer, exists = u.peers[pk]
+	u.mu.RLock()
+	peer, exists := u.peers[pk]
+	u.mu.RUnlock()
 	if !exists {
-		u.mu.Unlock()
+		return nil, ErrPeerNotFound
+	}
+	return &Peer{udp: u, state: peer}, nil
+}
+
+// PeerServiceMux returns the active ServiceMux for a peer, creating one if needed.
+func (u *UDP) PeerServiceMux(pk noise.PublicKey) (*ServiceMux, error) {
+	peer, err := u.GetPeer(pk)
+	if err != nil {
+		return nil, err
+	}
+	return peer.ServiceMux()
+}
+
+// ClosePeerServiceMux marks a peer offline and closes its service state without
+// removing the UDP peer or Noise session.
+func (u *UDP) ClosePeerServiceMux(pk noise.PublicKey) {
+	peer, err := u.GetPeer(pk)
+	if err != nil {
 		return
 	}
-	delete(u.peers, pk)
+	peer.CloseServiceMux(nil)
+}
 
-	peer.mu.Lock()
-	smux = peer.serviceMux
-	session = peer.session
-	peer.mu.Unlock()
-	u.mu.Unlock()
-
-	if smux != nil {
-		_ = smux.Close()
+// OpenPeerServiceMux starts a new service-mux generation for an established
+// peer, closing any previous generation while keeping the UDP peer and Noise
+// session intact.
+func (u *UDP) OpenPeerServiceMux(pk noise.PublicKey) (*Peer, *ServiceMux, error) {
+	peer, err := u.GetPeer(pk)
+	if err != nil {
+		return nil, nil, err
 	}
+	smux, err := peer.OpenServiceMux()
+	if err != nil {
+		return nil, nil, err
+	}
+	return peer, smux, nil
+}
 
-	u.mu.Lock()
-	peer.mu.Lock()
-	peer.removed = true
-	peer.state = PeerStateFailed
-	if session != nil {
-		if current, ok := u.byIndex[session.LocalIndex()]; ok && current == peer {
-			delete(u.byIndex, session.LocalIndex())
+// isKCPClient determines if we are the KCP client for a peer.
+// Uses deterministic rule: smaller public key is client (uses odd stream IDs).
+// This ensures consistent stream ID allocation regardless of who initiated the connection.
+func (u *UDP) isKCPClient(remotePK noise.PublicKey) bool {
+	return bytes.Compare(u.localKey.Public[:], remotePK[:]) < 0
+}
+
+// createServiceMux creates a new ServiceMux for a peer.
+func (u *UDP) createServiceMux(peer *peerState) *ServiceMux {
+	isClient := u.isKCPClient(peer.pk)
+	cfg := u.serviceMuxConfig
+	userOutputError := cfg.OnOutputError
+
+	cfg.IsClient = isClient
+	cfg.Output = func(_ noise.PublicKey, service uint64, protocol byte, data []byte) error {
+		if protocol == ProtocolKCP {
+			return u.sendKCP(peer, service, data)
 		}
-		if peer.session == session {
-			peer.session = nil
+		return u.sendPayload(peer, protocol, data)
+	}
+	cfg.OnOutputError = func(_ noise.PublicKey, service uint64, err error) {
+		u.kcpOutputErrors.Add(1)
+		if userOutputError != nil {
+			userOutputError(peer.pk, service, err)
 		}
 	}
-	if peer.serviceMux == smux {
-		peer.serviceMux = nil
-	}
-	peer.mu.Unlock()
-	u.mu.Unlock()
 
-	u.emitPeerEvent(pk, PeerStateFailed)
+	return NewServiceMux(peer.pk, cfg)
+}
+
+func (u *UDP) sendPayload(peer *peerState, protocol byte, payload []byte) error {
+	peer.mu.RLock()
+	session := peer.session
+	endpoint := peer.endpoint
+	peer.mu.RUnlock()
+
+	if endpoint == nil {
+		return ErrNoEndpoint
+	}
+	if session == nil {
+		return ErrNoSession
+	}
+
+	plaintext := EncodePayload(protocol, payload)
+	ciphertext, counter, err := session.Encrypt(plaintext)
+	if err != nil {
+		return err
+	}
+
+	msg := noise.BuildTransportMessage(session.RemoteIndex(), counter, ciphertext)
+	n, err := u.socket.WriteToUDP(msg, endpoint)
+	if err != nil {
+		return err
+	}
+
+	u.totalTx.Add(uint64(n))
+	peer.mu.Lock()
+	peer.txBytes += uint64(n)
+	peer.mu.Unlock()
+	return nil
+}
+
+// sendKCP sends KCP/service-mux traffic to a peer.
+func (u *UDP) sendKCP(peer *peerState, service uint64, data []byte) error {
+	payload := AppendVarint(nil, service)
+	payload = append(payload, data...)
+	return u.sendPayload(peer, ProtocolKCP, payload)
+}
+
+// closedChan returns a channel that's closed when UDP is closed.
+func (u *UDP) closedChan() <-chan struct{} {
+	return u.closeChan
+}
+
+// IsClosed reports whether the UDP transport is closed or closing.
+func (u *UDP) IsClosed() bool {
+	return u == nil || u.closed.Load() || u.closing.Load()
 }
 
 // HostInfo returns information about the local host.
@@ -582,7 +662,7 @@ func (u *UDP) Peers() iter.Seq[*Peer] {
 			}
 			ps.mu.RUnlock()
 
-			peer := &Peer{Info: info}
+			peer := &Peer{udp: u, state: ps, Info: info}
 
 			if !yield(peer) {
 				return
@@ -753,27 +833,32 @@ func (u *UDP) handleHandshakeInit(data []byte, from *net.UDPAddr) {
 	}
 
 	peer.mu.Lock()
-	if peer.serviceMux == nil {
-		peer.serviceMux = u.createServiceMux(peer)
-	}
+	createMux := u.ensureServiceMuxLocked(peer)
 	oldSession := peer.session
+	oldPrevious := peer.previous
 	peer.endpoint = from
 	peer.session = session
+	peer.previous = oldSession
 	peer.state = PeerStateEstablished
 	peer.lastSeen = time.Now()
 	peer.mu.Unlock()
 
 	// Register in index map and clean up stale entry
 	u.mu.Lock()
-	if oldSession != nil {
-		if current, ok := u.byIndex[oldSession.LocalIndex()]; ok && current == peer {
-			delete(u.byIndex, oldSession.LocalIndex())
+	if oldPrevious != nil {
+		if current, ok := u.byIndex[oldPrevious.LocalIndex()]; ok && current == peer {
+			delete(u.byIndex, oldPrevious.LocalIndex())
 		}
+	}
+	if oldSession != nil {
+		u.byIndex[oldSession.LocalIndex()] = peer
 	}
 	u.byIndex[localIdx] = peer
 	u.mu.Unlock()
 
-	u.emitPeerEvent(remotePK, PeerStateEstablished)
+	if createMux {
+		u.emitPeerEvent(remotePK, PeerStateEstablished)
+	}
 }
 
 // handleHandshakeResp processes an incoming handshake response.
@@ -844,25 +929,45 @@ func (u *UDP) handleHandshakeResp(data []byte, from *net.UDPAddr) {
 	}
 
 	peer := pending.peer
-	smux := u.createServiceMux(peer)
 
 	peer.mu.Lock()
+	createMux := u.ensureServiceMuxLocked(peer)
+	oldSession := peer.session
+	oldPrevious := peer.previous
 	peer.endpoint = from // Roaming: update endpoint
 	peer.session = session
-	peer.serviceMux = smux
+	peer.previous = oldSession
 	peer.state = PeerStateEstablished
 	peer.lastSeen = time.Now()
 	peer.mu.Unlock()
 
 	u.mu.Lock()
+	if oldPrevious != nil {
+		if current, ok := u.byIndex[oldPrevious.LocalIndex()]; ok && current == peer {
+			delete(u.byIndex, oldPrevious.LocalIndex())
+		}
+	}
+	if oldSession != nil {
+		u.byIndex[oldSession.LocalIndex()] = peer
+	}
 	u.byIndex[pending.localIdx] = peer
 	u.mu.Unlock()
 
-	u.emitPeerEvent(peer.pk, PeerStateEstablished)
+	if createMux {
+		u.emitPeerEvent(peer.pk, PeerStateEstablished)
+	}
 
 	if pending.done != nil {
 		pending.done <- nil
 	}
+}
+
+func (u *UDP) ensureServiceMuxLocked(peer *peerState) bool {
+	if peer.serviceMux != nil {
+		return false
+	}
+	peer.serviceMux = u.createServiceMux(peer)
+	return true
 }
 
 // Connect initiates a handshake with a peer.
@@ -1261,7 +1366,10 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 		afterDecryptTransportDecryptHook()
 	}
 
-	smux, err := u.recordTransportActivity(peer, from, len(data))
+	peer.mu.RLock()
+	currentSession := peer.session
+	peer.mu.RUnlock()
+	smux, err := u.recordTransportActivity(peer, from, len(data), session == currentSession)
 	if err != nil {
 		pkt.err = err
 		return
@@ -1285,7 +1393,9 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 			pkt.err = ErrNoData
 			return
 		}
-		go u.RemovePeer(peer.pk)
+		if session == currentSession {
+			u.ClosePeerServiceMux(peer.pk)
+		}
 		pkt.err = ErrNoData
 		return
 	}
@@ -1297,16 +1407,19 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 	// Stream protocols are routed through KCP streams, not the raw passthrough path.
 	// Wire format: service_varint + kcp_data
 	if protocol == ProtocolKCP {
-		if smux == nil {
-			u.rpcRouteErrors.Add(1)
-			pkt.err = ErrNoSession
-			return
-		}
 		service, n, err := DecodeVarint(payload)
 		if err != nil {
 			u.rpcRouteErrors.Add(1)
 			pkt.err = err
 			return
+		}
+		if smux == nil {
+			smux, err = u.ensureServiceMux(peer)
+			if err != nil {
+				u.rpcRouteErrors.Add(1)
+				pkt.err = err
+				return
+			}
 		}
 		if err := smux.InputKCP(service, payload[n:]); err != nil {
 			u.rpcRouteErrors.Add(1)
@@ -1319,9 +1432,12 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 
 	// Non-KCP packets are delivered through the peer service mux.
 	if smux == nil {
-		u.droppedInboundPackets.Add(1)
-		pkt.err = ErrNoData
-		return
+		smux, err = u.ensureServiceMux(peer)
+		if err != nil {
+			u.droppedInboundPackets.Add(1)
+			pkt.err = err
+			return
+		}
 	}
 	if err := smux.InputPacket(protocol, pkt.payload); err != nil {
 		u.droppedInboundPackets.Add(1)
@@ -1338,24 +1454,48 @@ func (u *UDP) transportPeerSession(receiverIndex uint32) (*peerState, *noise.Ses
 
 	peer.mu.RLock()
 	session := peer.session
+	previous := peer.previous
 	peer.mu.RUnlock()
-	if session == nil {
+	switch {
+	case session != nil && session.LocalIndex() == receiverIndex:
+		return peer, session, nil
+	case previous != nil && previous.LocalIndex() == receiverIndex:
+		return peer, previous, nil
+	default:
 		return nil, nil, ErrNoSession
 	}
-	return peer, session, nil
 }
 
-func (u *UDP) recordTransportActivity(peer *peerState, from *net.UDPAddr, packetLen int) (*ServiceMux, error) {
+func (u *UDP) recordTransportActivity(peer *peerState, from *net.UDPAddr, packetLen int, updateEndpoint bool) (*ServiceMux, error) {
 	peer.mu.Lock()
 	defer peer.mu.Unlock()
 
-	if peer.removed {
-		return nil, ErrPeerNotFound
-	}
-	if peer.endpoint == nil || peer.endpoint.String() != from.String() {
+	if updateEndpoint && (peer.endpoint == nil || peer.endpoint.String() != from.String()) {
 		peer.endpoint = from // Roaming
 	}
 	peer.rxBytes += uint64(packetLen)
 	peer.lastSeen = time.Now()
 	return peer.serviceMux, nil
+}
+
+func (u *UDP) ensureServiceMux(peer *peerState) (*ServiceMux, error) {
+	peer.mu.Lock()
+	session := peer.session
+	if session == nil {
+		peer.mu.Unlock()
+		return nil, ErrNoSession
+	}
+	if peer.serviceMux != nil {
+		smux := peer.serviceMux
+		peer.mu.Unlock()
+		return smux, nil
+	}
+	smux := u.createServiceMux(peer)
+	peer.serviceMux = smux
+	peer.state = PeerStateEstablished
+	pk := peer.pk
+	peer.mu.Unlock()
+
+	u.emitPeerEvent(pk, PeerStateEstablished)
+	return smux, nil
 }

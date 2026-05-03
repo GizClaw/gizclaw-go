@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func TestIntegrationRPCDialAndPing(t *testing.T) {
@@ -59,6 +60,24 @@ func TestIntegrationRPCDialAndPing(t *testing.T) {
 	if clockDiff > time.Second || clockDiff < -time.Second {
 		t.Fatalf("ClockDiff=%v (too large for localhost)", clockDiff)
 	}
+}
+
+func TestIntegrationSameClientKeyReconnectsAfterClose(t *testing.T) {
+	ts := startTestServer(t)
+	keyPair, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(client) error: %v", err)
+	}
+
+	first := &gizclaw.Client{KeyPair: keyPair}
+	startTestClient(t, first, ts.server.PublicKey(), ts.addr)
+	if err := first.Close(); err != nil {
+		t.Fatalf("first Close error = %v", err)
+	}
+
+	second := &gizclaw.Client{KeyPair: keyPair}
+	startTestClient(t, second, ts.server.PublicKey(), ts.addr)
+	t.Cleanup(func() { _ = second.Close() })
 }
 
 func TestIntegrationRPCReversePingClient(t *testing.T) {

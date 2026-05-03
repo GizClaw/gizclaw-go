@@ -16,9 +16,9 @@ const (
 func mustServiceMux(t *testing.T, u *UDP, pk noise.PublicKey) *ServiceMux {
 	t.Helper()
 
-	smux, err := u.GetServiceMux(pk)
+	smux, err := u.PeerServiceMux(pk)
 	if err != nil {
-		t.Fatalf("GetServiceMux failed: %v", err)
+		t.Fatalf("PeerServiceMux failed: %v", err)
 	}
 	return smux
 }

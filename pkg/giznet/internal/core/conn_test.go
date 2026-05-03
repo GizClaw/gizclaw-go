@@ -56,6 +56,51 @@ func TestConnClose(t *testing.T) {
 	}
 }
 
+func TestSetSession(t *testing.T) {
+	localKey, _ := noise.GenerateKeyPair()
+	remoteKey, _ := noise.GenerateKeyPair()
+	transport := NewMockTransport("test")
+	defer transport.Close()
+
+	conn, err := newConn(localKey, transport, NewMockAddr("remote"), remoteKey.Public)
+	if err != nil {
+		t.Fatalf("newConn() error = %v", err)
+	}
+	defer conn.Close()
+
+	if conn.Session() != nil {
+		t.Error("Session() should be nil initially")
+	}
+
+	idx, _ := noise.GenerateIndex()
+	session, err := noise.NewSession(noise.SessionConfig{
+		LocalIndex:  idx,
+		RemoteIndex: idx + 1,
+		SendKey:     [32]byte{1, 2, 3},
+		RecvKey:     [32]byte{4, 5, 6},
+		RemotePK:    remoteKey.Public,
+	})
+	if err != nil {
+		t.Fatalf("NewSession() error = %v", err)
+	}
+
+	conn.SetSession(session)
+	if conn.Session() == nil {
+		t.Error("Session() should not be nil after SetSession")
+	}
+	if conn.State() != ConnStateEstablished {
+		t.Errorf("State() = %v, want %v", conn.State(), ConnStateEstablished)
+	}
+	if conn.LocalIndex() != idx {
+		t.Errorf("LocalIndex() = %d, want %d", conn.LocalIndex(), idx)
+	}
+
+	conn.SetSession(nil)
+	if conn.Session() != nil {
+		t.Error("Session() should be nil after SetSession(nil)")
+	}
+}
+
 func TestConnCloseStopsTickTimer(t *testing.T) {
 	key, _ := noise.GenerateKeyPair()
 	transport := NewMockTransport("test")

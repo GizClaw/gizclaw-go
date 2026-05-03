@@ -264,6 +264,9 @@ func (s *PeerService) servePublic(conn *giznet.Conn) error {
 	defer func() {
 		_ = server.Shutdown(context.Background())
 	}()
+	defer func() {
+		_ = conn.Close()
+	}()
 	return server.Serve()
 }
 
@@ -279,6 +282,9 @@ func (s *PeerService) serveAdmin(conn *giznet.Conn) error {
 	server := gizhttp.NewServer(conn, ServiceAdmin, fiberHTTPHandler(app))
 	defer func() {
 		_ = server.Shutdown(context.Background())
+	}()
+	defer func() {
+		_ = conn.Close()
 	}()
 	return server.Serve()
 }
@@ -300,6 +306,9 @@ func (s *PeerService) serveGear(conn *giznet.Conn) error {
 	server := gizhttp.NewServer(conn, ServiceGear, fiberHTTPHandler(app))
 	defer func() {
 		_ = server.Shutdown(context.Background())
+	}()
+	defer func() {
+		_ = conn.Close()
 	}()
 	return server.Serve()
 }

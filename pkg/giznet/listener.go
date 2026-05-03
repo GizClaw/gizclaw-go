@@ -15,15 +15,18 @@ type Listener struct {
 	closeOnce sync.Once
 	closedCh  chan struct{}
 	closed    atomic.Bool
-	known     map[PublicKey]struct{}
-	events    chan PeerEvent
+	// established tracks peers that already have an active Conn owned by this
+	// listener. A peer public key can have at most one active Conn here until
+	// that Conn is closed and releases the entry.
+	established map[PublicKey]*Conn
+	events      chan PeerEvent
 }
 
 func Listen(key *KeyPair, opts ...Option) (*Listener, error) {
 	l := &Listener{
-		closedCh: make(chan struct{}),
-		known:    make(map[PublicKey]struct{}),
-		events:   make(chan PeerEvent, 64),
+		closedCh:    make(chan struct{}),
+		established: make(map[PublicKey]*Conn),
+		events:      make(chan PeerEvent, 64),
 	}
 
 	// Append our handler last so it always wins if the caller accidentally
@@ -67,41 +70,62 @@ func (l *Listener) Accept() (*Conn, error) {
 				continue
 			}
 			l.mu.Lock()
-			if _, dup := l.known[ev.PublicKey]; dup {
+			if conn, ok := l.established[ev.PublicKey]; ok {
 				l.mu.Unlock()
+				return conn, nil
+			}
+			l.mu.Unlock()
+
+			peer, err := l.udp.GetPeer(ev.PublicKey)
+			if err != nil {
 				continue
 			}
-			l.known[ev.PublicKey] = struct{}{}
+			smux, err := peer.ServiceMux()
+			if err != nil {
+				continue
+			}
+			l.mu.Lock()
+			if existing, ok := l.established[ev.PublicKey]; ok {
+				l.mu.Unlock()
+				return existing, nil
+			}
+			conn := &Conn{pk: ev.PublicKey, peer: peer, smux: smux, listener: l}
+			l.established[ev.PublicKey] = conn
 			l.mu.Unlock()
-			return &Conn{udp: l.udp, pk: ev.PublicKey, listener: l}, nil
+			return conn, nil
 		}
 	}
 }
 
-func (l *Listener) Peer(pk PublicKey) (*Conn, error) {
+// Peer returns the active Conn owned by this listener for pk.
+func (l *Listener) Peer(pk PublicKey) (*Conn, bool) {
 	if l == nil {
-		return nil, ErrNilListener
+		return nil, false
 	}
-
-	info := l.udp.PeerInfo(pk)
-	if info == nil {
-		return nil, ErrPeerNotFound
-	}
-	if info.State != core.PeerStateEstablished {
-		return nil, ErrNoSession
-	}
-
-	return &Conn{udp: l.udp, pk: pk, listener: l}, nil
-}
-
-// release removes a peer from the known set so it can be re-accepted.
-func (l *Listener) release(pk PublicKey) {
-	if l == nil {
-		return
+	if l.closed.Load() {
+		return nil, false
 	}
 	l.mu.Lock()
-	delete(l.known, pk)
-	l.mu.Unlock()
+	defer l.mu.Unlock()
+	conn, ok := l.established[pk]
+	return conn, ok
+}
+
+func (l *Listener) releaseConn(conn *Conn, fn func() error) error {
+	if l == nil || conn == nil {
+		return nil
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if fn != nil {
+		if err := fn(); err != nil {
+			return err
+		}
+	}
+	if l.established[conn.pk] == conn {
+		delete(l.established, conn.pk)
+	}
+	return nil
 }
 
 func (l *Listener) SetPeerEndpoint(pk PublicKey, endpoint *net.UDPAddr) {
@@ -113,18 +137,50 @@ func (l *Listener) Connect(pk PublicKey) error {
 }
 
 // Dial sets the peer endpoint, performs a synchronous Noise IK handshake,
-// and returns an established Conn.
+// and returns this listener's active Conn for the peer.
 func (l *Listener) Dial(pk PublicKey, addr *net.UDPAddr) (*Conn, error) {
+	if l == nil {
+		return nil, ErrNilListener
+	}
+	if l.closed.Load() {
+		return nil, ErrClosed
+	}
 	l.mu.Lock()
-	l.known[pk] = struct{}{}
+	if conn, ok := l.established[pk]; ok {
+		l.mu.Unlock()
+		return conn, nil
+	}
 	l.mu.Unlock()
 
 	l.SetPeerEndpoint(pk, addr)
 	if err := l.Connect(pk); err != nil {
-		l.release(pk)
 		return nil, err
 	}
-	return &Conn{udp: l.udp, pk: pk, listener: l}, nil
+
+	l.mu.Lock()
+	if conn, ok := l.established[pk]; ok {
+		l.mu.Unlock()
+		return conn, nil
+	}
+	l.mu.Unlock()
+
+	peer, err := l.udp.GetPeer(pk)
+	if err != nil {
+		return nil, err
+	}
+	smux, err := peer.ServiceMux()
+	if err != nil {
+		return nil, err
+	}
+	conn := &Conn{pk: pk, peer: peer, smux: smux, listener: l}
+	l.mu.Lock()
+	if existing, ok := l.established[pk]; ok {
+		l.mu.Unlock()
+		return existing, nil
+	}
+	l.established[pk] = conn
+	l.mu.Unlock()
+	return conn, nil
 }
 
 func (l *Listener) UDP() *UDP {

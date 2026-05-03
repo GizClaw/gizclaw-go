@@ -8,8 +8,9 @@ import (
 )
 
 type Conn struct {
-	udp      *core.UDP
 	pk       PublicKey
+	peer     *core.Peer
+	smux     *core.ServiceMux
 	listener *Listener
 	closed   atomic.Bool
 }
@@ -59,18 +60,21 @@ func (c *Conn) Write(protocol byte, payload []byte) (int, error) {
 	return smux.Write(protocol, payload)
 }
 
-// Close marks this handle as closed and releases the peer from the listener's
-// known set so it can be re-accepted via Listener.Accept. It does NOT tear
-// down the underlying UDP peer or KCP session.
+// Close marks this handle as closed, releases the peer from the listener's
+// established set, and tears down the local service mux. The underlying UDP peer
+// and Noise session are retained so future service traffic can establish a new
+// Conn.
 func (c *Conn) Close() error {
-	if err := c.validate(); err != nil {
-		return err
+	if c == nil || c.peer == nil || c.listener == nil {
+		return ErrNilConn
 	}
-	c.closed.Store(true)
-	if c.listener != nil {
-		c.listener.release(c.pk)
-	}
-	return nil
+	return c.listener.releaseConn(c, func() error {
+		if !c.closed.CompareAndSwap(false, true) {
+			return ErrConnClosed
+		}
+		c.peer.CloseServiceMux(c.smux)
+		return nil
+	})
 }
 
 func (c *Conn) PublicKey() PublicKey {
@@ -81,7 +85,7 @@ func (c *Conn) PublicKey() PublicKey {
 }
 
 func (c *Conn) validate() error {
-	if c == nil || c.udp == nil {
+	if c == nil || c.peer == nil {
 		return ErrNilConn
 	}
 	if c.closed.Load() {
@@ -94,5 +98,11 @@ func (c *Conn) serviceMux() (*core.ServiceMux, error) {
 	if err := c.validate(); err != nil {
 		return nil, err
 	}
-	return c.udp.GetServiceMux(c.pk)
+	if c.peer.IsClosed() {
+		return nil, ErrUDPClosed
+	}
+	if c.smux == nil {
+		return nil, ErrNoSession
+	}
+	return c.smux, nil
 }

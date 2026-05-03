@@ -1,106 +1,102 @@
 package core
 
-import (
-	"bytes"
+import "github.com/GizClaw/gizclaw-go/pkg/giznet/internal/noise"
 
-	"github.com/GizClaw/gizclaw-go/pkg/giznet/internal/noise"
-)
+// Peer represents a UDP peer handle plus optional snapshot/connection fields
+// used by peer iterators.
+type Peer struct {
+	udp   *UDP
+	state *peerState
 
-// isKCPClient determines if we are the KCP client for a peer.
-// Uses deterministic rule: smaller public key is client (uses odd stream IDs).
-// This ensures consistent stream ID allocation regardless of who initiated the connection.
-func (u *UDP) isKCPClient(remotePK noise.PublicKey) bool {
-	return bytes.Compare(u.localKey.Public[:], remotePK[:]) < 0
+	Info *PeerInfo
+	Conn *Conn
 }
 
-// createServiceMux creates a new ServiceMux for a peer.
-func (u *UDP) createServiceMux(peer *peerState) *ServiceMux {
-	isClient := u.isKCPClient(peer.pk)
-	cfg := u.serviceMuxConfig
-	userOutputError := cfg.OnOutputError
-
-	cfg.IsClient = isClient
-	cfg.Output = func(_ noise.PublicKey, service uint64, protocol byte, data []byte) error {
-		if protocol == ProtocolKCP {
-			return u.sendKCP(peer, service, data)
-		}
-		return u.sendPayload(peer, protocol, data)
+func (p *Peer) PublicKey() noise.PublicKey {
+	if p == nil || p.state == nil {
+		return noise.PublicKey{}
 	}
-	cfg.OnOutputError = func(_ noise.PublicKey, service uint64, err error) {
-		u.kcpOutputErrors.Add(1)
-		if userOutputError != nil {
-			userOutputError(peer.pk, service, err)
-		}
-	}
-
-	return NewServiceMux(peer.pk, cfg)
+	return p.state.pk
 }
 
-func (u *UDP) sendPayload(peer *peerState, protocol byte, payload []byte) error {
-	peer.mu.RLock()
-	session := peer.session
-	endpoint := peer.endpoint
-	peer.mu.RUnlock()
-
-	if endpoint == nil {
-		return ErrNoEndpoint
+// State returns the current peer state snapshot.
+func (p *Peer) State() PeerState {
+	if p == nil || p.state == nil {
+		return PeerStateFailed
 	}
-	if session == nil {
-		return ErrNoSession
-	}
-
-	plaintext := EncodePayload(protocol, payload)
-	ciphertext, counter, err := session.Encrypt(plaintext)
-	if err != nil {
-		return err
-	}
-
-	msg := noise.BuildTransportMessage(session.RemoteIndex(), counter, ciphertext)
-	n, err := u.socket.WriteToUDP(msg, endpoint)
-	if err != nil {
-		return err
-	}
-
-	u.totalTx.Add(uint64(n))
-	peer.mu.Lock()
-	peer.txBytes += uint64(n)
-	peer.mu.Unlock()
-	return nil
+	p.state.mu.RLock()
+	defer p.state.mu.RUnlock()
+	return p.state.state
 }
 
-// sendKCP sends KCP/service-mux traffic to a peer.
-func (u *UDP) sendKCP(peer *peerState, service uint64, data []byte) error {
-	payload := AppendVarint(nil, service)
-	payload = append(payload, data...)
-	return u.sendPayload(peer, ProtocolKCP, payload)
+// IsClosed reports whether the owning UDP transport is closing or closed.
+func (p *Peer) IsClosed() bool {
+	return p == nil || p.udp == nil || p.udp.closed.Load() || p.udp.closing.Load()
 }
 
-// GetServiceMux returns the ServiceMux for a peer.
-func (u *UDP) GetServiceMux(pk noise.PublicKey) (*ServiceMux, error) {
-	if u.closed.Load() || u.closing.Load() {
+// ServiceMux returns this peer's active service mux, creating one if the peer has
+// an established Noise session but no active service generation yet.
+func (p *Peer) ServiceMux() (*ServiceMux, error) {
+	if p == nil || p.udp == nil || p.state == nil {
+		return nil, ErrPeerNotFound
+	}
+	if p.IsClosed() {
+		return nil, ErrClosed
+	}
+	return p.udp.ensureServiceMux(p.state)
+}
+
+// OpenServiceMux starts a new service mux generation for this peer and closes
+// the previous generation, while preserving the peer and Noise session.
+func (p *Peer) OpenServiceMux() (*ServiceMux, error) {
+	if p == nil || p.udp == nil || p.state == nil {
+		return nil, ErrPeerNotFound
+	}
+	if p.IsClosed() {
 		return nil, ErrClosed
 	}
 
-	u.mu.RLock()
-	peer, exists := u.peers[pk]
-	u.mu.RUnlock()
-
-	if !exists {
-		return nil, ErrPeerNotFound
-	}
-
-	peer.mu.RLock()
-	m := peer.serviceMux
-	peer.mu.RUnlock()
-
-	if m == nil {
+	p.state.mu.Lock()
+	if p.state.session == nil {
+		p.state.mu.Unlock()
 		return nil, ErrNoSession
 	}
+	oldMux := p.state.serviceMux
+	smux := p.udp.createServiceMux(p.state)
+	p.state.serviceMux = smux
+	p.state.state = PeerStateEstablished
+	p.state.mu.Unlock()
 
-	return m, nil
+	if oldMux != nil {
+		_ = oldMux.Close()
+	}
+	p.udp.emitPeerEvent(p.PublicKey(), PeerStateEstablished)
+	return smux, nil
 }
 
-// closedChan returns a channel that's closed when UDP is closed.
-func (u *UDP) closedChan() <-chan struct{} {
-	return u.closeChan
+// CloseServiceMux closes this peer's active service mux. When ifMatch is
+// non-nil, it is used only as a generation token: the active mux is closed only
+// if it matches ifMatch.
+func (p *Peer) CloseServiceMux(ifMatch *ServiceMux) {
+	if p == nil || p.udp == nil || p.state == nil {
+		return
+	}
+
+	p.state.mu.Lock()
+	smux := p.state.serviceMux
+	if ifMatch != nil && smux != ifMatch {
+		p.state.mu.Unlock()
+		return
+	}
+	wasOffline := p.state.state == PeerStateOffline
+	p.state.state = PeerStateOffline
+	p.state.serviceMux = nil
+	p.state.mu.Unlock()
+
+	if smux != nil {
+		_ = smux.Close()
+	}
+	if !wasOffline {
+		p.udp.emitPeerEvent(p.PublicKey(), PeerStateOffline)
+	}
 }
