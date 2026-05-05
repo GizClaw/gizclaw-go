@@ -23,6 +23,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
 const (
@@ -65,6 +66,16 @@ func waitUntil(timeout time.Duration, check func() error) error {
 	return fmt.Errorf("condition not satisfied before timeout")
 }
 
+func mustBadgerInMemory(t testing.TB, opts *kv.Options) kv.Store {
+	t.Helper()
+	store, err := kv.NewBadgerInMemory(opts)
+	if err != nil {
+		t.Fatalf("NewBadgerInMemory: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	return store
+}
+
 func startTestServer(t *testing.T) *testServer {
 	t.Helper()
 
@@ -81,17 +92,21 @@ func startTestServer(t *testing.T) *testServer {
 
 	srv := &gizclaw.Server{
 		KeyPair:    keyPair,
+		ListenAddr: allocateUDPAddr(t),
 		GearStore:  mustBadgerInMemory(t, nil),
 		DepotStore: depotstore.Dir(firmwareRoot),
 	}
 
 	ts := &testServer{
 		server: srv,
-		addr:   allocateUDPAddr(t),
+		addr:   srv.ListenAddr,
 		errCh:  make(chan error, 1),
 	}
+	if err := srv.Listen(); err != nil {
+		t.Fatalf("test server listen: %v", err)
+	}
 	go func() {
-		ts.errCh <- srv.ListenAndServe(nil, giznet.WithBindAddr(ts.addr))
+		ts.errCh <- srv.Serve()
 	}()
 
 	if err := waitForServerReady(ts.addr, srv.PublicKey(), ts.errCh); err != nil {

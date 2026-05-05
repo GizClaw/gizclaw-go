@@ -5,12 +5,25 @@ import (
 	"testing"
 )
 
-func TestListenerCloseLeavesPeerEventsOpen(t *testing.T) {
+type allowAllSecurityPolicy struct{}
+
+func (allowAllSecurityPolicy) AllowPeer(PublicKey) bool {
+	return true
+}
+
+func (allowAllSecurityPolicy) AllowService(_ PublicKey, service uint64) bool {
+	return service == 0
+}
+
+func TestListenerCloseLeavesEventQueueOpen(t *testing.T) {
 	key, err := GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair failed: %v", err)
 	}
-	listener, err := Listen(key, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	listener, err := (&ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: allowAllSecurityPolicy{},
+	}).Listen(key)
 	if err != nil {
 		t.Fatalf("Listen failed: %v", err)
 	}
@@ -32,13 +45,44 @@ func TestListenerCloseLeavesPeerEventsOpen(t *testing.T) {
 	select {
 	case _, ok := <-listener.events:
 		if !ok {
-			t.Fatal("events channel should remain open after Close")
+			t.Fatal("event queue should remain open after Close")
 		}
 	default:
 	}
 
 	if delivered := listener.onPeerEvent(PeerEvent{}); delivered {
 		t.Fatal("onPeerEvent should reject events after Close")
+	}
+}
+
+func TestListenConfigPeerEventHandleFuncReceivesEvents(t *testing.T) {
+	key, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair failed: %v", err)
+	}
+	events := make(chan PeerEvent, 2)
+	cfg := ListenConfig{
+		Addr: "127.0.0.1:0",
+		PeerEventHandler: PeerEventHandleFunc(func(ev PeerEvent) {
+			events <- ev
+		}),
+	}
+	listener, err := cfg.Listen(key)
+	if err != nil {
+		t.Fatalf("Listen failed: %v", err)
+	}
+	defer listener.Close()
+
+	offline := PeerEvent{PublicKey: key.Public, State: PeerStateOffline}
+	if delivered := listener.onPeerEvent(offline); !delivered {
+		t.Fatal("onPeerEvent should deliver offline event")
+	}
+
+	if got := <-events; got != offline {
+		t.Fatalf("offline event=%+v, want %+v", got, offline)
+	}
+	if err := listener.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
 	}
 }
 

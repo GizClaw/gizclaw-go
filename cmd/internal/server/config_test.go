@@ -1,18 +1,13 @@
 package server
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
@@ -373,28 +368,6 @@ func TestNewRejectsMissingNamedStores(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "server: firmware store:") {
 		t.Fatalf("New error = %v", err)
-	}
-}
-
-func TestSecurityPolicyAllowsAdminServicesForActiveAdmin(t *testing.T) {
-	keyPair, err := giznet.GenerateKeyPair()
-	if err != nil {
-		t.Fatalf("GenerateKeyPair error = %v", err)
-	}
-	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
-	if _, err := service.SaveGear(context.Background(), apitypes.Gear{
-		PublicKey:     keyPair.Public.String(),
-		Role:          apitypes.GearRoleAdmin,
-		Status:        apitypes.GearStatusActive,
-		Device:        apitypes.DeviceInfo{},
-		Configuration: apitypes.Configuration{},
-	}); err != nil {
-		t.Fatalf("SaveGear error = %v", err)
-	}
-
-	policy := gizclaw.GearsSecurityPolicy{Gears: service}
-	if !policy.AllowPeerService(keyPair.Public, gizclaw.ServiceAdmin) {
-		t.Fatal("admin policy should allow admin service")
 	}
 }
 

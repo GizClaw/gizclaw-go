@@ -40,7 +40,7 @@ type Client struct {
 }
 
 // DialAndServe establishes the peer connection and serves peer public handlers.
-func (c *Client) DialAndServe(serverPK giznet.PublicKey, serverAddr string, opts ...giznet.Option) error {
+func (c *Client) DialAndServe(serverPK giznet.PublicKey, serverAddr string) error {
 	if c == nil {
 		return fmt.Errorf("gizclaw: nil client")
 	}
@@ -57,16 +57,10 @@ func (c *Client) DialAndServe(serverPK giznet.PublicKey, serverAddr string, opts
 		return fmt.Errorf("gizclaw: client already started")
 	}
 
-	all := append([]giznet.Option{
-		giznet.WithBindAddr("127.0.0.1:0"),
-		giznet.WithAllowUnknown(true),
-		giznet.WithServiceMuxConfig(giznet.ServiceMuxConfig{
-			OnNewService: func(_ giznet.PublicKey, service uint64) bool {
-				return service == ServiceServerPublic || service == ServicePeerPublic || service == ServiceRPC
-			},
-		}),
-	}, opts...)
-	l, err := giznet.Listen(c.KeyPair, all...)
+	l, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: clientSecurityPolicy{},
+	}).Listen(c.KeyPair)
 	if err != nil {
 		return fmt.Errorf("gizclaw: listen: %w", err)
 	}
@@ -117,6 +111,16 @@ func (c *Client) DialAndServe(serverPK giznet.PublicKey, serverAddr string, opts
 		return err
 	}
 	return nil
+}
+
+type clientSecurityPolicy struct{}
+
+func (clientSecurityPolicy) AllowPeer(giznet.PublicKey) bool {
+	return true
+}
+
+func (clientSecurityPolicy) AllowService(_ giznet.PublicKey, service uint64) bool {
+	return service == ServiceServerPublic || service == ServicePeerPublic || service == ServiceRPC
 }
 
 // Close releases all resources including the underlying UDP socket.

@@ -110,7 +110,7 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 	manager := NewManager(gearServer)
 	firmwareServer := &firmware.Server{Store: depotstore.Dir(t.TempDir()), MetadataStore: kv.NewMemory(nil)}
 	service := &PeerService{
-		peerManager: manager,
+		manager: manager,
 		admin: &adminService{
 			FirmwareAdminService: firmwareServer,
 			GearsAdminService:    gearServer,
@@ -359,11 +359,10 @@ func newProxyTestPair(t *testing.T) (*Client, *giznet.Conn, func()) {
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
 
-	serverListener, err := giznet.Listen(serverKey,
-		giznet.WithBindAddr("127.0.0.1:0"),
-		giznet.WithAllowUnknown(true),
-		giznet.WithServiceMuxConfig(giznet.ServiceMuxConfig{
-			OnNewService: func(_ giznet.PublicKey, service uint64) bool {
+	serverListener, err := (&giznet.ListenConfig{
+		Addr: "127.0.0.1:0",
+		SecurityPolicy: testGiznetSecurityPolicy{
+			allowService: func(_ giznet.PublicKey, service uint64) bool {
 				switch service {
 				case ServiceAdmin, ServiceGear, ServiceServerPublic:
 					return true
@@ -371,14 +370,17 @@ func newProxyTestPair(t *testing.T) (*Client, *giznet.Conn, func()) {
 					return false
 				}
 			},
-		}),
-	)
+		},
+	}).Listen(serverKey)
 	if err != nil {
 		t.Fatalf("giznet.Listen(server) error = %v", err)
 	}
 	go drainUDP(serverListener.UDP())
 
-	clientListener, err := giznet.Listen(clientKey, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
+	clientListener, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: testGiznetSecurityPolicy{},
+	}).Listen(clientKey)
 	if err != nil {
 		_ = serverListener.Close()
 		t.Fatalf("giznet.Listen(client) error = %v", err)

@@ -4,6 +4,7 @@ import "github.com/GizClaw/gizclaw-go/pkg/giznet/internal/core"
 
 type PeerState = core.PeerState
 type PeerEvent = core.PeerEvent
+type PeerInfo = core.PeerInfo
 
 const (
 	PeerStateNew         = core.PeerStateNew

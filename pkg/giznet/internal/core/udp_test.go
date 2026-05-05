@@ -3,7 +3,10 @@ package core
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
+	"io"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -415,13 +418,17 @@ func TestHandshakeAndTransport(t *testing.T) {
 	key1, _ := noise.GenerateKeyPair()
 	key2, _ := noise.GenerateKeyPair()
 
-	udp1, err := NewUDP(key1, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	udp1, err := NewUDP(key1, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("NewUDP 1 failed: %v", err)
 	}
 	defer udp1.Close()
 
-	udp2, err := NewUDP(key2, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	udp2, err := NewUDP(key2, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("NewUDP 2 failed: %v", err)
 	}
@@ -504,13 +511,17 @@ func TestRoaming(t *testing.T) {
 	key1, _ := noise.GenerateKeyPair()
 	key2, _ := noise.GenerateKeyPair()
 
-	udp1, err := NewUDP(key1, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	udp1, err := NewUDP(key1, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("NewUDP 1 failed: %v", err)
 	}
 	defer udp1.Close()
 
-	udp2, err := NewUDP(key2, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	udp2, err := NewUDP(key2, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("NewUDP 2 failed: %v", err)
 	}
@@ -1256,6 +1267,314 @@ func TestPeerServiceMuxAndSendDirectWrapper(t *testing.T) {
 	if string(payload) != "wrapper-path" {
 		t.Fatalf("server got payload=%q, want %q", string(payload), "wrapper-path")
 	}
+}
+
+func TestOptions(t *testing.T) {
+	key, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair failed: %v", err)
+	}
+
+	cfg := FullSocketConfig()
+	cfg.RecvBufSize = 2 * 1024 * 1024
+	cfg.SendBufSize = 2 * 1024 * 1024
+
+	u, err := NewUDP(
+		key,
+		WithBindAddr("127.0.0.1:0"),
+		WithAllowFunc(func(noise.PublicKey) bool {
+			return true
+		}),
+		WithRawChanSize(17),
+		WithSocketConfig(cfg),
+		WithServiceMuxConfig(ServiceMuxConfig{
+			OnNewService: func(peer noise.PublicKey, service uint64) bool {
+				return service == 1
+			},
+		}),
+	)
+	if err != nil {
+		t.Fatalf("NewUDP failed: %v", err)
+	}
+
+	if cap(u.decryptChan) != 17 {
+		t.Fatalf("decryptChan cap=%d, want 17", cap(u.decryptChan))
+	}
+	if u.socketConfig != cfg {
+		t.Fatalf("socketConfig mismatch: got=%+v want=%+v", u.socketConfig, cfg)
+	}
+	if u.serviceMuxConfig.OnNewService == nil {
+		t.Fatal("serviceMuxConfig should be injected by WithServiceMuxConfig")
+	}
+
+	if err := u.Close(); err != nil {
+		t.Fatalf("Close failed: %v", err)
+	}
+}
+
+func TestWithServiceMuxConfigOption(t *testing.T) {
+	key, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair failed: %v", err)
+	}
+
+	wantCfg := ServiceMuxConfig{
+		OnNewService: func(peer noise.PublicKey, service uint64) bool {
+			return service == 9
+		},
+	}
+
+	u, err := NewUDP(
+		key,
+		WithBindAddr("127.0.0.1:0"),
+		WithServiceMuxConfig(wantCfg),
+	)
+	if err != nil {
+		t.Fatalf("NewUDP failed: %v", err)
+	}
+	defer u.Close()
+
+	if u.serviceMuxConfig.OnNewService == nil {
+		t.Fatal("serviceMuxConfig.OnNewService is nil")
+	}
+	if u.serviceMuxConfig.OnNewService(noise.PublicKey{}, 9) != wantCfg.OnNewService(noise.PublicKey{}, 9) {
+		t.Fatal("serviceMuxConfig.OnNewService not applied")
+	}
+}
+
+// TestPacketLeakWhenOutputChanFull verifies that packets sent to decryptChan
+// but dropped from outputChan (because it's full) are still properly released.
+func TestPacketLeakWhenOutputChanFull(t *testing.T) {
+	serverKey, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair: %v", err)
+	}
+	clientKey, err := noise.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair: %v", err)
+	}
+
+	server, err := NewUDP(serverKey,
+		WithBindAddr("127.0.0.1:0"),
+		WithAllowFunc(func(noise.PublicKey) bool {
+			return true
+		}),
+		WithDecryptedChanSize(1),
+		WithDecryptWorkers(1),
+	)
+	if err != nil {
+		t.Fatalf("NewUDP server: %v", err)
+	}
+	defer server.Close()
+
+	client, err := NewUDP(clientKey,
+		WithBindAddr("127.0.0.1:0"),
+		WithAllowFunc(func(noise.PublicKey) bool {
+			return true
+		}),
+	)
+	if err != nil {
+		t.Fatalf("NewUDP client: %v", err)
+	}
+	defer client.Close()
+
+	serverAddr := server.HostInfo().Addr
+	clientAddr := client.HostInfo().Addr
+	server.SetPeerEndpoint(clientKey.Public, clientAddr)
+	client.SetPeerEndpoint(serverKey.Public, serverAddr)
+
+	go func() {
+		buf := make([]byte, 65535)
+		for {
+			if _, _, err := client.ReadFrom(buf); err != nil {
+				return
+			}
+		}
+	}()
+
+	// Read from server only long enough for the handshake to complete.
+	hsComplete := make(chan struct{})
+	go func() {
+		buf := make([]byte, 65535)
+		for {
+			select {
+			case <-hsComplete:
+				return
+			default:
+			}
+			if _, _, err := server.ReadFrom(buf); err != nil {
+				return
+			}
+		}
+	}()
+
+	if err := client.Connect(serverKey.Public); err != nil {
+		t.Fatalf("Handshake failed: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	close(hsComplete)
+	time.Sleep(50 * time.Millisecond)
+
+	before := outstandingPackets.Load()
+
+	const numPackets = 50
+	for i := 0; i < numPackets; i++ {
+		if err := client.WriteTo(serverKey.Public, []byte("leak-test")); err != nil {
+			t.Logf("WriteTo %d: %v", i, err)
+		}
+	}
+
+	time.Sleep(1 * time.Second)
+
+	after := outstandingPackets.Load()
+	leaked := after - before
+
+	const outputChanSize = 1
+	if leaked > outputChanSize {
+		t.Errorf("PACKET POOL LEAK: %d packets acquired but never released "+
+			"(before=%d, after=%d, allowed=%d in outputChan). "+
+			"Packets processed by decryptWorker but not in outputChan should be released.",
+			leaked, before, after, outputChanSize)
+	}
+}
+
+// TestUDPStreamThroughput measures async throughput through a KCP stream over
+// the full UDP transport layer (Noise encryption + real UDP sockets).
+// Run with: -test.run=TestUDPStreamThroughput (skipped in short mode)
+func TestUDPStreamThroughput(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping throughput test in short mode")
+	}
+	const totalSize = 32 * 1024 * 1024 // 32 MB
+	const chunkSize = 8 * 1024         // 8 KB
+
+	clientKey, _ := noise.GenerateKeyPair()
+	serverKey, _ := noise.GenerateKeyPair()
+
+	client, err := NewUDP(clientKey, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+
+	server, err := NewUDP(serverKey, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer server.Close()
+
+	client.SetPeerEndpoint(serverKey.Public, server.HostInfo().Addr)
+	server.SetPeerEndpoint(clientKey.Public, client.HostInfo().Addr)
+
+	// Drain non-KCP packets so UDP can process handshake/KCP control traffic.
+	go func() {
+		buf := make([]byte, 65535)
+		for {
+			if _, _, err := client.ReadFrom(buf); err != nil {
+				return
+			}
+		}
+	}()
+	go func() {
+		buf := make([]byte, 65535)
+		for {
+			if _, _, err := server.ReadFrom(buf); err != nil {
+				return
+			}
+		}
+	}()
+
+	if err := client.Connect(serverKey.Public); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	chunk := make([]byte, chunkSize)
+	for i := range chunk {
+		chunk[i] = byte(i & 0xFF)
+	}
+
+	serverStreamCh := make(chan io.ReadWriteCloser, 1)
+	serverErrCh := make(chan error, 1)
+	go func() {
+		s, err := mustServiceMux(t, server, clientKey.Public).AcceptStream(0)
+		if err != nil {
+			serverErrCh <- err
+			return
+		}
+		serverStreamCh <- s
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	clientStream, err := mustServiceMux(t, client, serverKey.Public).OpenStream(0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	written := 0
+	n, err := clientStream.Write(chunk)
+	if err != nil {
+		t.Fatalf("initial write error: %v", err)
+	}
+	written += n
+
+	var serverStream io.ReadWriteCloser
+	select {
+	case serverStream = <-serverStreamCh:
+	case err := <-serverErrCh:
+		t.Fatal(err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for AcceptStream")
+	}
+
+	var wg sync.WaitGroup
+	var readBytes int
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		buf := make([]byte, 64*1024)
+		for readBytes < totalSize {
+			n, err := serverStream.Read(buf)
+			if err != nil {
+				t.Errorf("read error: %v", err)
+				return
+			}
+			readBytes += n
+		}
+	}()
+
+	start := time.Now()
+	for written < totalSize {
+		n, err := clientStream.Write(chunk)
+		if err != nil {
+			t.Fatalf("write error at %d: %v", written, err)
+		}
+		written += n
+	}
+
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(60 * time.Second):
+		t.Fatalf("timeout: wrote %d, read %d", written, readBytes)
+	}
+
+	elapsed := time.Since(start)
+	mbps := float64(readBytes) / elapsed.Seconds() / (1024 * 1024)
+	t.Logf("Layer 2 (UDP + Noise): %d bytes in %s = %.1f MB/s", readBytes, elapsed.Round(time.Millisecond), mbps)
+	fmt.Printf("THROUGHPUT_UDP=%.1f\n", mbps)
 }
 
 func readPeerWithTimeout(t *testing.T, u *UDP, pk noise.PublicKey, timeout time.Duration) (byte, []byte) {

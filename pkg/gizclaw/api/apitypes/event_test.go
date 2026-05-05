@@ -1,4 +1,4 @@
-package gizclaw
+package apitypes
 
 import (
 	"encoding/json"

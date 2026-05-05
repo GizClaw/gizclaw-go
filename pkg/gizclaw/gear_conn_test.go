@@ -12,16 +12,16 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
-func TestGearPeerHelpersAndDispatch(t *testing.T) {
+func TestGearConnHelpersAndDispatch(t *testing.T) {
 	t.Run("audio mixer lifecycle", func(t *testing.T) {
-		var nilPeer *GearPeer
-		if _, err := nilPeer.audioMixer(); err != ErrNilGearPeer {
-			t.Fatalf("audioMixer(nil) err = %v, want %v", err, ErrNilGearPeer)
+		var nilPeer *GearConn
+		if _, err := nilPeer.audioMixer(); err != ErrNilGearConn {
+			t.Fatalf("audioMixer(nil) err = %v, want %v", err, ErrNilGearConn)
 		}
 
-		peer := &GearPeer{}
-		if _, err := peer.audioMixer(); err != ErrNilGearPeerMixer {
-			t.Fatalf("audioMixer() err = %v, want %v", err, ErrNilGearPeerMixer)
+		peer := &GearConn{}
+		if _, err := peer.audioMixer(); err != ErrNilGearConnMixer {
+			t.Fatalf("audioMixer() err = %v, want %v", err, ErrNilGearConnMixer)
 		}
 
 		peer.init()
@@ -45,7 +45,7 @@ func TestGearPeerHelpersAndDispatch(t *testing.T) {
 	})
 
 	t.Run("dispatch missing params", func(t *testing.T) {
-		resp, err := (&GearPeer{}).dispatchRPC(context.Background(), &rpc.RPCRequest{
+		resp, err := (&GearConn{}).dispatchRPC(context.Background(), &rpc.RPCRequest{
 			Id:     "missing",
 			Method: rpc.MethodPing,
 		})
@@ -58,7 +58,7 @@ func TestGearPeerHelpersAndDispatch(t *testing.T) {
 	})
 
 	t.Run("dispatch ping and unknown method", func(t *testing.T) {
-		peer := &GearPeer{}
+		peer := &GearConn{}
 		resp, err := peer.dispatchRPC(context.Background(), &rpc.RPCRequest{
 			Id:     "ping",
 			Method: rpc.MethodPing,
@@ -84,7 +84,7 @@ func TestGearPeerHelpersAndDispatch(t *testing.T) {
 	})
 }
 
-func TestGearPeerCloseClosesConn(t *testing.T) {
+func TestGearConnCloseClosesConn(t *testing.T) {
 	serverKey, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(server) error = %v", err)
@@ -93,13 +93,19 @@ func TestGearPeerCloseClosesConn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
-	serverListener, err := giznet.Listen(serverKey, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
+	serverListener, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: testGiznetSecurityPolicy{},
+	}).Listen(serverKey)
 	if err != nil {
 		t.Fatalf("Listen(server) error = %v", err)
 	}
 	defer serverListener.Close()
 	go drainUDP(serverListener.UDP())
-	clientListener, err := giznet.Listen(clientKey, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
+	clientListener, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: testGiznetSecurityPolicy{},
+	}).Listen(clientKey)
 	if err != nil {
 		t.Fatalf("Listen(client) error = %v", err)
 	}
@@ -132,25 +138,25 @@ func TestGearPeerCloseClosesConn(t *testing.T) {
 		t.Fatal("Accept timeout")
 	}
 
-	peer := &GearPeer{Conn: serverConn}
+	peer := &GearConn{Conn: serverConn}
 	if err := peer.close(); err != nil {
-		t.Fatalf("GearPeer.close() error = %v", err)
+		t.Fatalf("GearConn.close() error = %v", err)
 	}
 	if err := serverConn.Close(); !errors.Is(err, giznet.ErrConnClosed) {
-		t.Fatalf("server Conn.Close() after GearPeer.close err=%v, want %v", err, giznet.ErrConnClosed)
+		t.Fatalf("server Conn.Close() after GearConn.close err=%v, want %v", err, giznet.ErrConnClosed)
 	}
 }
 
-func TestGearPeerPCMChunkToInt16(t *testing.T) {
+func TestGearConnPCMChunkToInt16(t *testing.T) {
 	chunk := &pcm.DataChunk{Data: []byte{0x34, 0x12, 0x78, 0x56}}
-	got := gearPeerPCMChunkToInt16(chunk)
+	got := gearConnPCMChunkToInt16(chunk)
 	if len(got) != 2 {
-		t.Fatalf("len(gearPeerPCMChunkToInt16()) = %d", len(got))
+		t.Fatalf("len(gearConnPCMChunkToInt16()) = %d", len(got))
 	}
 	if got[0] != 0x1234 || got[1] != 0x5678 {
-		t.Fatalf("gearPeerPCMChunkToInt16() = %#v", got)
+		t.Fatalf("gearConnPCMChunkToInt16() = %#v", got)
 	}
-	if out := gearPeerPCMChunkToInt16(nil); out != nil {
-		t.Fatalf("gearPeerPCMChunkToInt16(nil) = %#v", out)
+	if out := gearConnPCMChunkToInt16(nil); out != nil {
+		t.Fatalf("gearConnPCMChunkToInt16(nil) = %#v", out)
 	}
 }

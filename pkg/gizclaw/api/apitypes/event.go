@@ -1,11 +1,9 @@
-package gizclaw
+package apitypes
 
 import (
 	"errors"
 	"strings"
 )
-
-//go:generate go tool oapi-codegen -config=event_codegen_config.yaml -o event_generated.go ../../api/event_types.json
 
 const EventVersion = 1
 

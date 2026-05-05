@@ -23,11 +23,13 @@ func TestRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverListener := newListenerNode(t, serverKey, giznet.WithServiceMuxConfig(giznet.ServiceMuxConfig{
-		OnNewService: func(_ giznet.PublicKey, service uint64) bool {
-			return service == 7
+	serverListener := newListenerNode(t, serverKey, giznet.ListenConfig{
+		SecurityPolicy: testSecurityPolicy{
+			allowService: func(_ giznet.PublicKey, service uint64) bool {
+				return service == 7
+			},
 		},
-	}))
+	})
 	defer serverListener.Close()
 	clientListener := newListenerNode(t, clientKey)
 	defer clientListener.Close()

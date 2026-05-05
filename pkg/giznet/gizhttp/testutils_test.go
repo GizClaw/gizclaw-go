@@ -7,16 +7,36 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
+type testSecurityPolicy struct {
+	allowService func(giznet.PublicKey, uint64) bool
+}
+
+func (p testSecurityPolicy) AllowPeer(giznet.PublicKey) bool {
+	return true
+}
+
+func (p testSecurityPolicy) AllowService(pk giznet.PublicKey, service uint64) bool {
+	if p.allowService == nil {
+		return service == 0
+	}
+	return p.allowService(pk, service)
+}
+
 // newListenerNode creates a giznet.Listener for tests using only public APIs.
-func newListenerNode(t *testing.T, key *giznet.KeyPair, opts ...giznet.Option) *giznet.Listener {
+func newListenerNode(t *testing.T, key *giznet.KeyPair, cfgs ...giznet.ListenConfig) *giznet.Listener {
 	t.Helper()
 
-	defaults := []giznet.Option{
-		giznet.WithBindAddr("127.0.0.1:0"),
-		giznet.WithAllowUnknown(true),
-		giznet.WithDecryptWorkers(1),
+	cfg := giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: testSecurityPolicy{},
 	}
-	l, err := giznet.Listen(key, append(defaults, opts...)...)
+	if len(cfgs) > 0 {
+		if cfgs[0].SecurityPolicy != nil {
+			cfg.SecurityPolicy = cfgs[0].SecurityPolicy
+		}
+		cfg.PeerEventHandler = cfgs[0].PeerEventHandler
+	}
+	l, err := (&cfg).Listen(key)
 	if err != nil {
 		t.Fatalf("giznet.Listen failed: %v", err)
 	}

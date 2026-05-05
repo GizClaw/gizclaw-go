@@ -11,53 +11,74 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
-func TestManagerMarkPeerOfflineDeletesActivePeer(t *testing.T) {
+func TestManagerSetPeerDownDeletesPeer(t *testing.T) {
 	manager := &Manager{}
+	key := giznet.PublicKey{1}
 	conn := &giznet.Conn{}
 
-	manager.MarkPeerOnline("device-pk", conn)
-	if runtime := manager.PeerRuntime(context.Background(), "device-pk"); !runtime.Online {
-		t.Fatalf("peer should be online before offline mark: %+v", runtime)
+	manager.SetPeerUp(key, conn)
+	if runtime := manager.PeerRuntime(context.Background(), key); !runtime.Online {
+		t.Fatalf("peer should be online before removal: %+v", runtime)
 	}
 
-	manager.MarkPeerOffline("device-pk", conn)
-	if _, ok := manager.ActivePeer("device-pk"); ok {
-		t.Fatal("peer should be removed after disconnect")
+	manager.SetPeerDown(key)
+	if _, ok := manager.Peer(key); ok {
+		t.Fatal("peer should be removed")
 	}
-	if runtime := manager.PeerRuntime(context.Background(), "device-pk"); runtime.Online || !runtime.LastSeenAt.IsZero() {
+	if runtime := manager.PeerRuntime(context.Background(), key); runtime.Online || !runtime.LastSeenAt.IsZero() {
 		t.Fatalf("runtime after removal = %+v", runtime)
 	}
 }
 
-func TestManagerMarkPeerOfflineKeepsNewerConnection(t *testing.T) {
+func TestManagerSetPeerUpReplacesConnection(t *testing.T) {
 	manager := &Manager{}
+	key := giznet.PublicKey{1}
 	oldConn := &giznet.Conn{}
 	newConn := &giznet.Conn{}
 
-	manager.MarkPeerOnline("device-pk", oldConn)
-	manager.MarkPeerOnline("device-pk", newConn)
-	manager.MarkPeerOffline("device-pk", oldConn)
+	manager.SetPeerUp(key, oldConn)
+	manager.SetPeerUp(key, newConn)
 
-	got, ok := manager.ActivePeer("device-pk")
+	got, ok := manager.Peer(key)
 	if !ok || got != newConn {
-		t.Fatalf("ActivePeer after old disconnect = %v, %v", got, ok)
+		t.Fatalf("ActivePeer after replacement = %v, %v", got, ok)
 	}
-	if runtime := manager.PeerRuntime(context.Background(), "device-pk"); !runtime.Online {
-		t.Fatalf("runtime after old disconnect = %+v", runtime)
+	if runtime := manager.PeerRuntime(context.Background(), key); !runtime.Online || !runtime.LastSeenAt.IsZero() {
+		t.Fatalf("runtime after replacement = %+v", runtime)
 	}
 }
 
-func TestManagerEnsurePeerGearCreatesDefaultUnspecifiedGear(t *testing.T) {
+func TestManagerSetPeerUpAndDownUpdatesRuntime(t *testing.T) {
+	manager := &Manager{}
+	key := giznet.PublicKey{1}
+	conn := &giznet.Conn{}
+
+	manager.SetPeerUp(key, conn)
+	if got, ok := manager.Peer(key); !ok || got != conn {
+		t.Fatalf("active peer after set = %v, %v", got, ok)
+	}
+	if runtime := manager.PeerRuntime(context.Background(), key); !runtime.Online || !runtime.LastSeenAt.IsZero() {
+		t.Fatalf("runtime after set = %+v, want online with no peer info", runtime)
+	}
+
+	manager.SetPeerDown(key)
+	if runtime := manager.PeerRuntime(context.Background(), key); runtime.Online || !runtime.LastSeenAt.IsZero() {
+		t.Fatalf("runtime after remove = %+v", runtime)
+	}
+}
+
+func TestManagerEnsureGearCreatesDefaultUnspecifiedGear(t *testing.T) {
 	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
 	manager := NewManager(service)
 	ctx := context.Background()
+	key := giznet.PublicKey{1}
 
-	created, err := manager.EnsurePeerGear(ctx, "peer-pk")
+	created, err := manager.EnsureGear(ctx, key)
 	if err != nil {
-		t.Fatalf("EnsurePeerGear error = %v", err)
+		t.Fatalf("EnsureGear error = %v", err)
 	}
-	if created.PublicKey != "peer-pk" {
-		t.Fatalf("PublicKey = %q, want peer-pk", created.PublicKey)
+	if created.PublicKey != key.String() {
+		t.Fatalf("PublicKey = %q, want %q", created.PublicKey, key.String())
 	}
 	if created.Role != apitypes.GearRoleUnspecified {
 		t.Fatalf("Role = %q, want unspecified", created.Role)
@@ -69,7 +90,7 @@ func TestManagerEnsurePeerGearCreatesDefaultUnspecifiedGear(t *testing.T) {
 		t.Fatalf("AutoRegistered = %v, want true", created.AutoRegistered)
 	}
 
-	loaded, err := service.LoadGear(ctx, "peer-pk")
+	loaded, err := service.LoadGear(ctx, key.String())
 	if err != nil {
 		t.Fatalf("LoadGear error = %v", err)
 	}
@@ -78,12 +99,13 @@ func TestManagerEnsurePeerGearCreatesDefaultUnspecifiedGear(t *testing.T) {
 	}
 }
 
-func TestManagerEnsurePeerGearPreservesExistingGear(t *testing.T) {
+func TestManagerEnsureGearPreservesExistingGear(t *testing.T) {
 	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
 	manager := NewManager(service)
 	ctx := context.Background()
+	key := giznet.PublicKey{1}
 	if _, err := service.SaveGear(ctx, apitypes.Gear{
-		PublicKey:     "peer-pk",
+		PublicKey:     key.String(),
 		Role:          apitypes.GearRoleAdmin,
 		Status:        apitypes.GearStatusBlocked,
 		Device:        apitypes.DeviceInfo{},
@@ -92,12 +114,12 @@ func TestManagerEnsurePeerGearPreservesExistingGear(t *testing.T) {
 		t.Fatalf("SaveGear error = %v", err)
 	}
 
-	got, err := manager.EnsurePeerGear(ctx, "peer-pk")
+	got, err := manager.EnsureGear(ctx, key)
 	if err != nil {
-		t.Fatalf("EnsurePeerGear error = %v", err)
+		t.Fatalf("EnsureGear error = %v", err)
 	}
 	if got.Role != apitypes.GearRoleAdmin || got.Status != apitypes.GearStatusBlocked {
-		t.Fatalf("EnsurePeerGear overwrote existing gear: %+v", got)
+		t.Fatalf("EnsureGear overwrote existing gear: %+v", got)
 	}
 }
 
@@ -105,13 +127,15 @@ func TestManagerRefreshDeviceErrors(t *testing.T) {
 	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
 	manager := NewManager(service)
 	ctx := context.Background()
+	missingKey := giznet.PublicKey{1}
+	deviceKey := giznet.PublicKey{2}
 
-	if _, _, err := manager.RefreshGear(ctx, "missing"); !errors.Is(err, gear.ErrGearNotFound) {
+	if _, _, err := manager.RefreshGear(ctx, missingKey); !errors.Is(err, gear.ErrGearNotFound) {
 		t.Fatalf("RefreshGear missing err = %v", err)
 	}
 
 	if _, err := service.SaveGear(ctx, apitypes.Gear{
-		PublicKey:     "device-pk",
+		PublicKey:     deviceKey.String(),
 		Role:          apitypes.GearRoleUnspecified,
 		Status:        apitypes.GearStatusUnspecified,
 		Device:        apitypes.DeviceInfo{},
@@ -120,7 +144,7 @@ func TestManagerRefreshDeviceErrors(t *testing.T) {
 		t.Fatalf("SaveGear error: %v", err)
 	}
 
-	if _, online, err := manager.RefreshGear(ctx, "device-pk"); !errors.Is(err, ErrDeviceOffline) {
+	if _, online, err := manager.RefreshGear(ctx, deviceKey); !errors.Is(err, ErrDeviceOffline) {
 		t.Fatalf("RefreshGear offline err = %v", err)
 	} else if online {
 		t.Fatal("offline RefreshGear should report online=false")

@@ -196,7 +196,7 @@ type UDP struct {
 	socketConfig SocketConfig
 
 	// Options
-	allowUnknown     bool
+	allowFunc        func(noise.PublicKey) bool
 	serviceMuxConfig ServiceMuxConfig
 
 	// Peer management
@@ -265,7 +265,7 @@ type Option func(*options)
 
 type options struct {
 	bindAddr          string
-	allowUnknown      bool
+	allowFunc         func(noise.PublicKey) bool
 	decryptWorkers    int // 0 = runtime.NumCPU()
 	rawChanSize       int // 0 = use RawChanSize constant
 	decryptedChanSize int // 0 = use DecryptedChanSize constant
@@ -282,10 +282,11 @@ func WithBindAddr(addr string) Option {
 	}
 }
 
-// WithAllowUnknown allows accepting connections from unknown peers.
-func WithAllowUnknown(allow bool) Option {
+// WithAllowFunc registers a policy used before creating a peer for an inbound
+// handshake. Existing peers are allowed without consulting this policy.
+func WithAllowFunc(fn func(noise.PublicKey) bool) Option {
 	return func(o *options) {
-		o.allowUnknown = allow
+		o.allowFunc = fn
 	}
 }
 
@@ -321,8 +322,7 @@ func WithSocketConfig(cfg SocketConfig) Option {
 	}
 }
 
-// WithServiceMuxConfig injects the per-peer ServiceMux configuration template.
-// Transport-owned fields are filled by UDP when a peer session is established.
+// WithServiceMuxConfig injects per-peer ServiceMux policy and observability hooks.
 func WithServiceMuxConfig(cfg ServiceMuxConfig) Option {
 	return func(o *options) {
 		o.serviceMuxConfig = cfg
@@ -380,7 +380,7 @@ func NewUDP(key *noise.KeyPair, opts ...Option) (*UDP, error) {
 		socket:           socket,
 		localKey:         key,
 		socketConfig:     socketConfig,
-		allowUnknown:     o.allowUnknown,
+		allowFunc:        o.allowFunc,
 		serviceMuxConfig: o.serviceMuxConfig,
 		peers:            make(map[noise.PublicKey]*peerState),
 		byIndex:          make(map[uint32]*peerState),
@@ -775,22 +775,29 @@ func (u *UDP) handleHandshakeInit(data []byte, from *net.UDPAddr) {
 	// Get the remote's public key
 	remotePK := hs.RemoteStatic()
 
-	// Check if peer is known or if we allow unknown peers
+	// Check if peer is known, or ask policy before admitting a new peer.
 	u.mu.Lock()
 	peer, exists := u.peers[remotePK]
+	u.mu.Unlock()
 	if !exists {
-		if !u.allowUnknown {
-			u.mu.Unlock()
+		if u.allowFunc == nil || !u.allowFunc(remotePK) {
 			return
 		}
-		// Create new peer
-		peer = &peerState{
-			pk:    remotePK,
-			state: PeerStateNew,
+		u.mu.Lock()
+		peer, exists = u.peers[remotePK]
+		if !exists {
+			// Create new peer
+			peer = &peerState{
+				pk:    remotePK,
+				state: PeerStateNew,
+			}
+			u.peers[remotePK] = peer
 		}
-		u.peers[remotePK] = peer
+		u.mu.Unlock()
 	}
-	u.mu.Unlock()
+	if peer == nil {
+		return
+	}
 
 	// Generate local index for response
 	localIdx, err := noise.GenerateIndex()

@@ -10,6 +10,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 type stubPeerManager struct {
@@ -19,11 +20,11 @@ type stubPeerManager struct {
 	refreshErr    error
 }
 
-func (m stubPeerManager) PeerRuntime(context.Context, string) apitypes.Runtime {
+func (m stubPeerManager) PeerRuntime(context.Context, giznet.PublicKey) apitypes.Runtime {
 	return m.runtime
 }
 
-func (m stubPeerManager) RefreshGear(context.Context, string) (adminservice.RefreshResult, bool, error) {
+func (m stubPeerManager) RefreshGear(context.Context, giznet.PublicKey) (adminservice.RefreshResult, bool, error) {
 	return m.refreshResult, m.refreshOnline, m.refreshErr
 }
 
@@ -436,6 +437,8 @@ func TestServerListGearsLimitClampsToConfiguredBounds(t *testing.T) {
 func TestServerRuntimeHandlers(t *testing.T) {
 	now := time.Unix(1_700_200_000, 0).UTC()
 	runtimeAddr := "10.0.0.1:1234"
+	peerKey := giznet.PublicKey{3}
+	peerPublicKey := peerKey.String()
 	server := &Server{
 		Store: mustBadgerInMemory(t, nil),
 		PeerManager: stubPeerManager{
@@ -446,7 +449,7 @@ func TestServerRuntimeHandlers(t *testing.T) {
 			},
 			refreshResult: adminservice.RefreshResult{
 				Gear: apitypes.Gear{
-					PublicKey: "peer-3",
+					PublicKey: peerPublicKey,
 					Role:      apitypes.GearRoleServer,
 					Status:    apitypes.GearStatusActive,
 				},
@@ -456,8 +459,8 @@ func TestServerRuntimeHandlers(t *testing.T) {
 		},
 	}
 
-	registerCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-3")
-	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-3")
+	registerCtx := gearservice.WithCallerPublicKey(context.Background(), peerPublicKey)
+	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerPublicKey)
 	_, err := server.RegisterGear(registerCtx, gearservice.RegisterGearRequestObject{
 		Body: &gearservice.RegisterGearJSONRequestBody{Device: apitypes.DeviceInfo{}},
 	})
@@ -466,7 +469,7 @@ func TestServerRuntimeHandlers(t *testing.T) {
 	}
 
 	getGearRuntimeResp, err := server.GetGearRuntime(context.Background(), adminservice.GetGearRuntimeRequestObject{
-		PublicKey: adminservice.PublicKey("peer-3"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("GetGearRuntime error: %v", err)
@@ -492,7 +495,7 @@ func TestServerRuntimeHandlers(t *testing.T) {
 	}
 
 	refreshResp, err := server.RefreshGear(context.Background(), adminservice.RefreshGearRequestObject{
-		PublicKey: adminservice.PublicKey("peer-3"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("RefreshGear error: %v", err)
@@ -501,7 +504,7 @@ func TestServerRuntimeHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("RefreshGear response type = %T", refreshResp)
 	}
-	if refreshed.Gear.PublicKey != "peer-3" || refreshed.UpdatedFields == nil || len(*refreshed.UpdatedFields) != 1 {
+	if refreshed.Gear.PublicKey != peerPublicKey || refreshed.UpdatedFields == nil || len(*refreshed.UpdatedFields) != 1 {
 		t.Fatalf("RefreshGear = %+v", refreshed)
 	}
 }
@@ -598,6 +601,8 @@ func TestServerPublicHandlers(t *testing.T) {
 func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	now := time.Unix(1_700_500_000, 0).UTC()
 	runtimeAddr := "10.0.0.1:8888"
+	peerKey := giznet.PublicKey{4}
+	peerPublicKey := peerKey.String()
 	server := &Server{
 		Store: mustBadgerInMemory(t, nil),
 		PeerManager: stubPeerManager{
@@ -609,8 +614,8 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 		},
 	}
 
-	registerCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-public")
-	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-public")
+	registerCtx := gearservice.WithCallerPublicKey(context.Background(), peerPublicKey)
+	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerPublicKey)
 	sn := "sn-old"
 	depot := "depot-public"
 	_, err := server.RegisterGear(registerCtx, gearservice.RegisterGearRequestObject{
@@ -630,7 +635,7 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	stable := apitypes.GearFirmwareChannel("stable")
 	adminStable := apitypes.GearFirmwareChannel(stable)
 	_, err = server.PutGearConfig(context.Background(), adminservice.PutGearConfigRequestObject{
-		PublicKey: adminservice.PublicKey("peer-public"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 		Body: &adminservice.PutGearConfigJSONRequestBody{
 			Firmware: &apitypes.FirmwareConfig{Channel: &adminStable},
 		},

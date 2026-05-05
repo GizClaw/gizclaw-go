@@ -24,13 +24,11 @@ func (s *Server) PublicHTTPHandler() (http.Handler, error) {
 	if s.KeyPair == nil {
 		return nil, fmt.Errorf("gizclaw: nil key pair")
 	}
-	if err := s.initOnce(s.KeyPair.Public.String()); err != nil {
+	if err := s.init(); err != nil {
 		return nil, err
 	}
-	s.mu.Lock()
 	peerService := s.peerService
 	sessions := s.sessions
-	s.mu.Unlock()
 	if peerService == nil || sessions == nil {
 		return nil, fmt.Errorf("gizclaw: public http runtime not initialized")
 	}

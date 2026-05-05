@@ -13,6 +13,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -27,8 +28,8 @@ const (
 )
 
 type PeerManager interface {
-	PeerRuntime(context.Context, string) apitypes.Runtime
-	RefreshGear(context.Context, string) (adminservice.RefreshResult, bool, error)
+	PeerRuntime(context.Context, giznet.PublicKey) apitypes.Runtime
+	RefreshGear(context.Context, giznet.PublicKey) (adminservice.RefreshResult, bool, error)
 }
 
 type Server struct {
@@ -279,7 +280,11 @@ func (s *Server) RefreshGear(ctx context.Context, request adminservice.RefreshGe
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	result, online, err := s.PeerManager.RefreshGear(ctx, publicKey)
+	key, err := giznet.KeyFromHex(publicKey)
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	result, online, err := s.PeerManager.RefreshGear(ctx, key)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrGearNotFound):

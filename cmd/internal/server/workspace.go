@@ -18,7 +18,6 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/service"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 const workspaceConfigFile = "config.yaml"
@@ -150,9 +149,12 @@ func ServeContext(ctx context.Context, workspace string, opts ServeOptions) erro
 	}
 	defer releasePID()
 
+	if err := srv.Listen(); err != nil {
+		return err
+	}
 	errCh := make(chan error, 2)
 	go func() {
-		errCh <- srv.ListenAndServe(nil, giznet.WithBindAddr(cfg.ListenAddr))
+		errCh <- srv.Serve()
 	}()
 	go func() {
 		err := publicHTTP.Serve(publicListener)

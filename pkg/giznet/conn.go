@@ -84,6 +84,13 @@ func (c *Conn) PublicKey() PublicKey {
 	return c.pk
 }
 
+func (c *Conn) PeerInfo() *PeerInfo {
+	if c == nil || c.peer == nil {
+		return nil
+	}
+	return c.peer.PeerInfo()
+}
+
 func (c *Conn) validate() error {
 	if c == nil || c.peer == nil {
 		return ErrNilConn

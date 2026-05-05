@@ -24,111 +24,94 @@ var (
 )
 
 type activePeer struct {
-	conn       *giznet.Conn
-	client     *peerpublic.ClientWithResponses
-	lastSeenAt time.Time
-	online     bool
+	conn   *giznet.Conn
+	client *peerpublic.ClientWithResponses
 }
 
 type Manager struct {
 	Gears *gear.Server
 
-	activePeersMu sync.RWMutex
-	activePeers   map[string]*activePeer
+	mu    sync.RWMutex
+	peers map[giznet.PublicKey]*activePeer
 }
 
 func NewManager(gearsService *gear.Server) *Manager {
 	return &Manager{
-		Gears:       gearsService,
-		activePeers: make(map[string]*activePeer),
+		Gears: gearsService,
+		peers: make(map[giznet.PublicKey]*activePeer),
 	}
 }
 
-func (m *Manager) MarkPeerOnline(publicKey string, conn *giznet.Conn) {
-	m.activePeersMu.Lock()
-	defer m.activePeersMu.Unlock()
-	if m.activePeers == nil {
-		m.activePeers = make(map[string]*activePeer)
+func (m *Manager) SetPeerUp(publicKey giznet.PublicKey, conn *giznet.Conn) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.peers == nil {
+		m.peers = make(map[giznet.PublicKey]*activePeer)
 	}
-	m.activePeers[publicKey] = &activePeer{
-		conn:       conn,
-		lastSeenAt: time.Now(),
-		online:     true,
+	state, ok := m.peers[publicKey]
+	if !ok {
+		state = &activePeer{}
+		m.peers[publicKey] = state
 	}
+	state.conn = conn
+	state.client = nil
 }
 
-func (m *Manager) TouchPeer(publicKey string, conn *giznet.Conn) {
-	m.activePeersMu.Lock()
-	defer m.activePeersMu.Unlock()
-	state, ok := m.activePeers[publicKey]
-	if !ok || state.conn != conn {
-		return
-	}
-	state.lastSeenAt = time.Now()
+func (m *Manager) SetPeerDown(publicKey giznet.PublicKey) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.peers, publicKey)
 }
 
-func (m *Manager) MarkPeerOffline(publicKey string, conn *giznet.Conn) {
-	m.activePeersMu.Lock()
-	defer m.activePeersMu.Unlock()
-	state, ok := m.activePeers[publicKey]
-	if !ok || state.conn != conn {
-		return
-	}
-	delete(m.activePeers, publicKey)
-}
-
-func (m *Manager) ActivePeer(publicKey string) (*giznet.Conn, bool) {
-	m.activePeersMu.RLock()
-	defer m.activePeersMu.RUnlock()
-	state, ok := m.activePeers[publicKey]
-	if !ok || !state.online || state.conn == nil {
+func (m *Manager) Peer(publicKey giznet.PublicKey) (*giznet.Conn, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	state, ok := m.peers[publicKey]
+	if !ok || state.conn == nil {
 		return nil, false
 	}
 	return state.conn, true
 }
 
-func (m *Manager) PeerRuntime(_ context.Context, publicKey string) apitypes.Runtime {
-	m.activePeersMu.RLock()
-	defer m.activePeersMu.RUnlock()
-	state, ok := m.activePeers[publicKey]
+func (m *Manager) PeerRuntime(_ context.Context, publicKey giznet.PublicKey) apitypes.Runtime {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	state, ok := m.peers[publicKey]
 	if !ok {
 		return apitypes.Runtime{}
 	}
+	var lastSeenAt time.Time
+	if state.conn != nil {
+		if info := state.conn.PeerInfo(); info != nil {
+			lastSeenAt = info.LastSeen
+		}
+	}
 	return apitypes.Runtime{
-		Online:     state.online,
-		LastSeenAt: state.lastSeenAt,
+		Online:     true,
+		LastSeenAt: lastSeenAt,
 	}
 }
 
-func (m *Manager) EnsurePeerGear(ctx context.Context, publicKey string) (apitypes.Gear, error) {
+func (m *Manager) EnsureGear(ctx context.Context, publicKey giznet.PublicKey) (apitypes.Gear, error) {
 	if m == nil || m.Gears == nil {
 		return apitypes.Gear{}, errors.New("gizclaw: gears service not configured")
 	}
-	return m.Gears.EnsureConnectedGear(ctx, publicKey)
+	return m.Gears.EnsureConnectedGear(ctx, publicKey.String())
 }
 
-func (m *Manager) RefreshGear(ctx context.Context, publicKey string) (adminservice.RefreshResult, bool, error) {
+func (m *Manager) RefreshGear(ctx context.Context, publicKey giznet.PublicKey) (adminservice.RefreshResult, bool, error) {
 	if m.Gears == nil {
 		return adminservice.RefreshResult{}, false, errors.New("gizclaw: gears service not configured")
 	}
-	gear, err := m.Gears.LoadGear(ctx, publicKey)
+	gear, err := m.Gears.LoadGear(ctx, publicKey.String())
 	if err != nil {
 		return adminservice.RefreshResult{}, false, err
 	}
-	conn, ok := m.ActivePeer(publicKey)
-	if !ok {
-		return adminservice.RefreshResult{}, false, ErrDeviceOffline
-	}
-	client, err := m.peerPublicClientForConn(publicKey, conn)
-	if err != nil {
-		return adminservice.RefreshResult{}, true, err
-	}
-
-	next, updatedFields, errs, err := m.refreshGearFromPeer(ctx, client, gear)
+	next, updatedFields, errs, err := m.refreshGear(ctx, publicKey, gear)
 	if err != nil {
 		online := true
 		if errors.Is(err, ErrDeviceOffline) {
-			m.MarkPeerOffline(publicKey, conn)
+			m.SetPeerDown(publicKey)
 			online = false
 		}
 		return adminservice.RefreshResult{
@@ -158,27 +141,19 @@ func (m *Manager) RefreshGear(ctx context.Context, publicKey string) (adminservi
 	}, true, nil
 }
 
-func (m *Manager) peerPublicClient(publicKey string) (*peerpublic.ClientWithResponses, error) {
-	conn, ok := m.ActivePeer(publicKey)
-	if !ok {
-		return nil, ErrDeviceOffline
-	}
-	return m.peerPublicClientForConn(publicKey, conn)
-}
+func (m *Manager) peerPublicClient(publicKey giznet.PublicKey) (*peerpublic.ClientWithResponses, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
-func (m *Manager) peerPublicClientForConn(publicKey string, conn *giznet.Conn) (*peerpublic.ClientWithResponses, error) {
-	m.activePeersMu.Lock()
-	defer m.activePeersMu.Unlock()
-
-	state, ok := m.activePeers[publicKey]
-	if !ok || !state.online || state.conn != conn || state.conn == nil {
+	state, ok := m.peers[publicKey]
+	if !ok || state.conn == nil {
 		return nil, ErrDeviceOffline
 	}
 	if state.client != nil {
 		return state.client, nil
 	}
 	client := &http.Client{
-		Transport: gizhttp.NewRoundTripper(conn, ServicePeerPublic),
+		Transport: gizhttp.NewRoundTripper(state.conn, ServicePeerPublic),
 		Timeout:   30 * time.Second,
 	}
 	peerClient, err := peerpublic.NewClientWithResponses(
@@ -192,7 +167,12 @@ func (m *Manager) peerPublicClientForConn(publicKey string, conn *giznet.Conn) (
 	return peerClient, nil
 }
 
-func (m *Manager) refreshGearFromPeer(ctx context.Context, client *peerpublic.ClientWithResponses, gear apitypes.Gear) (apitypes.Gear, []string, []string, error) {
+func (m *Manager) refreshGear(ctx context.Context, publicKey giznet.PublicKey, gear apitypes.Gear) (apitypes.Gear, []string, []string, error) {
+	client, err := m.peerPublicClient(publicKey)
+	if err != nil {
+		return gear, nil, nil, err
+	}
+
 	var (
 		errs          []string
 		updatedFields []string

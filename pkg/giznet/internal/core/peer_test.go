@@ -48,13 +48,17 @@ func TestPeerOpenStreamAcceptStream(t *testing.T) {
 	}
 
 	// Create UDP instances
-	client, err := NewUDP(clientKey, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	client, err := NewUDP(clientKey, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("Failed to create client UDP: %v", err)
 	}
 	defer client.Close()
 
-	server, err := NewUDP(serverKey, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	server, err := NewUDP(serverKey, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("Failed to create server UDP: %v", err)
 	}
@@ -157,13 +161,17 @@ func TestPeerReadWrite(t *testing.T) {
 	}
 
 	// Create UDP instances
-	client, err := NewUDP(clientKey, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	client, err := NewUDP(clientKey, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("Failed to create client UDP: %v", err)
 	}
 	defer client.Close()
 
-	server, err := NewUDP(serverKey, WithBindAddr("127.0.0.1:0"), WithAllowUnknown(true))
+	server, err := NewUDP(serverKey, WithBindAddr("127.0.0.1:0"), WithAllowFunc(func(noise.PublicKey) bool {
+		return true
+	}))
 	if err != nil {
 		t.Fatalf("Failed to create server UDP: %v", err)
 	}

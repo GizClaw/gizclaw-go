@@ -8,6 +8,21 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
+type benchSecurityPolicy struct {
+	allowService func(giznet.PublicKey, uint64) bool
+}
+
+func (p benchSecurityPolicy) AllowPeer(giznet.PublicKey) bool {
+	return true
+}
+
+func (p benchSecurityPolicy) AllowService(pk giznet.PublicKey, service uint64) bool {
+	if p.allowService == nil {
+		return service == 0
+	}
+	return p.allowService(pk, service)
+}
+
 // peerBenchMux is the minimal mux surface used by public benchmarks.
 type peerBenchMux interface {
 	Write(protocol byte, data []byte) (n int, err error)
@@ -19,11 +34,10 @@ type peerBenchMux interface {
 func newBenchUDPNode(tb testing.TB, key *giznet.KeyPair) *giznet.UDP {
 	tb.Helper()
 
-	l, err := giznet.Listen(key,
-		giznet.WithBindAddr("127.0.0.1:0"),
-		giznet.WithAllowUnknown(true),
-		giznet.WithDecryptWorkers(1),
-	)
+	l, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: benchSecurityPolicy{},
+	}).Listen(key)
 	if err != nil {
 		tb.Fatalf("giznet.Listen failed: %v", err)
 	}
@@ -85,15 +99,20 @@ func mustPeerBenchMux(tb testing.TB, u *giznet.UDP, pk giznet.PublicKey) peerBen
 	return smux
 }
 
-func newBenchListenerNode(tb testing.TB, key *giznet.KeyPair, opts ...giznet.Option) *giznet.Listener {
+func newBenchListenerNode(tb testing.TB, key *giznet.KeyPair, cfgs ...giznet.ListenConfig) *giznet.Listener {
 	tb.Helper()
 
-	defaults := []giznet.Option{
-		giznet.WithBindAddr("127.0.0.1:0"),
-		giznet.WithAllowUnknown(true),
-		giznet.WithDecryptWorkers(1),
+	cfg := giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: benchSecurityPolicy{},
 	}
-	l, err := giznet.Listen(key, append(defaults, opts...)...)
+	if len(cfgs) > 0 {
+		if cfgs[0].SecurityPolicy != nil {
+			cfg.SecurityPolicy = cfgs[0].SecurityPolicy
+		}
+		cfg.PeerEventHandler = cfgs[0].PeerEventHandler
+	}
+	l, err := (&cfg).Listen(key)
 	if err != nil {
 		tb.Fatalf("giznet.Listen failed: %v", err)
 	}

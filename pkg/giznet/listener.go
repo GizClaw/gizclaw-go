@@ -20,31 +20,17 @@ type Listener struct {
 	// that Conn is closed and releases the entry.
 	established map[PublicKey]*Conn
 	events      chan PeerEvent
-}
-
-func Listen(key *KeyPair, opts ...Option) (*Listener, error) {
-	l := &Listener{
-		closedCh:    make(chan struct{}),
-		established: make(map[PublicKey]*Conn),
-		events:      make(chan PeerEvent, 64),
-	}
-
-	// Append our handler last so it always wins if the caller accidentally
-	// passes WithOnPeerEvent (last-write-wins in the options slice).
-	allOpts := append(opts, core.WithOnPeerEvent(l.onPeerEvent))
-	u, err := core.NewUDP(key, allOpts...)
-	if err != nil {
-		return nil, err
-	}
-	l.udp = u
-
-	return l, nil
+	evtHandler  PeerEventHandler
 }
 
 func (l *Listener) onPeerEvent(ev PeerEvent) bool {
 	if l.closed.Load() {
 		return false
 	}
+	if l.evtHandler != nil {
+		l.evtHandler.HandlePeerEvent(ev)
+	}
+
 	select {
 	case l.events <- ev:
 		return true

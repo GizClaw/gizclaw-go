@@ -26,6 +26,21 @@ var (
 	errTestEventMissingName = errors.New("event: missing name")
 )
 
+type testSecurityPolicy struct {
+	allowService func(giznet.PublicKey, uint64) bool
+}
+
+func (p testSecurityPolicy) AllowPeer(giznet.PublicKey) bool {
+	return true
+}
+
+func (p testSecurityPolicy) AllowService(pk giznet.PublicKey, service uint64) bool {
+	if p.allowService == nil {
+		return service == 0
+	}
+	return p.allowService(pk, service)
+}
+
 type testEvent struct {
 	Data *json.RawMessage `json:"data,omitempty"`
 	Name string           `json:"name"`
@@ -128,10 +143,21 @@ func (p *ConnectedPeerPair) Close() {
 	}
 }
 
-// NewTestListener returns a Listener on loopback with AllowUnknown and a UDP read loop.
+// NewTestListener returns a Listener on loopback that allows inbound peers and starts a UDP read loop.
 func NewTestListener(t *testing.T, key *giznet.KeyPair) *giznet.Listener {
 	t.Helper()
-	l, err := giznet.Listen(key, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
+	return NewTestListenerConfig(t, giznet.ListenConfig{}, key)
+}
+
+func NewTestListenerConfig(t *testing.T, cfg giznet.ListenConfig, key *giznet.KeyPair) *giznet.Listener {
+	t.Helper()
+	if cfg.Addr == "" {
+		cfg.Addr = "127.0.0.1:0"
+	}
+	if cfg.SecurityPolicy == nil {
+		cfg.SecurityPolicy = testSecurityPolicy{}
+	}
+	l, err := cfg.Listen(key)
 	if err != nil {
 		t.Fatalf("Listen failed: %v", err)
 	}
@@ -298,11 +324,10 @@ type peerMux interface {
 func NewUDPNode(t *testing.T, key *giznet.KeyPair) *giznet.UDP {
 	t.Helper()
 
-	l, err := giznet.Listen(key,
-		giznet.WithBindAddr("127.0.0.1:0"),
-		giznet.WithAllowUnknown(true),
-		giznet.WithDecryptWorkers(1),
-	)
+	l, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: testSecurityPolicy{},
+	}).Listen(key)
 	if err != nil {
 		t.Fatalf("giznet.Listen failed: %v", err)
 	}

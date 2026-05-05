@@ -509,6 +509,13 @@ type ErrorResponse struct {
 	Error ErrorPayload `json:"error"`
 }
 
+// Event defines model for Event.
+type Event struct {
+	Data *json.RawMessage `json:"data,omitempty"`
+	Name string           `json:"name"`
+	V    int              `json:"v"`
+}
+
 // FirmwareConfig defines model for FirmwareConfig.
 type FirmwareConfig struct {
 	Channel *GearFirmwareChannel `json:"channel,omitempty"`

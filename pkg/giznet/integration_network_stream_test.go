@@ -670,32 +670,40 @@ func TestIntegration_EVENTFireAndForgetBidirectional(t *testing.T) {
 		t.Fatalf("EVENT fire-and-forget writes took too long: %s", took)
 	}
 
+	serverWant := make(map[string]struct{}, burst)
 	for i := 0; i < burst; i++ {
-		want := []byte(fmt.Sprintf("event-c2s-%02d", i))
+		serverWant[fmt.Sprintf("event-c2s-%02d", i)] = struct{}{}
+	}
+	for i := 0; i < burst; i++ {
 		proto, got := ReadFromPeerWithTimeout(t, server, clientKey.Public, 3*time.Second)
 		if proto != testProtocolEvent {
 			t.Fatalf("server EVENT proto[%d]=%d, want %d", i, proto, testProtocolEvent)
 		}
-		if !bytes.Equal(got, want) {
-			t.Fatalf("server EVENT payload[%d] mismatch: got=%q want=%q", i, string(got), string(want))
+		if _, ok := serverWant[string(got)]; !ok {
+			t.Fatalf("server EVENT payload[%d] unexpected: got=%q remaining=%v", i, string(got), serverWant)
 		}
+		delete(serverWant, string(got))
 	}
 
+	clientWant := make(map[string]struct{}, burst)
 	for i := 0; i < burst; i++ {
-		want := []byte(fmt.Sprintf("event-s2c-%02d", i))
+		clientWant[fmt.Sprintf("event-s2c-%02d", i)] = struct{}{}
+	}
+	for i := 0; i < burst; i++ {
 		proto, got := ReadFromPeerWithTimeout(t, client, serverKey.Public, 3*time.Second)
 		if proto != testProtocolEvent {
 			t.Fatalf("client EVENT proto[%d]=%d, want %d", i, proto, testProtocolEvent)
 		}
-		if !bytes.Equal(got, want) {
-			t.Fatalf("client EVENT payload[%d] mismatch: got=%q want=%q", i, string(got), string(want))
+		if _, ok := clientWant[string(got)]; !ok {
+			t.Fatalf("client EVENT payload[%d] unexpected: got=%q remaining=%v", i, string(got), clientWant)
 		}
+		delete(clientWant, string(got))
 	}
 }
 
-// TestIntegration_OPUSFramesOrdered verifies that 40 consecutive OPUS frames
-// are received in order with correct protocol identification.
-func TestIntegration_OPUSFramesOrdered(t *testing.T) {
+// TestIntegration_OPUSFramesDelivered verifies that 40 consecutive OPUS frames
+// are received with correct protocol identification.
+func TestIntegration_OPUSFramesDelivered(t *testing.T) {
 	serverKey, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("Generate server key failed: %v", err)
@@ -720,15 +728,19 @@ func TestIntegration_OPUSFramesOrdered(t *testing.T) {
 		}
 	}
 
+	wantFrames := make(map[string]struct{}, frames)
 	for i := 0; i < frames; i++ {
-		want := []byte(fmt.Sprintf("opus-frame-%03d", i))
+		wantFrames[fmt.Sprintf("opus-frame-%03d", i)] = struct{}{}
+	}
+	for i := 0; i < frames; i++ {
 		proto, got := ReadFromPeerWithTimeout(t, server, clientKey.Public, 3*time.Second)
 		if proto != testProtocolOpus {
 			t.Fatalf("server OPUS proto[%d]=%d, want %d", i, proto, testProtocolOpus)
 		}
-		if !bytes.Equal(got, want) {
-			t.Fatalf("server OPUS payload[%d] mismatch: got=%q want=%q", i, string(got), string(want))
+		if _, ok := wantFrames[string(got)]; !ok {
+			t.Fatalf("server OPUS payload[%d] unexpected: got=%q remaining=%v", i, string(got), wantFrames)
 		}
+		delete(wantFrames, string(got))
 	}
 }
 

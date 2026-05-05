@@ -10,6 +10,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
@@ -441,7 +442,11 @@ func (s *Server) peerRuntime(ctx context.Context, publicKey string) apitypes.Run
 	if s.PeerManager == nil {
 		return apitypes.Runtime{}
 	}
-	return s.PeerManager.PeerRuntime(ctx, publicKey)
+	key, err := giznet.KeyFromHex(publicKey)
+	if err != nil {
+		return apitypes.Runtime{}
+	}
+	return s.PeerManager.PeerRuntime(ctx, key)
 }
 
 func optionalGear(gear apitypes.Gear, err error) *apitypes.Gear {

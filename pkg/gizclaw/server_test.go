@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
@@ -13,65 +14,94 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 )
 
-type countCloser struct {
-	calls int
+type testGiznetSecurityPolicy struct {
+	allowService func(giznet.PublicKey, uint64) bool
 }
 
-func (c *countCloser) Close() error {
-	c.calls++
-	return nil
+func (p testGiznetSecurityPolicy) AllowPeer(giznet.PublicKey) bool {
+	return true
 }
 
-func TestServerListenAndServeRequiresGearStore(t *testing.T) {
+func (p testGiznetSecurityPolicy) AllowService(pk giznet.PublicKey, service uint64) bool {
+	if p.allowService == nil {
+		return service == 0
+	}
+	return p.allowService(pk, service)
+}
+
+func TestServerListenRequiresGearStore(t *testing.T) {
 	keyPair, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
 	server := &Server{KeyPair: keyPair, DepotStore: depotstore.Dir(t.TempDir())}
-	err = server.ListenAndServe(nil)
-	if !errors.Is(err, ErrNilGearStore) {
-		t.Fatalf("ListenAndServe error = %v, want %v", err, ErrNilGearStore)
+	err = server.Listen()
+	if err == nil || !strings.Contains(err.Error(), "nil gear store") {
+		t.Fatalf("Listen error = %v, want nil gear store", err)
 	}
 }
 
-func TestServerListenAndServeRequiresDepotStore(t *testing.T) {
+func TestServerListenRequiresDepotStore(t *testing.T) {
 	keyPair, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
 	server := &Server{KeyPair: keyPair, GearStore: mustBadgerInMemory(t, nil)}
-	err = server.ListenAndServe(nil)
-	if !errors.Is(err, ErrNilDepotStore) {
-		t.Fatalf("ListenAndServe error = %v, want %v", err, ErrNilDepotStore)
+	err = server.Listen()
+	if err == nil || !strings.Contains(err.Error(), "nil depot store") {
+		t.Fatalf("Listen error = %v, want nil depot store", err)
 	}
 }
 
-func TestAllowAllAllowsPeerService(t *testing.T) {
-	var policy SecurityPolicy = AllowAll{}
-	if !policy.AllowPeerService(giznet.PublicKey{}, ServiceAdmin) {
-		t.Fatal("AllowAll should allow admin service")
-	}
-	if !policy.AllowPeerService(giznet.PublicKey{}, 0xffff) {
-		t.Fatal("AllowAll should allow arbitrary service")
-	}
-}
-
-func TestServerListenAndServeValidatesReceiverAndKeyPair(t *testing.T) {
+func TestServerListenValidatesReceiverAndKeyPair(t *testing.T) {
 	t.Run("nil server", func(t *testing.T) {
 		var server *Server
-		if err := server.ListenAndServe(nil); err == nil || !strings.Contains(err.Error(), "nil server") {
-			t.Fatalf("ListenAndServe(nil) err = %v", err)
+		if err := server.Listen(); err == nil || !strings.Contains(err.Error(), "nil server") {
+			t.Fatalf("Listen() err = %v", err)
 		}
 	})
 
 	t.Run("nil key pair", func(t *testing.T) {
 		server := &Server{}
-		if err := server.ListenAndServe(nil); err == nil || !strings.Contains(err.Error(), "nil key pair") {
-			t.Fatalf("ListenAndServe(nil key pair) err = %v", err)
+		if err := server.Listen(); err == nil || !strings.Contains(err.Error(), "nil key pair") {
+			t.Fatalf("Listen() nil key pair err = %v", err)
 		}
 	})
+}
+
+func TestServerServeReturnsNilAfterClose(t *testing.T) {
+	keyPair, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair error = %v", err)
+	}
+
+	server := &Server{
+		KeyPair:    keyPair,
+		ListenAddr: "127.0.0.1:0",
+		GearStore:  mustBadgerInMemory(t, nil),
+		DepotStore: depotstore.Dir(t.TempDir()),
+	}
+	if err := server.Listen(); err != nil {
+		t.Fatalf("Listen() error = %v", err)
+	}
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- server.Serve()
+	}()
+
+	if err := server.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Serve() after Close() error = %v, want nil", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Serve() did not return after Close()")
+	}
 }
 
 func TestServerPublicKeyAndPeerServiceAccessors(t *testing.T) {
@@ -88,66 +118,81 @@ func TestServerPublicKeyAndPeerServiceAccessors(t *testing.T) {
 	if got := server.PeerService(); got != service {
 		t.Fatalf("PeerService() = %v, want %v", got, service)
 	}
-
-	listenerKey, err := giznet.GenerateKeyPair()
-	if err != nil {
-		t.Fatalf("GenerateKeyPair(listener) error = %v", err)
-	}
-	listener, err := giznet.Listen(listenerKey, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
-	if err != nil {
-		t.Fatalf("giznet.Listen error = %v", err)
-	}
-	defer listener.Close()
-
-	server = &Server{}
-	server.setListener(listener)
-	if got := server.PublicKey(); got != listener.HostInfo().PublicKey {
-		t.Fatalf("PublicKey() from listener = %v, want %v", got, listener.HostInfo().PublicKey)
-	}
 }
 
-func TestServerCloseClosesStoreCloser(t *testing.T) {
-	closer := &countCloser{}
-	server := &Server{StoreCloser: closer}
-
-	if err := server.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
-	}
-	if closer.calls != 1 {
-		t.Fatalf("StoreCloser calls = %d, want 1", closer.calls)
-	}
-	if err := server.Close(); err != nil {
-		t.Fatalf("Close second: %v", err)
-	}
-	if closer.calls != 1 {
-		t.Fatalf("StoreCloser calls after second close = %d, want 1", closer.calls)
-	}
-}
-
-func TestServerAllowPeerServiceDefaults(t *testing.T) {
+func TestServerSecurityPolicyAllowServiceUsesGearPolicy(t *testing.T) {
 	var nilServer *Server
-	if nilServer.allowPeerService(giznet.PublicKey{}, ServiceRPC) {
+	if (*ServerSecurityPolicy)(nilServer).AllowService(giznet.PublicKey{}, ServiceRPC) {
 		t.Fatal("nil server should deny all services")
 	}
 
-	server := &Server{}
-	if !server.allowPeerService(giznet.PublicKey{}, ServiceRPC) {
-		t.Fatal("server should allow rpc before manager is initialized")
+	gearKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair gear error = %v", err)
 	}
-	if !server.allowPeerService(giznet.PublicKey{}, ServiceServerPublic) {
-		t.Fatal("server should allow server public before manager is initialized")
+	adminKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair admin error = %v", err)
 	}
-	if server.allowPeerService(giznet.PublicKey{}, ServiceAdmin) {
-		t.Fatal("server should not allow admin before manager is initialized")
+	gearsServer := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	if _, err := gearsServer.SaveGear(context.Background(), apitypes.Gear{
+		PublicKey:     gearKey.Public.String(),
+		Role:          apitypes.GearRoleGear,
+		Status:        apitypes.GearStatusActive,
+		Device:        apitypes.DeviceInfo{},
+		Configuration: apitypes.Configuration{},
+	}); err != nil {
+		t.Fatalf("SaveGear gear error = %v", err)
 	}
+	if _, err := gearsServer.SaveGear(context.Background(), apitypes.Gear{
+		PublicKey:     adminKey.Public.String(),
+		Role:          apitypes.GearRoleAdmin,
+		Status:        apitypes.GearStatusActive,
+		Device:        apitypes.DeviceInfo{},
+		Configuration: apitypes.Configuration{},
+	}); err != nil {
+		t.Fatalf("SaveGear admin error = %v", err)
+	}
+	server := &Server{manager: NewManager(gearsServer)}
+	policy := (*ServerSecurityPolicy)(server)
+	if !policy.AllowService(gearKey.Public, ServiceRPC) {
+		t.Fatal("gear should allow rpc")
+	}
+	if !policy.AllowService(gearKey.Public, ServiceServerPublic) {
+		t.Fatal("gear should allow server public")
+	}
+	if policy.AllowService(gearKey.Public, ServiceAdmin) {
+		t.Fatal("non-admin gear should not allow admin")
+	}
+	if !policy.AllowService(adminKey.Public, ServiceAdmin) {
+		t.Fatal("active admin gear should allow admin")
+	}
+	configuredKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair configured error = %v", err)
+	}
+	server.AdminPublicKey = configuredKey.Public.String()
+	if !policy.AllowService(configuredKey.Public, ServiceAdmin) {
+		t.Fatal("configured admin public key should allow admin")
+	}
+	server.AdminPublicKey = "not-a-public-key"
+	if policy.AllowService(configuredKey.Public, ServiceAdmin) {
+		t.Fatal("invalid configured admin public key should not allow admin")
+	}
+}
 
+func TestServerPeerEventHandlerMarksManagerOffline(t *testing.T) {
 	keyPair, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
-	server.AdminPublicKey = keyPair.Public.String()
-	if !server.allowPeerService(keyPair.Public, ServiceAdmin) {
-		t.Fatal("configured admin public key should allow admin before manager is initialized")
+	server := &Server{manager: &Manager{}}
+	server.manager.SetPeerUp(keyPair.Public, &giznet.Conn{})
+
+	(*serverPeerEventHandler)(server).HandlePeerEvent(giznet.PeerEvent{PublicKey: keyPair.Public, State: giznet.PeerStateOffline})
+	runtime := server.manager.PeerRuntime(context.Background(), keyPair.Public)
+	if runtime.Online || !runtime.LastSeenAt.IsZero() {
+		t.Fatalf("runtime after offline event = %+v", runtime)
 	}
 }
 

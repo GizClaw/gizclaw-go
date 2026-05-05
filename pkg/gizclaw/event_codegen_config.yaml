@@ -1,5 +1,0 @@
-package: gizclaw
-generate:
-  models: true
-output-options:
-  skip-prune: true

@@ -36,7 +36,10 @@ func TestListenAndCloseOwnedListener(t *testing.T) {
 		t.Fatalf("GenerateKeyPair failed: %v", err)
 	}
 
-	l, err := giznet.Listen(key, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
+	l, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: testSecurityPolicy{},
+	}).Listen(key)
 	if err != nil {
 		t.Fatalf("Listen failed: %v", err)
 	}
@@ -61,7 +64,10 @@ func TestListenerPeerMissingReturnsFalse(t *testing.T) {
 		t.Fatalf("Generate unknown key failed: %v", err)
 	}
 
-	l, err := giznet.Listen(key, giznet.WithBindAddr("127.0.0.1:0"), giznet.WithAllowUnknown(true))
+	l, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: testSecurityPolicy{},
+	}).Listen(key)
 	if err != nil {
 		t.Fatalf("Listen failed: %v", err)
 	}
@@ -70,6 +76,61 @@ func TestListenerPeerMissingReturnsFalse(t *testing.T) {
 	if _, ok := l.Peer(unknown.Public); ok {
 		t.Fatal("Peer(unknown) should not find a Conn")
 	}
+}
+
+func TestListenConfigReceivesPeerOnlineOfflineEvents(t *testing.T) {
+	serverKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("Generate server key failed: %v", err)
+	}
+	clientKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("Generate client key failed: %v", err)
+	}
+
+	events := make(chan giznet.PeerEvent, 2)
+	serverListener := NewTestListenerConfig(t, giznet.ListenConfig{
+		PeerEventHandler: giznet.PeerEventHandleFunc(func(ev giznet.PeerEvent) {
+			events <- ev
+		}),
+	}, serverKey)
+	defer serverListener.Close()
+	clientListener := NewTestListener(t, clientKey)
+	defer clientListener.Close()
+
+	clientConn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+	if err != nil {
+		t.Fatalf("client Dial failed: %v", err)
+	}
+
+	serverConn, err := AcceptConnWithTimeout(serverListener, 3*time.Second)
+	if err != nil {
+		t.Fatalf("server Accept failed: %v", err)
+	}
+	if serverConn.PublicKey() != clientKey.Public {
+		t.Fatalf("server accepted key=%v, want %v", serverConn.PublicKey(), clientKey.Public)
+	}
+	select {
+	case ev := <-events:
+		if ev.PublicKey != clientKey.Public || ev.State != giznet.PeerStateEstablished {
+			t.Fatalf("online event=%+v, want established for client", ev)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("online handler event timeout")
+	}
+
+	if err := serverConn.Close(); err != nil {
+		t.Fatalf("server Conn.Close failed: %v", err)
+	}
+	select {
+	case ev := <-events:
+		if ev.PublicKey != clientKey.Public || ev.State != giznet.PeerStateOffline {
+			t.Fatalf("offline event=%+v, want offline for client", ev)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("offline handler event timeout")
+	}
+	_ = clientConn
 }
 
 func TestListenerDoesNotAcceptSamePeerAgainOnReconnect(t *testing.T) {
@@ -333,6 +394,31 @@ func TestNilConnGuard(t *testing.T) {
 	}
 	if got := c.PublicKey(); got != (giznet.PublicKey{}) {
 		t.Fatalf("PublicKey(nil conn) = %v, want zero key", got)
+	}
+	if info := c.PeerInfo(); info != nil {
+		t.Fatalf("PeerInfo(nil conn) = %+v, want nil", info)
+	}
+}
+
+func TestConnPeerInfoReturnsTransportSnapshot(t *testing.T) {
+	pair := NewConnectedPeerPair(t)
+	defer pair.Close()
+
+	info := pair.ServerConn.PeerInfo()
+	if info == nil {
+		t.Fatal("PeerInfo() = nil")
+	}
+	if info.PublicKey != pair.ClientKey.Public {
+		t.Fatalf("PeerInfo().PublicKey = %v, want %v", info.PublicKey, pair.ClientKey.Public)
+	}
+	if info.State != giznet.PeerStateEstablished {
+		t.Fatalf("PeerInfo().State = %v, want %v", info.State, giznet.PeerStateEstablished)
+	}
+	if info.Endpoint == nil {
+		t.Fatal("PeerInfo().Endpoint = nil")
+	}
+	if info.LastSeen.IsZero() {
+		t.Fatal("PeerInfo().LastSeen is zero")
 	}
 }
 

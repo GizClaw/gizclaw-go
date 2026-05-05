@@ -23,11 +23,13 @@ func BenchmarkPublicHTTPRoundTrip(b *testing.B) {
 				b.Fatal(err)
 			}
 
-			serverListener := newBenchListenerNode(b, serverKey, giznet.WithServiceMuxConfig(giznet.ServiceMuxConfig{
-				OnNewService: func(_ giznet.PublicKey, service uint64) bool {
-					return service == 7
+			serverListener := newBenchListenerNode(b, serverKey, giznet.ListenConfig{
+				SecurityPolicy: benchSecurityPolicy{
+					allowService: func(_ giznet.PublicKey, service uint64) bool {
+						return service == 7
+					},
 				},
-			}))
+			})
 			clientListener := newBenchListenerNode(b, clientKey)
 			clientConn, serverConn := connectBenchListenerNodes(b, clientListener, clientKey, serverListener, serverKey)
 

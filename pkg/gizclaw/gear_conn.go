@@ -20,19 +20,19 @@ import (
 )
 
 var (
-	ErrNilGearPeer        = errors.New("gizclaw: nil gear peer")
-	ErrNilGearPeerConn    = errors.New("gizclaw: nil gear peer conn")
-	ErrNilGearPeerService = errors.New("gizclaw: nil gear peer service")
-	ErrNilGearPeerMixer   = errors.New("gizclaw: nil gear peer mixer")
+	ErrNilGearConn          = errors.New("gizclaw: nil gear conn")
+	ErrNilGearConnTransport = errors.New("gizclaw: nil gear conn transport")
+	ErrNilGearConnService   = errors.New("gizclaw: nil gear conn service")
+	ErrNilGearConnMixer     = errors.New("gizclaw: nil gear conn mixer")
 )
 
-const gearPeerMixerFormat = pcm.L16Mono16K
+const gearConnMixerFormat = pcm.L16Mono16K
 
-const gearPeerOpusFrameDuration = 20 * time.Millisecond
+const gearConnOpusFrameDuration = 20 * time.Millisecond
 
-// GearPeer is the in-memory runtime peer for one active gear.
+// GearConn is the in-memory runtime for one active gear connection.
 // It wraps the existing PeerService bundle and serves one live conn at a time.
-type GearPeer struct {
+type GearConn struct {
 	Conn    *giznet.Conn
 	Service *PeerService
 
@@ -43,8 +43,8 @@ type GearPeer struct {
 }
 
 // CreateAudioTrack creates a writable audio track on the peer mixer.
-// The mixer itself is intentionally kept private to GearPeer.
-func (h *GearPeer) CreateAudioTrack(opts ...pcm.TrackOption) (pcm.Track, *pcm.TrackCtrl, error) {
+// The mixer itself is intentionally kept private to GearConn.
+func (h *GearConn) CreateAudioTrack(opts ...pcm.TrackOption) (pcm.Track, *pcm.TrackCtrl, error) {
 	mx, err := h.audioMixer()
 	if err != nil {
 		return nil, nil, err
@@ -53,15 +53,15 @@ func (h *GearPeer) CreateAudioTrack(opts ...pcm.TrackOption) (pcm.Track, *pcm.Tr
 }
 
 // serve proxies to the existing PeerService implementation for one live conn.
-func (h *GearPeer) serve() error {
+func (h *GearConn) serve() error {
 	if h == nil {
-		return ErrNilGearPeer
+		return ErrNilGearConn
 	}
 	if h.Conn == nil {
-		return ErrNilGearPeerConn
+		return ErrNilGearConnTransport
 	}
 	if h.Service == nil {
-		return ErrNilGearPeerService
+		return ErrNilGearConnService
 	}
 	h.init()
 
@@ -76,14 +76,14 @@ func (h *GearPeer) serve() error {
 	return err
 }
 
-func (h *GearPeer) serveService() error {
+func (h *GearConn) serveService() error {
 	defer func() {
 		_ = h.close()
 	}()
 	return h.Service.ServeConn(h.Conn)
 }
 
-func (h *GearPeer) servePackets() error {
+func (h *GearConn) servePackets() error {
 	if _, err := h.audioMixer(); err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (h *GearPeer) servePackets() error {
 	return nil
 }
 
-func (h *GearPeer) serveRPC() error {
+func (h *GearConn) serveRPC() error {
 	listener := h.Conn.ListenService(ServiceRPC)
 	defer func() {
 		_ = listener.Close()
@@ -104,8 +104,6 @@ func (h *GearPeer) serveRPC() error {
 			}
 			return err
 		}
-		h.Service.touchPeer(h.Conn)
-
 		go func(stream net.Conn) {
 			if err := h.serveRPCStream(stream); err != nil {
 				_ = stream.Close()
@@ -114,7 +112,7 @@ func (h *GearPeer) serveRPC() error {
 	}
 }
 
-func (h *GearPeer) serveRPCStream(stream net.Conn) error {
+func (h *GearConn) serveRPCStream(stream net.Conn) error {
 	req, err := rpc.ReadRequest(stream)
 	if err != nil {
 		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
@@ -122,8 +120,6 @@ func (h *GearPeer) serveRPCStream(stream net.Conn) error {
 		}
 		return err
 	}
-	h.Service.touchPeer(h.Conn)
-
 	resp, err := h.dispatchRPC(context.Background(), req)
 	if err != nil {
 		return err
@@ -146,7 +142,7 @@ func (h *GearPeer) serveRPCStream(stream net.Conn) error {
 	return nil
 }
 
-func (h *GearPeer) dispatchRPC(ctx context.Context, req *rpc.RPCRequest) (*rpc.RPCResponse, error) {
+func (h *GearConn) dispatchRPC(ctx context.Context, req *rpc.RPCRequest) (*rpc.RPCResponse, error) {
 	switch req.Method {
 	case rpc.MethodPing:
 		if req.Params == nil {
@@ -168,7 +164,7 @@ func (h *GearPeer) dispatchRPC(ctx context.Context, req *rpc.RPCRequest) (*rpc.R
 // requests can run concurrently on separate streams. This is closer to
 // HTTP/1.0-style request lifecycles; HTTP/1.1-style stream reuse is not
 // supported yet.
-func (h *GearPeer) Ping(ctx context.Context, id string) (*rpc.PingResponse, error) {
+func (h *GearConn) Ping(ctx context.Context, id string) (*rpc.PingResponse, error) {
 	rpcClient, err := h.rpcClient()
 	if err != nil {
 		return nil, err
@@ -177,7 +173,7 @@ func (h *GearPeer) Ping(ctx context.Context, id string) (*rpc.PingResponse, erro
 	return rpcClient.Ping(ctx, id)
 }
 
-func (h *GearPeer) rpcClient() (*rpc.Client, error) {
+func (h *GearConn) rpcClient() (*rpc.Client, error) {
 	conn := h.Conn
 	stream, err := conn.Dial(ServiceRPC)
 	if err != nil {
@@ -186,34 +182,34 @@ func (h *GearPeer) rpcClient() (*rpc.Client, error) {
 	return rpc.NewClient(stream), nil
 }
 
-func (h *GearPeer) handlePing(_ context.Context, _ rpc.PingRequest) (*rpc.PingResponse, error) {
+func (h *GearConn) handlePing(_ context.Context, _ rpc.PingRequest) (*rpc.PingResponse, error) {
 	return &rpc.PingResponse{ServerTime: time.Now().UnixMilli()}, nil
 }
 
-func (h *GearPeer) init() {
+func (h *GearConn) init() {
 	h.initMixer()
 }
 
-func (h *GearPeer) initMixer() {
+func (h *GearConn) initMixer() {
 	if h == nil {
 		return
 	}
 	if h.mixer == nil {
-		h.mixer = pcm.NewMixer(gearPeerMixerFormat)
+		h.mixer = pcm.NewMixer(gearConnMixerFormat)
 	}
 }
 
-func (h *GearPeer) audioMixer() (*pcm.Mixer, error) {
+func (h *GearConn) audioMixer() (*pcm.Mixer, error) {
 	if h == nil {
-		return nil, ErrNilGearPeer
+		return nil, ErrNilGearConn
 	}
 	if h.mixer == nil {
-		return nil, ErrNilGearPeerMixer
+		return nil, ErrNilGearConnMixer
 	}
 	return h.mixer, nil
 }
 
-func (h *GearPeer) close() error {
+func (h *GearConn) close() error {
 	if h == nil {
 		return nil
 	}
@@ -233,7 +229,7 @@ func (h *GearPeer) close() error {
 	return closeErr
 }
 
-func (h *GearPeer) streamMixedAudioLoop() {
+func (h *GearConn) streamMixedAudioLoop() {
 	hasWrittenBefore := false
 	for !h.isClosed() {
 		wrote, err := h.streamMixedAudio(hasWrittenBefore)
@@ -244,9 +240,9 @@ func (h *GearPeer) streamMixedAudioLoop() {
 	}
 }
 
-func (h *GearPeer) streamMixedAudio(hasWrittenBefore bool) (wrote bool, err error) {
+func (h *GearConn) streamMixedAudio(hasWrittenBefore bool) (wrote bool, err error) {
 	mx := h.mixer
-	enc, err := opus.NewEncoder(gearPeerMixerFormat.SampleRate(), gearPeerMixerFormat.Channels(), opus.ApplicationAudio)
+	enc, err := opus.NewEncoder(gearConnMixerFormat.SampleRate(), gearConnMixerFormat.Channels(), opus.ApplicationAudio)
 	if err != nil {
 		return false, err
 	}
@@ -254,9 +250,9 @@ func (h *GearPeer) streamMixedAudio(hasWrittenBefore bool) (wrote bool, err erro
 		_ = enc.Close()
 	}()
 
-	frameSize := int(gearPeerMixerFormat.SamplesInDuration(gearPeerOpusFrameDuration))
+	frameSize := int(gearConnMixerFormat.SamplesInDuration(gearConnOpusFrameDuration))
 	for {
-		chunk, err := gearPeerMixerFormat.ReadChunk(mx, gearPeerOpusFrameDuration)
+		chunk, err := gearConnMixerFormat.ReadChunk(mx, gearConnOpusFrameDuration)
 		if err != nil {
 			if h.isClosed() && errors.Is(err, io.ErrClosedPipe) {
 				return wrote, nil
@@ -264,7 +260,7 @@ func (h *GearPeer) streamMixedAudio(hasWrittenBefore bool) (wrote bool, err erro
 			return wrote, err
 		}
 
-		packet, err := enc.Encode(gearPeerPCMChunkToInt16(chunk), frameSize)
+		packet, err := enc.Encode(gearConnPCMChunkToInt16(chunk), frameSize)
 		if err != nil {
 			return wrote, err
 		}
@@ -277,18 +273,18 @@ func (h *GearPeer) streamMixedAudio(hasWrittenBefore bool) (wrote bool, err erro
 		if _, err := h.Conn.Write(ProtocolStampedOpus, payload); err != nil {
 			return wrote, err
 		}
-		h.lastOpusFrameTimestamp.Add(uint64(gearPeerOpusFrameDuration / time.Millisecond))
+		h.lastOpusFrameTimestamp.Add(uint64(gearConnOpusFrameDuration / time.Millisecond))
 	}
 }
 
-func (h *GearPeer) isClosed() bool {
+func (h *GearConn) isClosed() bool {
 	if h == nil {
 		return true
 	}
 	return h.closed.Load()
 }
 
-func gearPeerPCMChunkToInt16(chunk pcm.Chunk) []int16 {
+func gearConnPCMChunkToInt16(chunk pcm.Chunk) []int16 {
 	dataChunk, ok := chunk.(*pcm.DataChunk)
 	if !ok || len(dataChunk.Data) == 0 {
 		return nil

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
@@ -10,9 +11,31 @@ import (
 
 var BuildCommit = "dev"
 
-// New wires an already prepared in-memory config into a gizclaw.Server.
-func New(cfg Config) (*gizclaw.Server, error) {
-	cfg, err := prepareConfig(cfg)
+// CmdServer owns the command-layer store registry for a gizclaw server.
+type CmdServer struct {
+	*gizclaw.Server
+	stores *stores.Stores
+}
+
+func (s *CmdServer) Close() error {
+	if s == nil {
+		return nil
+	}
+	var errs []error
+	if s.Server != nil {
+		errs = append(errs, s.Server.Close())
+		s.Server = nil
+	}
+	if s.stores != nil {
+		errs = append(errs, s.stores.Close())
+		s.stores = nil
+	}
+	return errors.Join(errs...)
+}
+
+// New wires an already prepared in-memory config into a command server.
+func New(cfg Config) (srv *CmdServer, err error) {
+	cfg, err = prepareConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -20,63 +43,59 @@ func New(cfg Config) (*gizclaw.Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("server: stores: %w", err)
 	}
+	openedStores := ss
+	defer func() {
+		if err != nil {
+			err = errors.Join(err, openedStores.Close())
+		}
+	}()
 
 	gearsKV, err := ss.KV(cfg.Gears.Store)
 	if err != nil {
-		_ = ss.Close()
 		return nil, fmt.Errorf("server: gears store: %w", err)
 	}
 
 	fwStore, err := ss.DepotStore(cfg.Depots.Store)
 	if err != nil {
-		_ = ss.Close()
 		return nil, fmt.Errorf("server: firmware store: %w", err)
 	}
 
-	srv := &gizclaw.Server{
+	gizServer := &gizclaw.Server{
 		KeyPair:         cfg.KeyPair,
+		ListenAddr:      cfg.ListenAddr,
 		GearStore:       gearsKV,
 		BuildCommit:     BuildCommit,
 		ServerPublicKey: cfg.KeyPair.Public.String(),
 		AdminPublicKey:  cfg.AdminPublicKey,
 		DepotStore:      fwStore,
-		StoreCloser:     ss,
 	}
 	if len(cfg.Storage) > 0 {
-		if srv.CredentialStore, err = ss.KV(cfg.Credentials.Store); err != nil {
-			_ = ss.Close()
+		if gizServer.CredentialStore, err = ss.KV(cfg.Credentials.Store); err != nil {
 			return nil, fmt.Errorf("server: credentials store: %w", err)
 		}
-		if srv.MiniMaxCredentialStore, err = ss.KV(cfg.MiniMax.CredentialsStore); err != nil {
-			_ = ss.Close()
+		if gizServer.MiniMaxCredentialStore, err = ss.KV(cfg.MiniMax.CredentialsStore); err != nil {
 			return nil, fmt.Errorf("server: minimax credentials store: %w", err)
 		}
-		if srv.MiniMaxTenantStore, err = ss.KV(cfg.MiniMax.TenantsStore); err != nil {
-			_ = ss.Close()
+		if gizServer.MiniMaxTenantStore, err = ss.KV(cfg.MiniMax.TenantsStore); err != nil {
 			return nil, fmt.Errorf("server: minimax tenants store: %w", err)
 		}
-		if srv.VoiceStore, err = ss.KV(cfg.MiniMax.VoicesStore); err != nil {
-			_ = ss.Close()
+		if gizServer.VoiceStore, err = ss.KV(cfg.MiniMax.VoicesStore); err != nil {
 			return nil, fmt.Errorf("server: voices store: %w", err)
 		}
-		if srv.WorkspaceStore, err = ss.KV(cfg.Workspaces.Store); err != nil {
-			_ = ss.Close()
+		if gizServer.WorkspaceStore, err = ss.KV(cfg.Workspaces.Store); err != nil {
 			return nil, fmt.Errorf("server: workspaces store: %w", err)
 		}
-		if srv.WorkspaceTemplateStore, err = ss.KV(cfg.Workspaces.TemplatesStore); err != nil {
-			_ = ss.Close()
+		if gizServer.WorkspaceTemplateStore, err = ss.KV(cfg.Workspaces.TemplatesStore); err != nil {
 			return nil, fmt.Errorf("server: workspace template reference store: %w", err)
 		}
-		if srv.DepotMetadataStore, err = ss.KV(cfg.Depots.MetadataStore); err != nil {
-			_ = ss.Close()
+		if gizServer.DepotMetadataStore, err = ss.KV(cfg.Depots.MetadataStore); err != nil {
 			return nil, fmt.Errorf("server: firmware metadata store: %w", err)
 		}
-		if srv.TemplateStore, err = ss.KV(cfg.WorkspaceTemplates.Store); err != nil {
-			_ = ss.Close()
+		if gizServer.TemplateStore, err = ss.KV(cfg.WorkspaceTemplates.Store); err != nil {
 			return nil, fmt.Errorf("server: workspace templates store: %w", err)
 		}
 	}
-	return srv, nil
+	return &CmdServer{Server: gizServer, stores: ss}, nil
 }
 
 func newStoreRegistry(cfg Config) (*stores.Stores, error) {

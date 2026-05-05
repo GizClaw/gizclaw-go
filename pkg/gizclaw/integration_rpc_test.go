@@ -92,11 +92,11 @@ func TestIntegrationRPCReversePingClient(t *testing.T) {
 		if manager == nil {
 			return fmt.Errorf("server manager not ready")
 		}
-		conn, ok := manager.ActivePeer(client.KeyPair.Public.String())
+		conn, ok := manager.Peer(client.KeyPair.Public)
 		if !ok {
 			return fmt.Errorf("active peer not ready")
 		}
-		host := &gizclaw.GearPeer{
+		host := &gizclaw.GearConn{
 			Conn:    conn,
 			Service: ts.server.PeerService(),
 		}

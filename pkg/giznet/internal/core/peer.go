@@ -29,6 +29,23 @@ func (p *Peer) State() PeerState {
 	return p.state.state
 }
 
+// PeerInfo returns the current peer state snapshot.
+func (p *Peer) PeerInfo() *PeerInfo {
+	if p == nil || p.state == nil {
+		return nil
+	}
+	p.state.mu.RLock()
+	defer p.state.mu.RUnlock()
+	return &PeerInfo{
+		PublicKey: p.state.pk,
+		Endpoint:  p.state.endpoint,
+		State:     p.state.state,
+		RxBytes:   p.state.rxBytes,
+		TxBytes:   p.state.txBytes,
+		LastSeen:  p.state.lastSeen,
+	}
+}
+
 // IsClosed reports whether the owning UDP transport is closing or closed.
 func (p *Peer) IsClosed() bool {
 	return p == nil || p.udp == nil || p.udp.closed.Load() || p.udp.closing.Load()

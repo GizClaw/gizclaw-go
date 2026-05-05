@@ -23,6 +23,24 @@
       "ErrorResponse": {
         "$ref": "./type/error_response.json#/components/schemas/ErrorResponse"
       },
+      "Event": {
+        "type": "object",
+        "required": [
+          "v",
+          "name"
+        ],
+        "properties": {
+          "v": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "data": {
+            "x-go-type": "json.RawMessage"
+          }
+        }
+      },
       "FirmwareConfig": {
         "$ref": "./type/firmware_config.json#/components/schemas/FirmwareConfig"
       },

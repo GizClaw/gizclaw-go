@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"runtime"
 	"testing"
 	"time"
 
@@ -728,5 +729,61 @@ func TestServiceMux_InputReturnsInboundQueueFull(t *testing.T) {
 	}
 	if err := mux.InputPacket(testDirectProtoA, []byte("overflow")); !errors.Is(err, ErrInboundQueueFull) {
 		t.Fatalf("InputPacket overflow err=%v, want %v", err, ErrInboundQueueFull)
+	}
+}
+
+// TestClosedChanGoroutineLeak verifies that AcceptStream does not leak
+// goroutines via closedChan().
+func TestClosedChanGoroutineLeak(t *testing.T) {
+	runtime.GC()
+	time.Sleep(100 * time.Millisecond)
+	baseline := runtime.NumGoroutine()
+
+	// Call AcceptStream multiple times across fresh connected pairs. After each
+	// AcceptStream returns, the closedChan goroutine should exit.
+	const iterations = 10
+	for i := 0; i < iterations; i++ {
+		server, client, serverKey, clientKey := createConnectedPair(t)
+
+		accepted := make(chan io.ReadWriteCloser, 1)
+		go func() {
+			s, err := mustServiceMux(t, server, clientKey.Public).AcceptStream(0)
+			if err != nil {
+				return
+			}
+			accepted <- s
+		}()
+
+		time.Sleep(20 * time.Millisecond)
+		cs, err := mustServiceMux(t, client, serverKey.Public).OpenStream(0)
+		if err != nil {
+			t.Fatalf("OpenStream %d: %v", i, err)
+		}
+		if _, err := cs.Write([]byte("x")); err != nil {
+			t.Fatalf("Write %d: %v", i, err)
+		}
+
+		select {
+		case ss := <-accepted:
+			ss.Close()
+		case <-time.After(3 * time.Second):
+			t.Fatalf("Timeout waiting for AcceptStream %d", i)
+		}
+		cs.Close()
+		_ = server.Close()
+		_ = client.Close()
+	}
+
+	time.Sleep(200 * time.Millisecond)
+	runtime.GC()
+	time.Sleep(100 * time.Millisecond)
+
+	after := runtime.NumGoroutine()
+	leaked := after - baseline
+
+	if leaked > 5 {
+		t.Errorf("GOROUTINE LEAK: %d goroutines leaked after %d AcceptStream calls "+
+			"(baseline=%d, after=%d). closedChan() likely leaking goroutines.",
+			leaked, iterations, baseline, after)
 	}
 }
