@@ -2,17 +2,18 @@ package clicontext
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/GizClaw/gizclaw-go/cmd/internal/identity"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/goccy/go-yaml"
-	"os"
-	"path/filepath"
 )
 
 // ServerConfig holds the connection info for a remote server.
 type ServerConfig struct {
-	Address   string `yaml:"address"`
-	PublicKey string `yaml:"public-key"`
+	Address   string           `yaml:"address"`
+	PublicKey giznet.PublicKey `yaml:"public-key"`
 }
 
 // Config is the per-cli-context configuration stored in config.yaml.
@@ -36,9 +37,23 @@ func Load(dir string) (*CLIContext, error) {
 	if err != nil {
 		return nil, fmt.Errorf("clicontext: read config: %w", err)
 	}
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	var raw struct {
+		Server struct {
+			Address   string           `yaml:"address"`
+			PublicKey giznet.PublicKey `yaml:"public-key"`
+		} `yaml:"server"`
+	}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("clicontext: parse config: %w", err)
+	}
+	if raw.Server.PublicKey.IsZero() {
+		return nil, fmt.Errorf("clicontext: parse server public key: zero key")
+	}
+	cfg := Config{
+		Server: ServerConfig{
+			Address:   raw.Server.Address,
+			PublicKey: raw.Server.PublicKey,
+		},
 	}
 
 	kp, err := identity.Load(filepath.Join(dir, "identity.key"))
@@ -51,5 +66,5 @@ func Load(dir string) (*CLIContext, error) {
 
 // ServerPublicKey parses and returns the server's public key.
 func (c *CLIContext) ServerPublicKey() (giznet.PublicKey, error) {
-	return giznet.KeyFromHex(c.Config.Server.PublicKey)
+	return c.Config.Server.PublicKey, nil
 }

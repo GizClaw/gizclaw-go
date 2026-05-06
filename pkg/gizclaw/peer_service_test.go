@@ -49,13 +49,13 @@ func TestPublicFiberAdapterServerInfo(t *testing.T) {
 		if base == nil {
 			base = context.Background()
 		}
-		ctx.SetUserContext(serverpublic.WithCallerPublicKey(base, "gear-pk"))
+		ctx.SetUserContext(serverpublic.WithCallerPublicKey(base, giznet.PublicKey{1}))
 		return ctx.Next()
 	})
 	serverpublic.RegisterHandlers(app, serverpublic.NewStrictHandler(&serverPublic{
 		GearsServerPublic: &gear.Server{
 			BuildCommit:     "test-build",
-			ServerPublicKey: "server-pk",
+			ServerPublicKey: giznet.PublicKey{1},
 		},
 	}, nil))
 
@@ -129,7 +129,7 @@ func TestPeerServicePublicRoundTrip(t *testing.T) {
 
 	gearsServer := &gear.Server{
 		BuildCommit:     "test-build",
-		ServerPublicKey: serverKey.Public.String(),
+		ServerPublicKey: serverKey.Public,
 	}
 	service := &PeerService{
 		manager: NewManager(gearsServer),
@@ -301,7 +301,7 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 		GearStore:       mustBadgerInMemory(t, nil),
 		DepotStore:      depotstore.Dir(t.TempDir()),
 		BuildCommit:     "test-build",
-		ServerPublicKey: serverKey.Public.String(),
+		ServerPublicKey: serverKey.Public,
 	}
 	if err := server.init(); err != nil {
 		t.Fatalf("init error = %v", err)
@@ -320,7 +320,7 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 		if _, ok := server.manager.Peer(clientKey.Public); !ok {
 			return fmt.Errorf("peer not marked online yet")
 		}
-		gear, loadErr := server.manager.Gears.LoadGear(context.Background(), clientKey.Public.String())
+		gear, loadErr := server.manager.Gears.LoadGear(context.Background(), clientKey.Public)
 		if loadErr != nil {
 			return fmt.Errorf("auto-created gear not ready: %w", loadErr)
 		}

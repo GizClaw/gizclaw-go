@@ -13,7 +13,7 @@ import (
 type Config struct {
 	KeyPair            *giznet.KeyPair
 	ListenAddr         string
-	AdminPublicKey     string
+	AdminPublicKey     giznet.PublicKey
 	Storage            map[string]storage.Config
 	Stores             map[string]stores.Config
 	Gears              GearsConfig
@@ -54,7 +54,7 @@ type DepotsConfig struct {
 
 type ConfigFile struct {
 	ListenAddr         string                    `yaml:"listen"`
-	AdminPublicKey     string                    `yaml:"admin-public-key"`
+	AdminPublicKey     giznet.PublicKey          `yaml:"admin-public-key"`
 	Storage            map[string]storage.Config `yaml:"storage"`
 	Stores             map[string]stores.Config  `yaml:"stores"`
 	Gears              GearsConfig               `yaml:"gears"`
@@ -70,9 +70,39 @@ func LoadConfig(path string) (ConfigFile, error) {
 	if err != nil {
 		return ConfigFile{}, err
 	}
-	var cfg ConfigFile
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	var raw struct {
+		ListenAddr         string                    `yaml:"listen"`
+		AdminPublicKey     *giznet.PublicKey         `yaml:"admin-public-key"`
+		Storage            map[string]storage.Config `yaml:"storage"`
+		Stores             map[string]stores.Config  `yaml:"stores"`
+		Gears              GearsConfig               `yaml:"gears"`
+		Credentials        CredentialsConfig         `yaml:"credentials"`
+		MiniMax            MiniMaxConfig             `yaml:"minimax"`
+		Workspaces         WorkspacesConfig          `yaml:"workspaces"`
+		WorkspaceTemplates WorkspaceTemplatesConfig  `yaml:"workspace-templates"`
+		Depots             DepotsConfig              `yaml:"depots"`
+	}
+	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return ConfigFile{}, err
+	}
+	var adminPublicKey giznet.PublicKey
+	if raw.AdminPublicKey != nil {
+		if raw.AdminPublicKey.IsZero() {
+			return ConfigFile{}, fmt.Errorf("server: invalid admin-public-key: zero key")
+		}
+		adminPublicKey = *raw.AdminPublicKey
+	}
+	cfg := ConfigFile{
+		ListenAddr:         raw.ListenAddr,
+		AdminPublicKey:     adminPublicKey,
+		Storage:            raw.Storage,
+		Stores:             raw.Stores,
+		Gears:              raw.Gears,
+		Credentials:        raw.Credentials,
+		MiniMax:            raw.MiniMax,
+		Workspaces:         raw.Workspaces,
+		WorkspaceTemplates: raw.WorkspaceTemplates,
+		Depots:             raw.Depots,
 	}
 	return cfg, nil
 }
@@ -83,11 +113,11 @@ func DefaultConfig() Config {
 	}
 }
 
-func mergeFileConfig(cfg Config, fileCfg ConfigFile) Config {
+func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	if cfg.ListenAddr == "" {
 		cfg.ListenAddr = fileCfg.ListenAddr
 	}
-	if cfg.AdminPublicKey == "" {
+	if cfg.AdminPublicKey.IsZero() {
 		cfg.AdminPublicKey = fileCfg.AdminPublicKey
 	}
 	if len(cfg.Stores) == 0 {
@@ -102,7 +132,7 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) Config {
 	cfg.Workspaces = mergeWorkspacesConfig(cfg.Workspaces, fileCfg.Workspaces)
 	cfg.WorkspaceTemplates = mergeWorkspaceTemplatesConfig(cfg.WorkspaceTemplates, fileCfg.WorkspaceTemplates)
 	cfg.Depots = mergeDepotsConfig(cfg.Depots, fileCfg.Depots)
-	return cfg
+	return cfg, nil
 }
 
 func mergeGearsConfig(runtime GearsConfig, file GearsConfig) GearsConfig {
@@ -164,11 +194,6 @@ func prepareConfig(cfg Config) (Config, error) {
 	if cfg.ListenAddr == "" {
 		cfg.ListenAddr = defaults.ListenAddr
 	}
-	adminPublicKey, err := normalizeAdminPublicKey(cfg.AdminPublicKey)
-	if err != nil {
-		return Config{}, err
-	}
-	cfg.AdminPublicKey = adminPublicKey
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
 	}
@@ -188,9 +213,6 @@ func (cfg Config) validate() error {
 	}
 	if cfg.Depots.Store == "" {
 		return fmt.Errorf("server: depots.store is required")
-	}
-	if _, err := normalizeAdminPublicKey(cfg.AdminPublicKey); err != nil {
-		return err
 	}
 	if len(cfg.Storage) == 0 {
 		return nil
@@ -220,18 +242,4 @@ func (cfg Config) validate() error {
 		return fmt.Errorf("server: depots.metadata-store is required")
 	}
 	return nil
-}
-
-func normalizeAdminPublicKey(value string) (string, error) {
-	if value == "" {
-		return "", nil
-	}
-	adminPublicKey, err := giznet.KeyFromHex(value)
-	if err != nil {
-		return "", fmt.Errorf("server: invalid admin-public-key: %w", err)
-	}
-	if adminPublicKey.IsZero() {
-		return "", fmt.Errorf("server: invalid admin-public-key: zero key")
-	}
-	return adminPublicKey.String(), nil
 }

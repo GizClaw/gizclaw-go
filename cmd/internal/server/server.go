@@ -65,7 +65,7 @@ func New(cfg Config) (srv *CmdServer, err error) {
 		ListenAddr:      cfg.ListenAddr,
 		GearStore:       gearsKV,
 		BuildCommit:     BuildCommit,
-		ServerPublicKey: cfg.KeyPair.Public.String(),
+		ServerPublicKey: cfg.KeyPair.Public,
 		AdminPublicKey:  cfg.AdminPublicKey,
 		DepotStore:      fwStore,
 	}

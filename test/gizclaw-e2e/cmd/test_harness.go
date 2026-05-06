@@ -365,8 +365,8 @@ func (h *Harness) PublicHTTPURL() string {
 func (h *Harness) PublicHTTPLogin(name string) publiclogin.LoginResponse {
 	h.t.Helper()
 
-	serverPublicKey, err := giznet.KeyFromHex(h.ServerPublicKey)
-	if err != nil {
+	var serverPublicKey giznet.PublicKey
+	if err := serverPublicKey.UnmarshalText([]byte(h.ServerPublicKey)); err != nil {
 		h.t.Fatalf("parse server public key: %v", err)
 	}
 	assertion, err := publiclogin.NewLoginAssertion(h.ContextKeyPair(name), serverPublicKey, time.Minute)
@@ -490,8 +490,8 @@ func (h *Harness) connectClientFromContext(name string) (*gizclaw.Client, error)
 		return nil, fmt.Errorf("load context identity: %w", err)
 	}
 
-	serverPublicKey, err := giznet.KeyFromHex(cfg.Server.PublicKey)
-	if err != nil {
+	var serverPublicKey giznet.PublicKey
+	if err := serverPublicKey.UnmarshalText([]byte(cfg.Server.PublicKey)); err != nil {
 		return nil, fmt.Errorf("parse server public key: %w", err)
 	}
 
@@ -564,8 +564,8 @@ func (h *Harness) waitForServerIdentity() {
 func (h *Harness) waitForServerReady() {
 	h.t.Helper()
 
-	serverPublicKey, err := giznet.KeyFromHex(h.ServerPublicKey)
-	if err != nil {
+	var serverPublicKey giznet.PublicKey
+	if err := serverPublicKey.UnmarshalText([]byte(h.ServerPublicKey)); err != nil {
 		h.t.Fatalf("parse server public key: %v", err)
 	}
 

@@ -48,5 +48,8 @@ jobs:
       - name: Download modules
         run: go mod download
 
+      - name: Generate UI assets
+        run: go generate ./ui/apps/admin ./ui/apps/play
+
       - name: Run tests
         run: go test -count=1 ./...

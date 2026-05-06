@@ -15,6 +15,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 	"github.com/gofiber/fiber/v2"
@@ -25,7 +26,7 @@ type Server struct {
 	MetadataStore kv.Store
 
 	// ResolveGearTarget maps a gear public key to the OTA depot/channel it should read from.
-	ResolveGearTarget func(ctx context.Context, publicKey string) (depot string, channel Channel, err error)
+	ResolveGearTarget func(ctx context.Context, publicKey giznet.PublicKey) (depot string, channel Channel, err error)
 
 	mu      sync.Mutex
 	depotMu map[string]*sync.Mutex
@@ -218,7 +219,11 @@ func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTA
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	depotName, channel, err := s.ResolveGearTarget(ctx, publicKey)
+	var key giznet.PublicKey
+	if err := key.UnmarshalText([]byte(publicKey)); err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	depotName, channel, err := s.ResolveGearTarget(ctx, key)
 	if err != nil || depotName == "" || channel == "" {
 		if err == nil {
 			err = fmt.Errorf("missing depot or channel")
@@ -282,7 +287,7 @@ func (s *Server) resolveCallerTarget(ctx context.Context) (string, Channel, erro
 		return "", "", fmt.Errorf("gear target resolver not configured")
 	}
 	publicKey := gearservice.CallerPublicKey(ctx)
-	if publicKey == "" {
+	if publicKey.IsZero() {
 		return "", "", fmt.Errorf("caller public key not configured")
 	}
 	depotName, channel, err := s.ResolveGearTarget(ctx, publicKey)

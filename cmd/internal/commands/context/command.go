@@ -38,7 +38,7 @@ func buildContextInfo(ctx *clicontext.CLIContext, current string) contextInfo {
 		Name:            ctx.Name,
 		Current:         ctx.Name == current,
 		ServerAddress:   ctx.Config.Server.Address,
-		ServerPublicKey: ctx.Config.Server.PublicKey,
+		ServerPublicKey: ctx.Config.Server.PublicKey.String(),
 		IdentityPublic:  ctx.KeyPair.Public.String(),
 	}
 }

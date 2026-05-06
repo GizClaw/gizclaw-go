@@ -24,11 +24,8 @@ func (p *ServerSecurityPolicy) AllowService(publicKey giznet.PublicKey, service 
 	server := (*Server)(p)
 	manager := server.manager
 	adminPublicKey := server.AdminPublicKey
-	if service == ServiceAdmin && adminPublicKey != "" {
-		key, err := giznet.KeyFromHex(adminPublicKey)
-		if err == nil && key == publicKey {
-			return true
-		}
+	if service == ServiceAdmin && !adminPublicKey.IsZero() && adminPublicKey == publicKey {
+		return true
 	}
 	if manager == nil {
 		return false
@@ -42,7 +39,7 @@ func (p *ServerSecurityPolicy) AllowService(publicKey giznet.PublicKey, service 
 	}
 	switch service {
 	case ServiceGear:
-		gear, err := manager.Gears.LoadGear(context.Background(), publicKey.String())
+		gear, err := manager.Gears.LoadGear(context.Background(), publicKey)
 		if errors.Is(err, gearpkg.ErrGearNotFound) {
 			return true
 		}
@@ -51,7 +48,7 @@ func (p *ServerSecurityPolicy) AllowService(publicKey giznet.PublicKey, service 
 		}
 		return gear.Status == apitypes.GearStatusActive
 	case ServiceAdmin:
-		gear, err := manager.Gears.LoadGear(context.Background(), publicKey.String())
+		gear, err := manager.Gears.LoadGear(context.Background(), publicKey)
 		if err != nil {
 			return false
 		}

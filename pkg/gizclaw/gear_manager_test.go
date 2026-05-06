@@ -90,7 +90,7 @@ func TestManagerEnsureGearCreatesDefaultUnspecifiedGear(t *testing.T) {
 		t.Fatalf("AutoRegistered = %v, want true", created.AutoRegistered)
 	}
 
-	loaded, err := service.LoadGear(ctx, key.String())
+	loaded, err := service.LoadGear(ctx, key)
 	if err != nil {
 		t.Fatalf("LoadGear error = %v", err)
 	}

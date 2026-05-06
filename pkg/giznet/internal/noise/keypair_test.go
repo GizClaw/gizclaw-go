@@ -3,6 +3,8 @@ package noise
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
+	"strings"
 	"testing"
 )
 
@@ -27,8 +29,11 @@ func TestKeyString(t *testing.T) {
 	}
 
 	full := k.String()
-	if len(full) != 64 { // 32 bytes * 2 hex chars
-		t.Errorf("String() length = %d, want 64", len(full))
+	if len(full) != 52 {
+		t.Errorf("String() length = %d, want 52", len(full))
+	}
+	if full != "0410610000000000000000000000000000000000000000000000" {
+		t.Errorf("String() = %q", full)
 	}
 }
 
@@ -64,6 +69,94 @@ func TestKeyFromHex(t *testing.T) {
 				t.Errorf("KeyFromHex() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestKeyTextEncoding(t *testing.T) {
+	var key Key
+	for i := range key {
+		key[i] = byte(i + 1)
+	}
+
+	text, err := key.MarshalText()
+	if err != nil {
+		t.Fatalf("MarshalText error = %v", err)
+	}
+	want := "041061050R3GG28A1C60T3GF208H44RM2MB1E60S38DHR78Y3WG0"
+	if string(text) != want {
+		t.Fatalf("MarshalText = %q, want %q", string(text), want)
+	}
+
+	var got Key
+	if err := got.UnmarshalText(text); err != nil {
+		t.Fatalf("UnmarshalText(crockford) error = %v", err)
+	}
+	if got != key {
+		t.Fatalf("UnmarshalText(crockford) = %v, want %v", got, key)
+	}
+}
+
+func TestKeyTextUnmarshalAcceptsLegacyBase64(t *testing.T) {
+	var want Key
+	for i := range want {
+		want[i] = byte(i + 1)
+	}
+
+	var got Key
+	input := base64.RawURLEncoding.EncodeToString(want[:])
+	if err := got.UnmarshalText([]byte(input)); err != nil {
+		t.Fatalf("UnmarshalText(base64url) error = %v", err)
+	}
+	if got != want {
+		t.Fatalf("UnmarshalText(base64url) = %v, want %v", got, want)
+	}
+}
+
+func TestKeyTextUnmarshalAcceptsLegacyHex(t *testing.T) {
+	input := "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
+	want, err := KeyFromHex(input)
+	if err != nil {
+		t.Fatalf("KeyFromHex error = %v", err)
+	}
+
+	var got Key
+	if err := got.UnmarshalText([]byte(input)); err != nil {
+		t.Fatalf("UnmarshalText(hex) error = %v", err)
+	}
+	if got != want {
+		t.Fatalf("UnmarshalText(hex) = %v, want %v", got, want)
+	}
+}
+
+func TestKeyTextUnmarshalAcceptsCrockfordAliases(t *testing.T) {
+	var want Key
+	for i := range want {
+		want[i] = byte(i + 1)
+	}
+	canonical := want.String()
+	input := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(canonical, "0", "O"), "1", "L"))
+	input = input[:13] + "-" + input[13:26] + "-" + input[26:39] + "-" + input[39:]
+
+	var got Key
+	if err := got.UnmarshalText([]byte(input)); err != nil {
+		t.Fatalf("UnmarshalText(crockford aliases) error = %v", err)
+	}
+	if got != want {
+		t.Fatalf("UnmarshalText(crockford aliases) = %v, want %v", got, want)
+	}
+}
+
+func TestKeyTextUnmarshalRejectsInvalid(t *testing.T) {
+	var key Key
+	for _, input := range []string{
+		"",
+		"not-a-key",
+		base64.RawURLEncoding.EncodeToString([]byte("short")),
+		"041061050R3GG28A1C60T3GF208H44RM2MB1E60S38DHR78Y3WG1",
+	} {
+		if err := key.UnmarshalText([]byte(input)); err == nil {
+			t.Fatalf("UnmarshalText(%q) should fail", input)
+		}
 	}
 }
 

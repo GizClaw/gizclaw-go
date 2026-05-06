@@ -33,7 +33,9 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		Store: mustBadgerInMemory(t, nil),
 	}
 
-	ctx := gearservice.WithCallerPublicKey(context.Background(), "peer-gear")
+	peerKey := giznet.PublicKey{1}
+	peerPublicKey := peerKey.String()
+	ctx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
 	sn := "sn-gear"
 	depot := "depot-gear"
 	tac := "12345678"
@@ -59,7 +61,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	getResp, err := server.GetGear(ctx, adminservice.GetGearRequestObject{
-		PublicKey: adminservice.PublicKey("peer-gear"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("GetGear error: %v", err)
@@ -68,7 +70,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetGear response type = %T", getResp)
 	}
-	if getRegistered.PublicKey != "peer-gear" {
+	if getRegistered.PublicKey != peerPublicKey {
 		t.Fatalf("GetGear = %+v", getRegistered)
 	}
 
@@ -80,14 +82,14 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("ListGears response type = %T", listResp)
 	}
-	if len(listed.Items) != 1 || listed.Items[0].PublicKey != "peer-gear" {
+	if len(listed.Items) != 1 || listed.Items[0].PublicKey != peerPublicKey {
 		t.Fatalf("ListGears items = %+v", listed.Items)
 	}
 
 	stable := apitypes.GearFirmwareChannel("stable")
 	adminStable := apitypes.GearFirmwareChannel(stable)
 	putConfigResp, err := server.PutGearConfig(ctx, adminservice.PutGearConfigRequestObject{
-		PublicKey: adminservice.PublicKey("peer-gear"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 		Body: &adminservice.PutGearConfigJSONRequestBody{
 			Certifications: &[]apitypes.GearCertification{{
 				Type:      apitypes.GearCertificationType("license"),
@@ -105,7 +107,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	getConfigResp, err := server.GetGearConfig(ctx, adminservice.GetGearConfigRequestObject{
-		PublicKey: adminservice.PublicKey("peer-gear"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("GetGearConfig error: %v", err)
@@ -119,7 +121,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	getInfoResp, err := server.GetGearInfo(ctx, adminservice.GetGearInfoRequestObject{
-		PublicKey: adminservice.PublicKey("peer-gear"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("GetGearInfo error: %v", err)
@@ -143,7 +145,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("ListByFirmware response type = %T", byFirmwareResp)
 	}
-	if len(byFirmware.Items) != 1 || byFirmware.Items[0].PublicKey != "peer-gear" {
+	if len(byFirmware.Items) != 1 || byFirmware.Items[0].PublicKey != peerPublicKey {
 		t.Fatalf("ListByFirmware items = %+v", byFirmware.Items)
 	}
 
@@ -155,7 +157,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("ResolveBySN response type = %T", resolveSNResp)
 	}
-	if resolvedSN.PublicKey != "peer-gear" {
+	if resolvedSN.PublicKey != peerPublicKey {
 		t.Fatalf("ResolveBySN = %+v", resolvedSN)
 	}
 
@@ -167,7 +169,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("ListByLabel response type = %T", byLabelResp)
 	}
-	if len(byLabel.Items) != 1 || byLabel.Items[0].PublicKey != "peer-gear" {
+	if len(byLabel.Items) != 1 || byLabel.Items[0].PublicKey != peerPublicKey {
 		t.Fatalf("ListByLabel items = %+v", byLabel.Items)
 	}
 
@@ -182,7 +184,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("ResolveByIMEI response type = %T", resolveIMEIResp)
 	}
-	if resolvedIMEI.PublicKey != "peer-gear" {
+	if resolvedIMEI.PublicKey != peerPublicKey {
 		t.Fatalf("ResolveByIMEI = %+v", resolvedIMEI)
 	}
 
@@ -198,12 +200,12 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("ListByCertification response type = %T", byCertificationResp)
 	}
-	if len(byCertification.Items) != 1 || byCertification.Items[0].PublicKey != "peer-gear" {
+	if len(byCertification.Items) != 1 || byCertification.Items[0].PublicKey != peerPublicKey {
 		t.Fatalf("ListByCertification items = %+v", byCertification.Items)
 	}
 
 	approveResp, err := server.ApproveGear(ctx, adminservice.ApproveGearRequestObject{
-		PublicKey: adminservice.PublicKey("peer-gear"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 		Body:      &adminservice.ApproveGearJSONRequestBody{Role: apitypes.GearRoleGear},
 	})
 	if err != nil {
@@ -218,7 +220,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	blockResp, err := server.BlockGear(ctx, adminservice.BlockGearRequestObject{
-		PublicKey: adminservice.PublicKey("peer-gear"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("BlockGear error: %v", err)
@@ -232,7 +234,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	deleteResp, err := server.DeleteGear(ctx, adminservice.DeleteGearRequestObject{
-		PublicKey: adminservice.PublicKey("peer-gear"),
+		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("DeleteGear error: %v", err)
@@ -251,7 +253,13 @@ func TestServerListGearsPagination(t *testing.T) {
 		Store: mustBadgerInMemory(t, nil),
 	}
 
-	registerGear := func(publicKey, labelValue string) {
+	gearA := giznet.PublicKey{1}
+	gearB := giznet.PublicKey{2}
+	gearC := giznet.PublicKey{3}
+	gearAText := gearA.String()
+	gearBText := gearB.String()
+
+	registerGear := func(publicKey giznet.PublicKey, labelValue string) {
 		ctx := gearservice.WithCallerPublicKey(context.Background(), publicKey)
 		_, err := server.RegisterGear(ctx, gearservice.RegisterGearRequestObject{
 			Body: &gearservice.RegisterGearJSONRequestBody{
@@ -263,13 +271,13 @@ func TestServerListGearsPagination(t *testing.T) {
 			},
 		})
 		if err != nil {
-			t.Fatalf("RegisterGear(%q) error: %v", publicKey, err)
+			t.Fatalf("RegisterGear(%s) error: %v", publicKey, err)
 		}
 	}
 
-	registerGear("gear-a", "cn")
-	registerGear("gear-b", "cn")
-	registerGear("gear-c", "us")
+	registerGear(gearA, "cn")
+	registerGear(gearB, "cn")
+	registerGear(gearC, "us")
 
 	limit := adminservice.Limit(1)
 	resp, err := server.ListGears(context.Background(), adminservice.ListGearsRequestObject{
@@ -284,10 +292,10 @@ func TestServerListGearsPagination(t *testing.T) {
 	if !ok {
 		t.Fatalf("ListGears response type = %T", resp)
 	}
-	if !listed.HasNext || listed.NextCursor == nil || *listed.NextCursor != "gear-a" {
+	if !listed.HasNext || listed.NextCursor == nil || *listed.NextCursor != gearAText {
 		t.Fatalf("ListGears pagination metadata = %+v", listed)
 	}
-	if len(listed.Items) != 1 || listed.Items[0].PublicKey != "gear-a" {
+	if len(listed.Items) != 1 || listed.Items[0].PublicKey != gearAText {
 		t.Fatalf("ListGears paged items = %+v", listed.Items)
 	}
 
@@ -305,7 +313,7 @@ func TestServerListGearsPagination(t *testing.T) {
 	if !ok {
 		t.Fatalf("ListByLabel response type = %T", firstFilteredResp)
 	}
-	if !firstFiltered.HasNext || firstFiltered.NextCursor == nil || *firstFiltered.NextCursor != "gear-a" {
+	if !firstFiltered.HasNext || firstFiltered.NextCursor == nil || *firstFiltered.NextCursor != gearAText {
 		t.Fatalf("ListByLabel first page metadata = %+v", firstFiltered)
 	}
 
@@ -327,7 +335,7 @@ func TestServerListGearsPagination(t *testing.T) {
 	if filtered.HasNext || filtered.NextCursor != nil {
 		t.Fatalf("ListByLabel pagination metadata = %+v", filtered)
 	}
-	if len(filtered.Items) != 1 || filtered.Items[0].PublicKey != "gear-b" {
+	if len(filtered.Items) != 1 || filtered.Items[0].PublicKey != gearBText {
 		t.Fatalf("ListByLabel paged items = %+v", filtered.Items)
 	}
 }
@@ -337,7 +345,14 @@ func TestServerListGearsPaginationPreservesCreationOrder(t *testing.T) {
 		Store: mustBadgerInMemory(t, nil),
 	}
 
-	registerGear := func(publicKey string) {
+	gearA := giznet.PublicKey{1}
+	gearB := giznet.PublicKey{2}
+	gearC := giznet.PublicKey{3}
+	gearAText := gearA.String()
+	gearBText := gearB.String()
+	gearCText := gearC.String()
+
+	registerGear := func(publicKey giznet.PublicKey) {
 		ctx := gearservice.WithCallerPublicKey(context.Background(), publicKey)
 		_, err := server.RegisterGear(ctx, gearservice.RegisterGearRequestObject{
 			Body: &gearservice.RegisterGearJSONRequestBody{
@@ -345,13 +360,13 @@ func TestServerListGearsPaginationPreservesCreationOrder(t *testing.T) {
 			},
 		})
 		if err != nil {
-			t.Fatalf("RegisterGear(%q) error: %v", publicKey, err)
+			t.Fatalf("RegisterGear(%s) error: %v", publicKey, err)
 		}
 	}
 
-	registerGear("gear-b")
-	registerGear("gear-a")
-	registerGear("gear-c")
+	registerGear(gearB)
+	registerGear(gearA)
+	registerGear(gearC)
 
 	limit := adminservice.Limit(2)
 	resp, err := server.ListGears(context.Background(), adminservice.ListGearsRequestObject{
@@ -364,10 +379,10 @@ func TestServerListGearsPaginationPreservesCreationOrder(t *testing.T) {
 	if !ok {
 		t.Fatalf("ListGears first response type = %T", resp)
 	}
-	if len(firstPage.Items) != 2 || firstPage.Items[0].PublicKey != "gear-b" || firstPage.Items[1].PublicKey != "gear-a" {
+	if len(firstPage.Items) != 2 || firstPage.Items[0].PublicKey != gearBText || firstPage.Items[1].PublicKey != gearAText {
 		t.Fatalf("ListGears first page = %+v", firstPage.Items)
 	}
-	if !firstPage.HasNext || firstPage.NextCursor == nil || *firstPage.NextCursor != "gear-a" {
+	if !firstPage.HasNext || firstPage.NextCursor == nil || *firstPage.NextCursor != gearAText {
 		t.Fatalf("ListGears first page metadata = %+v", firstPage)
 	}
 
@@ -384,7 +399,7 @@ func TestServerListGearsPaginationPreservesCreationOrder(t *testing.T) {
 	if !ok {
 		t.Fatalf("ListGears second response type = %T", resp)
 	}
-	if len(secondPage.Items) != 1 || secondPage.Items[0].PublicKey != "gear-c" {
+	if len(secondPage.Items) != 1 || secondPage.Items[0].PublicKey != gearCText {
 		t.Fatalf("ListGears second page = %+v", secondPage.Items)
 	}
 }
@@ -393,13 +408,13 @@ func TestServerListGearsLimitClampsToConfiguredBounds(t *testing.T) {
 	server := &Server{
 		Store: mustBadgerInMemory(t, nil),
 	}
-	for _, publicKey := range []string{"gear-a", "gear-b", "gear-c"} {
+	for _, publicKey := range []giznet.PublicKey{{1}, {2}, {3}} {
 		ctx := gearservice.WithCallerPublicKey(context.Background(), publicKey)
 		_, err := server.RegisterGear(ctx, gearservice.RegisterGearRequestObject{
 			Body: &gearservice.RegisterGearJSONRequestBody{Device: apitypes.DeviceInfo{}},
 		})
 		if err != nil {
-			t.Fatalf("RegisterGear(%q) error: %v", publicKey, err)
+			t.Fatalf("RegisterGear(%s) error: %v", publicKey, err)
 		}
 	}
 
@@ -459,8 +474,8 @@ func TestServerRuntimeHandlers(t *testing.T) {
 		},
 	}
 
-	registerCtx := gearservice.WithCallerPublicKey(context.Background(), peerPublicKey)
-	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerPublicKey)
+	registerCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
+	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
 	_, err := server.RegisterGear(registerCtx, gearservice.RegisterGearRequestObject{
 		Body: &gearservice.RegisterGearJSONRequestBody{Device: apitypes.DeviceInfo{}},
 	})
@@ -511,14 +526,16 @@ func TestServerRuntimeHandlers(t *testing.T) {
 
 func TestServerPublicHandlers(t *testing.T) {
 	before := time.Now()
+	peerKey := giznet.PublicKey{5}
+	peerPublicKey := peerKey.String()
 	server := &Server{
 		Store:           mustBadgerInMemory(t, nil),
 		BuildCommit:     "deadbeef",
-		ServerPublicKey: "server-pk",
+		ServerPublicKey: giznet.PublicKey{1},
 	}
 
-	registerCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-1")
-	gearCtx := gearservice.WithCallerPublicKey(context.Background(), "peer-1")
+	registerCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
+	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
 	name := "gear-a"
 	sn := "sn-1"
 	depot := "alpha"
@@ -545,7 +562,7 @@ func TestServerPublicHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("RegisterGear response type = %T", registerResp)
 	}
-	if registered.Registration.PublicKey != "peer-1" {
+	if registered.Registration.PublicKey != peerPublicKey {
 		t.Fatalf("PublicKey = %q", registered.Registration.PublicKey)
 	}
 	if registered.Registration.Role != apitypes.GearRole(apitypes.GearRoleUnspecified) {
@@ -590,7 +607,7 @@ func TestServerPublicHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetServerInfo response type = %T", serverInfoResp)
 	}
-	if serverInfo.BuildCommit != "deadbeef" || serverInfo.PublicKey != "server-pk" {
+	if serverInfo.BuildCommit != "deadbeef" || serverInfo.PublicKey != server.ServerPublicKey.String() {
 		t.Fatalf("GetServerInfo = %+v", serverInfo)
 	}
 	if serverInfo.ServerTime < before.UnixMilli() || serverInfo.ServerTime > time.Now().Add(time.Second).UnixMilli() {
@@ -614,8 +631,8 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 		},
 	}
 
-	registerCtx := gearservice.WithCallerPublicKey(context.Background(), peerPublicKey)
-	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerPublicKey)
+	registerCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
+	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
 	sn := "sn-old"
 	depot := "depot-public"
 	_, err := server.RegisterGear(registerCtx, gearservice.RegisterGearRequestObject{

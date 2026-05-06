@@ -10,6 +10,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 const publicKeyHeader = "X-Public-Key"
@@ -81,7 +82,7 @@ func (s *PeerService) gearHTTPHandler(sessions *publiclogin.SessionManager) http
 	return fiberHTTPHandler(app)
 }
 
-func authenticateFiberSession(ctx *fiber.Ctx, sessions *publiclogin.SessionManager) (string, bool) {
+func authenticateFiberSession(ctx *fiber.Ctx, sessions *publiclogin.SessionManager) (giznet.PublicKey, bool) {
 	publicKey, err := sessions.Authenticate(ctx.Get("Authorization"))
 	if err != nil {
 		ctx.Status(http.StatusUnauthorized)
@@ -91,9 +92,9 @@ func authenticateFiberSession(ctx *fiber.Ctx, sessions *publiclogin.SessionManag
 				"message": "missing or invalid bearer session",
 			},
 		})
-		return "", false
+		return giznet.PublicKey{}, false
 	}
-	if headerPublicKey := ctx.Get(publicKeyHeader); headerPublicKey != "" && headerPublicKey != publicKey {
+	if headerPublicKey := ctx.Get(publicKeyHeader); headerPublicKey != "" && headerPublicKey != publicKey.String() {
 		ctx.Status(http.StatusUnauthorized)
 		_ = ctx.JSON(map[string]any{
 			"error": map[string]string{
@@ -101,7 +102,7 @@ func authenticateFiberSession(ctx *fiber.Ctx, sessions *publiclogin.SessionManag
 				"message": "x-public-key does not match bearer session",
 			},
 		})
-		return "", false
+		return giznet.PublicKey{}, false
 	}
 	return publicKey, true
 }

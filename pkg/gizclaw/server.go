@@ -37,8 +37,8 @@ type Server struct {
 	WorkspaceTemplateStore kv.Store
 	PublicLoginStore       kv.Store
 	BuildCommit            string
-	ServerPublicKey        string
-	AdminPublicKey         string
+	ServerPublicKey        giznet.PublicKey
+	AdminPublicKey         giznet.PublicKey
 	DepotStore             depotstore.Store
 	DepotMetadataStore     kv.Store
 
@@ -162,10 +162,10 @@ func (s *Server) init() error {
 		return errors.New("gizclaw: nil depot store")
 	}
 	serverPublicKey := s.ServerPublicKey
-	if serverPublicKey == "" && s.KeyPair != nil {
-		serverPublicKey = s.KeyPair.Public.String()
+	if serverPublicKey.IsZero() && s.KeyPair != nil {
+		serverPublicKey = s.KeyPair.Public
 	}
-	if serverPublicKey == "" {
+	if serverPublicKey.IsZero() {
 		return fmt.Errorf("gizclaw: empty server public key")
 	}
 
@@ -205,7 +205,7 @@ func (s *Server) init() error {
 	firmwareServer := &firmware.Server{
 		Store:         s.DepotStore,
 		MetadataStore: depotMetadataStore,
-		ResolveGearTarget: func(ctx context.Context, publicKey string) (string, firmware.Channel, error) {
+		ResolveGearTarget: func(ctx context.Context, publicKey giznet.PublicKey) (string, firmware.Channel, error) {
 			return resolveGearTarget(ctx, gearsServer, publicKey)
 		},
 	}
@@ -263,7 +263,7 @@ func moduleStore(configured, fallback kv.Store, defaultPrefix string) kv.Store {
 	return kv.Prefixed(fallback, kv.Key{defaultPrefix})
 }
 
-func resolveGearTarget(ctx context.Context, gearsServer *gear.Server, publicKey string) (string, firmware.Channel, error) {
+func resolveGearTarget(ctx context.Context, gearsServer *gear.Server, publicKey giznet.PublicKey) (string, firmware.Channel, error) {
 	if gearsServer == nil {
 		return "", "", errors.New("gizclaw: gears service not configured")
 	}

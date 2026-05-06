@@ -101,14 +101,14 @@ func (m *Manager) EnsureGear(ctx context.Context, publicKey giznet.PublicKey) (a
 	if m == nil || m.Gears == nil {
 		return apitypes.Gear{}, errors.New("gizclaw: gears service not configured")
 	}
-	return m.Gears.EnsureConnectedGear(ctx, publicKey.String())
+	return m.Gears.EnsureConnectedGear(ctx, publicKey)
 }
 
 func (m *Manager) RefreshGear(ctx context.Context, publicKey giznet.PublicKey) (adminservice.RefreshResult, bool, error) {
 	if m.Gears == nil {
 		return adminservice.RefreshResult{}, false, errors.New("gizclaw: gears service not configured")
 	}
-	gear, err := m.Gears.LoadGear(ctx, publicKey.String())
+	gear, err := m.Gears.LoadGear(ctx, publicKey)
 	if err != nil {
 		return adminservice.RefreshResult{}, false, err
 	}

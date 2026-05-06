@@ -43,8 +43,8 @@ func TestLoginAssertionAndSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Authenticate error = %v", err)
 	}
-	if publicKey != deviceKey.Public.String() {
-		t.Fatalf("Authenticate public key = %q, want %q", publicKey, deviceKey.Public.String())
+	if publicKey != deviceKey.Public {
+		t.Fatalf("Authenticate public key = %s, want %s", publicKey, deviceKey.Public)
 	}
 
 	reloaded := NewSessionManager(manager.Store)
@@ -53,8 +53,8 @@ func TestLoginAssertionAndSession(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reloaded Authenticate error = %v", err)
 	}
-	if publicKey != deviceKey.Public.String() {
-		t.Fatalf("reloaded Authenticate public key = %q, want %q", publicKey, deviceKey.Public.String())
+	if publicKey != deviceKey.Public {
+		t.Fatalf("reloaded Authenticate public key = %s, want %s", publicKey, deviceKey.Public)
 	}
 
 	if _, err := reloaded.login(context.Background(), serverKey, deviceKey.Public, assertion); err == nil {

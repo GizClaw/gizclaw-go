@@ -109,7 +109,7 @@ func (s *PeerService) servePublic(conn *giznet.Conn) error {
 		if base == nil {
 			base = context.Background()
 		}
-		ctx.SetUserContext(serverpublic.WithCallerPublicKey(base, conn.PublicKey().String()))
+		ctx.SetUserContext(serverpublic.WithCallerPublicKey(base, conn.PublicKey()))
 		return ctx.Next()
 	})
 	serverpublic.RegisterHandlers(app, serverpublic.NewStrictHandler(s.public, nil))
@@ -131,7 +131,7 @@ func (s *PeerService) serveGear(conn *giznet.Conn) error {
 		if base == nil {
 			base = context.Background()
 		}
-		ctx.SetUserContext(gearservice.WithCallerPublicKey(base, conn.PublicKey().String()))
+		ctx.SetUserContext(gearservice.WithCallerPublicKey(base, conn.PublicKey()))
 		return ctx.Next()
 	})
 	handler := gearservice.NewStrictHandler(s.gear, nil)

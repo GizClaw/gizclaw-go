@@ -53,6 +53,7 @@ export function PeerDetailPage(): JSX.Element {
   const registration = detail.data?.registration ?? null;
   const isBlocked = registration?.status === "blocked";
   const isActive = registration?.status === "active";
+  const isApproved = isActive && registration?.role !== "unspecified";
 
   useEffect(() => {
     const nextChannel = detail.data?.config?.firmware?.channel ?? "stable";
@@ -91,9 +92,9 @@ export function PeerDetailPage(): JSX.Element {
         );
         await detail.reload();
       },
-      isActive ? `Peer role saved as ${nextRole}.` : `Peer approved as ${nextRole}.`,
+      isApproved ? `Peer role saved as ${nextRole}.` : `Peer approved as ${nextRole}.`,
     );
-  }, [approveRole, detail, isActive, publicKey, runPeerAction]);
+  }, [approveRole, detail, isApproved, publicKey, runPeerAction]);
 
   const handleUnblock = useCallback(async () => {
     if (publicKey === "") {
@@ -269,7 +270,7 @@ export function PeerDetailPage(): JSX.Element {
                         <>
                           <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleApprove()} type="button">
                             <Check className="size-4" />
-                            {isActive ? "Save Role" : "Approve"}
+                            {isApproved ? "Save Role" : "Approve"}
                           </Button>
                           <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleBlock()} type="button" variant="outline">
                             <Ban className="size-4" />

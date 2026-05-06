@@ -87,8 +87,8 @@ func (s *Server) Login(ctx context.Context, request serverpublic.LoginRequestObj
 	if s == nil || s.KeyPair == nil || s.Store == nil {
 		return serverpublic.Login401JSONResponse(apitypes.NewErrorResponse("UNSUPPORTED_LOGIN", "login is not configured")), nil
 	}
-	publicKey, err := giznet.KeyFromHex(request.Params.XPublicKey)
-	if err != nil {
+	var publicKey giznet.PublicKey
+	if err := publicKey.UnmarshalText([]byte(request.Params.XPublicKey)); err != nil {
 		return serverpublic.Login401JSONResponse(apitypes.NewErrorResponse("INVALID_PUBLIC_KEY", err.Error())), nil
 	}
 	assertion := bearerToken(request.Params.Authorization)
@@ -206,33 +206,37 @@ func (m *SessionManager) login(ctx context.Context, serverKeyPair *giznet.KeyPai
 	}, nil
 }
 
-func (m *SessionManager) Authenticate(header string) (string, error) {
+func (m *SessionManager) Authenticate(header string) (giznet.PublicKey, error) {
 	token := bearerToken(header)
 	if token == "" {
-		return "", errInvalidSession
+		return giznet.PublicKey{}, errInvalidSession
 	}
 	if m == nil || m.Store == nil {
-		return "", errInvalidSession
+		return giznet.PublicKey{}, errInvalidSession
 	}
 	now := m.nowOrDefault()
 
 	data, err := m.Store.Get(context.Background(), sessionKey(token))
 	if errors.Is(err, kv.ErrNotFound) {
-		return "", errInvalidSession
+		return giznet.PublicKey{}, errInvalidSession
 	}
 	if err != nil {
-		return "", err
+		return giznet.PublicKey{}, err
 	}
 	var sess session
 	if err := json.Unmarshal(data, &sess); err != nil {
-		return "", errInvalidSession
+		return giznet.PublicKey{}, errInvalidSession
 	}
 	expiresAt := time.UnixMilli(sess.ExpiresAt)
 	if sess.PublicKey == "" || !expiresAt.After(now) {
 		_ = m.Store.Delete(context.Background(), sessionKey(token))
-		return "", errInvalidSession
+		return giznet.PublicKey{}, errInvalidSession
 	}
-	return sess.PublicKey, nil
+	var publicKey giznet.PublicKey
+	if err := publicKey.UnmarshalText([]byte(sess.PublicKey)); err != nil {
+		return giznet.PublicKey{}, errInvalidSession
+	}
+	return publicKey, nil
 }
 
 func (m *SessionManager) nowOrDefault() time.Time {

@@ -30,7 +30,7 @@ func TestPublicHTTPLoginRegisterAndGearAPI(t *testing.T) {
 		GearStore:          mustBadgerInMemory(t, nil),
 		DepotStore:         depotstore.Dir(t.TempDir()),
 		BuildCommit:        "test-build",
-		ServerPublicKey:    serverKey.Public.String(),
+		ServerPublicKey:    serverKey.Public,
 		DepotMetadataStore: mustBadgerInMemory(t, nil),
 	}
 	handler, err := server.PublicHTTPHandler()

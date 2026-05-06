@@ -105,7 +105,7 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 	gearServer := &gear.Server{
 		Store:           mustBadgerInMemory(t, nil),
 		BuildCommit:     "test-build",
-		ServerPublicKey: "server-pk",
+		ServerPublicKey: giznet.PublicKey{1},
 	}
 	manager := NewManager(gearServer)
 	firmwareServer := &firmware.Server{Store: depotstore.Dir(t.TempDir()), MetadataStore: kv.NewMemory(nil)}
@@ -163,7 +163,7 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("GET /api/public/server-info status = %d body=%s", resp.StatusCode, string(body))
 	}
-	if !strings.Contains(string(body), "server-pk") {
+	if !strings.Contains(string(body), gearServer.ServerPublicKey.String()) {
 		t.Fatalf("GET /api/public/server-info body = %s", string(body))
 	}
 

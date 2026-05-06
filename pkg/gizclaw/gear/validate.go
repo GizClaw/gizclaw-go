@@ -5,12 +5,17 @@ import (
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func validateGear(gear apitypes.Gear) error {
 	gear.PublicKey = normalizePublicKey(gear.PublicKey)
 	if gear.PublicKey == "" {
 		return fmt.Errorf("gear: empty public key")
+	}
+	var key giznet.PublicKey
+	if err := key.UnmarshalText([]byte(gear.PublicKey)); err != nil {
+		return fmt.Errorf("gear: invalid public key: %w", err)
 	}
 	if !gear.Role.Valid() {
 		return fmt.Errorf("gear: invalid role %q", gear.Role)
@@ -35,5 +40,18 @@ func validateConfiguration(cfg apitypes.Configuration) error {
 }
 
 func normalizePublicKey(publicKey string) string {
-	return strings.TrimSpace(publicKey)
+	publicKey = strings.TrimSpace(publicKey)
+	var key giznet.PublicKey
+	if err := key.UnmarshalText([]byte(publicKey)); err == nil {
+		return key.String()
+	}
+	return publicKey
+}
+
+func publicKeyFromText(publicKey string) (giznet.PublicKey, error) {
+	var key giznet.PublicKey
+	if err := key.UnmarshalText([]byte(publicKey)); err != nil {
+		return giznet.PublicKey{}, fmt.Errorf("gear: invalid public key: %w", err)
+	}
+	return key, nil
 }

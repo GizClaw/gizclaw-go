@@ -8,6 +8,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func TestStoreOpsHelpers(t *testing.T) {
@@ -15,7 +16,7 @@ func TestStoreOpsHelpers(t *testing.T) {
 	if _, err := server.store(); err == nil {
 		t.Fatal("store should fail when store is nil")
 	}
-	if (&Server{}).peerRuntime(context.Background(), "pk").Online {
+	if (&Server{}).peerRuntime(context.Background(), giznet.PublicKey{1}).Online {
 		t.Fatal("zero peerRuntime should be offline")
 	}
 	if optionalGear(apitypes.Gear{PublicKey: "x"}, nil) == nil {
@@ -31,12 +32,13 @@ func TestStoreOpsRegisterValidation(t *testing.T) {
 		Store: mustBadgerInMemory(t, nil),
 	}
 
-	_, err := server.register(context.Background(), "", gearservice.RegistrationRequest{})
+	_, err := server.register(context.Background(), giznet.PublicKey{}, gearservice.RegistrationRequest{})
 	if err == nil || !strings.Contains(err.Error(), "empty public key") {
 		t.Fatalf("empty public key err = %v", err)
 	}
 
-	registered, err := server.register(context.Background(), "server", gearservice.RegistrationRequest{
+	publicKey := giznet.PublicKey{1}
+	registered, err := server.register(context.Background(), publicKey, gearservice.RegistrationRequest{
 		Device: apitypes.DeviceInfo{},
 	})
 	if err != nil {
@@ -50,8 +52,9 @@ func TestStoreOpsRegisterValidation(t *testing.T) {
 func TestStoreOpsEnsureConnectedGearAndRegister(t *testing.T) {
 	server := &Server{Store: mustBadgerInMemory(t, nil)}
 	ctx := context.Background()
+	publicKey := giznet.PublicKey{1}
 
-	connected, err := server.EnsureConnectedGear(ctx, "server")
+	connected, err := server.EnsureConnectedGear(ctx, publicKey)
 	if err != nil {
 		t.Fatalf("EnsureConnectedGear error = %v", err)
 	}
@@ -60,7 +63,7 @@ func TestStoreOpsEnsureConnectedGearAndRegister(t *testing.T) {
 	}
 
 	name := "demo"
-	registered, err := server.register(ctx, "server", gearservice.RegistrationRequest{
+	registered, err := server.register(ctx, publicKey, gearservice.RegistrationRequest{
 		Device: apitypes.DeviceInfo{Name: &name},
 	})
 	if err != nil {
@@ -77,8 +80,9 @@ func TestStoreOpsEnsureConnectedGearAndRegister(t *testing.T) {
 func TestStoreOpsEnsureConnectedGearPreservesExisting(t *testing.T) {
 	server := &Server{Store: mustBadgerInMemory(t, nil)}
 	ctx := context.Background()
+	publicKey := giznet.PublicKey{1}
 	if _, err := server.SaveGear(ctx, apitypes.Gear{
-		PublicKey:     "server",
+		PublicKey:     publicKey.String(),
 		Role:          apitypes.GearRoleAdmin,
 		Status:        apitypes.GearStatusBlocked,
 		Configuration: apitypes.Configuration{},
@@ -86,7 +90,7 @@ func TestStoreOpsEnsureConnectedGearPreservesExisting(t *testing.T) {
 		t.Fatalf("SaveGear error = %v", err)
 	}
 
-	got, err := server.EnsureConnectedGear(ctx, "server")
+	got, err := server.EnsureConnectedGear(ctx, publicKey)
 	if err != nil {
 		t.Fatalf("EnsureConnectedGear error = %v", err)
 	}
@@ -97,8 +101,9 @@ func TestStoreOpsEnsureConnectedGearPreservesExisting(t *testing.T) {
 
 func TestStoreOpsLoadAndSaveGear(t *testing.T) {
 	server := &Server{Store: mustBadgerInMemory(t, nil)}
+	publicKey := giznet.PublicKey{1}
 	want := apitypes.Gear{
-		PublicKey: "server",
+		PublicKey: publicKey.String(),
 		Role:      apitypes.GearRoleGear,
 		Status:    apitypes.GearStatusActive,
 		Device: apitypes.DeviceInfo{
@@ -118,7 +123,7 @@ func TestStoreOpsLoadAndSaveGear(t *testing.T) {
 		t.Fatalf("SaveGear public key = %q, want %q", got.PublicKey, want.PublicKey)
 	}
 
-	loaded, err := server.LoadGear(context.Background(), want.PublicKey)
+	loaded, err := server.LoadGear(context.Background(), publicKey)
 	if err != nil {
 		t.Fatalf("LoadGear error = %v", err)
 	}
@@ -130,10 +135,41 @@ func TestStoreOpsLoadAndSaveGear(t *testing.T) {
 	}
 }
 
+func TestStoreOpsCanonicalizesPublicKeyText(t *testing.T) {
+	server := &Server{Store: mustBadgerInMemory(t, nil)}
+	ctx := context.Background()
+	key, err := giznet.KeyFromHex(strings.Repeat("ab", giznet.KeySize))
+	if err != nil {
+		t.Fatalf("KeyFromHex error = %v", err)
+	}
+	hexKey := strings.Repeat("ab", giznet.KeySize)
+
+	saved, err := server.SaveGear(ctx, apitypes.Gear{
+		PublicKey:     hexKey,
+		Role:          apitypes.GearRoleGear,
+		Status:        apitypes.GearStatusActive,
+		Configuration: apitypes.Configuration{},
+	})
+	if err != nil {
+		t.Fatalf("SaveGear error = %v", err)
+	}
+	if saved.PublicKey != key.String() {
+		t.Fatalf("SaveGear public key = %q, want canonical %q", saved.PublicKey, key.String())
+	}
+
+	loaded, err := server.LoadGear(ctx, key)
+	if err != nil {
+		t.Fatalf("LoadGear error = %v", err)
+	}
+	if loaded.PublicKey != key.String() {
+		t.Fatalf("LoadGear public key = %q, want canonical %q", loaded.PublicKey, key.String())
+	}
+}
+
 func TestStoreOpsLoadGearMissing(t *testing.T) {
 	server := &Server{Store: mustBadgerInMemory(t, nil)}
 
-	_, err := server.LoadGear(context.Background(), "missing")
+	_, err := server.LoadGear(context.Background(), giznet.PublicKey{1})
 	if !errors.Is(err, ErrGearNotFound) {
 		t.Fatalf("LoadGear missing err = %v", err)
 	}
@@ -146,17 +182,28 @@ func TestStoreOpsSaveGearRejectsInvalidGear(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "empty public key") {
 		t.Fatalf("SaveGear invalid err = %v", err)
 	}
+
+	_, err = server.SaveGear(context.Background(), apitypes.Gear{
+		PublicKey:     "server",
+		Role:          apitypes.GearRoleGear,
+		Status:        apitypes.GearStatusActive,
+		Configuration: apitypes.Configuration{},
+	})
+	if err == nil || !strings.Contains(err.Error(), "invalid public key") {
+		t.Fatalf("SaveGear invalid public key err = %v", err)
+	}
 }
 
 func TestStoreOpsExists(t *testing.T) {
 	server := &Server{Store: mustBadgerInMemory(t, nil)}
+	publicKey := giznet.PublicKey{1}
 
-	if exists, err := server.exists(context.Background(), "missing"); err != nil || exists {
+	if exists, err := server.exists(context.Background(), publicKey); err != nil || exists {
 		t.Fatalf("exists(missing) = %v, %v", exists, err)
 	}
 
 	if _, err := server.SaveGear(context.Background(), apitypes.Gear{
-		PublicKey:     "server",
+		PublicKey:     publicKey.String(),
 		Role:          apitypes.GearRoleGear,
 		Status:        apitypes.GearStatusActive,
 		Configuration: apitypes.Configuration{},
@@ -164,7 +211,7 @@ func TestStoreOpsExists(t *testing.T) {
 		t.Fatalf("SaveGear error = %v", err)
 	}
 
-	if exists, err := server.exists(context.Background(), "server"); err != nil || !exists {
+	if exists, err := server.exists(context.Background(), publicKey); err != nil || !exists {
 		t.Fatalf("exists(peer) = %v, %v", exists, err)
 	}
 }

@@ -287,10 +287,15 @@ func startSeededUI(t testing.TB) Seed {
 	applyFirmwareReleaseSeed(t, seedCtx, adminAPI, "beta", "1.0.1")
 	for _, publicKey := range []string{
 		h.ContextPublicKey("device-a"),
-		h.ContextPublicKey("device-actions-a"),
 		h.ContextPublicKey("device-delete-a"),
 	} {
 		approveGear(t, seedCtx, adminAPI, publicKey)
+	}
+	for _, publicKey := range []string{
+		h.ContextPublicKey("device-a"),
+		h.ContextPublicKey("device-actions-a"),
+		h.ContextPublicKey("device-delete-a"),
+	} {
 		if err := itest.ApplyDeviceConfigSeed(seedCtx, adminAPI, publicKey); err != nil {
 			t.Fatalf("apply device config seed for %q: %v", publicKey, err)
 		}

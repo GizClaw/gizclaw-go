@@ -171,13 +171,13 @@ func TestServerSecurityPolicyAllowServiceUsesGearPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair configured error = %v", err)
 	}
-	server.AdminPublicKey = configuredKey.Public.String()
+	server.AdminPublicKey = configuredKey.Public
 	if !policy.AllowService(configuredKey.Public, ServiceAdmin) {
 		t.Fatal("configured admin public key should allow admin")
 	}
-	server.AdminPublicKey = "not-a-public-key"
+	server.AdminPublicKey = giznet.PublicKey{}
 	if policy.AllowService(configuredKey.Public, ServiceAdmin) {
-		t.Fatal("invalid configured admin public key should not allow admin")
+		t.Fatal("empty configured admin public key should not allow admin")
 	}
 }
 
@@ -201,10 +201,10 @@ func TestResolveGearTarget(t *testing.T) {
 	store := mustBadgerInMemory(t, nil)
 	gearsServer := &gear.Server{Store: store}
 
-	saveGear := func(t *testing.T, publicKey string, device apitypes.DeviceInfo, config apitypes.Configuration) {
+	saveGear := func(t *testing.T, publicKey giznet.PublicKey, device apitypes.DeviceInfo, config apitypes.Configuration) {
 		t.Helper()
 		if _, err := gearsServer.SaveGear(ctx, apitypes.Gear{
-			PublicKey:     publicKey,
+			PublicKey:     publicKey.String(),
 			Role:          apitypes.GearRoleGear,
 			Status:        apitypes.GearStatusActive,
 			Device:        device,
@@ -214,28 +214,33 @@ func TestResolveGearTarget(t *testing.T) {
 		}
 	}
 
-	saveGear(t, "missing-depot", apitypes.DeviceInfo{}, apitypes.Configuration{
+	missingDepotKey := giznet.PublicKey{1}
+	missingChannelKey := giznet.PublicKey{2}
+	missingGearKey := giznet.PublicKey{3}
+	validKey := giznet.PublicKey{4}
+
+	saveGear(t, missingDepotKey, apitypes.DeviceInfo{}, apitypes.Configuration{
 		Firmware: &apitypes.FirmwareConfig{Channel: func() *apitypes.GearFirmwareChannel {
 			ch := apitypes.GearFirmwareChannel("stable")
 			return &ch
 		}()},
 	})
-	if _, _, err := resolveGearTarget(ctx, gearsServer, "missing-depot"); err == nil || !strings.Contains(err.Error(), "missing depot") {
+	if _, _, err := resolveGearTarget(ctx, gearsServer, missingDepotKey); err == nil || !strings.Contains(err.Error(), "missing depot") {
 		t.Fatalf("resolveGearTarget(missing depot) err = %v", err)
 	}
 
-	saveGear(t, "missing-channel", apitypes.DeviceInfo{
+	saveGear(t, missingChannelKey, apitypes.DeviceInfo{
 		Hardware: &apitypes.HardwareInfo{Depot: func() *string { v := "demo-main"; return &v }()},
 	}, apitypes.Configuration{})
-	if _, _, err := resolveGearTarget(ctx, gearsServer, "missing-channel"); err == nil || !strings.Contains(err.Error(), "missing channel") {
+	if _, _, err := resolveGearTarget(ctx, gearsServer, missingChannelKey); err == nil || !strings.Contains(err.Error(), "missing channel") {
 		t.Fatalf("resolveGearTarget(missing channel) err = %v", err)
 	}
 
-	if _, _, err := resolveGearTarget(ctx, gearsServer, "missing-gear"); !errors.Is(err, gear.ErrGearNotFound) {
+	if _, _, err := resolveGearTarget(ctx, gearsServer, missingGearKey); !errors.Is(err, gear.ErrGearNotFound) {
 		t.Fatalf("resolveGearTarget(missing gear) err = %v", err)
 	}
 
-	saveGear(t, "valid", apitypes.DeviceInfo{
+	saveGear(t, validKey, apitypes.DeviceInfo{
 		Hardware: &apitypes.HardwareInfo{Depot: func() *string { v := "demo-main"; return &v }()},
 	}, apitypes.Configuration{
 		Firmware: &apitypes.FirmwareConfig{Channel: func() *apitypes.GearFirmwareChannel {
@@ -243,7 +248,7 @@ func TestResolveGearTarget(t *testing.T) {
 			return &ch
 		}()},
 	})
-	depot, channel, err := resolveGearTarget(ctx, gearsServer, "valid")
+	depot, channel, err := resolveGearTarget(ctx, gearsServer, validKey)
 	if err != nil {
 		t.Fatalf("resolveGearTarget(valid) err = %v", err)
 	}

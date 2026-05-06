@@ -15,9 +15,8 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
-func (s *Server) register(ctx context.Context, publicKey string, request gearservice.RegistrationRequest) (apitypes.Gear, error) {
-	publicKey = normalizePublicKey(publicKey)
-	if publicKey == "" {
+func (s *Server) register(ctx context.Context, publicKey giznet.PublicKey, request gearservice.RegistrationRequest) (apitypes.Gear, error) {
+	if publicKey.IsZero() {
 		return apitypes.Gear{}, fmt.Errorf("gear: empty public key")
 	}
 	exists, err := s.exists(ctx, publicKey)
@@ -41,7 +40,7 @@ func (s *Server) register(ctx context.Context, publicKey string, request gearser
 		return apitypes.Gear{}, err
 	}
 	gear := apitypes.Gear{
-		PublicKey:      publicKey,
+		PublicKey:      publicKey.String(),
 		Role:           apitypes.GearRoleUnspecified,
 		Status:         apitypes.GearStatusActive,
 		Device:         device,
@@ -56,7 +55,7 @@ func (s *Server) register(ctx context.Context, publicKey string, request gearser
 	return created, nil
 }
 
-func (s *Server) registerExistingConnectedGear(ctx context.Context, publicKey string, request gearservice.RegistrationRequest) (apitypes.Gear, error) {
+func (s *Server) registerExistingConnectedGear(ctx context.Context, publicKey giznet.PublicKey, request gearservice.RegistrationRequest) (apitypes.Gear, error) {
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
 		return apitypes.Gear{}, err
@@ -74,9 +73,8 @@ func (s *Server) registerExistingConnectedGear(ctx context.Context, publicKey st
 
 // EnsureConnectedGear creates a default active gear record for a connected peer
 // when the peer has not been registered yet. Existing records are preserved.
-func (s *Server) EnsureConnectedGear(ctx context.Context, publicKey string) (apitypes.Gear, error) {
-	publicKey = normalizePublicKey(publicKey)
-	if publicKey == "" {
+func (s *Server) EnsureConnectedGear(ctx context.Context, publicKey giznet.PublicKey) (apitypes.Gear, error) {
+	if publicKey.IsZero() {
 		return apitypes.Gear{}, fmt.Errorf("gear: empty public key")
 	}
 	existing, err := s.get(ctx, publicKey)
@@ -89,7 +87,7 @@ func (s *Server) EnsureConnectedGear(ctx context.Context, publicKey string) (api
 
 	autoRegistered := true
 	created, err := s.create(ctx, apitypes.Gear{
-		PublicKey:      publicKey,
+		PublicKey:      publicKey.String(),
 		Role:           apitypes.GearRoleUnspecified,
 		Status:         apitypes.GearStatusActive,
 		Device:         apitypes.DeviceInfo{},
@@ -110,7 +108,7 @@ func isAutoConnectedGear(gear apitypes.Gear) bool {
 		gear.Status == apitypes.GearStatusActive
 }
 
-func (s *Server) putInfo(ctx context.Context, publicKey string, info apitypes.DeviceInfo) (apitypes.Gear, error) {
+func (s *Server) putInfo(ctx context.Context, publicKey giznet.PublicKey, info apitypes.DeviceInfo) (apitypes.Gear, error) {
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
 		return apitypes.Gear{}, err
@@ -120,7 +118,7 @@ func (s *Server) putInfo(ctx context.Context, publicKey string, info apitypes.De
 }
 
 // LoadGear returns the stored gear record for a public key.
-func (s *Server) LoadGear(ctx context.Context, publicKey string) (apitypes.Gear, error) {
+func (s *Server) LoadGear(ctx context.Context, publicKey giznet.PublicKey) (apitypes.Gear, error) {
 	return s.get(ctx, publicKey)
 }
 
@@ -129,7 +127,7 @@ func (s *Server) SaveGear(ctx context.Context, gear apitypes.Gear) (apitypes.Gea
 	return s.put(ctx, gear)
 }
 
-func (s *Server) putConfig(ctx context.Context, publicKey string, cfg apitypes.Configuration) (apitypes.Gear, error) {
+func (s *Server) putConfig(ctx context.Context, publicKey giznet.PublicKey, cfg apitypes.Configuration) (apitypes.Gear, error) {
 	if err := validateConfiguration(cfg); err != nil {
 		return apitypes.Gear{}, err
 	}
@@ -141,7 +139,7 @@ func (s *Server) putConfig(ctx context.Context, publicKey string, cfg apitypes.C
 	return s.put(ctx, gear)
 }
 
-func (s *Server) approve(ctx context.Context, publicKey string, role apitypes.GearRole) (apitypes.Gear, error) {
+func (s *Server) approve(ctx context.Context, publicKey giznet.PublicKey, role apitypes.GearRole) (apitypes.Gear, error) {
 	if role == apitypes.GearRoleUnspecified || !role.Valid() {
 		return apitypes.Gear{}, fmt.Errorf("gear: invalid role %q", role)
 	}
@@ -156,7 +154,7 @@ func (s *Server) approve(ctx context.Context, publicKey string, role apitypes.Ge
 	return s.put(ctx, gear)
 }
 
-func (s *Server) block(ctx context.Context, publicKey string) (apitypes.Gear, error) {
+func (s *Server) block(ctx context.Context, publicKey giznet.PublicKey) (apitypes.Gear, error) {
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
 		return apitypes.Gear{}, err
@@ -165,7 +163,7 @@ func (s *Server) block(ctx context.Context, publicKey string) (apitypes.Gear, er
 	return s.put(ctx, gear)
 }
 
-func (s *Server) delete(ctx context.Context, publicKey string) (apitypes.Gear, error) {
+func (s *Server) delete(ctx context.Context, publicKey giznet.PublicKey) (apitypes.Gear, error) {
 	gear, err := s.get(ctx, publicKey)
 	if err != nil {
 		return apitypes.Gear{}, err
@@ -176,27 +174,27 @@ func (s *Server) delete(ctx context.Context, publicKey string) (apitypes.Gear, e
 	return s.put(ctx, gear)
 }
 
-func (s *Server) get(ctx context.Context, publicKey string) (apitypes.Gear, error) {
+func (s *Server) get(ctx context.Context, publicKey giznet.PublicKey) (apitypes.Gear, error) {
 	store, err := s.store()
 	if err != nil {
 		return apitypes.Gear{}, err
 	}
-	publicKey = normalizePublicKey(publicKey)
-	data, err := store.Get(ctx, gearKey(publicKey))
+	publicKeyText := publicKey.String()
+	data, err := store.Get(ctx, gearKey(publicKeyText))
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
 			return apitypes.Gear{}, ErrGearNotFound
 		}
-		return apitypes.Gear{}, fmt.Errorf("gear: get %s: %w", publicKey, err)
+		return apitypes.Gear{}, fmt.Errorf("gear: get %s: %w", publicKeyText, err)
 	}
 	var gear apitypes.Gear
 	if err := json.Unmarshal(data, &gear); err != nil {
-		return apitypes.Gear{}, fmt.Errorf("gear: decode %s: %w", publicKey, err)
+		return apitypes.Gear{}, fmt.Errorf("gear: decode %s: %w", publicKeyText, err)
 	}
 	return gear, nil
 }
 
-func (s *Server) exists(ctx context.Context, publicKey string) (bool, error) {
+func (s *Server) exists(ctx context.Context, publicKey giznet.PublicKey) (bool, error) {
 	_, err := s.get(ctx, publicKey)
 	if err == nil {
 		return true, nil
@@ -208,14 +206,19 @@ func (s *Server) exists(ctx context.Context, publicKey string) (bool, error) {
 }
 
 func (s *Server) create(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, error) {
+	gear.PublicKey = normalizePublicKey(gear.PublicKey)
 	if err := validateGear(gear); err != nil {
+		return apitypes.Gear{}, err
+	}
+	publicKey, err := publicKeyFromText(gear.PublicKey)
+	if err != nil {
 		return apitypes.Gear{}, err
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if _, err := s.get(ctx, gear.PublicKey); err == nil {
+	if _, err := s.get(ctx, publicKey); err == nil {
 		return apitypes.Gear{}, ErrGearAlreadyExists
 	} else if !errors.Is(err, ErrGearNotFound) {
 		return apitypes.Gear{}, err
@@ -227,18 +230,23 @@ func (s *Server) create(ctx context.Context, gear apitypes.Gear) (apitypes.Gear,
 	if err := s.writeGearLocked(ctx, gear, nil); err != nil {
 		return apitypes.Gear{}, err
 	}
-	return s.get(ctx, gear.PublicKey)
+	return s.get(ctx, publicKey)
 }
 
 func (s *Server) put(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, error) {
+	gear.PublicKey = normalizePublicKey(gear.PublicKey)
 	if err := validateGear(gear); err != nil {
+		return apitypes.Gear{}, err
+	}
+	publicKey, err := publicKeyFromText(gear.PublicKey)
+	if err != nil {
 		return apitypes.Gear{}, err
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	old, err := s.get(ctx, gear.PublicKey)
+	old, err := s.get(ctx, publicKey)
 	if err != nil && !errors.Is(err, ErrGearNotFound) {
 		return apitypes.Gear{}, err
 	}
@@ -253,7 +261,7 @@ func (s *Server) put(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, er
 	if err := s.writeGearLocked(ctx, gear, optionalGear(old, err)); err != nil {
 		return apitypes.Gear{}, err
 	}
-	return s.get(ctx, gear.PublicKey)
+	return s.get(ctx, publicKey)
 }
 
 func (s *Server) list(ctx context.Context) ([]apitypes.Gear, error) {
@@ -391,7 +399,10 @@ func (s *Server) listByReferencePrefixPage(ctx context.Context, prefix kv.Key, c
 		if len(entry.Key) == 0 {
 			continue
 		}
-		publicKey := entry.Key[len(entry.Key)-1]
+		publicKey, err := publicKeyFromText(entry.Key[len(entry.Key)-1])
+		if err != nil {
+			return nil, false, nil, err
+		}
 		gear, err := s.get(ctx, publicKey)
 		if err != nil {
 			if errors.Is(err, ErrGearNotFound) {
@@ -438,15 +449,14 @@ func (s *Server) store() (kv.Store, error) {
 	return s.Store, nil
 }
 
-func (s *Server) peerRuntime(ctx context.Context, publicKey string) apitypes.Runtime {
+func (s *Server) peerRuntime(ctx context.Context, publicKey giznet.PublicKey) apitypes.Runtime {
 	if s.PeerManager == nil {
 		return apitypes.Runtime{}
 	}
-	key, err := giznet.KeyFromHex(publicKey)
-	if err != nil {
+	if publicKey.IsZero() {
 		return apitypes.Runtime{}
 	}
-	return s.PeerManager.PeerRuntime(ctx, key)
+	return s.PeerManager.PeerRuntime(ctx, publicKey)
 }
 
 func optionalGear(gear apitypes.Gear, err error) *apitypes.Gear {

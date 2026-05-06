@@ -79,7 +79,7 @@ func TestServerSecurityPolicyRequiresAdminRoleForAdminService(t *testing.T) {
 	}
 
 	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
-	if _, err := service.EnsureConnectedGear(context.Background(), keyPair.Public.String()); err != nil {
+	if _, err := service.EnsureConnectedGear(context.Background(), keyPair.Public); err != nil {
 		t.Fatalf("EnsureConnectedGear error = %v", err)
 	}
 	policy := testServerSecurityPolicy(service)
@@ -89,7 +89,7 @@ func TestServerSecurityPolicyRequiresAdminRoleForAdminService(t *testing.T) {
 	if !policy.AllowService(keyPair.Public, ServiceGear) {
 		t.Fatal("active gear should still allow gear service")
 	}
-	stored, err := service.LoadGear(context.Background(), keyPair.Public.String())
+	stored, err := service.LoadGear(context.Background(), keyPair.Public)
 	if err != nil {
 		t.Fatalf("LoadGear error = %v", err)
 	}

@@ -3,14 +3,37 @@ package clicontext
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
+
+var (
+	testServerPublicKeyHex = strings.Repeat("ab", giznet.KeySize)
+	testServerPublicKey    = mustKeyText(testServerPublicKeyHex)
+)
+
+func mustKeyText(hexValue string) string {
+	key, err := giznet.KeyFromHex(hexValue)
+	if err != nil {
+		panic(err)
+	}
+	return key.String()
+}
 
 func TestStoreCreateAndLoad(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
 
-	if err := s.Create("local", "127.0.0.1:9820", "aabbccdd"); err != nil {
+	if err := s.Create("local", "127.0.0.1:9820", testServerPublicKeyHex); err != nil {
 		t.Fatalf("Create err=%v", err)
+	}
+	configData, err := os.ReadFile(filepath.Join(s.Root, "local", "config.yaml"))
+	if err != nil {
+		t.Fatalf("ReadFile config err=%v", err)
+	}
+	if strings.Contains(string(configData), testServerPublicKeyHex) {
+		t.Fatalf("config.yaml should not store public key as hex:\n%s", string(configData))
 	}
 
 	cliCtx, err := Load(filepath.Join(s.Root, "local"))
@@ -23,8 +46,8 @@ func TestStoreCreateAndLoad(t *testing.T) {
 	if cliCtx.Config.Server.Address != "127.0.0.1:9820" {
 		t.Fatalf("Address=%q", cliCtx.Config.Server.Address)
 	}
-	if cliCtx.Config.Server.PublicKey != "aabbccdd" {
-		t.Fatalf("PublicKey=%q", cliCtx.Config.Server.PublicKey)
+	if cliCtx.Config.Server.PublicKey.String() != testServerPublicKey {
+		t.Fatalf("PublicKey=%q", cliCtx.Config.Server.PublicKey.String())
 	}
 	if cliCtx.KeyPair == nil || cliCtx.KeyPair.Public.IsZero() {
 		t.Fatal("KeyPair not loaded")
@@ -33,17 +56,17 @@ func TestStoreCreateAndLoad(t *testing.T) {
 
 func TestStoreCreateDuplicate(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("dup", "addr", "pk"); err != nil {
+	if err := s.Create("dup", "addr", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Create("dup", "addr", "pk"); err == nil {
+	if err := s.Create("dup", "addr", testServerPublicKey); err == nil {
 		t.Fatal("duplicate Create should fail")
 	}
 }
 
 func TestStoreCurrentAutoSet(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("first", "addr", "pk"); err != nil {
+	if err := s.Create("first", "addr", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
 
@@ -72,10 +95,10 @@ func TestStoreCurrentNone(t *testing.T) {
 
 func TestStoreUse(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("a", "addr-a", "pk-a"); err != nil {
+	if err := s.Create("a", "addr-a", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Create("b", "addr-b", "pk-b"); err != nil {
+	if err := s.Create("b", "addr-b", strings.Repeat("cd", giznet.KeySize)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -101,10 +124,10 @@ func TestStoreUseNonExistent(t *testing.T) {
 
 func TestStoreList(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("beta", "addr", "pk"); err != nil {
+	if err := s.Create("beta", "addr", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Create("alpha", "addr", "pk"); err != nil {
+	if err := s.Create("alpha", "addr", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
 
@@ -136,7 +159,7 @@ func TestStoreListEmpty(t *testing.T) {
 
 func TestServerPublicKey(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	pk := "0000000000000000000000000000000000000000000000000000000000000000"
+	pk := testServerPublicKey
 	if err := s.Create("spk", "addr", pk); err != nil {
 		t.Fatal(err)
 	}
@@ -155,15 +178,8 @@ func TestServerPublicKey(t *testing.T) {
 
 func TestServerPublicKeyInvalid(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("badpk", "addr", "not-hex"); err != nil {
-		t.Fatal(err)
-	}
-	cliCtx, err := Load(filepath.Join(s.Root, "badpk"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := cliCtx.ServerPublicKey(); err == nil {
-		t.Fatal("ServerPublicKey(invalid) should fail")
+	if err := s.Create("badpk", "addr", "not-hex"); err == nil {
+		t.Fatal("Create(invalid public key) should fail")
 	}
 }
 
@@ -189,7 +205,7 @@ func TestLoadBadYAML(t *testing.T) {
 
 func TestStoreLoadByName(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("myctx", "127.0.0.1:9820", "aabb"); err != nil {
+	if err := s.Create("myctx", "127.0.0.1:9820", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
 
@@ -223,7 +239,7 @@ func TestStoreLoadByNameNotExist(t *testing.T) {
 
 func TestStoreSymlinkIsRelative(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("myctx", "addr", "pk"); err != nil {
+	if err := s.Create("myctx", "addr", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
 
@@ -242,10 +258,10 @@ func TestStoreSymlinkIsRelative(t *testing.T) {
 
 func TestStoreListAbsoluteCurrentSymlink(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("alpha", "addr", "pk"); err != nil {
+	if err := s.Create("alpha", "addr", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Create("beta", "addr", "pk"); err != nil {
+	if err := s.Create("beta", "addr", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
 

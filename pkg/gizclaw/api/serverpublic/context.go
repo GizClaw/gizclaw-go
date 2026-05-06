@@ -1,16 +1,20 @@
 package serverpublic
 
-import "context"
+import (
+	"context"
+
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+)
 
 type callerPublicKeyContextKey string
 
 const callerPublicKeyKey callerPublicKeyContextKey = "caller_public_key"
 
-func WithCallerPublicKey(ctx context.Context, publicKey string) context.Context {
+func WithCallerPublicKey(ctx context.Context, publicKey giznet.PublicKey) context.Context {
 	return context.WithValue(ctx, callerPublicKeyKey, publicKey)
 }
 
-func CallerPublicKey(ctx context.Context) string {
-	value, _ := ctx.Value(callerPublicKeyKey).(string)
+func CallerPublicKey(ctx context.Context) giznet.PublicKey {
+	value, _ := ctx.Value(callerPublicKeyKey).(giznet.PublicKey)
 	return value
 }

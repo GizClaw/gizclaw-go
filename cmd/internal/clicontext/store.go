@@ -9,6 +9,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/identity"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/paths"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/goccy/go-yaml"
 )
 
@@ -34,6 +35,10 @@ func (s *Store) Create(name, serverAddr, serverPubKey string) error {
 	if _, err := os.Stat(dir); err == nil {
 		return fmt.Errorf("clicontext: %q already exists", name)
 	}
+	var serverPublicKey giznet.PublicKey
+	if err := serverPublicKey.UnmarshalText([]byte(serverPubKey)); err != nil {
+		return fmt.Errorf("clicontext: invalid server public key: %w", err)
+	}
 
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("clicontext: mkdir: %w", err)
@@ -43,7 +48,7 @@ func (s *Store) Create(name, serverAddr, serverPubKey string) error {
 		return fmt.Errorf("clicontext: generate key: %w", err)
 	}
 
-	cfg := Config{Server: ServerConfig{Address: serverAddr, PublicKey: serverPubKey}}
+	cfg := Config{Server: ServerConfig{Address: serverAddr, PublicKey: serverPublicKey}}
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("clicontext: marshal config: %w", err)

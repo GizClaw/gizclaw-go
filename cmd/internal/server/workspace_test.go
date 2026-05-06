@@ -12,6 +12,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/service"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func TestPrepareWorkspaceConfigLoadsWorkspaceConfig(t *testing.T) {
@@ -96,8 +97,12 @@ depots:
 	if cfg.ListenAddr != "127.0.0.1:39001" {
 		t.Fatalf("ListenAddr = %q", cfg.ListenAddr)
 	}
-	if cfg.AdminPublicKey != strings.Repeat("ab", 32) {
-		t.Fatalf("AdminPublicKey = %q", cfg.AdminPublicKey)
+	adminKey, err := giznet.KeyFromHex(strings.Repeat("ab", 32))
+	if err != nil {
+		t.Fatalf("KeyFromHex error = %v", err)
+	}
+	if cfg.AdminPublicKey != adminKey {
+		t.Fatalf("AdminPublicKey = %v", cfg.AdminPublicKey)
 	}
 	if got := cfg.Storage["memory"].Dir; got != "" {
 		t.Fatalf("memory store dir = %q", got)

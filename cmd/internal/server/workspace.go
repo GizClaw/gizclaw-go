@@ -54,9 +54,12 @@ func prepareWorkspaceConfig(workspace string) (Config, error) {
 		return Config{}, fmt.Errorf("server: identity: %w", err)
 	}
 
-	cfg := mergeFileConfig(Config{
+	cfg, err := mergeFileConfig(Config{
 		KeyPair: keyPair,
 	}, fileCfg)
+	if err != nil {
+		return Config{}, err
+	}
 	cfg.Storage = resolveWorkspaceStorageConfigs(root, cfg.Storage)
 	cfg.Stores = resolveWorkspaceStoreConfigs(root, cfg.Stores)
 	return prepareConfig(cfg)

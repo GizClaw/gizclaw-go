@@ -35,7 +35,7 @@ type PeerManager interface {
 type Server struct {
 	Store           kv.Store
 	BuildCommit     string
-	ServerPublicKey string
+	ServerPublicKey giznet.PublicKey
 	PeerManager     PeerManager
 
 	mu sync.Mutex
@@ -164,7 +164,7 @@ func (s *Server) ResolveBySN(ctx context.Context, request adminservice.ResolveBy
 
 // DeleteGear implements `adminservice.StrictServerInterface.DeleteGear`.
 func (s *Server) DeleteGear(ctx context.Context, request adminservice.DeleteGearRequestObject) (adminservice.DeleteGearResponseObject, error) {
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
@@ -177,7 +177,7 @@ func (s *Server) DeleteGear(ctx context.Context, request adminservice.DeleteGear
 
 // GetGear implements `adminservice.StrictServerInterface.GetGear`.
 func (s *Server) GetGear(ctx context.Context, request adminservice.GetGearRequestObject) (adminservice.GetGearResponseObject, error) {
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
@@ -190,7 +190,7 @@ func (s *Server) GetGear(ctx context.Context, request adminservice.GetGearReques
 
 // GetGearConfig implements `adminservice.StrictServerInterface.GetGearConfig`.
 func (s *Server) GetGearConfig(ctx context.Context, request adminservice.GetGearConfigRequestObject) (adminservice.GetGearConfigResponseObject, error) {
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
@@ -206,7 +206,7 @@ func (s *Server) PutGearConfig(ctx context.Context, request adminservice.PutGear
 	if request.Body == nil {
 		return adminservice.PutGearConfig400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", "request body required")), nil
 	}
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return adminservice.PutGearConfig400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
@@ -222,7 +222,7 @@ func (s *Server) PutGearConfig(ctx context.Context, request adminservice.PutGear
 
 // GetGearInfo implements `adminservice.StrictServerInterface.GetGearInfo`.
 func (s *Server) GetGearInfo(ctx context.Context, request adminservice.GetGearInfoRequestObject) (adminservice.GetGearInfoResponseObject, error) {
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
@@ -235,7 +235,7 @@ func (s *Server) GetGearInfo(ctx context.Context, request adminservice.GetGearIn
 
 // GetGearRuntime implements `adminservice.StrictServerInterface.GetGearRuntime`.
 func (s *Server) GetGearRuntime(ctx context.Context, request adminservice.GetGearRuntimeRequestObject) (adminservice.GetGearRuntimeResponseObject, error) {
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
@@ -247,7 +247,7 @@ func (s *Server) ApproveGear(ctx context.Context, request adminservice.ApproveGe
 	if request.Body == nil {
 		return adminservice.ApproveGear400JSONResponse(apitypes.NewErrorResponse("INVALID_ROLE", "request body required")), nil
 	}
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return adminservice.ApproveGear400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
 	}
@@ -260,7 +260,7 @@ func (s *Server) ApproveGear(ctx context.Context, request adminservice.ApproveGe
 
 // BlockGear implements `adminservice.StrictServerInterface.BlockGear`.
 func (s *Server) BlockGear(ctx context.Context, request adminservice.BlockGearRequestObject) (adminservice.BlockGearResponseObject, error) {
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
@@ -276,15 +276,11 @@ func (s *Server) RefreshGear(ctx context.Context, request adminservice.RefreshGe
 	if s.PeerManager == nil {
 		return adminservice.RefreshGear502JSONResponse(apitypes.NewErrorResponse("DEVICE_REFRESH_FAILED", "refresh provider not configured")), nil
 	}
-	publicKey, err := pathUnescape(string(request.PublicKey))
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	key, err := giznet.KeyFromHex(publicKey)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
-	}
-	result, online, err := s.PeerManager.RefreshGear(ctx, key)
+	result, online, err := s.PeerManager.RefreshGear(ctx, publicKey)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrGearNotFound):
@@ -381,13 +377,21 @@ func (s *Server) GetRuntime(ctx context.Context, _ gearservice.GetRuntimeRequest
 func (s *Server) GetServerInfo(_ context.Context, _ serverpublic.GetServerInfoRequestObject) (serverpublic.GetServerInfoResponseObject, error) {
 	return serverpublic.GetServerInfo200JSONResponse(apitypes.ServerInfo{
 		BuildCommit: s.BuildCommit,
-		PublicKey:   s.ServerPublicKey,
+		PublicKey:   s.ServerPublicKey.String(),
 		ServerTime:  time.Now().UnixMilli(),
 	}), nil
 }
 
 func pathUnescape(value string) (string, error) {
 	return url.PathUnescape(value)
+}
+
+func parsePublicKeyParam(value string) (giznet.PublicKey, error) {
+	text, err := pathUnescape(value)
+	if err != nil {
+		return giznet.PublicKey{}, err
+	}
+	return publicKeyFromText(text)
 }
 
 func normalizeListParams(cursor *adminservice.Cursor, limit *adminservice.Limit) (string, int) {
