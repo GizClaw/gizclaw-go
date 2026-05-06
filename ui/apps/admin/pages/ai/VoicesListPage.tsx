@@ -100,7 +100,7 @@ export function VoicesListPage(): JSX.Element {
                     <TableHead>Provider Voice ID</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Last Sync</TableHead>
-                    <TableHead>Updated</TableHead>
+                    <TableHead className="text-right">Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -118,7 +118,7 @@ export function VoicesListPage(): JSX.Element {
                       <TableCell className="font-mono text-xs">{formatValue(voice.provider_voice_id)}</TableCell>
                       <TableCell>{formatValue(voice.provider_voice_type)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatDate(voice.synced_at)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDate(voice.updated_at)}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{formatDate(voice.updated_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

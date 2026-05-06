@@ -80,16 +80,21 @@ func (m *Manager) PeerRuntime(_ context.Context, publicKey giznet.PublicKey) api
 	if !ok {
 		return apitypes.Runtime{}
 	}
-	var lastSeenAt time.Time
+	runtime := apitypes.Runtime{
+		Online: true,
+	}
 	if state.conn != nil {
 		if info := state.conn.PeerInfo(); info != nil {
-			lastSeenAt = info.LastSeen
+			runtime.LastSeenAt = info.LastSeen
+			runtime.RxBytes = &info.RxBytes
+			runtime.TxBytes = &info.TxBytes
+			if info.Endpoint != nil {
+				lastAddr := info.Endpoint.String()
+				runtime.LastAddr = &lastAddr
+			}
 		}
 	}
-	return apitypes.Runtime{
-		Online:     true,
-		LastSeenAt: lastSeenAt,
-	}
+	return runtime
 }
 
 func (m *Manager) EnsureGear(ctx context.Context, publicKey giznet.PublicKey) (apitypes.Gear, error) {

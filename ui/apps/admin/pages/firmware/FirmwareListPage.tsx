@@ -1,5 +1,6 @@
-import { ChevronRight, RefreshCw, Upload } from "lucide-react";
-import { Link } from "react-router-dom";
+import type { KeyboardEvent } from "react";
+import { RefreshCw, Upload } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "../../../../packages/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../packages/components/card";
@@ -14,7 +15,18 @@ import { formatRelease } from "../../lib/format";
 import { canReleaseDepot, canRollbackDepot, depotActionHint } from "../../lib/firmware-helpers";
 
 export function FirmwareListPage(): JSX.Element {
+  const navigate = useNavigate();
   const { depots, error, loading, reload } = useFirmwareList();
+  const openPath = (path: string) => {
+    navigate(path);
+  };
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, path: string) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    openPath(path);
+  };
 
   return (
     <div className="space-y-6">
@@ -74,18 +86,23 @@ export function FirmwareListPage(): JSX.Element {
                     <TableHead>Rollback Snapshot</TableHead>
                     <TableHead className="text-right">Files</TableHead>
                     <TableHead className="text-right">Readiness</TableHead>
-                    <TableHead className="text-right">Open</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {depots.map((depot) => {
                     const depotPath = encodeURIComponent(depot.name);
+                    const path = `/firmware/${depotPath}`;
                     return (
-                      <TableRow className="cursor-pointer hover:bg-muted/40" key={depot.name}>
+                      <TableRow
+                        className="cursor-pointer hover:bg-muted/40"
+                        key={depot.name}
+                        onClick={() => openPath(path)}
+                        onKeyDown={(event) => handleRowKeyDown(event, path)}
+                        role="link"
+                        tabIndex={0}
+                      >
                         <TableCell>
-                          <Link className="font-medium hover:underline" to={`/firmware/${depotPath}`}>
-                            {depot.name}
-                          </Link>
+                          <span className="font-medium">{depot.name}</span>
                         </TableCell>
                         <TableCell>{formatRelease(depot.stable)}</TableCell>
                         <TableCell>{formatRelease(depot.beta)}</TableCell>
@@ -94,11 +111,6 @@ export function FirmwareListPage(): JSX.Element {
                         <TableCell className="text-right">{depot.info?.files?.length ?? 0}</TableCell>
                         <TableCell className="max-w-[14rem] text-right text-xs text-muted-foreground">
                           {canReleaseDepot(depot) && canRollbackDepot(depot) ? "Ready" : depotActionHint(depot)}
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          <Link to={`/firmware/${depotPath}`}>
-                            <ChevronRight className="ml-auto size-4" />
-                          </Link>
                         </TableCell>
                       </TableRow>
                     );

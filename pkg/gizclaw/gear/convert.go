@@ -49,6 +49,8 @@ func toAdminRuntime(in apitypes.Runtime) apitypes.Runtime {
 		LastAddr:   in.LastAddr,
 		LastSeenAt: in.LastSeenAt,
 		Online:     in.Online,
+		RxBytes:    in.RxBytes,
+		TxBytes:    in.TxBytes,
 	}
 }
 

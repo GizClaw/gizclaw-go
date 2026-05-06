@@ -24,6 +24,14 @@
           },
           "last_addr": {
             "type": "string"
+          },
+          "rx_bytes": {
+            "type": "integer",
+            "format": "uint64"
+          },
+          "tx_bytes": {
+            "type": "integer",
+            "format": "uint64"
           }
         }
       }

@@ -99,7 +99,7 @@ export function MiniMaxTenantsListPage(): JSX.Element {
                     <TableHead>Credential</TableHead>
                     <TableHead>Base URL</TableHead>
                     <TableHead>Last Sync</TableHead>
-                    <TableHead>Updated</TableHead>
+                    <TableHead className="text-right">Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -111,7 +111,7 @@ export function MiniMaxTenantsListPage(): JSX.Element {
                       <TableCell>{tenant.credential_name}</TableCell>
                       <TableCell className="max-w-[18rem] truncate text-sm text-muted-foreground">{formatValue(tenant.base_url)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatDate(tenant.last_synced_at)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDate(tenant.updated_at)}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{formatDate(tenant.updated_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
+import type { KeyboardEvent } from "react";
 import { AudioLines, Boxes, ChevronRight, FolderKanban, HardDrive, KeyRound, Mic2, Server, ShieldCheck, Workflow } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "../../../../packages/components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../packages/components/card";
@@ -13,10 +14,21 @@ import { useOverviewData } from "../../hooks/useOverviewData";
 import { formatRelease, formatServerTime, formatShortKey } from "../../lib/format";
 
 export function OverviewPage(): JSX.Element {
+  const navigate = useNavigate();
   const dashboard = useOverviewData();
   const latestPeers = dashboard.gears.slice(0, 5);
   const latestDepots = dashboard.depots.slice(0, 4);
   const autoCount = dashboard.gears.filter((gear) => gear.auto_registered).length;
+  const openPath = (path: string) => {
+    navigate(path);
+  };
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, path: string) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    openPath(path);
+  };
 
   return (
     <div className="space-y-6">
@@ -93,28 +105,28 @@ export function OverviewPage(): JSX.Element {
                       <TableHead>Peer</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Open</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {latestPeers.map((gear) => (
-                      <TableRow className="cursor-pointer" key={gear.public_key}>
-                        <TableCell className="font-medium">
-                          <Link className="hover:underline" to={`/peers/${encodeURIComponent(gear.public_key)}`}>
-                            {formatShortKey(gear.public_key)}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{gear.role}</TableCell>
-                        <TableCell>
-                          <StatusBadge status={gear.status} />
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          <Link to={`/peers/${encodeURIComponent(gear.public_key)}`}>
-                            <ChevronRight className="ml-auto size-4" />
-                          </Link>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {latestPeers.map((gear) => {
+                      const path = `/peers/${encodeURIComponent(gear.public_key)}`;
+                      return (
+                        <TableRow
+                          className="cursor-pointer hover:bg-muted/40"
+                          key={gear.public_key}
+                          onClick={() => openPath(path)}
+                          onKeyDown={(event) => handleRowKeyDown(event, path)}
+                          role="link"
+                          tabIndex={0}
+                        >
+                          <TableCell className="font-medium">{formatShortKey(gear.public_key)}</TableCell>
+                          <TableCell>{gear.role}</TableCell>
+                          <TableCell>
+                            <StatusBadge status={gear.status} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -159,18 +171,24 @@ export function OverviewPage(): JSX.Element {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {latestDepots.map((depot) => (
-                      <TableRow key={depot.name}>
-                        <TableCell className="font-medium">
-                          <Link className="hover:underline" to={`/firmware/${encodeURIComponent(depot.name)}`}>
-                            {depot.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{formatRelease(depot.stable)}</TableCell>
-                        <TableCell>{formatRelease(depot.testing)}</TableCell>
-                        <TableCell className="text-right">{depot.info?.files?.length ?? 0}</TableCell>
-                      </TableRow>
-                    ))}
+                    {latestDepots.map((depot) => {
+                      const path = `/firmware/${encodeURIComponent(depot.name)}`;
+                      return (
+                        <TableRow
+                          className="cursor-pointer hover:bg-muted/40"
+                          key={depot.name}
+                          onClick={() => openPath(path)}
+                          onKeyDown={(event) => handleRowKeyDown(event, path)}
+                          role="link"
+                          tabIndex={0}
+                        >
+                          <TableCell className="font-medium">{depot.name}</TableCell>
+                          <TableCell>{formatRelease(depot.stable)}</TableCell>
+                          <TableCell>{formatRelease(depot.testing)}</TableCell>
+                          <TableCell className="text-right">{depot.info?.files?.length ?? 0}</TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

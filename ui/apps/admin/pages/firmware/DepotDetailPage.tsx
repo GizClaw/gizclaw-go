@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Package, RefreshCw, RotateCcw } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import type { KeyboardEvent } from "react";
+import { ChevronLeft, Package, RefreshCw, RotateCcw } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { expectData, toMessage } from "../../../../packages/components/api";
 import { Button } from "../../../../packages/components/button";
@@ -23,6 +24,7 @@ import { formatRelease } from "../../lib/format";
 const CHANNELS = ["stable", "beta", "testing"] as const;
 
 export function DepotDetailPage(): JSX.Element {
+  const navigate = useNavigate();
   const params = useParams();
   const rawDepot = params.depot ?? "";
   const depotName = useMemo(() => {
@@ -39,6 +41,16 @@ export function DepotDetailPage(): JSX.Element {
   const [notice, setNotice] = useState<{ message: string; tone: "error" | "success" } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [infoFile, setInfoFile] = useState<File | null>(null);
+  const openPath = (path: string) => {
+    navigate(path);
+  };
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, path: string) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    openPath(path);
+  };
 
   const runAction = useCallback(async (name: string, action: () => Promise<void>, successMessage: string) => {
     setBusy(name);
@@ -216,22 +228,24 @@ export function DepotDetailPage(): JSX.Element {
                       <TableHead>Channel</TableHead>
                       <TableHead>Version</TableHead>
                       <TableHead className="text-right">Files</TableHead>
-                      <TableHead className="text-right">Open</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {CHANNELS.map((channel) => {
                       const release = depot[channel];
+                      const path = `/firmware/${depotPath}/${encodeURIComponent(channel)}`;
                       return (
-                        <TableRow className="hover:bg-muted/40" key={channel}>
+                        <TableRow
+                          className="cursor-pointer hover:bg-muted/40"
+                          key={channel}
+                          onClick={() => openPath(path)}
+                          onKeyDown={(event) => handleRowKeyDown(event, path)}
+                          role="link"
+                          tabIndex={0}
+                        >
                           <TableCell className="font-medium capitalize">{channel}</TableCell>
                           <TableCell>{formatRelease(release)}</TableCell>
                           <TableCell className="text-right">{release?.files?.length ?? 0}</TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            <Link to={`/firmware/${depotPath}/${encodeURIComponent(channel)}`}>
-                              <ChevronRight className="ml-auto size-4" />
-                            </Link>
-                          </TableCell>
                         </TableRow>
                       );
                     })}

@@ -100,7 +100,7 @@ export function CredentialsListPage(): JSX.Element {
                     <TableHead>Method</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead className="text-right">Body Keys</TableHead>
-                    <TableHead>Updated</TableHead>
+                    <TableHead className="text-right">Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -124,7 +124,7 @@ export function CredentialsListPage(): JSX.Element {
                           {Object.keys(credential.body).length}
                         </Button>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDate(credential.updated_at)}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{formatDate(credential.updated_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

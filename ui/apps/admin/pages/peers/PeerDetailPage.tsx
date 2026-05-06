@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, Ban, Check, ChevronLeft, Database, RefreshCw, Save, Server, Trash2 } from "lucide-react";
+import { Activity, Ban, Check, ChevronLeft, Database, Download, RefreshCw, Save, Server, Trash2, Upload } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { expectData, toMessage } from "../../../../packages/components/api";
@@ -52,6 +52,7 @@ export function PeerDetailPage(): JSX.Element {
 
   const registration = detail.data?.registration ?? null;
   const isBlocked = registration?.status === "blocked";
+  const isActive = registration?.status === "active";
 
   useEffect(() => {
     const nextChannel = detail.data?.config?.firmware?.channel ?? "stable";
@@ -78,10 +79,9 @@ export function PeerDetailPage(): JSX.Element {
     if (publicKey === "") {
       return;
     }
-    const nextRole: GearRole =
-      detail.data?.registration?.role && detail.data.registration.role !== "unspecified" ? detail.data.registration.role : approveRole;
+    const nextRole = approveRole;
     await runPeerAction(
-      isBlocked ? "unblock" : "approve",
+      "approve",
       async () => {
         await expectData(
           approveGear({
@@ -91,9 +91,29 @@ export function PeerDetailPage(): JSX.Element {
         );
         await detail.reload();
       },
-      isBlocked ? `Peer restored as ${nextRole}.` : `Peer approved as ${nextRole}.`,
+      isActive ? `Peer role saved as ${nextRole}.` : `Peer approved as ${nextRole}.`,
     );
-  }, [approveRole, detail, isBlocked, publicKey, runPeerAction]);
+  }, [approveRole, detail, isActive, publicKey, runPeerAction]);
+
+  const handleUnblock = useCallback(async () => {
+    if (publicKey === "") {
+      return;
+    }
+    const nextRole = approveRole;
+    await runPeerAction(
+      "unblock",
+      async () => {
+        await expectData(
+          approveGear({
+            body: { role: nextRole },
+            path: { publicKey },
+          }),
+        );
+        await detail.reload();
+      },
+      `Peer restored as ${nextRole}.`,
+    );
+  }, [approveRole, detail, publicKey, runPeerAction]);
 
   const handleBlock = useCallback(async () => {
     if (publicKey === "") {
@@ -185,7 +205,7 @@ export function PeerDetailPage(): JSX.Element {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild size="sm" variant="outline">
-              <Link to="/peers">
+            <Link to="/peers">
               <ChevronLeft className="size-4" />
               Back to list
             </Link>
@@ -223,8 +243,8 @@ export function PeerDetailPage(): JSX.Element {
                 <FormField
                   description={
                     isBlocked
-                      ? "Blocked peers can be restored back to service with their assigned role."
-                      : "Choose the role to assign when this peer moves into service."
+                      ? "Choose the role to assign when this peer is restored."
+                      : "Choose the role to assign when this peer moves into service, or block it from this same flow."
                   }
                   label={isBlocked ? "Restore role" : "Approval role"}
                 >
@@ -239,10 +259,25 @@ export function PeerDetailPage(): JSX.Element {
                         <SelectItem value="admin">admin</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleApprove()} type="button">
-                      <Check className="size-4" />
-                      {isBlocked ? "Unblock" : "Approve"}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {isBlocked ? (
+                        <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleUnblock()} type="button">
+                          <Check className="size-4" />
+                          Unblock
+                        </Button>
+                      ) : (
+                        <>
+                          <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleApprove()} type="button">
+                            <Check className="size-4" />
+                            {isActive ? "Save Role" : "Approve"}
+                          </Button>
+                          <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleBlock()} type="button" variant="outline">
+                            <Ban className="size-4" />
+                            Block
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </FormField>
 
@@ -250,17 +285,13 @@ export function PeerDetailPage(): JSX.Element {
                   <div className="space-y-1">
                     <div className="text-sm font-medium">Operational actions</div>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      Pull the latest state from the peer, suspend it, or remove the registration entirely.
+                      Pull the latest state from the peer or remove the registration entirely.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button disabled={peerActionBusy !== null} onClick={() => void handleRefreshPeer()} type="button" variant="outline">
                       <RefreshCw className="size-4" />
                       Refresh
-                    </Button>
-                    <Button disabled={peerActionBusy !== null || isBlocked} onClick={() => void handleBlock()} type="button" variant="outline">
-                      <Ban className="size-4" />
-                      Block
                     </Button>
                     <Button disabled={peerActionBusy !== null} onClick={() => void handleDeletePeer()} type="button" variant="outline">
                       <Trash2 className="size-4" />
@@ -380,10 +411,12 @@ export function PeerDetailPage(): JSX.Element {
             </TabsContent>
 
             <TabsContent value="runtime">
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
                 <RuntimeMetric icon={Activity} label="Online" value={detail.data?.runtime?.online ? "Yes" : "No"} />
                 <RuntimeMetric icon={Server} label="Last Seen" value={formatDate(detail.data?.runtime?.last_seen_at)} />
                 <RuntimeMetric icon={Database} label="Last Address" value={detail.data?.runtime?.last_addr ?? "—"} />
+                <RuntimeMetric icon={Download} label="RX Bytes" value={formatBytes(detail.data?.runtime?.rx_bytes)} />
+                <RuntimeMetric icon={Upload} label="TX Bytes" value={formatBytes(detail.data?.runtime?.tx_bytes)} />
               </div>
             </TabsContent>
 
@@ -435,4 +468,22 @@ function RuntimeMetric({
       </CardHeader>
     </Card>
   );
+}
+
+function formatBytes(value: number | undefined): string {
+  if (value === undefined) {
+    return "—";
+  }
+  if (!Number.isFinite(value) || value <= 0) {
+    return "0 B";
+  }
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let size = value;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex += 1;
+  }
+  const precision = size >= 10 || unitIndex === 0 ? 0 : 1;
+  return `${size.toFixed(precision)} ${units[unitIndex]}`;
 }

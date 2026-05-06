@@ -97,7 +97,7 @@ export function WorkspacesListPage(): JSX.Element {
                     <TableHead>Template</TableHead>
                     <TableHead className="text-right">Parameters</TableHead>
                     <TableHead>Created</TableHead>
-                    <TableHead>Updated</TableHead>
+                    <TableHead className="text-right">Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -107,7 +107,7 @@ export function WorkspacesListPage(): JSX.Element {
                       <TableCell>{workspace.workspace_template_name}</TableCell>
                       <TableCell className="text-right">{Object.keys(workspace.parameters ?? {}).length}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatDate(workspace.created_at)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDate(workspace.updated_at)}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{formatDate(workspace.updated_at)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

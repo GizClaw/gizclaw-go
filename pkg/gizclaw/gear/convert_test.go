@@ -94,8 +94,10 @@ func TestConvertHelpers(t *testing.T) {
 		t.Fatalf("toAdminDeviceInfo = %+v", adminDevice)
 	}
 
-	adminRuntime := toAdminRuntime(apitypes.Runtime{Online: true, LastSeenAt: now})
-	if !adminRuntime.Online || !adminRuntime.LastSeenAt.Equal(now) {
+	rxBytes := uint64(123)
+	txBytes := uint64(456)
+	adminRuntime := toAdminRuntime(apitypes.Runtime{Online: true, LastSeenAt: now, RxBytes: &rxBytes, TxBytes: &txBytes})
+	if !adminRuntime.Online || !adminRuntime.LastSeenAt.Equal(now) || adminRuntime.RxBytes == nil || *adminRuntime.RxBytes != rxBytes || adminRuntime.TxBytes == nil || *adminRuntime.TxBytes != txBytes {
 		t.Fatalf("toAdminRuntime = %+v", adminRuntime)
 	}
 }

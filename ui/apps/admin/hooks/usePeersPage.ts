@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { expectData, toMessage } from "../../../packages/components/api";
-import { listDepots, listGears } from "../../../packages/adminservice";
+import { getGearRuntime, listDepots, listGears } from "../../../packages/adminservice";
 import { getServerInfo, type ServerInfo } from "../../../packages/serverpublic";
 
-import type { Depot, Registration } from "../../../packages/adminservice";
+import type { Depot, Registration, Runtime } from "../../../packages/adminservice";
 
 export const PEER_PAGE_LIMIT = 50;
+
+export type PeerRuntimeMap = Record<string, Runtime | null>;
 
 export interface PeerListState {
   cursor: string | null;
@@ -20,6 +22,7 @@ export interface PeersPageState {
   error: string;
   gears: Registration[];
   loading: boolean;
+  runtimes: PeerRuntimeMap;
   serverInfo: ServerInfo | null;
 }
 
@@ -41,6 +44,7 @@ export function usePeersPage(): {
     error: "",
     gears: [],
     loading: true,
+    runtimes: {},
     serverInfo: null,
   });
   const [peerList, setPeerList] = useState<PeerListState>({
@@ -66,11 +70,15 @@ export function usePeersPage(): {
         expectData(listDepots()),
       ]);
 
+      const gears = registrations.items ?? [];
+      const runtimes = await loadPeerRuntimes(gears);
+
       setDashboard({
         depots: depots.items ?? [],
         error: "",
-        gears: registrations.items ?? [],
+        gears,
         loading: false,
+        runtimes,
         serverInfo,
       });
       setPeerList({
@@ -102,11 +110,18 @@ export function usePeersPage(): {
     }
     const query = filter.trim().toLowerCase();
     return dashboard.gears.filter((gear) =>
-      [gear.public_key, gear.role, gear.status, gear.auto_registered ? "auto" : "manual"].some((value) =>
+      [
+        gear.public_key,
+        gear.role,
+        gear.status,
+        gear.auto_registered ? "auto" : "manual",
+        dashboard.runtimes[gear.public_key]?.online ? "online" : "offline",
+        dashboard.runtimes[gear.public_key]?.last_addr ?? "",
+      ].some((value) =>
         value.toLowerCase().includes(query),
       ),
     );
-  }, [dashboard.gears, filter]);
+  }, [dashboard.gears, dashboard.runtimes, filter]);
 
   const nextPage = useCallback(() => {
     if (peerList.nextCursor === null) {
@@ -137,4 +152,18 @@ export function usePeersPage(): {
     refreshDashboard,
     setFilter,
   };
+}
+
+async function loadPeerRuntimes(gears: Registration[]): Promise<PeerRuntimeMap> {
+  const entries = await Promise.all(
+    gears.map(async (gear): Promise<[string, Runtime | null]> => {
+      try {
+        const runtime = await expectData(getGearRuntime({ path: { publicKey: gear.public_key } }));
+        return [gear.public_key, runtime];
+      } catch {
+        return [gear.public_key, null];
+      }
+    }),
+  );
+  return Object.fromEntries(entries);
 }

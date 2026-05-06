@@ -1,6 +1,9 @@
-import { Check, ChevronRight, Copy, RefreshCw, Search } from "lucide-react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import type { KeyboardEvent, MouseEvent } from "react";
+import { Check, Copy, RefreshCw, Search } from "lucide-react";
 import { useCallback, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { Badge } from "../../../../packages/components/badge";
 import { Button } from "../../../../packages/components/button";
@@ -9,13 +12,24 @@ import { Input } from "../../../../packages/components/input";
 import { Skeleton } from "../../../../packages/components/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../packages/components/table";
 
+import type { Runtime } from "../../../../packages/adminservice";
 import { EmptyState } from "../../../../packages/components/empty-state";
 import { PageBreadcrumb } from "../../../../packages/components/page-breadcrumb";
 import { StatusBadge } from "../../../../packages/components/status-badge";
 import { usePeersPage } from "../../hooks/usePeersPage";
 import { formatDate } from "../../lib/format";
 
+dayjs.extend(relativeTime);
+
+interface NamedRegistration {
+  name?: string | null;
+  device?: {
+    name?: string | null;
+  } | null;
+}
+
 export function PeersListPage(): JSX.Element {
+  const navigate = useNavigate();
   const [copiedPublicKey, setCopiedPublicKey] = useState<string | null>(null);
   const {
     dashboard,
@@ -29,7 +43,8 @@ export function PeersListPage(): JSX.Element {
     setFilter,
   } = usePeersPage();
 
-  const handleCopyPublicKey = useCallback(async (publicKey: string) => {
+  const handleCopyPublicKey = useCallback(async (event: MouseEvent<HTMLButtonElement>, publicKey: string) => {
+    event.stopPropagation();
     try {
       await navigator.clipboard.writeText(publicKey);
       setCopiedPublicKey(publicKey);
@@ -38,6 +53,21 @@ export function PeersListPage(): JSX.Element {
       setCopiedPublicKey(null);
     }
   }, []);
+
+  const openPeer = useCallback((publicKey: string) => {
+    navigate(`/peers/${encodeURIComponent(publicKey)}`);
+  }, [navigate]);
+
+  const handlePeerRowKeyDown = useCallback((event: KeyboardEvent<HTMLTableRowElement>, publicKey: string) => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    openPeer(publicKey);
+  }, [openPeer]);
 
   return (
     <div className="space-y-6">
@@ -127,58 +157,64 @@ export function PeersListPage(): JSX.Element {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Peer</TableHead>
-                    <TableHead className="w-24 text-center">Role</TableHead>
-                    <TableHead className="w-24 text-center">Status</TableHead>
-                    <TableHead>Registration</TableHead>
-                    <TableHead>Updated</TableHead>
-                    <TableHead>Flags</TableHead>
-                    <TableHead className="text-right">Open</TableHead>
+                    <TableHead className="w-64">Peer</TableHead>
+                    <TableHead className="w-56">Registration</TableHead>
+                    <TableHead className="w-56">Runtime</TableHead>
+                    <TableHead className="w-48">Endpoint</TableHead>
+                    <TableHead className="text-right">Gear Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredGears.map((gear) => {
-                    const name = gear.public_key;
+                    const name = peerDisplayName(gear);
                     const copied = copiedPublicKey === gear.public_key;
+                    const runtime = dashboard.runtimes[gear.public_key];
 
                     return (
-                      <TableRow className="cursor-pointer hover:bg-muted/40" key={gear.public_key}>
-                        <TableCell className="min-w-[20rem]">
-                          <div className="space-y-1">
-                            <Link className="break-all font-medium hover:underline" to={`/peers/${encodeURIComponent(gear.public_key)}`}>
-                              {name}
-                            </Link>
+                      <TableRow
+                        className="cursor-pointer hover:bg-muted/40"
+                        key={gear.public_key}
+                        onClick={() => openPeer(gear.public_key)}
+                        onKeyDown={(event) => handlePeerRowKeyDown(event, gear.public_key)}
+                        role="link"
+                        tabIndex={0}
+                      >
+                        <TableCell className="w-64 max-w-64">
+                          <div className={name === "" ? "" : "space-y-1"}>
+                            {name !== "" ? (
+                              <div className="block truncate font-medium" title={name}>
+                                {name}
+                              </div>
+                            ) : null}
                             <button
-                              className="flex max-w-full items-center gap-1.5 truncate font-mono text-xs text-muted-foreground hover:text-foreground"
-                              onClick={() => void handleCopyPublicKey(gear.public_key)}
+                              className="flex max-w-full items-center gap-1.5 font-mono text-xs text-muted-foreground hover:text-foreground"
+                              onClick={(event) => void handleCopyPublicKey(event, gear.public_key)}
                               title="Copy public key"
                               type="button"
                             >
-                              <span className="truncate">{gear.public_key}</span>
+                              <span className="block truncate">{gear.public_key}</span>
                               {copied ? <Check className="size-3 shrink-0 text-emerald-600" /> : <Copy className="size-3 shrink-0" />}
                             </button>
                           </div>
                         </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex justify-center">
-                            <Badge variant="outline">{gear.role}</Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex justify-center">
-                            <StatusBadge status={gear.status} />
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{gear.auto_registered ? "Auto" : "Manual"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{formatDate(gear.updated_at)}</TableCell>
                         <TableCell>
-                          {gear.auto_registered ? <Badge variant="secondary">Auto</Badge> : <span className="text-sm text-muted-foreground">Manual</span>}
+                          <div className="flex justify-start gap-1.5">
+                            <Badge title={gear.auto_registered ? "Auto registered" : "Manual registration"} variant="secondary">
+                              {gear.auto_registered ? "A" : "M"}
+                            </Badge>
+                            <StatusBadge status={gear.status} />
+                            <Badge title={`Role: ${gear.role}`} variant="outline">
+                              {gear.role}
+                            </Badge>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          <Link to={`/peers/${encodeURIComponent(gear.public_key)}`}>
-                            <ChevronRight className="ml-auto size-4" />
-                          </Link>
+                        <TableCell>
+                          <PeerRuntime runtime={runtime} />
                         </TableCell>
+                        <TableCell>
+                          <PeerEndpoint runtime={runtime} />
+                        </TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">{formatDate(gear.updated_at)}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -197,4 +233,58 @@ export function PeersListPage(): JSX.Element {
       </Card>
     </div>
   );
+}
+
+function peerDisplayName(gear: NamedRegistration): string {
+  return gear.name?.trim() || gear.device?.name?.trim() || "";
+}
+
+function PeerRuntime({ runtime }: { runtime: Runtime | null | undefined }): JSX.Element {
+  if (runtime === undefined || runtime === null) {
+    return <span className="text-sm text-muted-foreground">Unavailable</span>;
+  }
+  const lastSeen = formatRuntimeLastSeen(runtime.last_seen_at);
+
+  return (
+    <div className="max-w-56 space-y-1">
+      <div className="flex items-center gap-2">
+        <Badge className={runtime.online ? undefined : "border-transparent bg-muted text-muted-foreground hover:bg-muted"} variant={runtime.online ? "success" : "outline"}>
+          {runtime.online ? "Online" : "Offline"}
+        </Badge>
+        <span className="whitespace-nowrap text-xs text-muted-foreground" title={lastSeen.title}>
+          {lastSeen.label}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function PeerEndpoint({ runtime }: { runtime: Runtime | null | undefined }): JSX.Element {
+  if (runtime === undefined || runtime === null) {
+    return <span className="text-sm text-muted-foreground">Unavailable</span>;
+  }
+  const endpoint = runtime.last_addr?.trim() ?? "";
+  if (endpoint === "") {
+    return <span className="text-sm text-muted-foreground">No endpoint</span>;
+  }
+  return (
+    <div className="max-w-48 truncate font-mono text-xs text-muted-foreground" title={endpoint}>
+      {endpoint}
+    </div>
+  );
+}
+
+function formatRuntimeLastSeen(value: string | undefined): { label: string; title: string } {
+  if (value === undefined || value === "" || value.startsWith("0001-01-01")) {
+    return { label: "Never seen", title: "Never seen" };
+  }
+  const seenAt = dayjs(value);
+  if (!seenAt.isValid()) {
+    return { label: value, title: value };
+  }
+  return { label: `Seen ${seenAt.fromNow()}`, title: seenAt.toDate().toLocaleString() };
+}
+
+function isInteractiveTarget(target: EventTarget): boolean {
+  return target instanceof Element && target.closest("a,button,input,select,textarea") !== null;
 }
