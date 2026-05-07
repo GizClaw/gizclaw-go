@@ -3,6 +3,7 @@
 package ui_test
 
 import (
+	"net/url"
 	"testing"
 )
 
@@ -16,8 +17,19 @@ func adminVoicesListStories() []Story {
 			page.ExpectText("Seeded UI Voice")
 			page.ExpectText("manual")
 			page.ExpectText(SeedMiniMaxTenantName)
-			page.ExpectText("provider-ui-seed-voice")
-			page.ExpectText("voice_cloning")
+		},
+	}, {
+		Name: "140-admin-volc-voice-detail-cli",
+		Run: func(_ testing.TB, page *Page) {
+			page.GotoAdmin("/ai/voices/" + url.PathEscape(SeedVolcVoiceID))
+			page.ExpectText("Seeded Volc UI Voice")
+			page.ClickRole("tab", "CLI")
+			page.ExpectText("Voice Resource Spec")
+			page.ExpectText(`"kind": "Voice"`)
+			page.ExpectText(`"name": "volc-tenant:ui-seed-volc-tenant:ICL_ui_seed_voice"`)
+			page.ExpectText("gizclaw admin --context <admin-cli-context> show Voice 'volc-tenant:ui-seed-volc-tenant:ICL_ui_seed_voice'")
+			page.ExpectText("gizclaw admin --context <admin-cli-context> show VolcTenant 'ui-seed-volc-tenant'")
+			page.ExpectText("gizclaw admin volc-tenants --context <admin-cli-context> sync-voices 'ui-seed-volc-tenant'")
 		},
 	}}
 }

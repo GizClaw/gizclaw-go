@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { Skeleton } from "../../../../packages/components/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../../../packages/components/table";
 import { expectData, toMessage } from "../../../../packages/components/api";
-import { listMiniMaxTenants, syncMiniMaxTenantVoices, type MiniMaxTenant } from "../../../../packages/adminservice";
+import { listVolcTenants, syncVolcTenantVoices, type VolcTenant } from "../../../../packages/adminservice";
 
 import { ErrorBanner } from "../../../../packages/components/banners";
 import { EmptyState } from "../../../../packages/components/empty-state";
@@ -17,12 +17,12 @@ import { PageBreadcrumb } from "../../../../packages/components/page-breadcrumb"
 import { useCursorListPage } from "../../hooks/useCursorListPage";
 import { formatDate, formatValue } from "../../lib/format";
 
-export function MiniMaxTenantsListPage(): JSX.Element {
+export function VolcTenantsListPage(): JSX.Element {
   const navigate = useNavigate();
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
   const [syncError, setSyncError] = useState("");
-  const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh } = useCursorListPage<MiniMaxTenant>(async (query) => {
-    const result = await expectData(listMiniMaxTenants({ query }));
+  const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh } = useCursorListPage<VolcTenant>(async (query) => {
+    const result = await expectData(listVolcTenants({ query }));
     return {
       hasNext: result.has_next,
       items: result.items ?? [],
@@ -31,7 +31,7 @@ export function MiniMaxTenantsListPage(): JSX.Element {
   });
 
   const openTenant = (name: string): void => {
-    navigate(`/providers/minimax-tenants/${encodeURIComponent(name)}`);
+    navigate(`/providers/volc-tenants/${encodeURIComponent(name)}`);
   };
 
   const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, name: string): void => {
@@ -50,7 +50,7 @@ export function MiniMaxTenantsListPage(): JSX.Element {
     setSyncError("");
     setSyncing((current) => ({ ...current, [name]: true }));
     try {
-      await expectData(syncMiniMaxTenantVoices({ path: { name } }));
+      await expectData(syncVolcTenantVoices({ path: { name } }));
       await refresh();
     } catch (err) {
       setSyncError(toMessage(err));
@@ -61,14 +61,14 @@ export function MiniMaxTenantsListPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb items={[{ href: "/overview", label: "Overview" }, { label: "MiniMax Tenants" }]} />
+      <PageBreadcrumb items={[{ href: "/overview", label: "Overview" }, { label: "Volcengine Tenants" }]} />
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Providers</div>
-          <h1 className="text-3xl font-semibold tracking-tight">MiniMax Tenants</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Volcengine Tenants</h1>
           <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">
-            Multi-tenant MiniMax configurations bound to stored credentials and used for voice synchronization.
+            Volcengine speech configurations bound to stored credentials and used for Doubao voice synchronization.
           </p>
         </div>
         <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refresh()} variant="outline">
@@ -86,7 +86,7 @@ export function MiniMaxTenantsListPage(): JSX.Element {
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div className="space-y-1">
             <CardTitle>Tenant catalog</CardTitle>
-            <CardDescription>Each tenant maps an app and group pair to a reusable credential.</CardDescription>
+            <CardDescription>Each tenant maps a Volcengine speech AppID and credential to purchased voice synchronization.</CardDescription>
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline">Page {pageNumber}</Badge>
@@ -123,7 +123,7 @@ export function MiniMaxTenantsListPage(): JSX.Element {
               ))}
             </div>
           ) : items.length === 0 ? (
-            <EmptyState description="MiniMax tenant records will appear here after they are created." title="No MiniMax tenants" />
+            <EmptyState description="Volcengine tenant records will appear here after they are created." title="No Volcengine tenants" />
           ) : (
             <div className="rounded-md border">
               <Table>
@@ -131,9 +131,10 @@ export function MiniMaxTenantsListPage(): JSX.Element {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>App ID</TableHead>
-                    <TableHead>Group ID</TableHead>
                     <TableHead>Credential</TableHead>
-                    <TableHead>Base URL</TableHead>
+                    <TableHead>Region</TableHead>
+                    <TableHead>Endpoint</TableHead>
+                    <TableHead>Resource IDs</TableHead>
                     <TableHead>Last Sync</TableHead>
                     <TableHead className="text-right">Updated</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -151,9 +152,10 @@ export function MiniMaxTenantsListPage(): JSX.Element {
                     >
                       <TableCell className="font-medium">{tenant.name}</TableCell>
                       <TableCell className="font-mono text-xs">{tenant.app_id}</TableCell>
-                      <TableCell className="font-mono text-xs">{tenant.group_id}</TableCell>
                       <TableCell>{tenant.credential_name}</TableCell>
-                      <TableCell className="max-w-[18rem] truncate text-sm text-muted-foreground">{formatValue(tenant.base_url)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{formatValue(tenant.region)}</TableCell>
+                      <TableCell className="max-w-[18rem] truncate text-sm text-muted-foreground">{formatValue(tenant.endpoint)}</TableCell>
+                      <TableCell className="max-w-[18rem] truncate font-mono text-xs">{tenant.resource_ids?.join(", ") ?? "public only"}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatDate(tenant.last_synced_at)}</TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground">{formatDate(tenant.updated_at)}</TableCell>
                       <TableCell className="text-right">

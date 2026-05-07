@@ -121,15 +121,45 @@ type VoiceUpsert struct {
 	Name     *string                    `json:"name,omitempty"`
 	Provider externalRef0.VoiceProvider `json:"provider"`
 
-	// ProviderVoiceId Upstream provider voice identifier. Present for synced voices.
-	ProviderVoiceId *string `json:"provider_voice_id,omitempty"`
-
-	// ProviderVoiceType Provider-specific voice type
-	ProviderVoiceType *string                 `json:"provider_voice_type,omitempty"`
-	Raw               *map[string]interface{} `json:"raw,omitempty"`
+	// ProviderData Provider-specific debug data keyed by provider kind.
+	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
 
 	// Source How the voice entered the global catalog
 	Source externalRef0.VoiceSource `json:"source"`
+}
+
+// VolcSyncVoicesResult defines model for VolcSyncVoicesResult.
+type VolcSyncVoicesResult struct {
+	CreatedCount int32     `json:"created_count"`
+	DeletedCount int32     `json:"deleted_count"`
+	SyncedAt     time.Time `json:"synced_at"`
+
+	// TenantName Volcengine tenant name.
+	TenantName   externalRef0.VolcTenantName `json:"tenant_name"`
+	UpdatedCount int32                       `json:"updated_count"`
+}
+
+// VolcTenantList defines model for VolcTenantList.
+type VolcTenantList struct {
+	HasNext    bool                      `json:"has_next"`
+	Items      []externalRef0.VolcTenant `json:"items"`
+	NextCursor *string                   `json:"next_cursor,omitempty"`
+}
+
+// VolcTenantUpsert defines model for VolcTenantUpsert.
+type VolcTenantUpsert struct {
+	// AppId Volcengine speech application identifier
+	AppId externalRef0.VolcAppID `json:"app_id"`
+
+	// CredentialName Credential name
+	CredentialName externalRef0.CredentialName `json:"credential_name"`
+	Description    *string                     `json:"description,omitempty"`
+	Endpoint       *string                     `json:"endpoint,omitempty"`
+
+	// Name Volcengine tenant name.
+	Name        externalRef0.VolcTenantName    `json:"name"`
+	Region      *string                        `json:"region,omitempty"`
+	ResourceIds *[]externalRef0.VolcResourceID `json:"resource_ids,omitempty"`
 }
 
 // WorkspaceList defines model for WorkspaceList.
@@ -197,6 +227,9 @@ type VoiceProviderName = externalRef0.VoiceProviderName
 
 // VoiceSource How the voice entered the global catalog
 type VoiceSource = externalRef0.VoiceSource
+
+// VolcTenantName Volcengine tenant name.
+type VolcTenantName = externalRef0.VolcTenantName
 
 // WorkspaceName Workspace name
 type WorkspaceName = externalRef0.WorkspaceName
@@ -279,6 +312,15 @@ type ListVoicesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListVolcTenantsParams defines parameters for ListVolcTenants.
+type ListVolcTenantsParams struct {
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListWorkspaceTemplatesParams defines parameters for ListWorkspaceTemplates.
 type ListWorkspaceTemplatesParams struct {
 	// Cursor Opaque cursor returned by the previous list response
@@ -329,6 +371,12 @@ type CreateVoiceJSONRequestBody = VoiceUpsert
 
 // PutVoiceJSONRequestBody defines body for PutVoice for application/json ContentType.
 type PutVoiceJSONRequestBody = VoiceUpsert
+
+// CreateVolcTenantJSONRequestBody defines body for CreateVolcTenant for application/json ContentType.
+type CreateVolcTenantJSONRequestBody = VolcTenantUpsert
+
+// PutVolcTenantJSONRequestBody defines body for PutVolcTenant for application/json ContentType.
+type PutVolcTenantJSONRequestBody = VolcTenantUpsert
 
 // CreateWorkspaceTemplateJSONRequestBody defines body for CreateWorkspaceTemplate for application/json ContentType.
 type CreateWorkspaceTemplateJSONRequestBody = externalRef0.WorkflowTemplateDocument
@@ -565,6 +613,28 @@ type ClientInterface interface {
 	PutVoiceWithBody(ctx context.Context, id VoiceID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PutVoice(ctx context.Context, id VoiceID, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListVolcTenants request
+	ListVolcTenants(ctx context.Context, params *ListVolcTenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateVolcTenantWithBody request with any body
+	CreateVolcTenantWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateVolcTenant(ctx context.Context, body CreateVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteVolcTenant request
+	DeleteVolcTenant(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetVolcTenant request
+	GetVolcTenant(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutVolcTenantWithBody request with any body
+	PutVolcTenantWithBody(ctx context.Context, name VolcTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutVolcTenant(ctx context.Context, name VolcTenantName, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SyncVolcTenantVoices request
+	SyncVolcTenantVoices(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWorkspaceTemplates request
 	ListWorkspaceTemplates(ctx context.Context, params *ListWorkspaceTemplatesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1243,6 +1313,102 @@ func (c *Client) PutVoiceWithBody(ctx context.Context, id VoiceID, contentType s
 
 func (c *Client) PutVoice(ctx context.Context, id VoiceID, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutVoiceRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListVolcTenants(ctx context.Context, params *ListVolcTenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListVolcTenantsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateVolcTenantWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateVolcTenantRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateVolcTenant(ctx context.Context, body CreateVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateVolcTenantRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteVolcTenant(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteVolcTenantRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetVolcTenant(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetVolcTenantRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutVolcTenantWithBody(ctx context.Context, name VolcTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutVolcTenantRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutVolcTenant(ctx context.Context, name VolcTenantName, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutVolcTenantRequest(c.Server, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SyncVolcTenantVoices(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSyncVolcTenantVoicesRequest(c.Server, name)
 	if err != nil {
 		return nil, err
 	}
@@ -3365,6 +3531,260 @@ func NewPutVoiceRequestWithBody(server string, id VoiceID, contentType string, b
 	return req, nil
 }
 
+// NewListVolcTenantsRequest generates requests for ListVolcTenants
+func NewListVolcTenantsRequest(server string, params *ListVolcTenantsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/volc-tenants")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateVolcTenantRequest calls the generic CreateVolcTenant builder with application/json body
+func NewCreateVolcTenantRequest(server string, body CreateVolcTenantJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateVolcTenantRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateVolcTenantRequestWithBody generates requests for CreateVolcTenant with any type of body
+func NewCreateVolcTenantRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/volc-tenants")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteVolcTenantRequest generates requests for DeleteVolcTenant
+func NewDeleteVolcTenantRequest(server string, name VolcTenantName) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/volc-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetVolcTenantRequest generates requests for GetVolcTenant
+func NewGetVolcTenantRequest(server string, name VolcTenantName) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/volc-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutVolcTenantRequest calls the generic PutVolcTenant builder with application/json body
+func NewPutVolcTenantRequest(server string, name VolcTenantName, body PutVolcTenantJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutVolcTenantRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewPutVolcTenantRequestWithBody generates requests for PutVolcTenant with any type of body
+func NewPutVolcTenantRequestWithBody(server string, name VolcTenantName, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/volc-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSyncVolcTenantVoicesRequest generates requests for SyncVolcTenantVoices
+func NewSyncVolcTenantVoicesRequest(server string, name VolcTenantName) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/volc-tenants/%s/@sync-voices", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListWorkspaceTemplatesRequest generates requests for ListWorkspaceTemplates
 func NewListWorkspaceTemplatesRequest(server string, params *ListWorkspaceTemplatesParams) (*http.Request, error) {
 	var err error
@@ -3998,6 +4418,28 @@ type ClientWithResponsesInterface interface {
 	PutVoiceWithBodyWithResponse(ctx context.Context, id VoiceID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error)
 
 	PutVoiceWithResponse(ctx context.Context, id VoiceID, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error)
+
+	// ListVolcTenantsWithResponse request
+	ListVolcTenantsWithResponse(ctx context.Context, params *ListVolcTenantsParams, reqEditors ...RequestEditorFn) (*ListVolcTenantsResponse, error)
+
+	// CreateVolcTenantWithBodyWithResponse request with any body
+	CreateVolcTenantWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVolcTenantResponse, error)
+
+	CreateVolcTenantWithResponse(ctx context.Context, body CreateVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVolcTenantResponse, error)
+
+	// DeleteVolcTenantWithResponse request
+	DeleteVolcTenantWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*DeleteVolcTenantResponse, error)
+
+	// GetVolcTenantWithResponse request
+	GetVolcTenantWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*GetVolcTenantResponse, error)
+
+	// PutVolcTenantWithBodyWithResponse request with any body
+	PutVolcTenantWithBodyWithResponse(ctx context.Context, name VolcTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error)
+
+	PutVolcTenantWithResponse(ctx context.Context, name VolcTenantName, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error)
+
+	// SyncVolcTenantVoicesWithResponse request
+	SyncVolcTenantVoicesWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*SyncVolcTenantVoicesResponse, error)
 
 	// ListWorkspaceTemplatesWithResponse request
 	ListWorkspaceTemplatesWithResponse(ctx context.Context, params *ListWorkspaceTemplatesParams, reqEditors ...RequestEditorFn) (*ListWorkspaceTemplatesResponse, error)
@@ -5067,6 +5509,152 @@ func (r PutVoiceResponse) StatusCode() int {
 	return 0
 }
 
+type ListVolcTenantsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *VolcTenantList
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListVolcTenantsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListVolcTenantsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateVolcTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.VolcTenant
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateVolcTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateVolcTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteVolcTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.VolcTenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteVolcTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteVolcTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetVolcTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.VolcTenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetVolcTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetVolcTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutVolcTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.VolcTenant
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutVolcTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutVolcTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type SyncVolcTenantVoicesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *VolcSyncVoicesResult
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+	JSON502      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r SyncVolcTenantVoicesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SyncVolcTenantVoicesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListWorkspaceTemplatesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -5780,6 +6368,76 @@ func (c *ClientWithResponses) PutVoiceWithResponse(ctx context.Context, id Voice
 		return nil, err
 	}
 	return ParsePutVoiceResponse(rsp)
+}
+
+// ListVolcTenantsWithResponse request returning *ListVolcTenantsResponse
+func (c *ClientWithResponses) ListVolcTenantsWithResponse(ctx context.Context, params *ListVolcTenantsParams, reqEditors ...RequestEditorFn) (*ListVolcTenantsResponse, error) {
+	rsp, err := c.ListVolcTenants(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListVolcTenantsResponse(rsp)
+}
+
+// CreateVolcTenantWithBodyWithResponse request with arbitrary body returning *CreateVolcTenantResponse
+func (c *ClientWithResponses) CreateVolcTenantWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateVolcTenantResponse, error) {
+	rsp, err := c.CreateVolcTenantWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateVolcTenantResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateVolcTenantWithResponse(ctx context.Context, body CreateVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVolcTenantResponse, error) {
+	rsp, err := c.CreateVolcTenant(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateVolcTenantResponse(rsp)
+}
+
+// DeleteVolcTenantWithResponse request returning *DeleteVolcTenantResponse
+func (c *ClientWithResponses) DeleteVolcTenantWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*DeleteVolcTenantResponse, error) {
+	rsp, err := c.DeleteVolcTenant(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteVolcTenantResponse(rsp)
+}
+
+// GetVolcTenantWithResponse request returning *GetVolcTenantResponse
+func (c *ClientWithResponses) GetVolcTenantWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*GetVolcTenantResponse, error) {
+	rsp, err := c.GetVolcTenant(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetVolcTenantResponse(rsp)
+}
+
+// PutVolcTenantWithBodyWithResponse request with arbitrary body returning *PutVolcTenantResponse
+func (c *ClientWithResponses) PutVolcTenantWithBodyWithResponse(ctx context.Context, name VolcTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error) {
+	rsp, err := c.PutVolcTenantWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutVolcTenantResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutVolcTenantWithResponse(ctx context.Context, name VolcTenantName, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error) {
+	rsp, err := c.PutVolcTenant(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutVolcTenantResponse(rsp)
+}
+
+// SyncVolcTenantVoicesWithResponse request returning *SyncVolcTenantVoicesResponse
+func (c *ClientWithResponses) SyncVolcTenantVoicesWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*SyncVolcTenantVoicesResponse, error) {
+	rsp, err := c.SyncVolcTenantVoices(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSyncVolcTenantVoicesResponse(rsp)
 }
 
 // ListWorkspaceTemplatesWithResponse request returning *ListWorkspaceTemplatesResponse
@@ -7603,6 +8261,260 @@ func ParsePutVoiceResponse(rsp *http.Response) (*PutVoiceResponse, error) {
 	return response, nil
 }
 
+// ParseListVolcTenantsResponse parses an HTTP response from a ListVolcTenantsWithResponse call
+func ParseListVolcTenantsResponse(rsp *http.Response) (*ListVolcTenantsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListVolcTenantsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VolcTenantList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateVolcTenantResponse parses an HTTP response from a CreateVolcTenantWithResponse call
+func ParseCreateVolcTenantResponse(rsp *http.Response) (*CreateVolcTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateVolcTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.VolcTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteVolcTenantResponse parses an HTTP response from a DeleteVolcTenantWithResponse call
+func ParseDeleteVolcTenantResponse(rsp *http.Response) (*DeleteVolcTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteVolcTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.VolcTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetVolcTenantResponse parses an HTTP response from a GetVolcTenantWithResponse call
+func ParseGetVolcTenantResponse(rsp *http.Response) (*GetVolcTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetVolcTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.VolcTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutVolcTenantResponse parses an HTTP response from a PutVolcTenantWithResponse call
+func ParsePutVolcTenantResponse(rsp *http.Response) (*PutVolcTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutVolcTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.VolcTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseSyncVolcTenantVoicesResponse parses an HTTP response from a SyncVolcTenantVoicesWithResponse call
+func ParseSyncVolcTenantVoicesResponse(rsp *http.Response) (*SyncVolcTenantVoicesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SyncVolcTenantVoicesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest VolcSyncVoicesResult
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 502:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON502 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListWorkspaceTemplatesResponse parses an HTTP response from a ListWorkspaceTemplatesWithResponse call
 func ParseListWorkspaceTemplatesResponse(rsp *http.Response) (*ListWorkspaceTemplatesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -8134,6 +9046,24 @@ type ServerInterface interface {
 	// Create or update a voice
 	// (PUT /voices/{id})
 	PutVoice(c *fiber.Ctx, id VoiceID) error
+	// List all Volcengine tenants
+	// (GET /volc-tenants)
+	ListVolcTenants(c *fiber.Ctx, params ListVolcTenantsParams) error
+	// Create a Volcengine tenant
+	// (POST /volc-tenants)
+	CreateVolcTenant(c *fiber.Ctx) error
+	// Delete a Volcengine tenant
+	// (DELETE /volc-tenants/{name})
+	DeleteVolcTenant(c *fiber.Ctx, name VolcTenantName) error
+	// Get a Volcengine tenant
+	// (GET /volc-tenants/{name})
+	GetVolcTenant(c *fiber.Ctx, name VolcTenantName) error
+	// Create or update a Volcengine tenant
+	// (PUT /volc-tenants/{name})
+	PutVolcTenant(c *fiber.Ctx, name VolcTenantName) error
+	// Sync voices from a Volcengine tenant into the global voice catalog
+	// (POST /volc-tenants/{name}/@sync-voices)
+	SyncVolcTenantVoices(c *fiber.Ctx, name VolcTenantName) error
 	// List all workspace templates
 	// (GET /workspace-templates)
 	ListWorkspaceTemplates(c *fiber.Ctx, params ListWorkspaceTemplatesParams) error
@@ -9048,6 +9978,107 @@ func (siw *ServerInterfaceWrapper) PutVoice(c *fiber.Ctx) error {
 	return siw.Handler.PutVoice(c, id)
 }
 
+// ListVolcTenants operation middleware
+func (siw *ServerInterfaceWrapper) ListVolcTenants(c *fiber.Ctx) error {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListVolcTenantsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListVolcTenants(c, params)
+}
+
+// CreateVolcTenant operation middleware
+func (siw *ServerInterfaceWrapper) CreateVolcTenant(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateVolcTenant(c)
+}
+
+// DeleteVolcTenant operation middleware
+func (siw *ServerInterfaceWrapper) DeleteVolcTenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name VolcTenantName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteVolcTenant(c, name)
+}
+
+// GetVolcTenant operation middleware
+func (siw *ServerInterfaceWrapper) GetVolcTenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name VolcTenantName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.GetVolcTenant(c, name)
+}
+
+// PutVolcTenant operation middleware
+func (siw *ServerInterfaceWrapper) PutVolcTenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name VolcTenantName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.PutVolcTenant(c, name)
+}
+
+// SyncVolcTenantVoices operation middleware
+func (siw *ServerInterfaceWrapper) SyncVolcTenantVoices(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name VolcTenantName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.SyncVolcTenantVoices(c, name)
+}
+
 // ListWorkspaceTemplates operation middleware
 func (siw *ServerInterfaceWrapper) ListWorkspaceTemplates(c *fiber.Ctx) error {
 
@@ -9324,6 +10355,18 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Get(options.BaseURL+"/voices/:id", wrapper.GetVoice)
 
 	router.Put(options.BaseURL+"/voices/:id", wrapper.PutVoice)
+
+	router.Get(options.BaseURL+"/volc-tenants", wrapper.ListVolcTenants)
+
+	router.Post(options.BaseURL+"/volc-tenants", wrapper.CreateVolcTenant)
+
+	router.Delete(options.BaseURL+"/volc-tenants/:name", wrapper.DeleteVolcTenant)
+
+	router.Get(options.BaseURL+"/volc-tenants/:name", wrapper.GetVolcTenant)
+
+	router.Put(options.BaseURL+"/volc-tenants/:name", wrapper.PutVolcTenant)
+
+	router.Post(options.BaseURL+"/volc-tenants/:name/@sync-voices", wrapper.SyncVolcTenantVoices)
 
 	router.Get(options.BaseURL+"/workspace-templates", wrapper.ListWorkspaceTemplates)
 
@@ -10847,6 +11890,235 @@ func (response PutVoice500JSONResponse) VisitPutVoiceResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
+type ListVolcTenantsRequestObject struct {
+	Params ListVolcTenantsParams
+}
+
+type ListVolcTenantsResponseObject interface {
+	VisitListVolcTenantsResponse(ctx *fiber.Ctx) error
+}
+
+type ListVolcTenants200JSONResponse VolcTenantList
+
+func (response ListVolcTenants200JSONResponse) VisitListVolcTenantsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListVolcTenants500JSONResponse externalRef0.ErrorResponse
+
+func (response ListVolcTenants500JSONResponse) VisitListVolcTenantsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateVolcTenantRequestObject struct {
+	Body *CreateVolcTenantJSONRequestBody
+}
+
+type CreateVolcTenantResponseObject interface {
+	VisitCreateVolcTenantResponse(ctx *fiber.Ctx) error
+}
+
+type CreateVolcTenant200JSONResponse externalRef0.VolcTenant
+
+func (response CreateVolcTenant200JSONResponse) VisitCreateVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateVolcTenant400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateVolcTenant400JSONResponse) VisitCreateVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateVolcTenant409JSONResponse externalRef0.ErrorResponse
+
+func (response CreateVolcTenant409JSONResponse) VisitCreateVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type CreateVolcTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateVolcTenant500JSONResponse) VisitCreateVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteVolcTenantRequestObject struct {
+	Name VolcTenantName `json:"name"`
+}
+
+type DeleteVolcTenantResponseObject interface {
+	VisitDeleteVolcTenantResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteVolcTenant200JSONResponse externalRef0.VolcTenant
+
+func (response DeleteVolcTenant200JSONResponse) VisitDeleteVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteVolcTenant404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteVolcTenant404JSONResponse) VisitDeleteVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteVolcTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteVolcTenant500JSONResponse) VisitDeleteVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetVolcTenantRequestObject struct {
+	Name VolcTenantName `json:"name"`
+}
+
+type GetVolcTenantResponseObject interface {
+	VisitGetVolcTenantResponse(ctx *fiber.Ctx) error
+}
+
+type GetVolcTenant200JSONResponse externalRef0.VolcTenant
+
+func (response GetVolcTenant200JSONResponse) VisitGetVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetVolcTenant404JSONResponse externalRef0.ErrorResponse
+
+func (response GetVolcTenant404JSONResponse) VisitGetVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetVolcTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response GetVolcTenant500JSONResponse) VisitGetVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutVolcTenantRequestObject struct {
+	Name VolcTenantName `json:"name"`
+	Body *PutVolcTenantJSONRequestBody
+}
+
+type PutVolcTenantResponseObject interface {
+	VisitPutVolcTenantResponse(ctx *fiber.Ctx) error
+}
+
+type PutVolcTenant200JSONResponse externalRef0.VolcTenant
+
+func (response PutVolcTenant200JSONResponse) VisitPutVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutVolcTenant400JSONResponse externalRef0.ErrorResponse
+
+func (response PutVolcTenant400JSONResponse) VisitPutVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutVolcTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response PutVolcTenant500JSONResponse) VisitPutVolcTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type SyncVolcTenantVoicesRequestObject struct {
+	Name VolcTenantName `json:"name"`
+}
+
+type SyncVolcTenantVoicesResponseObject interface {
+	VisitSyncVolcTenantVoicesResponse(ctx *fiber.Ctx) error
+}
+
+type SyncVolcTenantVoices200JSONResponse VolcSyncVoicesResult
+
+func (response SyncVolcTenantVoices200JSONResponse) VisitSyncVolcTenantVoicesResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type SyncVolcTenantVoices400JSONResponse externalRef0.ErrorResponse
+
+func (response SyncVolcTenantVoices400JSONResponse) VisitSyncVolcTenantVoicesResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type SyncVolcTenantVoices404JSONResponse externalRef0.ErrorResponse
+
+func (response SyncVolcTenantVoices404JSONResponse) VisitSyncVolcTenantVoicesResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type SyncVolcTenantVoices500JSONResponse externalRef0.ErrorResponse
+
+func (response SyncVolcTenantVoices500JSONResponse) VisitSyncVolcTenantVoicesResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type SyncVolcTenantVoices502JSONResponse externalRef0.ErrorResponse
+
+func (response SyncVolcTenantVoices502JSONResponse) VisitSyncVolcTenantVoicesResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(502)
+
+	return ctx.JSON(&response)
+}
+
 type ListWorkspaceTemplatesRequestObject struct {
 	Params ListWorkspaceTemplatesParams
 }
@@ -11330,6 +12602,24 @@ type StrictServerInterface interface {
 	// Create or update a voice
 	// (PUT /voices/{id})
 	PutVoice(ctx context.Context, request PutVoiceRequestObject) (PutVoiceResponseObject, error)
+	// List all Volcengine tenants
+	// (GET /volc-tenants)
+	ListVolcTenants(ctx context.Context, request ListVolcTenantsRequestObject) (ListVolcTenantsResponseObject, error)
+	// Create a Volcengine tenant
+	// (POST /volc-tenants)
+	CreateVolcTenant(ctx context.Context, request CreateVolcTenantRequestObject) (CreateVolcTenantResponseObject, error)
+	// Delete a Volcengine tenant
+	// (DELETE /volc-tenants/{name})
+	DeleteVolcTenant(ctx context.Context, request DeleteVolcTenantRequestObject) (DeleteVolcTenantResponseObject, error)
+	// Get a Volcengine tenant
+	// (GET /volc-tenants/{name})
+	GetVolcTenant(ctx context.Context, request GetVolcTenantRequestObject) (GetVolcTenantResponseObject, error)
+	// Create or update a Volcengine tenant
+	// (PUT /volc-tenants/{name})
+	PutVolcTenant(ctx context.Context, request PutVolcTenantRequestObject) (PutVolcTenantResponseObject, error)
+	// Sync voices from a Volcengine tenant into the global voice catalog
+	// (POST /volc-tenants/{name}/@sync-voices)
+	SyncVolcTenantVoices(ctx context.Context, request SyncVolcTenantVoicesRequestObject) (SyncVolcTenantVoicesResponseObject, error)
 	// List all workspace templates
 	// (GET /workspace-templates)
 	ListWorkspaceTemplates(ctx context.Context, request ListWorkspaceTemplatesRequestObject) (ListWorkspaceTemplatesResponseObject, error)
@@ -12612,6 +13902,178 @@ func (sh *strictHandler) PutVoice(ctx *fiber.Ctx, id VoiceID) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(PutVoiceResponseObject); ok {
 		if err := validResponse.VisitPutVoiceResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListVolcTenants operation middleware
+func (sh *strictHandler) ListVolcTenants(ctx *fiber.Ctx, params ListVolcTenantsParams) error {
+	var request ListVolcTenantsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListVolcTenants(ctx.UserContext(), request.(ListVolcTenantsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListVolcTenants")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListVolcTenantsResponseObject); ok {
+		if err := validResponse.VisitListVolcTenantsResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateVolcTenant operation middleware
+func (sh *strictHandler) CreateVolcTenant(ctx *fiber.Ctx) error {
+	var request CreateVolcTenantRequestObject
+
+	var body CreateVolcTenantJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateVolcTenant(ctx.UserContext(), request.(CreateVolcTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateVolcTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateVolcTenantResponseObject); ok {
+		if err := validResponse.VisitCreateVolcTenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteVolcTenant operation middleware
+func (sh *strictHandler) DeleteVolcTenant(ctx *fiber.Ctx, name VolcTenantName) error {
+	var request DeleteVolcTenantRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteVolcTenant(ctx.UserContext(), request.(DeleteVolcTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteVolcTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteVolcTenantResponseObject); ok {
+		if err := validResponse.VisitDeleteVolcTenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetVolcTenant operation middleware
+func (sh *strictHandler) GetVolcTenant(ctx *fiber.Ctx, name VolcTenantName) error {
+	var request GetVolcTenantRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetVolcTenant(ctx.UserContext(), request.(GetVolcTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetVolcTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetVolcTenantResponseObject); ok {
+		if err := validResponse.VisitGetVolcTenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutVolcTenant operation middleware
+func (sh *strictHandler) PutVolcTenant(ctx *fiber.Ctx, name VolcTenantName) error {
+	var request PutVolcTenantRequestObject
+
+	request.Name = name
+
+	var body PutVolcTenantJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutVolcTenant(ctx.UserContext(), request.(PutVolcTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutVolcTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutVolcTenantResponseObject); ok {
+		if err := validResponse.VisitPutVolcTenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// SyncVolcTenantVoices operation middleware
+func (sh *strictHandler) SyncVolcTenantVoices(ctx *fiber.Ctx, name VolcTenantName) error {
+	var request SyncVolcTenantVoicesRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.SyncVolcTenantVoices(ctx.UserContext(), request.(SyncVolcTenantVoicesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SyncVolcTenantVoices")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(SyncVolcTenantVoicesResponseObject); ok {
+		if err := validResponse.VisitSyncVolcTenantVoicesResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Volc Tenant Name Type",
+    "description": "VolcTenantName schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VolcTenantName": {
+        "type": "string",
+        "description": "Volcengine tenant name.",
+        "example": "volc-main"
+      }
+    }
+  }
+}

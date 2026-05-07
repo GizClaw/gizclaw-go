@@ -237,6 +237,7 @@ const (
 	ResourceKindMiniMaxTenant     ResourceKind = "MiniMaxTenant"
 	ResourceKindResourceList      ResourceKind = "ResourceList"
 	ResourceKindVoice             ResourceKind = "Voice"
+	ResourceKindVolcTenant        ResourceKind = "VolcTenant"
 	ResourceKindWorkspace         ResourceKind = "Workspace"
 	ResourceKindWorkspaceTemplate ResourceKind = "WorkspaceTemplate"
 )
@@ -253,6 +254,8 @@ func (e ResourceKind) Valid() bool {
 	case ResourceKindResourceList:
 		return true
 	case ResourceKindVoice:
+		return true
+	case ResourceKindVolcTenant:
 		return true
 	case ResourceKindWorkspace:
 		return true
@@ -320,6 +323,21 @@ func (e VoiceSource) Valid() bool {
 	case VoiceSourceManual:
 		return true
 	case VoiceSourceSync:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VolcTenantResourceKind.
+const (
+	VolcTenantResourceKindVolcTenant VolcTenantResourceKind = "VolcTenant"
+)
+
+// Valid indicates whether the value is a known member of the VolcTenantResourceKind enum.
+func (e VolcTenantResourceKind) Valid() bool {
+	switch e {
+	case VolcTenantResourceKindVolcTenant:
 		return true
 	default:
 		return false
@@ -788,12 +806,8 @@ type Voice struct {
 	Name     *string       `json:"name,omitempty"`
 	Provider VoiceProvider `json:"provider"`
 
-	// ProviderVoiceId Upstream provider voice identifier. Present for synced voices.
-	ProviderVoiceId *string `json:"provider_voice_id,omitempty"`
-
-	// ProviderVoiceType Provider-specific voice type
-	ProviderVoiceType *string                 `json:"provider_voice_type,omitempty"`
-	Raw               *map[string]interface{} `json:"raw,omitempty"`
+	// ProviderData Provider-specific debug data keyed by provider kind.
+	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
 
 	// Source How the voice entered the global catalog
 	Source    VoiceSource `json:"source"`
@@ -840,15 +854,64 @@ type VoiceSpec struct {
 	Name        *string       `json:"name,omitempty"`
 	Provider    VoiceProvider `json:"provider"`
 
-	// ProviderVoiceId Upstream provider voice identifier. Present for synced voices.
-	ProviderVoiceId *string `json:"provider_voice_id,omitempty"`
-
-	// ProviderVoiceType Provider-specific voice type
-	ProviderVoiceType *string                 `json:"provider_voice_type,omitempty"`
-	Raw               *map[string]interface{} `json:"raw,omitempty"`
+	// ProviderData Provider-specific debug data keyed by provider kind.
+	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
 
 	// Source How the voice entered the global catalog
 	Source VoiceSource `json:"source"`
+}
+
+// VolcAppID Volcengine speech application identifier
+type VolcAppID = string
+
+// VolcResourceID Volcengine speech resource identifier.
+type VolcResourceID = string
+
+// VolcTenant defines model for VolcTenant.
+type VolcTenant struct {
+	// AppId Volcengine speech application identifier
+	AppId     VolcAppID `json:"app_id"`
+	CreatedAt time.Time `json:"created_at"`
+
+	// CredentialName Credential name
+	CredentialName CredentialName `json:"credential_name"`
+	Description    *string        `json:"description,omitempty"`
+	Endpoint       *string        `json:"endpoint,omitempty"`
+	LastSyncedAt   *time.Time     `json:"last_synced_at,omitempty"`
+
+	// Name Volcengine tenant name.
+	Name        VolcTenantName    `json:"name"`
+	Region      *string           `json:"region,omitempty"`
+	ResourceIds *[]VolcResourceID `json:"resource_ids,omitempty"`
+	UpdatedAt   time.Time         `json:"updated_at"`
+}
+
+// VolcTenantName Volcengine tenant name.
+type VolcTenantName = string
+
+// VolcTenantResource defines model for VolcTenantResource.
+type VolcTenantResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion     `json:"apiVersion"`
+	Kind       VolcTenantResourceKind `json:"kind"`
+	Metadata   ResourceMetadata       `json:"metadata"`
+	Spec       VolcTenantSpec         `json:"spec"`
+}
+
+// VolcTenantResourceKind defines model for VolcTenantResource.Kind.
+type VolcTenantResourceKind string
+
+// VolcTenantSpec defines model for VolcTenantSpec.
+type VolcTenantSpec struct {
+	// AppId Volcengine speech application identifier
+	AppId VolcAppID `json:"app_id"`
+
+	// CredentialName Credential name
+	CredentialName CredentialName    `json:"credential_name"`
+	Description    *string           `json:"description,omitempty"`
+	Endpoint       *string           `json:"endpoint,omitempty"`
+	Region         *string           `json:"region,omitempty"`
+	ResourceIds    *[]VolcResourceID `json:"resource_ids,omitempty"`
 }
 
 // WorkflowTemplateAPIVersion defines model for WorkflowTemplateAPIVersion.
@@ -956,6 +1019,34 @@ func (t *Resource) FromMiniMaxTenantResource(v MiniMaxTenantResource) error {
 // MergeMiniMaxTenantResource performs a merge with any union data inside the Resource, using the provided MiniMaxTenantResource
 func (t *Resource) MergeMiniMaxTenantResource(v MiniMaxTenantResource) error {
 	v.Kind = "MiniMaxTenantResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsVolcTenantResource returns the union data inside the Resource as a VolcTenantResource
+func (t Resource) AsVolcTenantResource() (VolcTenantResource, error) {
+	var body VolcTenantResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromVolcTenantResource overwrites any union data inside the Resource as the provided VolcTenantResource
+func (t *Resource) FromVolcTenantResource(v VolcTenantResource) error {
+	v.Kind = "VolcTenantResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeVolcTenantResource performs a merge with any union data inside the Resource, using the provided VolcTenantResource
+func (t *Resource) MergeVolcTenantResource(v VolcTenantResource) error {
+	v.Kind = "VolcTenantResource"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -1130,6 +1221,8 @@ func (t Resource) ValueByDiscriminator() (interface{}, error) {
 		return t.AsResourceListResource()
 	case "VoiceResource":
 		return t.AsVoiceResource()
+	case "VolcTenantResource":
+		return t.AsVolcTenantResource()
 	case "WorkspaceResource":
 		return t.AsWorkspaceResource()
 	case "WorkspaceTemplateResource":

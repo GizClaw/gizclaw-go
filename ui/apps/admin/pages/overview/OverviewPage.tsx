@@ -228,6 +228,12 @@ export function OverviewPage(): JSX.Element {
             </Link>
           </Button>
           <Button asChild variant="outline">
+            <Link to="/providers/volc-tenants">
+              <AudioLines className="size-4" />
+              Volcengine Tenants
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
             <Link to="/ai/voices">
               <Mic2 className="size-4" />
               Voices

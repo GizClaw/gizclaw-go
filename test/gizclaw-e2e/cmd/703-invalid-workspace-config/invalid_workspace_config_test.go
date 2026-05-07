@@ -16,7 +16,7 @@ func TestInvalidWorkspaceConfigUserStory(t *testing.T) {
 		t.Fatalf("expected serve to fail for invalid config:\nstdout:\n%s\nstderr:\n%s", result.Stdout, result.Stderr)
 	}
 	combined := result.Stderr + result.Stdout
-	if !strings.Contains(combined, "depots.store is required") && !strings.Contains(combined, "missing-store") {
-		t.Fatalf("expected validation error, got:\nstdout:\n%s\nstderr:\n%s", result.Stdout, result.Stderr)
+	if !strings.Contains(combined, "direct serve is disabled") || !strings.Contains(combined, "gizclaw service start") {
+		t.Fatalf("expected service-start guidance, got:\nstdout:\n%s\nstderr:\n%s", result.Stdout, result.Stderr)
 	}
 }

@@ -1,4 +1,4 @@
-package minimaxtenantscmd
+package volctenantscmd
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 func NewCmd() *cobra.Command {
 	var ctxName string
 	cmd := &cobra.Command{
-		Use:   "minimax-tenants",
-		Short: "Manage MiniMax tenants",
+		Use:   "volc-tenants",
+		Short: "Manage Volcengine tenants",
 	}
 	cmd.PersistentFlags().StringVar(&ctxName, "context", "", "context name (default: current)")
 	cmd.AddCommand(
@@ -26,14 +26,14 @@ func NewCmd() *cobra.Command {
 func newListCmd(ctxName *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "List MiniMax tenants",
+		Short: "List Volcengine tenants",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := client.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			items, err := client.ListMiniMaxTenants(context.Background(), c)
+			items, err := client.ListVolcTenants(context.Background(), c)
 			if err != nil {
 				return err
 			}
@@ -45,7 +45,7 @@ func newListCmd(ctxName *string) *cobra.Command {
 func newGetCmd(ctxName *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <name>",
-		Short: "Get a MiniMax tenant",
+		Short: "Get a Volcengine tenant",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := client.ConnectFromContext(*ctxName)
@@ -53,7 +53,7 @@ func newGetCmd(ctxName *string) *cobra.Command {
 				return err
 			}
 			defer c.Close()
-			item, err := client.GetMiniMaxTenant(context.Background(), c, args[0])
+			item, err := client.GetVolcTenant(context.Background(), c, args[0])
 			if err != nil {
 				return err
 			}
@@ -65,7 +65,7 @@ func newGetCmd(ctxName *string) *cobra.Command {
 func newSyncVoicesCmd(ctxName *string) *cobra.Command {
 	return &cobra.Command{
 		Use:   "sync-voices <name>",
-		Short: "Sync MiniMax tenant voices",
+		Short: "Sync Volcengine tenant voices",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := client.ConnectFromContext(*ctxName)
@@ -73,7 +73,7 @@ func newSyncVoicesCmd(ctxName *string) *cobra.Command {
 				return err
 			}
 			defer c.Close()
-			result, err := client.SyncMiniMaxTenantVoices(context.Background(), c, args[0])
+			result, err := client.SyncVolcTenantVoices(context.Background(), c, args[0])
 			if err != nil {
 				return err
 			}

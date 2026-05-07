@@ -34,13 +34,21 @@ const (
 	miniMaxVoiceProviderKind = apitypes.VoiceProviderKind("minimax-tenant")
 )
 
+var fallbackMiniMaxBaseURLs = []string{
+	"https://api.minimax.chat",
+	"https://api.minimaxi.com",
+}
+
 type Server struct {
-	Store           kv.Store
-	TenantStore     kv.Store
-	VoiceStore      kv.Store
-	CredentialStore kv.Store
-	HTTPClient      *http.Client
-	Now             func() time.Time
+	Store                    kv.Store
+	TenantStore              kv.Store
+	VolcTenantStore          kv.Store
+	VoiceStore               kv.Store
+	CredentialStore          kv.Store
+	HTTPClient               *http.Client
+	MiniMaxBaseURLs          []string
+	VolcSpeakerClientFactory VolcSpeakerClientFactory
+	Now                      func() time.Time
 }
 
 type MiniMaxAdminService interface {
@@ -50,6 +58,12 @@ type MiniMaxAdminService interface {
 	GetMiniMaxTenant(context.Context, adminservice.GetMiniMaxTenantRequestObject) (adminservice.GetMiniMaxTenantResponseObject, error)
 	PutMiniMaxTenant(context.Context, adminservice.PutMiniMaxTenantRequestObject) (adminservice.PutMiniMaxTenantResponseObject, error)
 	SyncMiniMaxTenantVoices(context.Context, adminservice.SyncMiniMaxTenantVoicesRequestObject) (adminservice.SyncMiniMaxTenantVoicesResponseObject, error)
+	ListVolcTenants(context.Context, adminservice.ListVolcTenantsRequestObject) (adminservice.ListVolcTenantsResponseObject, error)
+	CreateVolcTenant(context.Context, adminservice.CreateVolcTenantRequestObject) (adminservice.CreateVolcTenantResponseObject, error)
+	DeleteVolcTenant(context.Context, adminservice.DeleteVolcTenantRequestObject) (adminservice.DeleteVolcTenantResponseObject, error)
+	GetVolcTenant(context.Context, adminservice.GetVolcTenantRequestObject) (adminservice.GetVolcTenantResponseObject, error)
+	PutVolcTenant(context.Context, adminservice.PutVolcTenantRequestObject) (adminservice.PutVolcTenantResponseObject, error)
+	SyncVolcTenantVoices(context.Context, adminservice.SyncVolcTenantVoicesRequestObject) (adminservice.SyncVolcTenantVoicesResponseObject, error)
 	CreateVoice(context.Context, adminservice.CreateVoiceRequestObject) (adminservice.CreateVoiceResponseObject, error)
 	ListVoices(context.Context, adminservice.ListVoicesRequestObject) (adminservice.ListVoicesResponseObject, error)
 	DeleteVoice(context.Context, adminservice.DeleteVoiceRequestObject) (adminservice.DeleteVoiceResponseObject, error)
@@ -221,12 +235,15 @@ func (s *Server) SyncMiniMaxTenantVoices(ctx context.Context, request adminservi
 		}
 		return adminservice.SyncMiniMaxTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	client, err := s.miniMaxClientForTenant(ctx, credentialStore, tenant)
+	credential, err := s.miniMaxCredentialForTenant(ctx, credentialStore, tenant)
 	if err != nil {
 		return adminservice.SyncMiniMaxTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", err.Error())), nil
 	}
-	upstream, err := listAllMiniMaxVoices(ctx, client)
+	upstream, err := s.listAllMiniMaxVoicesForTenant(ctx, tenant, credential)
 	if err != nil {
+		if miniMaxCredentialRejected(err) {
+			return adminservice.SyncMiniMaxTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_MINIMAX_TENANT", fmt.Sprintf("MiniMax credential rejected by upstream: %v", err))), nil
+		}
 		return adminservice.SyncMiniMaxTenantVoices502JSONResponse(apitypes.NewErrorResponse("MINIMAX_SYNC_FAILED", err.Error())), nil
 	}
 	now := s.now()
@@ -442,20 +459,8 @@ func normalizeVoiceUpsert(in adminservice.VoiceUpsert, expectedID string) (apity
 			voice.Description = &description
 		}
 	}
-	if in.ProviderVoiceId != nil {
-		providerVoiceID := strings.TrimSpace(*in.ProviderVoiceId)
-		if providerVoiceID != "" {
-			voice.ProviderVoiceId = &providerVoiceID
-		}
-	}
-	if in.ProviderVoiceType != nil {
-		providerVoiceType := strings.TrimSpace(*in.ProviderVoiceType)
-		if providerVoiceType != "" {
-			voice.ProviderVoiceType = &providerVoiceType
-		}
-	}
-	if in.Raw != nil {
-		voice.Raw = cloneMap(in.Raw)
+	if in.ProviderData != nil {
+		voice.ProviderData = cloneMap(in.ProviderData)
 	}
 	return voice, nil
 }
@@ -556,22 +561,62 @@ func getMiniMaxTenant(ctx context.Context, store kv.Store, name string) (apitype
 }
 
 func (s *Server) miniMaxClientForTenant(ctx context.Context, store kv.Store, tenant apitypes.MiniMaxTenant) (*minimax.Client, error) {
-	credential, err := getCredential(ctx, store, string(tenant.CredentialName))
+	credential, err := s.miniMaxCredentialForTenant(ctx, store, tenant)
 	if err != nil {
-		if errors.Is(err, kv.ErrNotFound) {
-			return nil, fmt.Errorf("credential %q not found", tenant.CredentialName)
-		}
 		return nil, err
-	}
-	provider := strings.TrimSpace(string(credential.Provider))
-	if provider != "" && provider != "minimax" {
-		return nil, fmt.Errorf("credential %q provider must be minimax", tenant.CredentialName)
 	}
 	apiKey, err := miniMaxAPIKey(credential)
 	if err != nil {
 		return nil, err
 	}
-	baseURL := miniMaxBaseURL(tenant)
+	return s.newMiniMaxClient(apiKey, s.miniMaxBaseURLCandidates(tenant, credential)[0])
+}
+
+func (s *Server) miniMaxCredentialForTenant(ctx context.Context, store kv.Store, tenant apitypes.MiniMaxTenant) (apitypes.Credential, error) {
+	credential, err := getCredential(ctx, store, string(tenant.CredentialName))
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return apitypes.Credential{}, fmt.Errorf("credential %q not found", tenant.CredentialName)
+		}
+		return apitypes.Credential{}, err
+	}
+	provider := strings.TrimSpace(string(credential.Provider))
+	if provider != "" && provider != "minimax" {
+		return apitypes.Credential{}, fmt.Errorf("credential %q provider must be minimax", tenant.CredentialName)
+	}
+	if _, err := miniMaxAPIKey(credential); err != nil {
+		return apitypes.Credential{}, err
+	}
+	return credential, nil
+}
+
+func (s *Server) listAllMiniMaxVoicesForTenant(ctx context.Context, tenant apitypes.MiniMaxTenant, credential apitypes.Credential) ([]minimax.Voice, error) {
+	apiKey, err := miniMaxAPIKey(credential)
+	if err != nil {
+		return nil, err
+	}
+	var rejectedErr error
+	for _, baseURL := range s.miniMaxBaseURLCandidates(tenant, credential) {
+		client, err := s.newMiniMaxClient(apiKey, baseURL)
+		if err != nil {
+			return nil, err
+		}
+		voices, err := listAllMiniMaxVoices(ctx, client)
+		if err == nil {
+			return voices, nil
+		}
+		if !miniMaxCredentialRejected(err) {
+			return nil, err
+		}
+		rejectedErr = err
+	}
+	if rejectedErr != nil {
+		return nil, rejectedErr
+	}
+	return nil, errors.New("MiniMax voice endpoint list is empty")
+}
+
+func (s *Server) newMiniMaxClient(apiKey, baseURL string) (*minimax.Client, error) {
 	client, err := minimax.NewClient(minimax.Config{
 		APIKey:     apiKey,
 		BaseURL:    baseURL,
@@ -584,13 +629,55 @@ func (s *Server) miniMaxClientForTenant(ctx context.Context, store kv.Store, ten
 }
 
 func miniMaxBaseURL(tenant apitypes.MiniMaxTenant) string {
+	return miniMaxBaseURLCandidates(tenant, apitypes.Credential{}, nil)[0]
+}
+
+func (s *Server) miniMaxBaseURLCandidates(tenant apitypes.MiniMaxTenant, credential apitypes.Credential) []string {
+	return miniMaxBaseURLCandidates(tenant, credential, s.MiniMaxBaseURLs)
+}
+
+func miniMaxBaseURLCandidates(tenant apitypes.MiniMaxTenant, credential apitypes.Credential, fallbackBaseURLs []string) []string {
+	var candidates []string
+	add := func(raw string) {
+		baseURL := normalizeMiniMaxVoiceBaseURL(raw)
+		if baseURL == "" {
+			return
+		}
+		for _, existing := range candidates {
+			if existing == baseURL {
+				return
+			}
+		}
+		candidates = append(candidates, baseURL)
+	}
 	if tenant.BaseUrl != nil {
-		baseURL := strings.TrimSpace(*tenant.BaseUrl)
-		if baseURL != "" {
-			return baseURL
+		add(*tenant.BaseUrl)
+	}
+	add(credentialBodyString(credential.Body, "voice_base_url"))
+	add(credentialBodyString(credential.Body, "minimax_voice_base_url"))
+	if len(fallbackBaseURLs) == 0 {
+		fallbackBaseURLs = append([]string{defaultMiniMaxBaseURL}, fallbackMiniMaxBaseURLs...)
+	}
+	for _, baseURL := range fallbackBaseURLs {
+		add(baseURL)
+	}
+	add(credentialBodyString(credential.Body, "base_url"))
+	return candidates
+}
+
+func normalizeMiniMaxVoiceBaseURL(raw string) string {
+	baseURL := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if baseURL == "" {
+		return ""
+	}
+	lower := strings.ToLower(baseURL)
+	for _, suffix := range []string{"/anthropic", "/v1"} {
+		if strings.HasSuffix(lower, suffix) {
+			baseURL = strings.TrimRight(baseURL[:len(baseURL)-len(suffix)], "/")
+			lower = strings.ToLower(baseURL)
 		}
 	}
-	return defaultMiniMaxBaseURL
+	return baseURL
 }
 
 func miniMaxAPIKey(credential apitypes.Credential) (string, error) {
@@ -677,6 +764,21 @@ func listMiniMaxVoicesByType(ctx context.Context, client *minimax.Client, voiceT
 	}
 }
 
+func miniMaxCredentialRejected(err error) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "invalid api key") ||
+		strings.Contains(message, "login fail") ||
+		strings.Contains(message, "status_code=2049") ||
+		strings.Contains(message, "status_code=1004") ||
+		strings.Contains(message, "status=401") ||
+		strings.Contains(message, "status=403") ||
+		strings.Contains(message, "unauthorized") ||
+		strings.Contains(message, "forbidden")
+}
+
 func mergeMiniMaxVoice(existing, candidate minimax.Voice) minimax.Voice {
 	merged := cloneMiniMaxVoice(existing)
 	if strings.TrimSpace(merged.VoiceID) == "" {
@@ -740,10 +842,11 @@ func reconcileTenantVoices(ctx context.Context, store kv.Store, tenant apitypes.
 		if voice.Source != apitypes.VoiceSourceSync {
 			continue
 		}
-		if voice.ProviderVoiceId == nil || strings.TrimSpace(*voice.ProviderVoiceId) == "" {
+		providerVoiceID := voiceProviderDataString(voice, "voice_id")
+		if providerVoiceID == "" {
 			continue
 		}
-		existingByProviderVoiceID[strings.TrimSpace(*voice.ProviderVoiceId)] = voice
+		existingByProviderVoiceID[providerVoiceID] = voice
 	}
 
 	seen := make(map[string]struct{}, len(upstream))
@@ -830,6 +933,13 @@ func voiceFromMiniMax(tenantName apitypes.MiniMaxTenantName, upstream minimax.Vo
 	name := strings.TrimSpace(upstream.VoiceName)
 	voiceType := strings.TrimSpace(upstream.VoiceType)
 	raw := rawMessagesToMap(upstream.Raw)
+	providerValues := map[string]interface{}{
+		"raw":      rawMapValue(raw),
+		"voice_id": providerVoiceID,
+	}
+	if voiceType != "" {
+		providerValues["voice_type"] = voiceType
+	}
 	syncedAt := now
 	voice := apitypes.Voice{
 		CreatedAt: now,
@@ -838,22 +948,16 @@ func voiceFromMiniMax(tenantName apitypes.MiniMaxTenantName, upstream minimax.Vo
 			Kind: miniMaxVoiceProviderKind,
 			Name: apitypes.VoiceProviderName(tenantName),
 		},
-		ProviderVoiceId: &providerVoiceID,
-		Source:          apitypes.VoiceSourceSync,
-		SyncedAt:        &syncedAt,
-		UpdatedAt:       now,
+		ProviderData: providerData(miniMaxVoiceProviderKind, providerValues),
+		Source:       apitypes.VoiceSourceSync,
+		SyncedAt:     &syncedAt,
+		UpdatedAt:    now,
 	}
 	if name != "" {
 		voice.Name = &name
 	}
 	if description != "" {
 		voice.Description = &description
-	}
-	if voiceType != "" {
-		voice.ProviderVoiceType = &voiceType
-	}
-	if raw != nil {
-		voice.Raw = raw
 	}
 	return voice
 }
@@ -880,7 +984,7 @@ func listVoicesPage(ctx context.Context, store kv.Store, filters voiceFilters, c
 		}
 		var voice apitypes.Voice
 		if prefix.String() == voicesRoot.String() {
-			if err := json.Unmarshal(entry.Value, &voice); err != nil {
+			if err := decodeVoice(entry.Value, &voice); err != nil {
 				return nil, false, nil, fmt.Errorf("mmx: decode voice list %s: %w", entry.Key.String(), err)
 			}
 		} else {
@@ -945,9 +1049,9 @@ func writeVoice(ctx context.Context, store kv.Store, voice apitypes.Voice, previ
 		{Key: voiceBySourceKey(string(voice.Source), string(voice.Id)), Value: []byte{}},
 		{Key: voiceByProviderKey(string(voice.Provider.Kind), string(voice.Provider.Name), string(voice.Id)), Value: []byte{}},
 	}
-	if voice.ProviderVoiceId != nil && strings.TrimSpace(*voice.ProviderVoiceId) != "" {
+	if providerVoiceID := voiceProviderDataString(voice, "voice_id"); providerVoiceID != "" {
 		entries = append(entries, kv.Entry{
-			Key:   voiceByProviderVoiceIDKey(string(voice.Provider.Kind), string(voice.Provider.Name), strings.TrimSpace(*voice.ProviderVoiceId)),
+			Key:   voiceByProviderVoiceIDKey(string(voice.Provider.Kind), string(voice.Provider.Name), providerVoiceID),
 			Value: []byte(string(voice.Id)),
 		})
 	}
@@ -965,18 +1069,16 @@ func staleVoiceIndexKeys(previous, next apitypes.Voice) []kv.Key {
 	if previous.Provider.Kind != next.Provider.Kind || previous.Provider.Name != next.Provider.Name {
 		keys = append(keys, voiceByProviderKey(string(previous.Provider.Kind), string(previous.Provider.Name), string(previous.Id)))
 	}
-	if previous.ProviderVoiceId != nil && strings.TrimSpace(*previous.ProviderVoiceId) != "" {
-		nextProviderVoiceID := ""
-		if next.ProviderVoiceId != nil {
-			nextProviderVoiceID = strings.TrimSpace(*next.ProviderVoiceId)
-		}
+	previousProviderVoiceID := voiceProviderDataString(previous, "voice_id")
+	if previousProviderVoiceID != "" {
+		nextProviderVoiceID := voiceProviderDataString(next, "voice_id")
 		if previous.Provider.Kind != next.Provider.Kind ||
 			previous.Provider.Name != next.Provider.Name ||
-			strings.TrimSpace(*previous.ProviderVoiceId) != nextProviderVoiceID {
+			previousProviderVoiceID != nextProviderVoiceID {
 			keys = append(keys, voiceByProviderVoiceIDKey(
 				string(previous.Provider.Kind),
 				string(previous.Provider.Name),
-				strings.TrimSpace(*previous.ProviderVoiceId),
+				previousProviderVoiceID,
 			))
 		}
 	}
@@ -989,11 +1091,11 @@ func deleteVoice(ctx context.Context, store kv.Store, voice apitypes.Voice) erro
 		voiceBySourceKey(string(voice.Source), string(voice.Id)),
 		voiceByProviderKey(string(voice.Provider.Kind), string(voice.Provider.Name), string(voice.Id)),
 	}
-	if voice.ProviderVoiceId != nil && strings.TrimSpace(*voice.ProviderVoiceId) != "" {
+	if providerVoiceID := voiceProviderDataString(voice, "voice_id"); providerVoiceID != "" {
 		keys = append(keys, voiceByProviderVoiceIDKey(
 			string(voice.Provider.Kind),
 			string(voice.Provider.Name),
-			strings.TrimSpace(*voice.ProviderVoiceId),
+			providerVoiceID,
 		))
 	}
 	if err := store.BatchDelete(ctx, keys); err != nil {
@@ -1024,7 +1126,7 @@ func getVoice(ctx context.Context, store kv.Store, id string) (apitypes.Voice, e
 		return apitypes.Voice{}, err
 	}
 	var voice apitypes.Voice
-	if err := json.Unmarshal(data, &voice); err != nil {
+	if err := decodeVoice(data, &voice); err != nil {
 		return apitypes.Voice{}, fmt.Errorf("mmx: decode voice %s: %w", id, err)
 	}
 	return voice, nil
@@ -1047,13 +1149,34 @@ func voiceSemanticEqual(left, right apitypes.Voice) bool {
 		equalStringPtr(left.Name, right.Name) &&
 		left.Provider.Kind == right.Provider.Kind &&
 		left.Provider.Name == right.Provider.Name &&
-		equalStringPtr(left.ProviderVoiceId, right.ProviderVoiceId) &&
-		equalStringPtr(left.ProviderVoiceType, right.ProviderVoiceType) &&
 		left.Source == right.Source &&
-		rawEqual(left.Raw, right.Raw)
+		mapEqual(left.ProviderData, right.ProviderData)
 }
 
-func rawEqual(left, right *map[string]interface{}) bool {
+func decodeVoice(data []byte, out *apitypes.Voice) error {
+	var decoded struct {
+		apitypes.Voice
+		ProviderVoiceID   *string                 `json:"provider_voice_id,omitempty"`
+		ProviderVoiceType *string                 `json:"provider_voice_type,omitempty"`
+		Raw               *map[string]interface{} `json:"raw,omitempty"`
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	voice := decoded.Voice
+	if voice.ProviderData == nil {
+		values := map[string]interface{}{
+			"raw":        rawMapValue(decoded.Raw),
+			"voice_id":   stringPtrValue(decoded.ProviderVoiceID),
+			"voice_type": stringPtrValue(decoded.ProviderVoiceType),
+		}
+		voice.ProviderData = providerData(voice.Provider.Kind, values)
+	}
+	*out = voice
+	return nil
+}
+
+func mapEqual(left, right *map[string]interface{}) bool {
 	if left == nil && right == nil {
 		return true
 	}
@@ -1069,6 +1192,75 @@ func rawEqual(left, right *map[string]interface{}) bool {
 		return false
 	}
 	return string(leftJSON) == string(rightJSON)
+}
+
+func rawEqual(left, right *map[string]interface{}) bool {
+	return mapEqual(left, right)
+}
+
+func providerData(kind apitypes.VoiceProviderKind, values map[string]interface{}) *map[string]interface{} {
+	clean := make(map[string]interface{}, len(values))
+	for key, value := range values {
+		switch typed := value.(type) {
+		case nil:
+			continue
+		case string:
+			if strings.TrimSpace(typed) == "" {
+				continue
+			}
+		}
+		clean[key] = value
+	}
+	if len(clean) == 0 {
+		return nil
+	}
+	out := map[string]interface{}{
+		string(kind): clean,
+	}
+	return &out
+}
+
+func rawMapValue(in *map[string]interface{}) interface{} {
+	if in == nil {
+		return nil
+	}
+	return *in
+}
+
+func stringPtrValue(in *string) string {
+	if in == nil {
+		return ""
+	}
+	return strings.TrimSpace(*in)
+}
+
+func voiceProviderDataString(voice apitypes.Voice, key string) string {
+	if voice.ProviderData == nil {
+		return ""
+	}
+	value, ok := (*voice.ProviderData)[string(voice.Provider.Kind)]
+	if !ok {
+		return ""
+	}
+	switch data := value.(type) {
+	case map[string]interface{}:
+		return providerDataString(data[key])
+	case map[string]string:
+		return strings.TrimSpace(data[key])
+	default:
+		return ""
+	}
+}
+
+func providerDataString(value interface{}) string {
+	switch typed := value.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	case fmt.Stringer:
+		return strings.TrimSpace(typed.String())
+	default:
+		return ""
+	}
 }
 
 func stableVoiceID(kind apitypes.VoiceProviderKind, name apitypes.VoiceProviderName, providerVoiceID string) string {

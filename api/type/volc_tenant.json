@@ -1,0 +1,68 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Volc Tenant Type",
+    "description": "VolcTenant schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VolcTenant": {
+        "type": "object",
+        "required": [
+          "name",
+          "app_id",
+          "credential_name",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "./volc_tenant_name.json#/components/schemas/VolcTenantName"
+          },
+          "credential_name": {
+            "$ref": "./credential_name.json#/components/schemas/CredentialName"
+          },
+          "app_id": {
+            "$ref": "./volc_app_id.json#/components/schemas/VolcAppID"
+          },
+          "region": {
+            "type": "string",
+            "example": "cn-beijing"
+          },
+          "endpoint": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://open.volcengineapi.com"
+          },
+          "resource_ids": {
+            "type": "array",
+            "items": {
+              "$ref": "./volc_resource_id.json#/components/schemas/VolcResourceID"
+            },
+            "example": [
+              "seed-tts-2.0"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "example": "primary Volcengine tenant for Doubao voices"
+          },
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

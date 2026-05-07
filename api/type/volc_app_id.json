@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Volc App ID Type",
+    "description": "VolcAppID schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VolcAppID": {
+        "type": "string",
+        "description": "Volcengine speech application identifier",
+        "example": "9476442538"
+      }
+    }
+  }
+}

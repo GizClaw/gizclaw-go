@@ -1,4 +1,7 @@
-import { RefreshCw } from "lucide-react";
+import { Copy, RefreshCw } from "lucide-react";
+import type { KeyboardEvent, MouseEvent } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Badge } from "../../../../packages/components/badge";
 import { Button } from "../../../../packages/components/button";
@@ -12,9 +15,11 @@ import { ErrorBanner } from "../../../../packages/components/banners";
 import { EmptyState } from "../../../../packages/components/empty-state";
 import { PageBreadcrumb } from "../../../../packages/components/page-breadcrumb";
 import { useCursorListPage } from "../../hooks/useCursorListPage";
-import { formatDate, formatValue } from "../../lib/format";
+import { formatDate } from "../../lib/format";
 
 export function VoicesListPage(): JSX.Element {
+  const navigate = useNavigate();
+  const [copiedID, setCopiedID] = useState("");
   const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh } = useCursorListPage<Voice>(async (query) => {
     const result = await expectData(listVoices({ query }));
     return {
@@ -23,6 +28,30 @@ export function VoicesListPage(): JSX.Element {
       nextCursor: result.next_cursor ?? null,
     };
   });
+
+  const openVoice = (id: string): void => {
+    navigate(`/ai/voices/${encodeURIComponent(id)}`);
+  };
+
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, id: string): void => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    openVoice(id);
+  };
+
+  const copyVoiceID = async (event: MouseEvent<HTMLButtonElement>, id: string): Promise<void> => {
+    event.stopPropagation();
+    await navigator.clipboard.writeText(id);
+    setCopiedID(id);
+    window.setTimeout(() => {
+      setCopiedID((current) => (current === id ? "" : current));
+    }, 1500);
+  };
 
   return (
     <div className="space-y-6">
@@ -93,31 +122,44 @@ export function VoicesListPage(): JSX.Element {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>ID</TableHead>
+                    <TableHead className="w-48">ID</TableHead>
+                    <TableHead>Provider</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Source</TableHead>
-                    <TableHead>Provider</TableHead>
-                    <TableHead>Provider Voice ID</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Last Sync</TableHead>
                     <TableHead className="text-right">Updated</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.map((voice) => (
-                    <TableRow key={voice.id}>
-                      <TableCell className="font-medium">{voice.id}</TableCell>
-                      <TableCell>{voice.name?.trim() || "—"}</TableCell>
+                    <TableRow
+                      className="cursor-pointer hover:bg-muted/40"
+                      key={voice.id}
+                      onClick={() => openVoice(voice.id)}
+                      onKeyDown={(event) => handleRowKeyDown(event, voice.id)}
+                      role="link"
+                      tabIndex={0}
+                    >
+                      <TableCell className="w-48 max-w-48">
+                        <button
+                          className="inline-flex w-44 max-w-44 items-center gap-2 rounded-sm text-left font-mono text-xs font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={(event) => void copyVoiceID(event, voice.id)}
+                          title={`Copy full ID: ${voice.id}`}
+                          type="button"
+                        >
+                          <span className="truncate">{compactVoiceID(voice.id)}</span>
+                          <Copy className="size-3 shrink-0 text-muted-foreground" />
+                        </button>
+                        {copiedID === voice.id ? <div className="text-[0.65rem] text-muted-foreground">Copied</div> : null}
+                      </TableCell>
+                      <TableCell className="text-sm font-medium">
+                        <ProviderLabel kind={voice.provider.kind} name={voice.provider.name} />
+                      </TableCell>
+                      <TableCell className="max-w-[22rem]">
+                        <div className="block truncate font-medium">{voice.name?.trim() || "Unnamed voice"}</div>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={voice.source === "sync" ? "secondary" : "outline"}>{voice.source}</Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
-                        <div>{voice.provider.kind}</div>
-                        <div className="text-muted-foreground">{voice.provider.name}</div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{formatValue(voice.provider_voice_id)}</TableCell>
-                      <TableCell>{formatValue(voice.provider_voice_type)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDate(voice.synced_at)}</TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground">{formatDate(voice.updated_at)}</TableCell>
                     </TableRow>
                   ))}
@@ -129,4 +171,41 @@ export function VoicesListPage(): JSX.Element {
       </Card>
     </div>
   );
+}
+
+function compactVoiceID(id: string): string {
+  const trimmed = id.trim();
+  if (trimmed === "") {
+    return "—";
+  }
+  const parts = trimmed.split(":");
+  const last = parts[parts.length - 1] ?? trimmed;
+  if (last.length <= 28) {
+    return last;
+  }
+  return `${last.slice(0, 14)}...${last.slice(-8)}`;
+}
+
+function ProviderLabel({ kind, name }: { kind: string; name: string }): JSX.Element {
+  return (
+    <span className="inline-flex max-w-[14rem] items-baseline font-mono text-xs">
+      <span className="shrink-0 text-muted-foreground">{providerPrefix(kind)}/</span>
+      <span className="truncate text-foreground">{name}</span>
+    </span>
+  );
+}
+
+function providerPrefix(kind: string): string {
+  switch (kind) {
+    case "minimax-tenant":
+      return "minimax";
+    case "volc-tenant":
+      return "volc";
+    default:
+      return kind;
+  }
+}
+
+function isInteractiveTarget(target: EventTarget): boolean {
+  return target instanceof Element && target.closest("a,button,input,select,textarea") !== null;
 }

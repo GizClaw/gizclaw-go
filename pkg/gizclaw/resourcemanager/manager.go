@@ -88,6 +88,18 @@ func (m *Manager) Get(ctx context.Context, kind apitypes.ResourceKind, name stri
 			return apitypes.Resource{}, notFound(kind, name)
 		}
 		return resourceFromMiniMaxTenant(item)
+	case apitypes.ResourceKindVolcTenant:
+		if m.services.MiniMax == nil {
+			return apitypes.Resource{}, missingService("volc")
+		}
+		item, exists, err := m.getVolcTenant(ctx, adminservice.VolcTenantName(pathParam(name)))
+		if err != nil {
+			return apitypes.Resource{}, err
+		}
+		if !exists {
+			return apitypes.Resource{}, notFound(kind, name)
+		}
+		return resourceFromVolcTenant(item)
 	case apitypes.ResourceKindVoice:
 		if m.services.MiniMax == nil {
 			return apitypes.Resource{}, missingService("minimax")
@@ -186,6 +198,21 @@ func (m *Manager) Put(ctx context.Context, resource apitypes.Resource) (apitypes
 			return apitypes.Resource{}, err
 		}
 		return m.Get(ctx, apitypes.ResourceKindMiniMaxTenant, item.Metadata.Name)
+	case string(apitypes.ResourceKindVolcTenant), "VolcTenantResource":
+		if m.services.MiniMax == nil {
+			return apitypes.Resource{}, missingService("volc")
+		}
+		item, err := resource.AsVolcTenantResource()
+		if err != nil {
+			return apitypes.Resource{}, applyError(400, "INVALID_VOLC_TENANT_RESOURCE", err.Error())
+		}
+		if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
+			return apitypes.Resource{}, err
+		}
+		if err := m.putVolcTenant(ctx, adminservice.VolcTenantName(pathParam(item.Metadata.Name)), volcTenantUpsert(item)); err != nil {
+			return apitypes.Resource{}, err
+		}
+		return m.Get(ctx, apitypes.ResourceKindVolcTenant, item.Metadata.Name)
 	case string(apitypes.ResourceKindResourceList), "ResourceListResource":
 		list, err := resource.AsResourceListResource()
 		if err != nil {
@@ -288,6 +315,18 @@ func (m *Manager) Delete(ctx context.Context, kind apitypes.ResourceKind, name s
 			return apitypes.Resource{}, notFound(kind, name)
 		}
 		return resourceFromMiniMaxTenant(item)
+	case apitypes.ResourceKindVolcTenant:
+		if m.services.MiniMax == nil {
+			return apitypes.Resource{}, missingService("volc")
+		}
+		item, exists, err := m.deleteVolcTenant(ctx, adminservice.VolcTenantName(pathParam(name)))
+		if err != nil {
+			return apitypes.Resource{}, err
+		}
+		if !exists {
+			return apitypes.Resource{}, notFound(kind, name)
+		}
+		return resourceFromVolcTenant(item)
 	case apitypes.ResourceKindVoice:
 		if m.services.MiniMax == nil {
 			return apitypes.Resource{}, missingService("minimax")
@@ -347,6 +386,8 @@ func (m *Manager) Apply(ctx context.Context, resource apitypes.Resource) (apityp
 		return m.applyGearConfig(ctx, resource)
 	case string(apitypes.ResourceKindMiniMaxTenant), "MiniMaxTenantResource":
 		return m.applyMiniMaxTenant(ctx, resource)
+	case string(apitypes.ResourceKindVolcTenant), "VolcTenantResource":
+		return m.applyVolcTenant(ctx, resource)
 	case string(apitypes.ResourceKindResourceList), "ResourceListResource":
 		return m.applyResourceList(ctx, resource)
 	case string(apitypes.ResourceKindVoice), "VoiceResource":

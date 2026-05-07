@@ -818,6 +818,60 @@ func SyncMiniMaxTenantVoices(ctx context.Context, c *gizclaw.Client, name string
 	return adminservice.MiniMaxSyncVoicesResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404, resp.JSON500, resp.JSON502)
 }
 
+func ListVolcTenants(ctx context.Context, c *gizclaw.Client) ([]apitypes.VolcTenant, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return nil, err
+	}
+	return collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[apitypes.VolcTenant], error) {
+		resp, err := api.ListVolcTenantsWithResponse(ctx, &adminservice.ListVolcTenantsParams{
+			Cursor: cursor,
+			Limit:  limit,
+		})
+		if err != nil {
+			return pagedItems[apitypes.VolcTenant]{}, err
+		}
+		if resp.JSON200 == nil {
+			return pagedItems[apitypes.VolcTenant]{}, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
+		}
+		return pagedItems[apitypes.VolcTenant]{
+			HasNext:    resp.JSON200.HasNext,
+			Items:      resp.JSON200.Items,
+			NextCursor: resp.JSON200.NextCursor,
+		}, nil
+	})
+}
+
+func GetVolcTenant(ctx context.Context, c *gizclaw.Client, name string) (apitypes.VolcTenant, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return apitypes.VolcTenant{}, err
+	}
+	resp, err := api.GetVolcTenantWithResponse(ctx, adminservice.VolcTenantName(name))
+	if err != nil {
+		return apitypes.VolcTenant{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return apitypes.VolcTenant{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+}
+
+func SyncVolcTenantVoices(ctx context.Context, c *gizclaw.Client, name string) (adminservice.VolcSyncVoicesResult, error) {
+	api, err := c.ServerAdminClient()
+	if err != nil {
+		return adminservice.VolcSyncVoicesResult{}, err
+	}
+	resp, err := api.SyncVolcTenantVoicesWithResponse(ctx, adminservice.VolcTenantName(name))
+	if err != nil {
+		return adminservice.VolcSyncVoicesResult{}, err
+	}
+	if resp.JSON200 != nil {
+		return *resp.JSON200, nil
+	}
+	return adminservice.VolcSyncVoicesResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404, resp.JSON500, resp.JSON502)
+}
+
 func ListVoices(ctx context.Context, c *gizclaw.Client, source, providerKind, providerName string) ([]apitypes.Voice, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {

@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/cmd/internal/service"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -251,10 +250,17 @@ func TestResolveWorkspaceStoreConfigsPreservesAbsoluteDirs(t *testing.T) {
 	}
 }
 
-func TestServeReturnsWorkspaceLoadError(t *testing.T) {
+func TestServeRejectsDirectRun(t *testing.T) {
 	err := Serve(t.TempDir())
+	if err == nil || !strings.Contains(err.Error(), "direct serve is disabled") || !strings.Contains(err.Error(), "gizclaw service start") {
+		t.Fatalf("Serve(direct) err = %v", err)
+	}
+}
+
+func TestServiceManagedServeReturnsWorkspaceLoadError(t *testing.T) {
+	err := ServeContext(context.Background(), t.TempDir(), ServeOptions{ServiceManaged: true})
 	if err == nil {
-		t.Fatal("Serve should fail without config.yaml")
+		t.Fatal("service-managed serve should fail without config.yaml")
 	}
 }
 
@@ -273,9 +279,9 @@ depots:
 		t.Fatalf("WriteFile error = %v", err)
 	}
 
-	err := Serve(workspace)
+	err := ServeContext(context.Background(), workspace, ServeOptions{ServiceManaged: true})
 	if err == nil {
-		t.Fatal("Serve should fail when New cannot build stores")
+		t.Fatal("service-managed serve should fail when New cannot build stores")
 	}
 }
 
@@ -353,7 +359,7 @@ depots:
 		t.Fatalf("WriteFile pid error = %v", err)
 	}
 
-	err := ServeContext(context.Background(), workspace, ServeOptions{})
+	err := ServeContext(context.Background(), workspace, ServeOptions{ServiceManaged: true})
 	if err == nil || !strings.Contains(err.Error(), "already running") {
 		t.Fatalf("ServeContext() err = %v", err)
 	}
@@ -365,18 +371,6 @@ depots:
 		t.Fatalf("storage should be closed after PID error, reopen: %v", err)
 	}
 	defer reopened.Close()
-}
-
-func TestServeRejectsServiceManagedWorkspace(t *testing.T) {
-	workspace := t.TempDir()
-	if err := service.WriteMarker(workspace); err != nil {
-		t.Fatalf("WriteMarker error = %v", err)
-	}
-
-	err := Serve(workspace)
-	if err == nil || !strings.Contains(err.Error(), "managed by gizclaw service") {
-		t.Fatalf("Serve(service-managed) err = %v", err)
-	}
 }
 
 func TestHandleExistingWorkspacePIDRejectsStaleWithoutForce(t *testing.T) {

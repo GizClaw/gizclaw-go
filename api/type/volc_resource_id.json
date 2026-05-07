@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Volc Resource ID Type",
+    "description": "VolcResourceID schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VolcResourceID": {
+        "type": "string",
+        "description": "Volcengine speech resource identifier.",
+        "example": "seed-tts-2.0"
+      }
+    }
+  }
+}

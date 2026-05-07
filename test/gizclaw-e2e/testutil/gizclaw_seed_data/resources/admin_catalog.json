@@ -23,6 +23,19 @@
       },
       {
         "apiVersion": "gizclaw.admin/v1alpha1",
+        "kind": "Credential",
+        "metadata": {
+          "name": "ui-seed-volc-credential"
+        },
+        "spec": {
+          "provider": "volc",
+          "method": "api_key",
+          "description": "Seeded Volcengine credential for UI CLI tests",
+          "body": {}
+        }
+      },
+      {
+        "apiVersion": "gizclaw.admin/v1alpha1",
         "kind": "MiniMaxTenant",
         "metadata": {
           "name": "ui-seed-tenant"
@@ -33,6 +46,22 @@
           "credential_name": "ui-seed-credential",
           "base_url": "https://example.invalid",
           "description": "Seeded MiniMax tenant for UI real-service tests"
+        }
+      },
+      {
+        "apiVersion": "gizclaw.admin/v1alpha1",
+        "kind": "VolcTenant",
+        "metadata": {
+          "name": "ui-seed-volc-tenant"
+        },
+        "spec": {
+          "app_id": "ui-seed-volc-app",
+          "credential_name": "ui-seed-volc-credential",
+          "region": "cn-beijing",
+          "resource_ids": [
+            "seed-tts-2.0"
+          ],
+          "description": "Seeded Volcengine tenant for UI CLI tests"
         }
       },
       {
@@ -49,10 +78,42 @@
           },
           "name": "Seeded UI Voice",
           "description": "Seeded voice for UI real-service tests",
-          "provider_voice_id": "provider-ui-seed-voice",
-          "provider_voice_type": "voice_cloning",
-          "raw": {
-            "origin": "integration-seed"
+          "provider_data": {
+            "minimax": {
+              "voice_id": "provider-ui-seed-voice",
+              "voice_type": "voice_cloning",
+              "raw": {
+                "origin": "integration-seed"
+              }
+            }
+          }
+        }
+      },
+      {
+        "apiVersion": "gizclaw.admin/v1alpha1",
+        "kind": "Voice",
+        "metadata": {
+          "name": "volc-tenant:ui-seed-volc-tenant:ICL_ui_seed_voice"
+        },
+        "spec": {
+          "source": "manual",
+          "provider": {
+            "kind": "volc-tenant",
+            "name": "ui-seed-volc-tenant"
+          },
+          "name": "Seeded Volc UI Voice",
+          "description": "Seeded Volc voice for UI CLI tests",
+          "provider_data": {
+            "volc-tenant": {
+              "app_id": "ui-seed-volc-app",
+              "resource_id": "seed-tts-2.0",
+              "state": "Success",
+              "status": "Available",
+              "voice_id": "ICL_ui_seed_voice",
+              "raw": {
+                "origin": "integration-seed"
+              }
+            }
           }
         }
       }

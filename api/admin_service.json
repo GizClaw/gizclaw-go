@@ -36,6 +36,10 @@
       "description": "MiniMax tenant operations"
     },
     {
+      "name": "VolcTenants",
+      "description": "Volcengine tenant operations"
+    },
+    {
       "name": "Voices",
       "description": "Global voice catalog operations"
     },
@@ -1325,6 +1329,314 @@
           },
           "502": {
             "description": "Upstream MiniMax sync failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/volc-tenants": {
+      "get": {
+        "operationId": "listVolcTenants",
+        "summary": "List all Volcengine tenants",
+        "tags": [
+          "VolcTenants"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/cursor"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Volcengine tenant list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VolcTenantList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createVolcTenant",
+        "summary": "Create a Volcengine tenant",
+        "tags": [
+          "VolcTenants"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VolcTenantUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created Volcengine tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/VolcTenant"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Volcengine tenant payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Volcengine tenant already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/volc-tenants/{name}": {
+      "get": {
+        "operationId": "getVolcTenant",
+        "summary": "Get a Volcengine tenant",
+        "tags": [
+          "VolcTenants"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/volcTenantName"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Volcengine tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/VolcTenant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Volcengine tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putVolcTenant",
+        "summary": "Create or update a Volcengine tenant",
+        "tags": [
+          "VolcTenants"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/volcTenantName"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VolcTenantUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored Volcengine tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/VolcTenant"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Volcengine tenant payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteVolcTenant",
+        "summary": "Delete a Volcengine tenant",
+        "tags": [
+          "VolcTenants"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/volcTenantName"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted Volcengine tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/VolcTenant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Volcengine tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/volc-tenants/{name}/@sync-voices": {
+      "post": {
+        "operationId": "syncVolcTenantVoices",
+        "summary": "Sync voices from a Volcengine tenant into the global voice catalog",
+        "tags": [
+          "VolcTenants"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/volcTenantName"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Volcengine voice sync result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VolcSyncVoicesResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Volcengine tenant configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Volcengine tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream Volcengine sync failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -2878,6 +3190,69 @@
           }
         }
       },
+      "VolcTenantUpsert": {
+        "type": "object",
+        "required": [
+          "name",
+          "app_id",
+          "credential_name"
+        ],
+        "properties": {
+          "name": {
+            "$ref": "./types.json#/components/schemas/VolcTenantName"
+          },
+          "credential_name": {
+            "$ref": "./types.json#/components/schemas/CredentialName"
+          },
+          "app_id": {
+            "$ref": "./types.json#/components/schemas/VolcAppID"
+          },
+          "region": {
+            "type": "string",
+            "example": "cn-beijing"
+          },
+          "endpoint": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://open.volcengineapi.com"
+          },
+          "resource_ids": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/VolcResourceID"
+            },
+            "example": [
+              "seed-tts-2.0"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "example": "primary Volcengine tenant for Doubao voices"
+          }
+        }
+      },
+      "VolcTenantList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/VolcTenant"
+            }
+          }
+        }
+      },
       "VoiceList": {
         "type": "object",
         "required": [
@@ -2917,24 +3292,22 @@
           "provider": {
             "$ref": "./types.json#/components/schemas/VoiceProvider"
           },
-          "provider_voice_id": {
-            "type": "string",
-            "description": "Upstream provider voice identifier. Present for synced voices."
-          },
           "name": {
             "type": "string"
           },
           "description": {
             "type": "string"
           },
-          "provider_voice_type": {
-            "type": "string",
-            "description": "Provider-specific voice type"
-          },
-          "raw": {
+          "provider_data": {
             "type": "object",
+            "description": "Provider-specific debug data keyed by provider kind.",
             "additionalProperties": true,
-            "example": {}
+            "example": {
+              "minimax-tenant": {
+                "voice_id": "Arabic_CalmWoman",
+                "voice_type": "system"
+              }
+            }
           }
         }
       },
@@ -2950,6 +3323,40 @@
         "properties": {
           "tenant_name": {
             "$ref": "./types.json#/components/schemas/MiniMaxTenantName"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_count": {
+            "type": "integer",
+            "format": "int32",
+            "example": 3
+          },
+          "updated_count": {
+            "type": "integer",
+            "format": "int32",
+            "example": 21
+          },
+          "deleted_count": {
+            "type": "integer",
+            "format": "int32",
+            "example": 2
+          }
+        }
+      },
+      "VolcSyncVoicesResult": {
+        "type": "object",
+        "required": [
+          "tenant_name",
+          "synced_at",
+          "created_count",
+          "updated_count",
+          "deleted_count"
+        ],
+        "properties": {
+          "tenant_name": {
+            "$ref": "./types.json#/components/schemas/VolcTenantName"
           },
           "synced_at": {
             "type": "string",
@@ -3146,6 +3553,15 @@
         "description": "MiniMax tenant name",
         "schema": {
           "$ref": "./types.json#/components/schemas/MiniMaxTenantName"
+        }
+      },
+      "volcTenantName": {
+        "name": "name",
+        "in": "path",
+        "required": true,
+        "description": "Volcengine tenant name",
+        "schema": {
+          "$ref": "./types.json#/components/schemas/VolcTenantName"
         }
       },
       "voiceID": {

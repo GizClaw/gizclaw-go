@@ -24,6 +24,9 @@ const (
 	SeedCredentialName        = "ui-seed-credential"
 	SeedMiniMaxTenantName     = "ui-seed-tenant"
 	SeedVoiceID               = "ui-seed-voice"
+	SeedVolcCredentialName    = "ui-seed-volc-credential"
+	SeedVolcTenantName        = "ui-seed-volc-tenant"
+	SeedVolcVoiceID           = "volc-tenant:ui-seed-volc-tenant:ICL_ui_seed_voice"
 	SeedWorkspaceTemplateName = "ui-seed-template"
 	SeedWorkspaceName         = "ui-seed-workspace"
 )

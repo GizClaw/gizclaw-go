@@ -31,6 +31,9 @@ const (
 	SeedCredentialName        = itest.SeedCredentialName
 	SeedMiniMaxTenantName     = itest.SeedMiniMaxTenantName
 	SeedVoiceID               = itest.SeedVoiceID
+	SeedVolcCredentialName    = itest.SeedVolcCredentialName
+	SeedVolcTenantName        = itest.SeedVolcTenantName
+	SeedVolcVoiceID           = itest.SeedVolcVoiceID
 	SeedWorkspaceTemplateName = itest.SeedWorkspaceTemplateName
 	SeedWorkspaceName         = itest.SeedWorkspaceName
 )

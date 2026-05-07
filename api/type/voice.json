@@ -27,11 +27,6 @@
           "provider": {
             "$ref": "./voice_provider.json#/components/schemas/VoiceProvider"
           },
-          "provider_voice_id": {
-            "type": "string",
-            "description": "Upstream provider voice identifier. Present for synced voices.",
-            "example": "voice-system-1"
-          },
           "name": {
             "type": "string",
             "example": "calm narrator"
@@ -40,16 +35,15 @@
             "type": "string",
             "example": "calm female narrator"
           },
-          "provider_voice_type": {
-            "type": "string",
-            "description": "Provider-specific voice type",
-            "example": "voice_cloning"
-          },
-          "raw": {
+          "provider_data": {
             "type": "object",
+            "description": "Provider-specific debug data keyed by provider kind.",
             "additionalProperties": true,
             "example": {
-              "gender": "female"
+              "minimax-tenant": {
+                "voice_id": "Arabic_CalmWoman",
+                "voice_type": "system"
+              }
             }
           },
           "synced_at": {

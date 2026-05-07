@@ -38,6 +38,32 @@ func TestAdminVoicesUserStory(t *testing.T) {
 	if !strings.Contains(get.Stdout, `"name":"Voice One"`) {
 		t.Fatalf("voices get missing name:\n%s", get.Stdout)
 	}
+
+	showVolcVoice := h.RunCLI("admin", "--context", "admin-a", "show", "Voice", "volc-tenant:gizclaw-dev:ICL_cli_seed_voice")
+	showVolcVoice.MustSucceed(t)
+	for _, want := range []string{`"kind":"Voice"`, `"name":"volc-tenant:gizclaw-dev:ICL_cli_seed_voice"`, `"resource_id":"seed-tts-2.0"`} {
+		if !strings.Contains(showVolcVoice.Stdout, want) {
+			t.Fatalf("admin show Volc voice missing %q:\n%s", want, showVolcVoice.Stdout)
+		}
+	}
+
+	showVolcTenant := h.RunCLI("admin", "--context", "admin-a", "show", "VolcTenant", "gizclaw-dev")
+	showVolcTenant.MustSucceed(t)
+	for _, want := range []string{`"kind":"VolcTenant"`, `"name":"gizclaw-dev"`, `"app_id":"app-cli"`} {
+		if !strings.Contains(showVolcTenant.Stdout, want) {
+			t.Fatalf("admin show VolcTenant missing %q:\n%s", want, showVolcTenant.Stdout)
+		}
+	}
+
+	syncVolcTenant := h.RunCLI("admin", "volc-tenants", "--context", "admin-a", "sync-voices", "gizclaw-dev")
+	if syncVolcTenant.Err == nil {
+		t.Fatalf("volc sync with incomplete credential should fail:\n%s", syncVolcTenant.Stdout)
+	}
+	for _, want := range []string{"INVALID_VOLC_TENANT", "missing access_key_id/secret_access_key"} {
+		if !strings.Contains(syncVolcTenant.Stderr, want) {
+			t.Fatalf("volc sync stderr missing %q:\nstdout:\n%s\nstderr:\n%s", want, syncVolcTenant.Stdout, syncVolcTenant.Stderr)
+		}
+	}
 }
 
 func seedVoices(t *testing.T, h *clitest.Harness) {
@@ -71,6 +97,25 @@ func seedVoices(t *testing.T, h *clitest.Harness) {
 			},
 			Name: ptr("Voice Two"),
 		},
+		{
+			Id:     "volc-tenant:gizclaw-dev:ICL_cli_seed_voice",
+			Source: apitypes.VoiceSourceManual,
+			Provider: apitypes.VoiceProvider{
+				Kind: "volc-tenant",
+				Name: "gizclaw-dev",
+			},
+			Name:        ptr("Volc CLI Seed Voice"),
+			Description: ptr("seeded Volc voice for CLI examples"),
+			ProviderData: &map[string]interface{}{
+				"volc-tenant": map[string]interface{}{
+					"app_id":      "app-cli",
+					"resource_id": "seed-tts-2.0",
+					"state":       "Success",
+					"status":      "Available",
+					"voice_id":    "ICL_cli_seed_voice",
+				},
+			},
+		},
 	} {
 		resp, err := api.CreateVoiceWithResponse(ctx, req)
 		if err != nil {
@@ -79,6 +124,33 @@ func seedVoices(t *testing.T, h *clitest.Harness) {
 		if resp.JSON200 == nil {
 			t.Fatalf("seed voice %q got status %d: %s", req.Id, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
 		}
+	}
+	credentialResp, err := api.CreateCredentialWithResponse(ctx, adminservice.CredentialUpsert{
+		Name:     "volc-cli-credential",
+		Provider: "volc",
+		Method:   apitypes.CredentialMethodApiKey,
+		Body:     apitypes.CredentialBody{},
+	})
+	if err != nil {
+		t.Fatalf("seed volc credential: %v", err)
+	}
+	if credentialResp.JSON200 == nil {
+		t.Fatalf("seed volc credential got status %d: %s", credentialResp.StatusCode(), strings.TrimSpace(string(credentialResp.Body)))
+	}
+	resourceIDs := []apitypes.VolcResourceID{"seed-tts-2.0"}
+	tenantResp, err := api.CreateVolcTenantWithResponse(ctx, adminservice.VolcTenantUpsert{
+		Name:           "gizclaw-dev",
+		AppId:          "app-cli",
+		CredentialName: "volc-cli-credential",
+		Region:         ptr("cn-beijing"),
+		ResourceIds:    &resourceIDs,
+		Description:    ptr("seeded Volc tenant for CLI examples"),
+	})
+	if err != nil {
+		t.Fatalf("seed volc tenant: %v", err)
+	}
+	if tenantResp.JSON200 == nil {
+		t.Fatalf("seed volc tenant got status %d: %s", tenantResp.StatusCode(), strings.TrimSpace(string(tenantResp.Body)))
 	}
 }
 

@@ -57,6 +57,22 @@ export type MiniMaxTenantList = {
     items: Array<MiniMaxTenant>;
 };
 
+export type VolcTenantUpsert = {
+    name: VolcTenantName;
+    credential_name: CredentialName;
+    app_id: VolcAppId;
+    region?: string;
+    endpoint?: string;
+    resource_ids?: Array<VolcResourceId>;
+    description?: string;
+};
+
+export type VolcTenantList = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<VolcTenant>;
+};
+
 export type VoiceList = {
     has_next: boolean;
     next_cursor?: string | null;
@@ -67,23 +83,26 @@ export type VoiceUpsert = {
     id: VoiceId;
     source: VoiceSource;
     provider: VoiceProvider;
-    /**
-     * Upstream provider voice identifier. Present for synced voices.
-     */
-    provider_voice_id?: string;
     name?: string;
     description?: string;
     /**
-     * Provider-specific voice type
+     * Provider-specific debug data keyed by provider kind.
      */
-    provider_voice_type?: string;
-    raw?: {
+    provider_data?: {
         [key: string]: unknown;
     };
 };
 
 export type MiniMaxSyncVoicesResult = {
     tenant_name: MiniMaxTenantName;
+    synced_at: string;
+    created_count: number;
+    updated_count: number;
+    deleted_count: number;
+};
+
+export type VolcSyncVoicesResult = {
+    tenant_name: VolcTenantName;
     synced_at: string;
     created_count: number;
     updated_count: number;
@@ -153,6 +172,8 @@ export type Resource = ({
 } & CredentialResource) | ({
     kind: 'MiniMaxTenantResource';
 } & MiniMaxTenantResource) | ({
+    kind: 'VolcTenantResource';
+} & VolcTenantResource) | ({
     kind: 'VoiceResource';
 } & VoiceResource) | ({
     kind: 'WorkspaceTemplateResource';
@@ -172,7 +193,7 @@ export type ResourceApiVersion = 'gizclaw.admin/v1alpha1';
 /**
  * Declarative GizClaw resource kind.
  */
-export type ResourceKind = 'Credential' | 'MiniMaxTenant' | 'Voice' | 'WorkspaceTemplate' | 'Workspace' | 'GearConfig' | 'ResourceList';
+export type ResourceKind = 'Credential' | 'MiniMaxTenant' | 'VolcTenant' | 'Voice' | 'WorkspaceTemplate' | 'Workspace' | 'GearConfig' | 'ResourceList';
 
 export type ResourceMetadata = {
     /**
@@ -199,6 +220,13 @@ export type VoiceResource = {
     kind: 'Voice';
     metadata: ResourceMetadata;
     spec: VoiceSpec;
+};
+
+export type VolcTenantResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'VolcTenant';
+    metadata: ResourceMetadata;
+    spec: VolcTenantSpec;
 };
 
 export type WorkspaceResource = {
@@ -454,17 +482,12 @@ export type Voice = {
     id: VoiceId;
     source: VoiceSource;
     provider: VoiceProvider;
-    /**
-     * Upstream provider voice identifier. Present for synced voices.
-     */
-    provider_voice_id?: string;
     name?: string;
     description?: string;
     /**
-     * Provider-specific voice type
+     * Provider-specific debug data keyed by provider kind.
      */
-    provider_voice_type?: string;
-    raw?: {
+    provider_data?: {
         [key: string]: unknown;
     };
     synced_at?: string;
@@ -500,19 +523,51 @@ export type VoiceSource = 'sync' | 'manual';
 export type VoiceSpec = {
     source: VoiceSource;
     provider: VoiceProvider;
-    /**
-     * Upstream provider voice identifier. Present for synced voices.
-     */
-    provider_voice_id?: string;
     name?: string;
     description?: string;
     /**
-     * Provider-specific voice type
+     * Provider-specific debug data keyed by provider kind.
      */
-    provider_voice_type?: string;
-    raw?: {
+    provider_data?: {
         [key: string]: unknown;
     };
+};
+
+/**
+ * Volcengine speech application identifier
+ */
+export type VolcAppId = string;
+
+/**
+ * Volcengine speech resource identifier.
+ */
+export type VolcResourceId = string;
+
+export type VolcTenant = {
+    name: VolcTenantName;
+    credential_name: CredentialName;
+    app_id: VolcAppId;
+    region?: string;
+    endpoint?: string;
+    resource_ids?: Array<VolcResourceId>;
+    description?: string;
+    last_synced_at?: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * Volcengine tenant name.
+ */
+export type VolcTenantName = string;
+
+export type VolcTenantSpec = {
+    credential_name: CredentialName;
+    app_id: VolcAppId;
+    region?: string;
+    endpoint?: string;
+    resource_ids?: Array<VolcResourceId>;
+    description?: string;
 };
 
 export type WorkflowTemplateApiVersion = 'gizclaw.flowcraft/v1alpha1';
@@ -609,6 +664,11 @@ export type ResourceName = string;
  * MiniMax tenant name
  */
 export type MiniMaxTenantName2 = MiniMaxTenantName;
+
+/**
+ * Volcengine tenant name
+ */
+export type VolcTenantName2 = VolcTenantName;
 
 /**
  * Voice identifier
@@ -1496,6 +1556,217 @@ export type SyncMiniMaxTenantVoicesResponses = {
 };
 
 export type SyncMiniMaxTenantVoicesResponse = SyncMiniMaxTenantVoicesResponses[keyof SyncMiniMaxTenantVoicesResponses];
+
+export type ListVolcTenantsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Opaque cursor returned by the previous list response
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+         */
+        limit?: number;
+    };
+    url: '/volc-tenants';
+};
+
+export type ListVolcTenantsErrors = {
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListVolcTenantsError = ListVolcTenantsErrors[keyof ListVolcTenantsErrors];
+
+export type ListVolcTenantsResponses = {
+    /**
+     * Volcengine tenant list
+     */
+    200: VolcTenantList;
+};
+
+export type ListVolcTenantsResponse = ListVolcTenantsResponses[keyof ListVolcTenantsResponses];
+
+export type CreateVolcTenantData = {
+    body: VolcTenantUpsert;
+    path?: never;
+    query?: never;
+    url: '/volc-tenants';
+};
+
+export type CreateVolcTenantErrors = {
+    /**
+     * Invalid Volcengine tenant payload
+     */
+    400: ErrorResponse;
+    /**
+     * Volcengine tenant already exists
+     */
+    409: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateVolcTenantError = CreateVolcTenantErrors[keyof CreateVolcTenantErrors];
+
+export type CreateVolcTenantResponses = {
+    /**
+     * Created Volcengine tenant
+     */
+    200: VolcTenant;
+};
+
+export type CreateVolcTenantResponse = CreateVolcTenantResponses[keyof CreateVolcTenantResponses];
+
+export type DeleteVolcTenantData = {
+    body?: never;
+    path: {
+        /**
+         * Volcengine tenant name
+         */
+        name: VolcTenantName;
+    };
+    query?: never;
+    url: '/volc-tenants/{name}';
+};
+
+export type DeleteVolcTenantErrors = {
+    /**
+     * Volcengine tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteVolcTenantError = DeleteVolcTenantErrors[keyof DeleteVolcTenantErrors];
+
+export type DeleteVolcTenantResponses = {
+    /**
+     * Deleted Volcengine tenant
+     */
+    200: VolcTenant;
+};
+
+export type DeleteVolcTenantResponse = DeleteVolcTenantResponses[keyof DeleteVolcTenantResponses];
+
+export type GetVolcTenantData = {
+    body?: never;
+    path: {
+        /**
+         * Volcengine tenant name
+         */
+        name: VolcTenantName;
+    };
+    query?: never;
+    url: '/volc-tenants/{name}';
+};
+
+export type GetVolcTenantErrors = {
+    /**
+     * Volcengine tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetVolcTenantError = GetVolcTenantErrors[keyof GetVolcTenantErrors];
+
+export type GetVolcTenantResponses = {
+    /**
+     * Volcengine tenant
+     */
+    200: VolcTenant;
+};
+
+export type GetVolcTenantResponse = GetVolcTenantResponses[keyof GetVolcTenantResponses];
+
+export type PutVolcTenantData = {
+    body: VolcTenantUpsert;
+    path: {
+        /**
+         * Volcengine tenant name
+         */
+        name: VolcTenantName;
+    };
+    query?: never;
+    url: '/volc-tenants/{name}';
+};
+
+export type PutVolcTenantErrors = {
+    /**
+     * Invalid Volcengine tenant payload
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutVolcTenantError = PutVolcTenantErrors[keyof PutVolcTenantErrors];
+
+export type PutVolcTenantResponses = {
+    /**
+     * Stored Volcengine tenant
+     */
+    200: VolcTenant;
+};
+
+export type PutVolcTenantResponse = PutVolcTenantResponses[keyof PutVolcTenantResponses];
+
+export type SyncVolcTenantVoicesData = {
+    body?: never;
+    path: {
+        /**
+         * Volcengine tenant name
+         */
+        name: VolcTenantName;
+    };
+    query?: never;
+    url: '/volc-tenants/{name}/@sync-voices';
+};
+
+export type SyncVolcTenantVoicesErrors = {
+    /**
+     * Invalid Volcengine tenant configuration
+     */
+    400: ErrorResponse;
+    /**
+     * Volcengine tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+    /**
+     * Upstream Volcengine sync failed
+     */
+    502: ErrorResponse;
+};
+
+export type SyncVolcTenantVoicesError = SyncVolcTenantVoicesErrors[keyof SyncVolcTenantVoicesErrors];
+
+export type SyncVolcTenantVoicesResponses = {
+    /**
+     * Volcengine voice sync result
+     */
+    200: VolcSyncVoicesResult;
+};
+
+export type SyncVolcTenantVoicesResponse = SyncVolcTenantVoicesResponses[keyof SyncVolcTenantVoicesResponses];
 
 export type ListVoicesData = {
     body?: never;

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/identity"
-	"github.com/GizClaw/gizclaw-go/cmd/internal/service"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 )
@@ -119,13 +118,7 @@ func ServeContext(ctx context.Context, workspace string, opts ServeOptions) erro
 		return err
 	}
 	if !opts.ServiceManaged {
-		managed, err := service.WorkspaceManaged(root)
-		if err != nil {
-			return err
-		}
-		if managed {
-			return fmt.Errorf("server: workspace is managed by gizclaw service; use 'gizclaw service start|stop|uninstall' instead")
-		}
+		return fmt.Errorf("server: direct serve is disabled; start the server through service with 'gizclaw service install %s' and 'gizclaw service start'", root)
 	}
 	cfg, err := prepareWorkspaceConfig(workspace)
 	if err != nil {

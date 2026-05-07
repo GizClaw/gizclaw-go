@@ -75,6 +75,40 @@ func (m *Manager) applyVoice(ctx context.Context, resource apitypes.Resource) (a
 	return applyResult(apitypes.ApplyActionCreated, apitypes.ResourceKindVoice, item.Metadata.Name), nil
 }
 
+func (m *Manager) applyVolcTenant(ctx context.Context, resource apitypes.Resource) (apitypes.ApplyResult, error) {
+	if m.services.MiniMax == nil {
+		return apitypes.ApplyResult{}, missingService("volc")
+	}
+	item, err := resource.AsVolcTenantResource()
+	if err != nil {
+		return apitypes.ApplyResult{}, applyError(400, "INVALID_VOLC_TENANT_RESOURCE", err.Error())
+	}
+	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
+		return apitypes.ApplyResult{}, err
+	}
+	name := adminservice.VolcTenantName(pathParam(item.Metadata.Name))
+	existing, exists, err := m.getVolcTenant(ctx, name)
+	if err != nil {
+		return apitypes.ApplyResult{}, err
+	}
+	if exists {
+		same, err := semanticEqual(volcTenantSpec(existing), item.Spec)
+		if err != nil {
+			return apitypes.ApplyResult{}, applyError(500, "RESOURCE_COMPARE_FAILED", err.Error())
+		}
+		if same {
+			return applyResult(apitypes.ApplyActionUnchanged, apitypes.ResourceKindVolcTenant, item.Metadata.Name), nil
+		}
+	}
+	if err := m.putVolcTenant(ctx, name, volcTenantUpsert(item)); err != nil {
+		return apitypes.ApplyResult{}, err
+	}
+	if exists {
+		return applyResult(apitypes.ApplyActionUpdated, apitypes.ResourceKindVolcTenant, item.Metadata.Name), nil
+	}
+	return applyResult(apitypes.ApplyActionCreated, apitypes.ResourceKindVolcTenant, item.Metadata.Name), nil
+}
+
 func (m *Manager) getMiniMaxTenant(ctx context.Context, name adminservice.MiniMaxTenantName) (apitypes.MiniMaxTenant, bool, error) {
 	response, err := m.services.MiniMax.GetMiniMaxTenant(ctx, adminservice.GetMiniMaxTenantRequestObject{Name: name})
 	if err != nil {
@@ -123,6 +157,57 @@ func (m *Manager) deleteMiniMaxTenant(ctx context.Context, name adminservice.Min
 		return apitypes.MiniMaxTenant{}, false, responseError(500, "DELETE_MINIMAX_TENANT_FAILED", "failed to delete minimax tenant", response)
 	default:
 		return apitypes.MiniMaxTenant{}, false, unexpectedResponse("DeleteMiniMaxTenant", response)
+	}
+}
+
+func (m *Manager) getVolcTenant(ctx context.Context, name adminservice.VolcTenantName) (apitypes.VolcTenant, bool, error) {
+	response, err := m.services.MiniMax.GetVolcTenant(ctx, adminservice.GetVolcTenantRequestObject{Name: name})
+	if err != nil {
+		return apitypes.VolcTenant{}, false, err
+	}
+	switch response := response.(type) {
+	case adminservice.GetVolcTenant200JSONResponse:
+		return apitypes.VolcTenant(response), true, nil
+	case adminservice.GetVolcTenant404JSONResponse:
+		return apitypes.VolcTenant{}, false, nil
+	case adminservice.GetVolcTenant500JSONResponse:
+		return apitypes.VolcTenant{}, false, responseError(500, "GET_VOLC_TENANT_FAILED", "failed to get volc tenant", response)
+	default:
+		return apitypes.VolcTenant{}, false, unexpectedResponse("GetVolcTenant", response)
+	}
+}
+
+func (m *Manager) putVolcTenant(ctx context.Context, name adminservice.VolcTenantName, body adminservice.VolcTenantUpsert) error {
+	response, err := m.services.MiniMax.PutVolcTenant(ctx, adminservice.PutVolcTenantRequestObject{Name: name, Body: &body})
+	if err != nil {
+		return err
+	}
+	switch response := response.(type) {
+	case adminservice.PutVolcTenant200JSONResponse:
+		return nil
+	case adminservice.PutVolcTenant400JSONResponse:
+		return responseError(400, "PUT_VOLC_TENANT_FAILED", "failed to put volc tenant", response)
+	case adminservice.PutVolcTenant500JSONResponse:
+		return responseError(500, "PUT_VOLC_TENANT_FAILED", "failed to put volc tenant", response)
+	default:
+		return unexpectedResponse("PutVolcTenant", response)
+	}
+}
+
+func (m *Manager) deleteVolcTenant(ctx context.Context, name adminservice.VolcTenantName) (apitypes.VolcTenant, bool, error) {
+	response, err := m.services.MiniMax.DeleteVolcTenant(ctx, adminservice.DeleteVolcTenantRequestObject{Name: name})
+	if err != nil {
+		return apitypes.VolcTenant{}, false, err
+	}
+	switch response := response.(type) {
+	case adminservice.DeleteVolcTenant200JSONResponse:
+		return apitypes.VolcTenant(response), true, nil
+	case adminservice.DeleteVolcTenant404JSONResponse:
+		return apitypes.VolcTenant{}, false, nil
+	case adminservice.DeleteVolcTenant500JSONResponse:
+		return apitypes.VolcTenant{}, false, responseError(500, "DELETE_VOLC_TENANT_FAILED", "failed to delete volc tenant", response)
+	default:
+		return apitypes.VolcTenant{}, false, unexpectedResponse("DeleteVolcTenant", response)
 	}
 }
 
@@ -200,28 +285,47 @@ func miniMaxTenantUpsert(resource apitypes.MiniMaxTenantResource) adminservice.M
 	}
 }
 
+func volcTenantSpec(tenant apitypes.VolcTenant) apitypes.VolcTenantSpec {
+	return apitypes.VolcTenantSpec{
+		AppId:          tenant.AppId,
+		CredentialName: tenant.CredentialName,
+		Description:    tenant.Description,
+		Endpoint:       tenant.Endpoint,
+		Region:         tenant.Region,
+		ResourceIds:    tenant.ResourceIds,
+	}
+}
+
+func volcTenantUpsert(resource apitypes.VolcTenantResource) adminservice.VolcTenantUpsert {
+	return adminservice.VolcTenantUpsert{
+		AppId:          resource.Spec.AppId,
+		CredentialName: resource.Spec.CredentialName,
+		Description:    resource.Spec.Description,
+		Endpoint:       resource.Spec.Endpoint,
+		Name:           apitypes.VolcTenantName(resource.Metadata.Name),
+		Region:         resource.Spec.Region,
+		ResourceIds:    resource.Spec.ResourceIds,
+	}
+}
+
 func voiceSpec(voice apitypes.Voice) apitypes.VoiceSpec {
 	return apitypes.VoiceSpec{
-		Description:       voice.Description,
-		Name:              voice.Name,
-		Provider:          voice.Provider,
-		ProviderVoiceId:   voice.ProviderVoiceId,
-		ProviderVoiceType: voice.ProviderVoiceType,
-		Raw:               voice.Raw,
-		Source:            voice.Source,
+		Description:  voice.Description,
+		Name:         voice.Name,
+		Provider:     voice.Provider,
+		ProviderData: voice.ProviderData,
+		Source:       voice.Source,
 	}
 }
 
 func voiceUpsert(resource apitypes.VoiceResource) adminservice.VoiceUpsert {
 	return adminservice.VoiceUpsert{
-		Description:       resource.Spec.Description,
-		Id:                apitypes.VoiceID(resource.Metadata.Name),
-		Name:              resource.Spec.Name,
-		Provider:          resource.Spec.Provider,
-		ProviderVoiceId:   resource.Spec.ProviderVoiceId,
-		ProviderVoiceType: resource.Spec.ProviderVoiceType,
-		Raw:               resource.Spec.Raw,
-		Source:            resource.Spec.Source,
+		Description:  resource.Spec.Description,
+		Id:           apitypes.VoiceID(resource.Metadata.Name),
+		Name:         resource.Spec.Name,
+		Provider:     resource.Spec.Provider,
+		ProviderData: resource.Spec.ProviderData,
+		Source:       resource.Spec.Source,
 	}
 }
 
@@ -231,6 +335,15 @@ func resourceFromMiniMaxTenant(item apitypes.MiniMaxTenant) (apitypes.Resource, 
 		Kind:       apitypes.MiniMaxTenantResourceKind(apitypes.ResourceKindMiniMaxTenant),
 		Metadata:   apitypes.ResourceMetadata{Name: string(item.Name)},
 		Spec:       miniMaxTenantSpec(item),
+	})
+}
+
+func resourceFromVolcTenant(item apitypes.VolcTenant) (apitypes.Resource, error) {
+	return marshalResource(apitypes.VolcTenantResource{
+		ApiVersion: apitypes.ResourceAPIVersionGizclawAdminv1alpha1,
+		Kind:       apitypes.VolcTenantResourceKind(apitypes.ResourceKindVolcTenant),
+		Metadata:   apitypes.ResourceMetadata{Name: string(item.Name)},
+		Spec:       volcTenantSpec(item),
 	})
 }
 

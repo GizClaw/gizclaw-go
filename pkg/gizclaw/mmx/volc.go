@@ -1,0 +1,890 @@
+package mmx
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/url"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/volcengine/volcengine-go-sdk/service/speechsaasprod"
+	"github.com/volcengine/volcengine-go-sdk/volcengine"
+	"github.com/volcengine/volcengine-go-sdk/volcengine/credentials"
+	"github.com/volcengine/volcengine-go-sdk/volcengine/session"
+	"github.com/volcengine/volcengine-go-sdk/volcengine/universal"
+
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+)
+
+var volcTenantsRoot = kv.Key{"volc-by-name"}
+
+const (
+	defaultVolcRegion     = "cn-beijing"
+	volcPublicResourceID  = apitypes.VolcResourceID("seed-tts-2.0")
+	volcVoiceProviderKind = apitypes.VoiceProviderKind("volc-tenant")
+)
+
+type VolcSpeakerClient interface {
+	ListBigModelTTSTimbresWithContext(context.Context) ([]volcPublicTimbre, error)
+	BatchListMegaTTSTrainStatusWithContext(context.Context, string, []apitypes.VolcResourceID, int32, int32) (*volcMegaTTSTrainStatusPage, error)
+}
+
+type VolcSpeakerClientFactory func(context.Context, apitypes.Credential, apitypes.VolcTenant) (VolcSpeakerClient, error)
+
+func (s *Server) ListVolcTenants(ctx context.Context, request adminservice.ListVolcTenantsRequestObject) (adminservice.ListVolcTenantsResponseObject, error) {
+	store, err := s.volcTenantStore()
+	if err != nil {
+		return adminservice.ListVolcTenants500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
+	items, hasNext, nextCursor, err := listVolcTenantsPage(ctx, store, cursor, limit)
+	if err != nil {
+		return adminservice.ListVolcTenants500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.ListVolcTenants200JSONResponse(adminservice.VolcTenantList{
+		HasNext:    hasNext,
+		Items:      items,
+		NextCursor: nextCursor,
+	}), nil
+}
+
+func (s *Server) CreateVolcTenant(ctx context.Context, request adminservice.CreateVolcTenantRequestObject) (adminservice.CreateVolcTenantResponseObject, error) {
+	store, err := s.volcTenantStore()
+	if err != nil {
+		return adminservice.CreateVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if request.Body == nil {
+		return adminservice.CreateVolcTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", "request body required")), nil
+	}
+	tenant, err := normalizeVolcTenantUpsert(*request.Body, "")
+	if err != nil {
+		return adminservice.CreateVolcTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", err.Error())), nil
+	}
+	credentialStore, err := s.credentialStore()
+	if err != nil {
+		return adminservice.CreateVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if err := validateVolcTenantReferences(ctx, credentialStore, tenant); err != nil {
+		return adminservice.CreateVolcTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", err.Error())), nil
+	}
+	if _, err := store.Get(ctx, volcTenantKey(string(tenant.Name))); err == nil {
+		return adminservice.CreateVolcTenant409JSONResponse(apitypes.NewErrorResponse("VOLC_TENANT_ALREADY_EXISTS", fmt.Sprintf("Volcengine tenant %q already exists", tenant.Name))), nil
+	} else if !errors.Is(err, kv.ErrNotFound) {
+		return adminservice.CreateVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	now := s.now()
+	tenant.CreatedAt = now
+	tenant.UpdatedAt = now
+	if err := writeVolcTenant(ctx, store, tenant); err != nil {
+		return adminservice.CreateVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.CreateVolcTenant200JSONResponse(tenant), nil
+}
+
+func (s *Server) DeleteVolcTenant(ctx context.Context, request adminservice.DeleteVolcTenantRequestObject) (adminservice.DeleteVolcTenantResponseObject, error) {
+	store, err := s.volcTenantStore()
+	if err != nil {
+		return adminservice.DeleteVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	name, err := url.PathUnescape(string(request.Name))
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	tenant, err := getVolcTenant(ctx, store, name)
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return adminservice.DeleteVolcTenant404JSONResponse(apitypes.NewErrorResponse("VOLC_TENANT_NOT_FOUND", fmt.Sprintf("Volcengine tenant %q not found", name))), nil
+		}
+		return adminservice.DeleteVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	voiceStore, err := s.voiceStore()
+	if err != nil {
+		return adminservice.DeleteVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if err := deleteVolcTenantVoices(ctx, voiceStore, tenant.Name); err != nil {
+		return adminservice.DeleteVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if err := store.Delete(ctx, volcTenantKey(string(tenant.Name))); err != nil {
+		return adminservice.DeleteVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.DeleteVolcTenant200JSONResponse(tenant), nil
+}
+
+func (s *Server) GetVolcTenant(ctx context.Context, request adminservice.GetVolcTenantRequestObject) (adminservice.GetVolcTenantResponseObject, error) {
+	store, err := s.volcTenantStore()
+	if err != nil {
+		return adminservice.GetVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	name, err := url.PathUnescape(string(request.Name))
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	tenant, err := getVolcTenant(ctx, store, name)
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return adminservice.GetVolcTenant404JSONResponse(apitypes.NewErrorResponse("VOLC_TENANT_NOT_FOUND", fmt.Sprintf("Volcengine tenant %q not found", name))), nil
+		}
+		return adminservice.GetVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.GetVolcTenant200JSONResponse(tenant), nil
+}
+
+func (s *Server) PutVolcTenant(ctx context.Context, request adminservice.PutVolcTenantRequestObject) (adminservice.PutVolcTenantResponseObject, error) {
+	store, err := s.volcTenantStore()
+	if err != nil {
+		return adminservice.PutVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if request.Body == nil {
+		return adminservice.PutVolcTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", "request body required")), nil
+	}
+	name, err := url.PathUnescape(string(request.Name))
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	tenant, err := normalizeVolcTenantUpsert(*request.Body, name)
+	if err != nil {
+		return adminservice.PutVolcTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", err.Error())), nil
+	}
+	credentialStore, err := s.credentialStore()
+	if err != nil {
+		return adminservice.PutVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if err := validateVolcTenantReferences(ctx, credentialStore, tenant); err != nil {
+		return adminservice.PutVolcTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", err.Error())), nil
+	}
+	previous, err := getVolcTenant(ctx, store, name)
+	if err != nil && !errors.Is(err, kv.ErrNotFound) {
+		return adminservice.PutVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	now := s.now()
+	tenant.CreatedAt = now
+	tenant.UpdatedAt = now
+	if err == nil {
+		tenant.CreatedAt = previous.CreatedAt
+		tenant.LastSyncedAt = cloneTime(previous.LastSyncedAt)
+	}
+	if err := writeVolcTenant(ctx, store, tenant); err != nil {
+		return adminservice.PutVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.PutVolcTenant200JSONResponse(tenant), nil
+}
+
+func (s *Server) SyncVolcTenantVoices(ctx context.Context, request adminservice.SyncVolcTenantVoicesRequestObject) (adminservice.SyncVolcTenantVoicesResponseObject, error) {
+	tenantStore, err := s.volcTenantStore()
+	if err != nil {
+		return adminservice.SyncVolcTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	voiceStore, err := s.voiceStore()
+	if err != nil {
+		return adminservice.SyncVolcTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	credentialStore, err := s.credentialStore()
+	if err != nil {
+		return adminservice.SyncVolcTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	name, err := url.PathUnescape(string(request.Name))
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	tenant, err := getVolcTenant(ctx, tenantStore, name)
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return adminservice.SyncVolcTenantVoices404JSONResponse(apitypes.NewErrorResponse("VOLC_TENANT_NOT_FOUND", fmt.Sprintf("Volcengine tenant %q not found", name))), nil
+		}
+		return adminservice.SyncVolcTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	credential, err := getCredential(ctx, credentialStore, string(tenant.CredentialName))
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return adminservice.SyncVolcTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", fmt.Sprintf("credential %q not found", tenant.CredentialName))), nil
+		}
+		return adminservice.SyncVolcTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	client, err := s.volcSpeakerClientForTenant(ctx, credential, tenant)
+	if err != nil {
+		return adminservice.SyncVolcTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", err.Error())), nil
+	}
+	upstream, err := listAllVolcSpeakers(ctx, client, tenant)
+	if err != nil {
+		return adminservice.SyncVolcTenantVoices502JSONResponse(apitypes.NewErrorResponse("VOLC_SYNC_FAILED", err.Error())), nil
+	}
+	now := s.now()
+	createdCount, updatedCount, deletedCount, err := reconcileVolcTenantVoices(ctx, voiceStore, tenant, upstream, now)
+	if err != nil {
+		return adminservice.SyncVolcTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	tenant.LastSyncedAt = &now
+	tenant.UpdatedAt = now
+	if err := writeVolcTenant(ctx, tenantStore, tenant); err != nil {
+		return adminservice.SyncVolcTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.SyncVolcTenantVoices200JSONResponse(adminservice.VolcSyncVoicesResult{
+		CreatedCount: createdCount,
+		DeletedCount: deletedCount,
+		SyncedAt:     now,
+		TenantName:   tenant.Name,
+		UpdatedCount: updatedCount,
+	}), nil
+}
+
+func listVolcTenantsPage(ctx context.Context, store kv.Store, cursor string, limit int) ([]apitypes.VolcTenant, bool, *string, error) {
+	entries, err := kv.ListAfter(ctx, store, volcTenantsRoot, cursorAfterKey(volcTenantsRoot, cursor), limit+1)
+	if err != nil {
+		return nil, false, nil, err
+	}
+	pageEntries, hasNext, nextCursor := paginateEntries(entries, limit)
+	items := make([]apitypes.VolcTenant, 0, len(pageEntries))
+	for _, entry := range pageEntries {
+		var tenant apitypes.VolcTenant
+		if err := json.Unmarshal(entry.Value, &tenant); err != nil {
+			return nil, false, nil, fmt.Errorf("mmx: decode volc tenant list %s: %w", entry.Key.String(), err)
+		}
+		items = append(items, tenant)
+	}
+	return items, hasNext, nextCursor, nil
+}
+
+func normalizeVolcTenantUpsert(in adminservice.VolcTenantUpsert, expectedName string) (apitypes.VolcTenant, error) {
+	name := strings.TrimSpace(string(in.Name))
+	if name == "" {
+		return apitypes.VolcTenant{}, errors.New("name is required")
+	}
+	if expectedName != "" && name != expectedName {
+		return apitypes.VolcTenant{}, fmt.Errorf("name %q must match path name %q", name, expectedName)
+	}
+	credentialName := strings.TrimSpace(string(in.CredentialName))
+	if credentialName == "" {
+		return apitypes.VolcTenant{}, errors.New("credential_name is required")
+	}
+	appID := strings.TrimSpace(string(in.AppId))
+	if appID == "" {
+		return apitypes.VolcTenant{}, errors.New("app_id is required")
+	}
+	tenant := apitypes.VolcTenant{
+		AppId:          apitypes.VolcAppID(appID),
+		CredentialName: apitypes.CredentialName(credentialName),
+		Name:           apitypes.VolcTenantName(name),
+	}
+	if in.Region != nil {
+		region := strings.TrimSpace(*in.Region)
+		if region != "" {
+			tenant.Region = &region
+		}
+	}
+	if in.Endpoint != nil {
+		endpoint := strings.TrimSpace(*in.Endpoint)
+		if endpoint != "" {
+			parsed, err := url.Parse(endpoint)
+			if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+				return apitypes.VolcTenant{}, errors.New("endpoint must be an absolute URL")
+			}
+			tenant.Endpoint = &endpoint
+		}
+	}
+	if in.ResourceIds != nil {
+		resourceIDs := normalizeVolcResourceIDs(*in.ResourceIds)
+		if len(resourceIDs) > 0 {
+			tenant.ResourceIds = &resourceIDs
+		}
+	}
+	if in.Description != nil {
+		description := strings.TrimSpace(*in.Description)
+		if description != "" {
+			tenant.Description = &description
+		}
+	}
+	return tenant, nil
+}
+
+func validateVolcTenantReferences(ctx context.Context, store kv.Store, tenant apitypes.VolcTenant) error {
+	if _, err := store.Get(ctx, credentialKey(string(tenant.CredentialName))); err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return fmt.Errorf("credential %q not found", tenant.CredentialName)
+		}
+		return err
+	}
+	return nil
+}
+
+func writeVolcTenant(ctx context.Context, store kv.Store, tenant apitypes.VolcTenant) error {
+	data, err := json.Marshal(tenant)
+	if err != nil {
+		return fmt.Errorf("mmx: encode volc tenant %s: %w", tenant.Name, err)
+	}
+	if err := store.Set(ctx, volcTenantKey(string(tenant.Name)), data); err != nil {
+		return fmt.Errorf("mmx: write volc tenant %s: %w", tenant.Name, err)
+	}
+	return nil
+}
+
+func getVolcTenant(ctx context.Context, store kv.Store, name string) (apitypes.VolcTenant, error) {
+	data, err := store.Get(ctx, volcTenantKey(name))
+	if err != nil {
+		return apitypes.VolcTenant{}, err
+	}
+	var tenant apitypes.VolcTenant
+	if err := json.Unmarshal(data, &tenant); err != nil {
+		return apitypes.VolcTenant{}, fmt.Errorf("mmx: decode volc tenant %s: %w", name, err)
+	}
+	return tenant, nil
+}
+
+func (s *Server) volcSpeakerClientForTenant(ctx context.Context, credential apitypes.Credential, tenant apitypes.VolcTenant) (VolcSpeakerClient, error) {
+	if s != nil && s.VolcSpeakerClientFactory != nil {
+		return s.VolcSpeakerClientFactory(ctx, credential, tenant)
+	}
+	provider := strings.TrimSpace(string(credential.Provider))
+	if provider != "" && provider != "volc" && provider != "volcengine" {
+		return nil, fmt.Errorf("credential %q provider must be volcengine", tenant.CredentialName)
+	}
+	ak, sk, token, err := volcCredentialKeys(credential)
+	if err != nil {
+		return nil, err
+	}
+	cfg := volcengine.NewConfig().
+		WithCredentials(credentials.NewStaticCredentials(ak, sk, token)).
+		WithRegion(volcRegion(tenant))
+	if s != nil && s.HTTPClient != nil {
+		cfg.WithHTTPClient(s.HTTPClient)
+	}
+	if tenant.Endpoint != nil && strings.TrimSpace(*tenant.Endpoint) != "" {
+		cfg.WithEndpoint(strings.TrimSpace(*tenant.Endpoint))
+	}
+	sess, err := session.NewSession(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("create Volcengine session: %w", err)
+	}
+	return volcSpeechSDKClient{
+		speech:    speechsaasprod.New(sess),
+		universal: universal.New(sess),
+	}, nil
+}
+
+type volcSpeechSDKClient struct {
+	speech    *speechsaasprod.SPEECHSAASPROD
+	universal *universal.Universal
+}
+
+func (c volcSpeechSDKClient) ListBigModelTTSTimbresWithContext(ctx context.Context) ([]volcPublicTimbre, error) {
+	out, err := c.speech.ListBigModelTTSTimbresWithContext(ctx, &speechsaasprod.ListBigModelTTSTimbresInput{})
+	if err != nil {
+		return nil, err
+	}
+	timbres := make([]volcPublicTimbre, 0, len(out.Timbres))
+	for _, timbre := range out.Timbres {
+		if timbre == nil {
+			continue
+		}
+		speakerID := strings.TrimSpace(stringValue(timbre.SpeakerID))
+		if speakerID == "" {
+			continue
+		}
+		raw := rawStructToMap(timbre)
+		timbres = append(timbres, volcPublicTimbre{
+			SpeakerID: speakerID,
+			Name:      firstVolcTimbreSpeakerName(timbre.TimbreInfos),
+			Raw:       rawMapValue(raw),
+		})
+	}
+	return timbres, nil
+}
+
+func (c volcSpeechSDKClient) BatchListMegaTTSTrainStatusWithContext(ctx context.Context, appID string, resourceIDs []apitypes.VolcResourceID, pageNumber, pageSize int32) (*volcMegaTTSTrainStatusPage, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	body := map[string]interface{}{
+		"AppID":       appID,
+		"ResourceIDs": volcResourceIDStrings(resourceIDs),
+		"PageNumber":  pageNumber,
+		"PageSize":    pageSize,
+	}
+	out, err := c.universal.DoCall(universal.RequestUniversal{
+		ServiceName: "speech_saas_prod",
+		Action:      "BatchListMegaTTSTrainStatus",
+		Version:     "2023-11-07",
+		HttpMethod:  universal.POST,
+		ContentType: universal.ApplicationJSON,
+	}, &body)
+	if err != nil {
+		return nil, err
+	}
+	result, ok := (*out)["Result"]
+	if !ok {
+		return nil, errors.New("Volcengine response missing Result")
+	}
+	data, err := json.Marshal(result)
+	if err != nil {
+		return nil, fmt.Errorf("encode Volcengine Result: %w", err)
+	}
+	var page volcMegaTTSTrainStatusPage
+	if err := json.Unmarshal(data, &page); err != nil {
+		return nil, fmt.Errorf("decode Volcengine Result: %w", err)
+	}
+	if err := page.captureRawStatuses(); err != nil {
+		return nil, err
+	}
+	return &page, nil
+}
+
+func volcCredentialKeys(credential apitypes.Credential) (string, string, string, error) {
+	ak := firstCredentialBodyString(credential.Body, "access_key_id", "access_key", "ak")
+	sk := firstCredentialBodyString(credential.Body, "secret_access_key", "secret_key", "sk")
+	token := firstCredentialBodyString(credential.Body, "session_token", "token")
+	if ak == "" || sk == "" {
+		return "", "", "", fmt.Errorf("credential %q is missing access_key_id/secret_access_key", credential.Name)
+	}
+	return ak, sk, token, nil
+}
+
+func firstCredentialBodyString(body apitypes.CredentialBody, keys ...string) string {
+	for _, key := range keys {
+		if value := credentialBodyString(body, key); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+type volcSpeakerRecord struct {
+	appID      apitypes.VolcAppID
+	resourceID apitypes.VolcResourceID
+	source     string
+	status     *volcSpeakerStatus
+	timbre     *volcPublicTimbre
+}
+
+type volcPublicTimbre struct {
+	SpeakerID string
+	Name      string
+	Raw       interface{}
+}
+
+type volcMegaTTSTrainStatusPage struct {
+	AppID       string              `json:"AppID"`
+	NextToken   string              `json:"NextToken"`
+	PageNumber  int32               `json:"PageNumber"`
+	PageSize    int32               `json:"PageSize"`
+	Statuses    []volcSpeakerStatus `json:"Statuses"`
+	TotalCount  int32               `json:"TotalCount"`
+	rawStatuses []json.RawMessage
+}
+
+type volcSpeakerStatus struct {
+	Alias                  string                 `json:"Alias"`
+	AvailableTrainingTimes int32                  `json:"AvailableTrainingTimes"`
+	CreateTime             int64                  `json:"CreateTime"`
+	DemoAudio              string                 `json:"DemoAudio"`
+	Description            string                 `json:"Description"`
+	ExpireTime             int64                  `json:"ExpireTime"`
+	InstanceNO             string                 `json:"InstanceNO"`
+	InstanceStatus         string                 `json:"InstanceStatus"`
+	IsActivatable          bool                   `json:"IsActivatable"`
+	ModelTypeDetails       []volcModelTypeDetail  `json:"ModelTypeDetails"`
+	OrderTime              int64                  `json:"OrderTime"`
+	ResourceID             string                 `json:"ResourceID"`
+	SpeakerID              string                 `json:"SpeakerID"`
+	State                  string                 `json:"State"`
+	Version                string                 `json:"Version"`
+	raw                    map[string]interface{} `json:"-"`
+}
+
+type volcModelTypeDetail struct {
+	DemoAudio    string `json:"DemoAudio"`
+	IclSpeakerId string `json:"IclSpeakerId"`
+	ModelType    int32  `json:"ModelType"`
+	ResourceID   string `json:"ResourceID"`
+}
+
+func (p *volcMegaTTSTrainStatusPage) UnmarshalJSON(data []byte) error {
+	type pageAlias volcMegaTTSTrainStatusPage
+	var raw struct {
+		*pageAlias
+		Statuses []json.RawMessage `json:"Statuses"`
+	}
+	raw.pageAlias = (*pageAlias)(p)
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	p.rawStatuses = raw.Statuses
+	p.Statuses = make([]volcSpeakerStatus, 0, len(raw.Statuses))
+	for _, item := range raw.Statuses {
+		var status volcSpeakerStatus
+		if err := json.Unmarshal(item, &status); err != nil {
+			return err
+		}
+		var rawStatus map[string]interface{}
+		if err := json.Unmarshal(item, &rawStatus); err != nil {
+			return err
+		}
+		status.raw = rawStatus
+		p.Statuses = append(p.Statuses, status)
+	}
+	return nil
+}
+
+func (p *volcMegaTTSTrainStatusPage) captureRawStatuses() error {
+	if len(p.rawStatuses) == len(p.Statuses) {
+		return nil
+	}
+	for i := range p.Statuses {
+		if p.Statuses[i].raw != nil {
+			continue
+		}
+		raw := rawStructToMap(p.Statuses[i])
+		if raw == nil {
+			continue
+		}
+		p.Statuses[i].raw = *raw
+	}
+	return nil
+}
+
+func listAllVolcSpeakers(ctx context.Context, client VolcSpeakerClient, tenant apitypes.VolcTenant) ([]volcSpeakerRecord, error) {
+	appID := strings.TrimSpace(string(tenant.AppId))
+	if appID == "" {
+		return nil, errors.New("Volcengine tenant app_id is required")
+	}
+	resourceIDs := volcTenantResourceIDs(tenant)
+	resourceFilter := volcResourceIDSet(resourceIDs)
+	byVoiceID := make(map[string]volcSpeakerRecord)
+	publicTimbres, err := client.ListBigModelTTSTimbresWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	_, syncPublicTimbres := resourceFilter[string(volcPublicResourceID)]
+	if len(resourceFilter) == 0 || syncPublicTimbres {
+		for _, timbre := range publicTimbres {
+			speakerID := strings.TrimSpace(timbre.SpeakerID)
+			if speakerID == "" {
+				continue
+			}
+			timbreCopy := timbre
+			byVoiceID[speakerID] = volcSpeakerRecord{appID: tenant.AppId, resourceID: volcPublicResourceID, source: "public", timbre: &timbreCopy}
+		}
+	}
+	if len(resourceIDs) == 0 {
+		return sortedVolcSpeakerRecords(byVoiceID), nil
+	}
+	const pageSize int32 = 100
+	for pageNumber := int32(1); ; pageNumber++ {
+		page, err := client.BatchListMegaTTSTrainStatusWithContext(ctx, appID, resourceIDs, pageNumber, pageSize)
+		if err != nil {
+			return nil, err
+		}
+		for _, status := range page.Statuses {
+			speakerID := strings.TrimSpace(status.SpeakerID)
+			if speakerID == "" {
+				return nil, errors.New("Volcengine returned speaker status without SpeakerID")
+			}
+			resourceID := apitypes.VolcResourceID(strings.TrimSpace(status.ResourceID))
+			if len(resourceFilter) > 0 {
+				if _, ok := resourceFilter[string(resourceID)]; !ok {
+					continue
+				}
+			}
+			statusCopy := status
+			byVoiceID[speakerID] = volcSpeakerRecord{appID: tenant.AppId, resourceID: resourceID, source: "app", status: &statusCopy}
+		}
+		if page.TotalCount == 0 || len(page.Statuses) == 0 || pageNumber*pageSize >= page.TotalCount {
+			break
+		}
+	}
+	return sortedVolcSpeakerRecords(byVoiceID), nil
+}
+
+func sortedVolcSpeakerRecords(byVoiceID map[string]volcSpeakerRecord) []volcSpeakerRecord {
+	all := make([]volcSpeakerRecord, 0, len(byVoiceID))
+	for _, record := range byVoiceID {
+		all = append(all, record)
+	}
+	sort.Slice(all, func(i, j int) bool {
+		left := all[i].providerVoiceID()
+		right := all[j].providerVoiceID()
+		if left == right {
+			return string(all[i].resourceID) < string(all[j].resourceID)
+		}
+		return left < right
+	})
+	return all
+}
+
+func (r volcSpeakerRecord) providerVoiceID() string {
+	if r.status != nil {
+		return strings.TrimSpace(r.status.SpeakerID)
+	}
+	if r.timbre != nil {
+		return strings.TrimSpace(r.timbre.SpeakerID)
+	}
+	return ""
+}
+
+func reconcileVolcTenantVoices(ctx context.Context, store kv.Store, tenant apitypes.VolcTenant, upstream []volcSpeakerRecord, now time.Time) (int32, int32, int32, error) {
+	existing, err := listProviderVoices(ctx, store, volcVoiceProviderKind, apitypes.VoiceProviderName(tenant.Name))
+	if err != nil {
+		return 0, 0, 0, err
+	}
+	existingByProviderVoiceID := make(map[string]apitypes.Voice, len(existing))
+	for _, voice := range existing {
+		if voice.Source != apitypes.VoiceSourceSync {
+			continue
+		}
+		providerVoiceID := voiceProviderDataString(voice, "voice_id")
+		if providerVoiceID == "" {
+			continue
+		}
+		existingByProviderVoiceID[providerVoiceID] = voice
+	}
+
+	seen := make(map[string]struct{}, len(upstream))
+	var createdCount, updatedCount int32
+	for _, upstreamVoice := range upstream {
+		providerVoiceID := upstreamVoice.providerVoiceID()
+		if providerVoiceID == "" {
+			return 0, 0, 0, errors.New("Volcengine returned voice without speaker id")
+		}
+		seen[providerVoiceID] = struct{}{}
+		record := voiceFromVolc(tenant.Name, upstreamVoice, now)
+		if previous, ok := existingByProviderVoiceID[providerVoiceID]; ok {
+			record.CreatedAt = previous.CreatedAt
+			if voiceSemanticEqual(previous, record) {
+				record.UpdatedAt = previous.UpdatedAt
+			} else {
+				updatedCount++
+			}
+			previousCopy := previous
+			if err := writeVoice(ctx, store, record, &previousCopy); err != nil {
+				return 0, 0, 0, err
+			}
+			continue
+		}
+		if occupied, err := getVoice(ctx, store, string(record.Id)); err == nil {
+			if occupied.Source != apitypes.VoiceSourceSync {
+				return 0, 0, 0, fmt.Errorf("voice id %q is occupied by non-sync resource", record.Id)
+			}
+			previousCopy := occupied
+			if err := writeVoice(ctx, store, record, &previousCopy); err != nil {
+				return 0, 0, 0, err
+			}
+			updatedCount++
+			continue
+		} else if !errors.Is(err, kv.ErrNotFound) {
+			return 0, 0, 0, err
+		}
+		createdCount++
+		if err := writeVoice(ctx, store, record, nil); err != nil {
+			return 0, 0, 0, err
+		}
+	}
+
+	var deletedCount int32
+	for providerVoiceID, voice := range existingByProviderVoiceID {
+		if _, ok := seen[providerVoiceID]; ok {
+			continue
+		}
+		if err := deleteVoice(ctx, store, voice); err != nil {
+			return 0, 0, 0, err
+		}
+		deletedCount++
+	}
+	return createdCount, updatedCount, deletedCount, nil
+}
+
+func voiceFromVolc(tenantName apitypes.VolcTenantName, upstream volcSpeakerRecord, now time.Time) apitypes.Voice {
+	providerVoiceID := upstream.providerVoiceID()
+	voiceID := stableVoiceID(volcVoiceProviderKind, apitypes.VoiceProviderName(tenantName), providerVoiceID)
+	name, description, raw := volcVoiceDisplay(upstream)
+	resourceID := strings.TrimSpace(string(upstream.resourceID))
+	syncedAt := now
+	voice := apitypes.Voice{
+		CreatedAt: now,
+		Id:        apitypes.VoiceID(voiceID),
+		Provider: apitypes.VoiceProvider{
+			Kind: volcVoiceProviderKind,
+			Name: apitypes.VoiceProviderName(tenantName),
+		},
+		ProviderData: providerData(volcVoiceProviderKind, map[string]interface{}{
+			"app_id":      strings.TrimSpace(string(upstream.appID)),
+			"raw":         raw,
+			"resource_id": resourceID,
+			"state":       upstream.state(),
+			"status":      upstream.statusText(),
+			"voice_id":    providerVoiceID,
+		}),
+		Source:    apitypes.VoiceSourceSync,
+		SyncedAt:  &syncedAt,
+		UpdatedAt: now,
+	}
+	if name != "" {
+		voice.Name = &name
+	}
+	if description != "" {
+		voice.Description = &description
+	}
+	return voice
+}
+
+func volcVoiceDisplay(record volcSpeakerRecord) (string, string, interface{}) {
+	if record.status != nil {
+		name := strings.TrimSpace(record.status.Alias)
+		if name == "" {
+			name = strings.TrimSpace(record.status.SpeakerID)
+		}
+		description := strings.TrimSpace(record.status.Description)
+		raw := record.status.raw
+		if len(raw) == 0 {
+			if rawMap := rawStructToMap(record.status); rawMap != nil {
+				raw = *rawMap
+			}
+		}
+		return name, description, raw
+	}
+	if record.timbre != nil {
+		name := strings.TrimSpace(record.timbre.Name)
+		if name == "" {
+			name = strings.TrimSpace(record.timbre.SpeakerID)
+		}
+		return name, "", record.timbre.Raw
+	}
+	return "", "", nil
+}
+
+func (r volcSpeakerRecord) state() string {
+	if r.status == nil {
+		return ""
+	}
+	return strings.TrimSpace(r.status.State)
+}
+
+func (r volcSpeakerRecord) statusText() string {
+	if r.status == nil {
+		return ""
+	}
+	return strings.TrimSpace(r.status.InstanceStatus)
+}
+
+func deleteVolcTenantVoices(ctx context.Context, store kv.Store, tenantName apitypes.VolcTenantName) error {
+	voices, err := listProviderVoices(ctx, store, volcVoiceProviderKind, apitypes.VoiceProviderName(tenantName))
+	if err != nil {
+		return err
+	}
+	for _, voice := range voices {
+		if voice.Source != apitypes.VoiceSourceSync {
+			continue
+		}
+		if err := deleteVoice(ctx, store, voice); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func volcTenantResourceIDs(tenant apitypes.VolcTenant) []apitypes.VolcResourceID {
+	if tenant.ResourceIds == nil {
+		return nil
+	}
+	return normalizeVolcResourceIDs(*tenant.ResourceIds)
+}
+
+func volcResourceIDSet(resourceIDs []apitypes.VolcResourceID) map[string]struct{} {
+	if len(resourceIDs) == 0 {
+		return nil
+	}
+	out := make(map[string]struct{}, len(resourceIDs))
+	for _, resourceID := range resourceIDs {
+		out[string(resourceID)] = struct{}{}
+	}
+	return out
+}
+
+func volcResourceIDStrings(resourceIDs []apitypes.VolcResourceID) []string {
+	normalized := normalizeVolcResourceIDs(resourceIDs)
+	out := make([]string, 0, len(normalized))
+	for _, resourceID := range normalized {
+		out = append(out, string(resourceID))
+	}
+	return out
+}
+
+func normalizeVolcResourceIDs(in []apitypes.VolcResourceID) []apitypes.VolcResourceID {
+	out := make([]apitypes.VolcResourceID, 0, len(in))
+	seen := make(map[string]struct{}, len(in))
+	for _, item := range in {
+		value := strings.TrimSpace(string(item))
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		out = append(out, apitypes.VolcResourceID(value))
+	}
+	return out
+}
+
+func volcRegion(tenant apitypes.VolcTenant) string {
+	if tenant.Region != nil {
+		region := strings.TrimSpace(*tenant.Region)
+		if region != "" {
+			return region
+		}
+	}
+	return defaultVolcRegion
+}
+
+func rawStructToMap(in interface{}) *map[string]interface{} {
+	data, err := json.Marshal(in)
+	if err != nil {
+		return nil
+	}
+	var out map[string]interface{}
+	if err := json.Unmarshal(data, &out); err != nil || len(out) == 0 {
+		return nil
+	}
+	return &out
+}
+
+func stringValue(in *string) string {
+	if in == nil {
+		return ""
+	}
+	return *in
+}
+
+func firstVolcTimbreSpeakerName(infos []*speechsaasprod.TimbreInfoForListBigModelTTSTimbresOutput) string {
+	for _, info := range infos {
+		if info == nil {
+			continue
+		}
+		if name := strings.TrimSpace(stringValue(info.SpeakerName)); name != "" {
+			return name
+		}
+	}
+	return ""
+}
+
+func volcTenantKey(name string) kv.Key {
+	return append(append(kv.Key{}, volcTenantsRoot...), escapeStoreSegment(name))
+}
+
+func (s *Server) volcTenantStore() (kv.Store, error) {
+	if s == nil {
+		return nil, errors.New("Volcengine tenant store not configured")
+	}
+	if s.VolcTenantStore != nil {
+		return s.VolcTenantStore, nil
+	}
+	if s.TenantStore != nil {
+		return s.TenantStore, nil
+	}
+	if s.Store == nil {
+		return nil, errors.New("Volcengine tenant store not configured")
+	}
+	return s.Store, nil
+}

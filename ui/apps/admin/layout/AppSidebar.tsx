@@ -44,6 +44,7 @@ const sections: NavSection[] = [
     items: [
       { href: "/providers/credentials", icon: KeyRound, label: "Credentials" },
       { href: "/providers/minimax-tenants", icon: AudioLines, label: "MiniMax Tenants" },
+      { href: "/providers/volc-tenants", icon: AudioLines, label: "Volcengine Tenants" },
     ],
   },
   {

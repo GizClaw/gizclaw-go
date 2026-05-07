@@ -38,6 +38,214 @@ func TestApplyMiniMaxTenantCreatesResource(t *testing.T) {
 	}
 }
 
+func TestApplyVolcTenantCreatesResource(t *testing.T) {
+	minimax := newFakeMiniMax()
+	manager := New(Services{MiniMax: minimax})
+
+	result, err := manager.Apply(context.Background(), mustResource(t, `{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "VolcTenant",
+		"metadata": {"name": "volc-main"},
+		"spec": {
+			"app_id": "9476442538",
+			"credential_name": "volc-cred",
+			"region": "cn-beijing",
+			"resource_ids": ["seed-tts-2.0"],
+			"description": "primary tenant"
+		}
+	}`))
+	if err != nil {
+		t.Fatalf("Apply returned error: %v", err)
+	}
+	if result.Action != apitypes.ApplyActionCreated {
+		t.Fatalf("action = %q, want created", result.Action)
+	}
+	if minimax.putVolcCount != 1 {
+		t.Fatalf("putVolcCount = %d, want 1", minimax.putVolcCount)
+	}
+	if minimax.volcTenants["volc-main"].CredentialName != "volc-cred" {
+		t.Fatalf("credential name = %q, want volc-cred", minimax.volcTenants["volc-main"].CredentialName)
+	}
+	if minimax.volcTenants["volc-main"].AppId != "9476442538" {
+		t.Fatalf("app_id = %q, want 9476442538", minimax.volcTenants["volc-main"].AppId)
+	}
+}
+
+func TestGetVolcTenantReturnsResource(t *testing.T) {
+	minimax := newFakeMiniMax()
+	minimax.volcTenants["volc-main"] = apitypes.VolcTenant{
+		AppId:          "9476442538",
+		CreatedAt:      time.Now().UTC(),
+		CredentialName: "volc-cred",
+		Name:           "volc-main",
+		UpdatedAt:      time.Now().UTC(),
+	}
+	manager := New(Services{MiniMax: minimax})
+
+	resource, err := manager.Get(context.Background(), apitypes.ResourceKindVolcTenant, "volc-main")
+	if err != nil {
+		t.Fatalf("Get returned error: %v", err)
+	}
+	tenant, err := resource.AsVolcTenantResource()
+	if err != nil {
+		t.Fatalf("AsVolcTenantResource returned error: %v", err)
+	}
+	if tenant.Metadata.Name != "volc-main" {
+		t.Fatalf("metadata.name = %q, want volc-main", tenant.Metadata.Name)
+	}
+	if tenant.Spec.CredentialName != "volc-cred" {
+		t.Fatalf("credential_name = %q, want volc-cred", tenant.Spec.CredentialName)
+	}
+	if tenant.Spec.AppId != "9476442538" {
+		t.Fatalf("app_id = %q, want 9476442538", tenant.Spec.AppId)
+	}
+}
+
+func TestApplyVolcTenantUnchangedSkipsPut(t *testing.T) {
+	minimax := newFakeMiniMax()
+	minimax.volcTenants["volc-main"] = apitypes.VolcTenant{
+		AppId:          "9476442538",
+		CreatedAt:      time.Now().UTC(),
+		CredentialName: "volc-cred",
+		Name:           "volc-main",
+		UpdatedAt:      time.Now().UTC(),
+	}
+	manager := New(Services{MiniMax: minimax})
+
+	result, err := manager.Apply(context.Background(), mustResource(t, `{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "VolcTenant",
+		"metadata": {"name": "volc-main"},
+		"spec": {
+			"app_id": "9476442538",
+			"credential_name": "volc-cred"
+		}
+	}`))
+	if err != nil {
+		t.Fatalf("Apply returned error: %v", err)
+	}
+	if result.Action != apitypes.ApplyActionUnchanged {
+		t.Fatalf("action = %q, want unchanged", result.Action)
+	}
+	if minimax.putVolcCount != 0 {
+		t.Fatalf("putVolcCount = %d, want 0", minimax.putVolcCount)
+	}
+}
+
+func TestApplyVolcTenantUpdatesResource(t *testing.T) {
+	minimax := newFakeMiniMax()
+	minimax.volcTenants["volc-main"] = apitypes.VolcTenant{
+		AppId:          "old-app",
+		CreatedAt:      time.Now().UTC(),
+		CredentialName: "volc-cred",
+		Name:           "volc-main",
+		UpdatedAt:      time.Now().UTC(),
+	}
+	manager := New(Services{MiniMax: minimax})
+
+	result, err := manager.Apply(context.Background(), mustResource(t, `{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "VolcTenant",
+		"metadata": {"name": "volc-main"},
+		"spec": {
+			"app_id": "new-app",
+			"credential_name": "volc-cred"
+		}
+	}`))
+	if err != nil {
+		t.Fatalf("Apply returned error: %v", err)
+	}
+	if result.Action != apitypes.ApplyActionUpdated {
+		t.Fatalf("action = %q, want updated", result.Action)
+	}
+	if minimax.putVolcCount != 1 {
+		t.Fatalf("putVolcCount = %d, want 1", minimax.putVolcCount)
+	}
+}
+
+func TestPutVolcTenantWritesAndReturnsResource(t *testing.T) {
+	minimax := newFakeMiniMax()
+	manager := New(Services{MiniMax: minimax})
+
+	resource, err := manager.Put(context.Background(), mustResource(t, `{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "VolcTenant",
+		"metadata": {"name": "volc-main"},
+		"spec": {
+			"app_id": "9476442538",
+			"credential_name": "volc-cred"
+		}
+	}`))
+	if err != nil {
+		t.Fatalf("Put returned error: %v", err)
+	}
+	if minimax.putVolcCount != 1 {
+		t.Fatalf("putVolcCount = %d, want 1", minimax.putVolcCount)
+	}
+	tenant, err := resource.AsVolcTenantResource()
+	if err != nil {
+		t.Fatalf("AsVolcTenantResource returned error: %v", err)
+	}
+	if tenant.Metadata.Name != "volc-main" {
+		t.Fatalf("metadata.name = %q, want volc-main", tenant.Metadata.Name)
+	}
+}
+
+func TestDeleteVolcTenantDeletesAndReturnsResource(t *testing.T) {
+	minimax := newFakeMiniMax()
+	minimax.volcTenants["volc-main"] = apitypes.VolcTenant{
+		AppId:          "9476442538",
+		CreatedAt:      time.Now().UTC(),
+		CredentialName: "volc-cred",
+		Name:           "volc-main",
+		UpdatedAt:      time.Now().UTC(),
+	}
+	manager := New(Services{MiniMax: minimax})
+
+	resource, err := manager.Delete(context.Background(), apitypes.ResourceKindVolcTenant, "volc-main")
+	if err != nil {
+		t.Fatalf("Delete returned error: %v", err)
+	}
+	tenant, err := resource.AsVolcTenantResource()
+	if err != nil {
+		t.Fatalf("AsVolcTenantResource returned error: %v", err)
+	}
+	if tenant.Metadata.Name != "volc-main" {
+		t.Fatalf("metadata.name = %q, want volc-main", tenant.Metadata.Name)
+	}
+	if _, ok := minimax.volcTenants["volc-main"]; ok {
+		t.Fatal("volc tenant still exists after Delete")
+	}
+}
+
+func TestDeleteMiniMaxTenantDeletesAndReturnsResource(t *testing.T) {
+	minimax := newFakeMiniMax()
+	minimax.tenants["main"] = apitypes.MiniMaxTenant{
+		AppId:          "app",
+		CreatedAt:      time.Now().UTC(),
+		CredentialName: "minimax-main",
+		GroupId:        "group",
+		Name:           "main",
+		UpdatedAt:      time.Now().UTC(),
+	}
+	manager := New(Services{MiniMax: minimax})
+
+	resource, err := manager.Delete(context.Background(), apitypes.ResourceKindMiniMaxTenant, "main")
+	if err != nil {
+		t.Fatalf("Delete returned error: %v", err)
+	}
+	tenant, err := resource.AsMiniMaxTenantResource()
+	if err != nil {
+		t.Fatalf("AsMiniMaxTenantResource returned error: %v", err)
+	}
+	if tenant.Metadata.Name != "main" {
+		t.Fatalf("metadata.name = %q, want main", tenant.Metadata.Name)
+	}
+	if _, ok := minimax.tenants["main"]; ok {
+		t.Fatal("minimax tenant still exists after Delete")
+	}
+}
+
 func TestGetMiniMaxTenantReturnsResource(t *testing.T) {
 	minimax := newFakeMiniMax()
 	minimax.tenants["main"] = apitypes.MiniMaxTenant{
@@ -99,6 +307,39 @@ func TestApplyMiniMaxTenantUnchangedSkipsPut(t *testing.T) {
 	}
 }
 
+func TestApplyMiniMaxTenantUpdatesResource(t *testing.T) {
+	minimax := newFakeMiniMax()
+	minimax.tenants["main"] = apitypes.MiniMaxTenant{
+		AppId:          "old-app",
+		CreatedAt:      time.Now().UTC(),
+		CredentialName: "minimax-main",
+		GroupId:        "group",
+		Name:           "main",
+		UpdatedAt:      time.Now().UTC(),
+	}
+	manager := New(Services{MiniMax: minimax})
+
+	result, err := manager.Apply(context.Background(), mustResource(t, `{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "MiniMaxTenant",
+		"metadata": {"name": "main"},
+		"spec": {
+			"app_id": "new-app",
+			"group_id": "group",
+			"credential_name": "minimax-main"
+		}
+	}`))
+	if err != nil {
+		t.Fatalf("Apply returned error: %v", err)
+	}
+	if result.Action != apitypes.ApplyActionUpdated {
+		t.Fatalf("action = %q, want updated", result.Action)
+	}
+	if minimax.putTenantCount != 1 {
+		t.Fatalf("putTenantCount = %d, want 1", minimax.putTenantCount)
+	}
+}
+
 func TestApplyVoiceUpdatesResource(t *testing.T) {
 	minimax := newFakeMiniMax()
 	minimax.voices["voice-1"] = apitypes.Voice{
@@ -157,6 +398,40 @@ func TestApplyVoiceCreatesResource(t *testing.T) {
 	}
 }
 
+func TestApplyVoiceUnchangedSkipsPut(t *testing.T) {
+	name := "Narrator"
+	minimax := newFakeMiniMax()
+	minimax.voices["voice-1"] = apitypes.Voice{
+		CreatedAt: time.Now().UTC(),
+		Id:        "voice-1",
+		Name:      &name,
+		Provider:  apitypes.VoiceProvider{Kind: "minimax", Name: "main"},
+		Source:    apitypes.VoiceSourceManual,
+		UpdatedAt: time.Now().UTC(),
+	}
+	manager := New(Services{MiniMax: minimax})
+
+	result, err := manager.Apply(context.Background(), mustResource(t, `{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "Voice",
+		"metadata": {"name": "voice-1"},
+		"spec": {
+			"name": "Narrator",
+			"provider": {"kind": "minimax", "name": "main"},
+			"source": "manual"
+		}
+	}`))
+	if err != nil {
+		t.Fatalf("Apply returned error: %v", err)
+	}
+	if result.Action != apitypes.ApplyActionUnchanged {
+		t.Fatalf("action = %q, want unchanged", result.Action)
+	}
+	if minimax.putVoiceCount != 0 {
+		t.Fatalf("putVoiceCount = %d, want 0", minimax.putVoiceCount)
+	}
+}
+
 func TestPutVoiceWritesAndReturnsResource(t *testing.T) {
 	minimax := newFakeMiniMax()
 	manager := New(Services{MiniMax: minimax})
@@ -186,6 +461,33 @@ func TestPutVoiceWritesAndReturnsResource(t *testing.T) {
 	}
 	if voice.Spec.Provider.Name != "main" {
 		t.Fatalf("provider.name = %q, want main", voice.Spec.Provider.Name)
+	}
+}
+
+func TestDeleteVoiceDeletesAndReturnsResource(t *testing.T) {
+	minimax := newFakeMiniMax()
+	minimax.voices["voice-1"] = apitypes.Voice{
+		CreatedAt: time.Now().UTC(),
+		Id:        "voice-1",
+		Provider:  apitypes.VoiceProvider{Kind: "local", Name: "manual"},
+		Source:    apitypes.VoiceSourceManual,
+		UpdatedAt: time.Now().UTC(),
+	}
+	manager := New(Services{MiniMax: minimax})
+
+	resource, err := manager.Delete(context.Background(), apitypes.ResourceKindVoice, "voice-1")
+	if err != nil {
+		t.Fatalf("Delete returned error: %v", err)
+	}
+	voice, err := resource.AsVoiceResource()
+	if err != nil {
+		t.Fatalf("AsVoiceResource returned error: %v", err)
+	}
+	if voice.Metadata.Name != "voice-1" {
+		t.Fatalf("metadata.name = %q, want voice-1", voice.Metadata.Name)
+	}
+	if _, ok := minimax.voices["voice-1"]; ok {
+		t.Fatal("voice still exists after Delete")
 	}
 }
 
@@ -251,10 +553,77 @@ func TestMiniMaxServiceErrorResponses(t *testing.T) {
 	}
 }
 
+func TestVolcAndVoiceServiceDeleteErrors(t *testing.T) {
+	minimax := newFakeMiniMax()
+	manager := New(Services{MiniMax: minimax})
+
+	_, exists, err := manager.deleteVolcTenant(context.Background(), "missing")
+	if err != nil {
+		t.Fatalf("deleteVolcTenant(missing) error = %v", err)
+	}
+	if exists {
+		t.Fatal("deleteVolcTenant(missing) exists = true")
+	}
+
+	_, exists, err = manager.deleteVoice(context.Background(), "missing")
+	if err != nil {
+		t.Fatalf("deleteVoice(missing) error = %v", err)
+	}
+	if exists {
+		t.Fatal("deleteVoice(missing) exists = true")
+	}
+
+	minimax.getTenantStatus = 500
+	_, _, err = manager.getVolcTenant(context.Background(), "volc-main")
+	assertResourceError(t, err, 500, "INTERNAL_ERROR")
+
+	minimax.getTenantStatus = 0
+	for _, tc := range []struct {
+		status int
+		code   string
+	}{
+		{status: 400, code: "INVALID_VOLC_TENANT"},
+		{status: 500, code: "INTERNAL_ERROR"},
+	} {
+		minimax.putTenantStatus = tc.status
+		err = manager.putVolcTenant(context.Background(), "volc-main", adminservice.VolcTenantUpsert{})
+		assertResourceError(t, err, tc.status, tc.code)
+	}
+}
+
+func TestVolcAndVoiceMissingServiceErrors(t *testing.T) {
+	manager := New(Services{})
+
+	if _, err := manager.Apply(context.Background(), mustResource(t, `{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "VolcTenant",
+		"metadata": {"name": "volc-main"},
+		"spec": {"app_id": "app", "credential_name": "cred"}
+	}`)); err == nil {
+		t.Fatal("Apply(VolcTenant) error = nil")
+	}
+	if _, err := manager.Get(context.Background(), apitypes.ResourceKindVolcTenant, "volc-main"); err == nil {
+		t.Fatal("Get(VolcTenant) error = nil")
+	}
+	if _, err := manager.Put(context.Background(), mustResource(t, `{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "Voice",
+		"metadata": {"name": "voice-1"},
+		"spec": {"source": "manual", "provider": {"kind": "local", "name": "manual"}}
+	}`)); err == nil {
+		t.Fatal("Put(Voice) error = nil")
+	}
+	if _, err := manager.Delete(context.Background(), apitypes.ResourceKindVoice, "voice-1"); err == nil {
+		t.Fatal("Delete(Voice) error = nil")
+	}
+}
+
 type fakeMiniMax struct {
 	tenants         map[string]apitypes.MiniMaxTenant
+	volcTenants     map[string]apitypes.VolcTenant
 	voices          map[string]apitypes.Voice
 	putTenantCount  int
+	putVolcCount    int
 	putVoiceCount   int
 	getTenantStatus int
 	putTenantStatus int
@@ -264,8 +633,9 @@ type fakeMiniMax struct {
 
 func newFakeMiniMax() *fakeMiniMax {
 	return &fakeMiniMax{
-		tenants: map[string]apitypes.MiniMaxTenant{},
-		voices:  map[string]apitypes.Voice{},
+		tenants:     map[string]apitypes.MiniMaxTenant{},
+		volcTenants: map[string]apitypes.VolcTenant{},
+		voices:      map[string]apitypes.Voice{},
 	}
 }
 
@@ -325,6 +695,63 @@ func (f *fakeMiniMax) SyncMiniMaxTenantVoices(context.Context, adminservice.Sync
 	return nil, nil
 }
 
+func (f *fakeMiniMax) ListVolcTenants(context.Context, adminservice.ListVolcTenantsRequestObject) (adminservice.ListVolcTenantsResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) CreateVolcTenant(context.Context, adminservice.CreateVolcTenantRequestObject) (adminservice.CreateVolcTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) DeleteVolcTenant(_ context.Context, request adminservice.DeleteVolcTenantRequestObject) (adminservice.DeleteVolcTenantResponseObject, error) {
+	tenant, ok := f.volcTenants[string(request.Name)]
+	if !ok {
+		return adminservice.DeleteVolcTenant404JSONResponse(apitypes.NewErrorResponse("VOLC_TENANT_NOT_FOUND", "not found")), nil
+	}
+	delete(f.volcTenants, string(request.Name))
+	return adminservice.DeleteVolcTenant200JSONResponse(tenant), nil
+}
+
+func (f *fakeMiniMax) GetVolcTenant(_ context.Context, request adminservice.GetVolcTenantRequestObject) (adminservice.GetVolcTenantResponseObject, error) {
+	if f.getTenantStatus == 500 {
+		return adminservice.GetVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", "failed")), nil
+	}
+	tenant, ok := f.volcTenants[string(request.Name)]
+	if !ok {
+		return adminservice.GetVolcTenant404JSONResponse(apitypes.NewErrorResponse("VOLC_TENANT_NOT_FOUND", "not found")), nil
+	}
+	return adminservice.GetVolcTenant200JSONResponse(tenant), nil
+}
+
+func (f *fakeMiniMax) PutVolcTenant(_ context.Context, request adminservice.PutVolcTenantRequestObject) (adminservice.PutVolcTenantResponseObject, error) {
+	switch f.putTenantStatus {
+	case 400:
+		return adminservice.PutVolcTenant400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", "invalid")), nil
+	case 500:
+		return adminservice.PutVolcTenant500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", "failed")), nil
+	}
+	f.putVolcCount++
+	body := *request.Body
+	now := time.Now().UTC()
+	tenant := apitypes.VolcTenant{
+		AppId:          body.AppId,
+		CreatedAt:      now,
+		CredentialName: body.CredentialName,
+		Description:    body.Description,
+		Endpoint:       body.Endpoint,
+		Name:           body.Name,
+		Region:         body.Region,
+		ResourceIds:    body.ResourceIds,
+		UpdatedAt:      now,
+	}
+	f.volcTenants[string(request.Name)] = tenant
+	return adminservice.PutVolcTenant200JSONResponse(tenant), nil
+}
+
+func (f *fakeMiniMax) SyncVolcTenantVoices(context.Context, adminservice.SyncVolcTenantVoicesRequestObject) (adminservice.SyncVolcTenantVoicesResponseObject, error) {
+	return nil, nil
+}
+
 func (f *fakeMiniMax) CreateVoice(context.Context, adminservice.CreateVoiceRequestObject) (adminservice.CreateVoiceResponseObject, error) {
 	return nil, nil
 }
@@ -366,16 +793,14 @@ func (f *fakeMiniMax) PutVoice(_ context.Context, request adminservice.PutVoiceR
 	body := *request.Body
 	now := time.Now().UTC()
 	voice := apitypes.Voice{
-		CreatedAt:         now,
-		Description:       body.Description,
-		Id:                body.Id,
-		Name:              body.Name,
-		Provider:          body.Provider,
-		ProviderVoiceId:   body.ProviderVoiceId,
-		ProviderVoiceType: body.ProviderVoiceType,
-		Raw:               body.Raw,
-		Source:            body.Source,
-		UpdatedAt:         now,
+		CreatedAt:    now,
+		Description:  body.Description,
+		Id:           body.Id,
+		Name:         body.Name,
+		Provider:     body.Provider,
+		ProviderData: body.ProviderData,
+		Source:       body.Source,
+		UpdatedAt:    now,
 	}
 	f.voices[string(request.Id)] = voice
 	return adminservice.PutVoice200JSONResponse(voice), nil

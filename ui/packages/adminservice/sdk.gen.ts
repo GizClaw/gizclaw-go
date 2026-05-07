@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApplyResourceData, ApplyResourceErrors, ApplyResourceResponses, ApproveGearData, ApproveGearErrors, ApproveGearResponses, BlockGearData, BlockGearErrors, BlockGearResponses, CreateCredentialData, CreateCredentialErrors, CreateCredentialResponses, CreateMiniMaxTenantData, CreateMiniMaxTenantErrors, CreateMiniMaxTenantResponses, CreateVoiceData, CreateVoiceErrors, CreateVoiceResponses, CreateWorkspaceData, CreateWorkspaceErrors, CreateWorkspaceResponses, CreateWorkspaceTemplateData, CreateWorkspaceTemplateErrors, CreateWorkspaceTemplateResponses, DeleteCredentialData, DeleteCredentialErrors, DeleteCredentialResponses, DeleteGearData, DeleteGearErrors, DeleteGearResponses, DeleteMiniMaxTenantData, DeleteMiniMaxTenantErrors, DeleteMiniMaxTenantResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, DeleteVoiceData, DeleteVoiceErrors, DeleteVoiceResponses, DeleteWorkspaceData, DeleteWorkspaceErrors, DeleteWorkspaceResponses, DeleteWorkspaceTemplateData, DeleteWorkspaceTemplateErrors, DeleteWorkspaceTemplateResponses, GetChannelData, GetChannelErrors, GetChannelResponses, GetCredentialData, GetCredentialErrors, GetCredentialResponses, GetDepotData, GetDepotErrors, GetDepotResponses, GetGearConfigData, GetGearConfigErrors, GetGearConfigResponses, GetGearData, GetGearErrors, GetGearInfoData, GetGearInfoErrors, GetGearInfoResponses, GetGearOtaData, GetGearOtaErrors, GetGearOtaResponses, GetGearResponses, GetGearRuntimeData, GetGearRuntimeResponses, GetMiniMaxTenantData, GetMiniMaxTenantErrors, GetMiniMaxTenantResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetVoiceData, GetVoiceErrors, GetVoiceResponses, GetWorkspaceData, GetWorkspaceErrors, GetWorkspaceResponses, GetWorkspaceTemplateData, GetWorkspaceTemplateErrors, GetWorkspaceTemplateResponses, ListByCertificationData, ListByCertificationErrors, ListByCertificationResponses, ListByFirmwareData, ListByFirmwareErrors, ListByFirmwareResponses, ListByLabelData, ListByLabelErrors, ListByLabelResponses, ListCredentialsData, ListCredentialsErrors, ListCredentialsResponses, ListDepotsData, ListDepotsErrors, ListDepotsResponses, ListGearsData, ListGearsErrors, ListGearsResponses, ListMiniMaxTenantsData, ListMiniMaxTenantsErrors, ListMiniMaxTenantsResponses, ListVoicesData, ListVoicesErrors, ListVoicesResponses, ListWorkspacesData, ListWorkspacesErrors, ListWorkspacesResponses, ListWorkspaceTemplatesData, ListWorkspaceTemplatesErrors, ListWorkspaceTemplatesResponses, PutChannelData, PutChannelErrors, PutChannelResponses, PutCredentialData, PutCredentialErrors, PutCredentialResponses, PutDepotInfoData, PutDepotInfoErrors, PutDepotInfoResponses, PutGearConfigData, PutGearConfigErrors, PutGearConfigResponses, PutMiniMaxTenantData, PutMiniMaxTenantErrors, PutMiniMaxTenantResponses, PutResourceData, PutResourceErrors, PutResourceResponses, PutVoiceData, PutVoiceErrors, PutVoiceResponses, PutWorkspaceData, PutWorkspaceErrors, PutWorkspaceResponses, PutWorkspaceTemplateData, PutWorkspaceTemplateErrors, PutWorkspaceTemplateResponses, RefreshGearData, RefreshGearErrors, RefreshGearResponses, ReleaseDepotData, ReleaseDepotErrors, ReleaseDepotResponses, ResolveByImeiData, ResolveByImeiErrors, ResolveByImeiResponses, ResolveBySnData, ResolveBySnErrors, ResolveBySnResponses, RollbackDepotData, RollbackDepotErrors, RollbackDepotResponses, SyncMiniMaxTenantVoicesData, SyncMiniMaxTenantVoicesErrors, SyncMiniMaxTenantVoicesResponses } from './types.gen';
+import type { ApplyResourceData, ApplyResourceErrors, ApplyResourceResponses, ApproveGearData, ApproveGearErrors, ApproveGearResponses, BlockGearData, BlockGearErrors, BlockGearResponses, CreateCredentialData, CreateCredentialErrors, CreateCredentialResponses, CreateMiniMaxTenantData, CreateMiniMaxTenantErrors, CreateMiniMaxTenantResponses, CreateVoiceData, CreateVoiceErrors, CreateVoiceResponses, CreateVolcTenantData, CreateVolcTenantErrors, CreateVolcTenantResponses, CreateWorkspaceData, CreateWorkspaceErrors, CreateWorkspaceResponses, CreateWorkspaceTemplateData, CreateWorkspaceTemplateErrors, CreateWorkspaceTemplateResponses, DeleteCredentialData, DeleteCredentialErrors, DeleteCredentialResponses, DeleteGearData, DeleteGearErrors, DeleteGearResponses, DeleteMiniMaxTenantData, DeleteMiniMaxTenantErrors, DeleteMiniMaxTenantResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, DeleteVoiceData, DeleteVoiceErrors, DeleteVoiceResponses, DeleteVolcTenantData, DeleteVolcTenantErrors, DeleteVolcTenantResponses, DeleteWorkspaceData, DeleteWorkspaceErrors, DeleteWorkspaceResponses, DeleteWorkspaceTemplateData, DeleteWorkspaceTemplateErrors, DeleteWorkspaceTemplateResponses, GetChannelData, GetChannelErrors, GetChannelResponses, GetCredentialData, GetCredentialErrors, GetCredentialResponses, GetDepotData, GetDepotErrors, GetDepotResponses, GetGearConfigData, GetGearConfigErrors, GetGearConfigResponses, GetGearData, GetGearErrors, GetGearInfoData, GetGearInfoErrors, GetGearInfoResponses, GetGearOtaData, GetGearOtaErrors, GetGearOtaResponses, GetGearResponses, GetGearRuntimeData, GetGearRuntimeResponses, GetMiniMaxTenantData, GetMiniMaxTenantErrors, GetMiniMaxTenantResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetVoiceData, GetVoiceErrors, GetVoiceResponses, GetVolcTenantData, GetVolcTenantErrors, GetVolcTenantResponses, GetWorkspaceData, GetWorkspaceErrors, GetWorkspaceResponses, GetWorkspaceTemplateData, GetWorkspaceTemplateErrors, GetWorkspaceTemplateResponses, ListByCertificationData, ListByCertificationErrors, ListByCertificationResponses, ListByFirmwareData, ListByFirmwareErrors, ListByFirmwareResponses, ListByLabelData, ListByLabelErrors, ListByLabelResponses, ListCredentialsData, ListCredentialsErrors, ListCredentialsResponses, ListDepotsData, ListDepotsErrors, ListDepotsResponses, ListGearsData, ListGearsErrors, ListGearsResponses, ListMiniMaxTenantsData, ListMiniMaxTenantsErrors, ListMiniMaxTenantsResponses, ListVoicesData, ListVoicesErrors, ListVoicesResponses, ListVolcTenantsData, ListVolcTenantsErrors, ListVolcTenantsResponses, ListWorkspacesData, ListWorkspacesErrors, ListWorkspacesResponses, ListWorkspaceTemplatesData, ListWorkspaceTemplatesErrors, ListWorkspaceTemplatesResponses, PutChannelData, PutChannelErrors, PutChannelResponses, PutCredentialData, PutCredentialErrors, PutCredentialResponses, PutDepotInfoData, PutDepotInfoErrors, PutDepotInfoResponses, PutGearConfigData, PutGearConfigErrors, PutGearConfigResponses, PutMiniMaxTenantData, PutMiniMaxTenantErrors, PutMiniMaxTenantResponses, PutResourceData, PutResourceErrors, PutResourceResponses, PutVoiceData, PutVoiceErrors, PutVoiceResponses, PutVolcTenantData, PutVolcTenantErrors, PutVolcTenantResponses, PutWorkspaceData, PutWorkspaceErrors, PutWorkspaceResponses, PutWorkspaceTemplateData, PutWorkspaceTemplateErrors, PutWorkspaceTemplateResponses, RefreshGearData, RefreshGearErrors, RefreshGearResponses, ReleaseDepotData, ReleaseDepotErrors, ReleaseDepotResponses, ResolveByImeiData, ResolveByImeiErrors, ResolveByImeiResponses, ResolveBySnData, ResolveBySnErrors, ResolveBySnResponses, RollbackDepotData, RollbackDepotErrors, RollbackDepotResponses, SyncMiniMaxTenantVoicesData, SyncMiniMaxTenantVoicesErrors, SyncMiniMaxTenantVoicesResponses, SyncVolcTenantVoicesData, SyncVolcTenantVoicesErrors, SyncVolcTenantVoicesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -209,6 +209,50 @@ export const putMiniMaxTenant = <ThrowOnError extends boolean = false>(options: 
  * Sync voices from a MiniMax tenant into the global voice catalog
  */
 export const syncMiniMaxTenantVoices = <ThrowOnError extends boolean = false>(options: Options<SyncMiniMaxTenantVoicesData, ThrowOnError>) => (options.client ?? client).post<SyncMiniMaxTenantVoicesResponses, SyncMiniMaxTenantVoicesErrors, ThrowOnError>({ url: '/minimax-tenants/{name}/@sync-voices', ...options });
+
+/**
+ * List all Volcengine tenants
+ */
+export const listVolcTenants = <ThrowOnError extends boolean = false>(options?: Options<ListVolcTenantsData, ThrowOnError>) => (options?.client ?? client).get<ListVolcTenantsResponses, ListVolcTenantsErrors, ThrowOnError>({ url: '/volc-tenants', ...options });
+
+/**
+ * Create a Volcengine tenant
+ */
+export const createVolcTenant = <ThrowOnError extends boolean = false>(options: Options<CreateVolcTenantData, ThrowOnError>) => (options.client ?? client).post<CreateVolcTenantResponses, CreateVolcTenantErrors, ThrowOnError>({
+    url: '/volc-tenants',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a Volcengine tenant
+ */
+export const deleteVolcTenant = <ThrowOnError extends boolean = false>(options: Options<DeleteVolcTenantData, ThrowOnError>) => (options.client ?? client).delete<DeleteVolcTenantResponses, DeleteVolcTenantErrors, ThrowOnError>({ url: '/volc-tenants/{name}', ...options });
+
+/**
+ * Get a Volcengine tenant
+ */
+export const getVolcTenant = <ThrowOnError extends boolean = false>(options: Options<GetVolcTenantData, ThrowOnError>) => (options.client ?? client).get<GetVolcTenantResponses, GetVolcTenantErrors, ThrowOnError>({ url: '/volc-tenants/{name}', ...options });
+
+/**
+ * Create or update a Volcengine tenant
+ */
+export const putVolcTenant = <ThrowOnError extends boolean = false>(options: Options<PutVolcTenantData, ThrowOnError>) => (options.client ?? client).put<PutVolcTenantResponses, PutVolcTenantErrors, ThrowOnError>({
+    url: '/volc-tenants/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Sync voices from a Volcengine tenant into the global voice catalog
+ */
+export const syncVolcTenantVoices = <ThrowOnError extends boolean = false>(options: Options<SyncVolcTenantVoicesData, ThrowOnError>) => (options.client ?? client).post<SyncVolcTenantVoicesResponses, SyncVolcTenantVoicesErrors, ThrowOnError>({ url: '/volc-tenants/{name}/@sync-voices', ...options });
 
 /**
  * List all voices

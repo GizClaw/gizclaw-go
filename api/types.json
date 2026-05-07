@@ -134,6 +134,15 @@
       "MiniMaxGroupID": {
         "$ref": "./type/minimax_group_id.json#/components/schemas/MiniMaxGroupID"
       },
+      "VolcTenantName": {
+        "$ref": "./type/volc_tenant_name.json#/components/schemas/VolcTenantName"
+      },
+      "VolcAppID": {
+        "$ref": "./type/volc_app_id.json#/components/schemas/VolcAppID"
+      },
+      "VolcResourceID": {
+        "$ref": "./type/volc_resource_id.json#/components/schemas/VolcResourceID"
+      },
       "VoiceID": {
         "$ref": "./type/voice_id.json#/components/schemas/VoiceID"
       },
@@ -151,6 +160,9 @@
       },
       "MiniMaxTenant": {
         "$ref": "./type/minimax_tenant.json#/components/schemas/MiniMaxTenant"
+      },
+      "VolcTenant": {
+        "$ref": "./type/volc_tenant.json#/components/schemas/VolcTenant"
       },
       "Voice": {
         "$ref": "./type/voice.json#/components/schemas/Voice"
@@ -182,6 +194,9 @@
       "MiniMaxTenantResource": {
         "$ref": "./resource/minimax_tenant.json#/components/schemas/MiniMaxTenantResource"
       },
+      "VolcTenantResource": {
+        "$ref": "./resource/volc_tenant.json#/components/schemas/VolcTenantResource"
+      },
       "VoiceResource": {
         "$ref": "./resource/voice.json#/components/schemas/VoiceResource"
       },
@@ -199,6 +214,9 @@
       },
       "MiniMaxTenantSpec": {
         "$ref": "./type/minimax_tenant_spec.json#/components/schemas/MiniMaxTenantSpec"
+      },
+      "VolcTenantSpec": {
+        "$ref": "./type/volc_tenant_spec.json#/components/schemas/VolcTenantSpec"
       },
       "VoiceSpec": {
         "$ref": "./type/voice_spec.json#/components/schemas/VoiceSpec"

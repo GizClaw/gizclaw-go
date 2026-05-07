@@ -31,6 +31,7 @@ type Server struct {
 	CredentialStore        kv.Store
 	MiniMaxCredentialStore kv.Store
 	MiniMaxTenantStore     kv.Store
+	VolcTenantStore        kv.Store
 	VoiceStore             kv.Store
 	WorkspaceStore         kv.Store
 	TemplateStore          kv.Store
@@ -171,6 +172,7 @@ func (s *Server) init() error {
 
 	legacySharedStore := s.CredentialStore == nil &&
 		s.MiniMaxTenantStore == nil &&
+		s.VolcTenantStore == nil &&
 		s.VoiceStore == nil &&
 		s.MiniMaxCredentialStore == nil &&
 		s.WorkspaceStore == nil &&
@@ -185,6 +187,7 @@ func (s *Server) init() error {
 	credentialStore := moduleStore(s.CredentialStore, s.GearStore, "credentials")
 	miniMaxCredentialStore := moduleStore(s.MiniMaxCredentialStore, credentialStore, "")
 	miniMaxTenantStore := moduleStore(s.MiniMaxTenantStore, s.GearStore, "minimax-tenants")
+	volcTenantStore := moduleStore(s.VolcTenantStore, miniMaxTenantStore, "volc-tenants")
 	voiceStore := moduleStore(s.VoiceStore, s.GearStore, "voices")
 	workspaceStore := moduleStore(s.WorkspaceStore, s.GearStore, "workspaces")
 	templateStore := moduleStore(s.TemplateStore, s.GearStore, "workspace-templates")
@@ -214,6 +217,7 @@ func (s *Server) init() error {
 	credentialServer := &credential.Server{Store: credentialStore}
 	mmxServer := &mmx.Server{
 		TenantStore:     miniMaxTenantStore,
+		VolcTenantStore: volcTenantStore,
 		VoiceStore:      voiceStore,
 		CredentialStore: miniMaxCredentialStore,
 	}

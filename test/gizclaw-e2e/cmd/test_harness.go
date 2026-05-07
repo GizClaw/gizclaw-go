@@ -28,6 +28,7 @@ import (
 
 const (
 	fixtureListenAddrToken = "__LISTEN_ADDR__"
+	serviceRunWorkspaceArg = "--service-run-workspace"
 	serverStopTimeout      = 5 * time.Second
 )
 
@@ -187,7 +188,7 @@ func (h *Harness) startServerProcess() {
 		h.t.Fatalf("create server log: %v", err)
 	}
 
-	cmd := exec.Command(h.BinaryPath, "serve", h.ServerWorkspace)
+	cmd := exec.Command(h.BinaryPath, serviceRunWorkspaceArg, h.ServerWorkspace)
 	cmd.Dir = h.RepoRoot
 	cmd.Env = h.baseEnv()
 	cmd.Stdout = logFile
