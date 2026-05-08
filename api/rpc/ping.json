@@ -1,0 +1,38 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "RPC Ping Types",
+    "description": "Schemas for the peer.ping RPC method.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "PingRequest": {
+        "type": "object",
+        "required": [
+          "client_send_time"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "client_send_time": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PingResponse": {
+        "type": "object",
+        "required": [
+          "server_time"
+        ],
+        "properties": {
+          "server_time": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    }
+  }
+}

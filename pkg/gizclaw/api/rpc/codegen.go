@@ -1,6 +1,7 @@
 package rpc
 
-//go:generate go tool oapi-codegen -config=codegen_config.yaml -o generated.go ../../../../api/rpc_types.json
+//go:generate go run ./internal/rpcgen -resolve
+//go:generate go tool oapi-codegen -config=codegen_config.yaml -o generated.go rpc_resolved.json
 
 import (
 	"context"

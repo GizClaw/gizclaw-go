@@ -7,11 +7,12 @@ interfaces, and shared API types under `pkg/gizclaw/api/`.
 ## Layout
 
 - `admin_service.json`, `gear_service.json`, `openai_service.json`, `server_public.json`,
-  `peer_public.json`, and `rpc_types.json` define API surfaces or shared
+  `peer_public.json`, and `rpc.json` define API surfaces or shared
   protocol documents.
 - `types.json` collects shared schemas and exposes them through
   `#/components/schemas`.
 - `type/*.json` contains reusable shared schema definitions.
+- `rpc/*.json` contains reusable RPC method schema definitions.
 - `resource/*.json` contains declarative admin resource schemas used by
   `admin apply`, `admin show`, and related resource APIs.
 

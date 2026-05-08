@@ -1,7 +1,7 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "RPC Types",
+    "title": "RPC API",
     "description": "Schemas used by the internal framed RPC protocol.",
     "version": "1.0.0"
   },
@@ -26,7 +26,7 @@
             "type": "string"
           },
           "params": {
-            "$ref": "#/components/schemas/PingRequest"
+            "$ref": "./rpc/ping.json#/components/schemas/PingRequest"
           }
         }
       },
@@ -44,7 +44,7 @@
             "type": "string"
           },
           "result": {
-            "$ref": "#/components/schemas/PingResponse"
+            "$ref": "./rpc/ping.json#/components/schemas/PingResponse"
           },
           "error": {
             "$ref": "#/components/schemas/RPCError"
@@ -63,31 +63,6 @@
           },
           "message": {
             "type": "string"
-          }
-        }
-      },
-      "PingRequest": {
-        "type": "object",
-        "required": [
-          "client_send_time"
-        ],
-        "additionalProperties": false,
-        "properties": {
-          "client_send_time": {
-            "type": "integer",
-            "format": "int64"
-          }
-        }
-      },
-      "PingResponse": {
-        "type": "object",
-        "required": [
-          "server_time"
-        ],
-        "properties": {
-          "server_time": {
-            "type": "integer",
-            "format": "int64"
           }
         }
       }
