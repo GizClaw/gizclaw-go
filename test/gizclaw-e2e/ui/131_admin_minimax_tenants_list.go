@@ -3,6 +3,7 @@
 package ui_test
 
 import (
+	"net/url"
 	"testing"
 )
 
@@ -17,6 +18,17 @@ func adminMiniMaxTenantsListStories() []Story {
 			page.ExpectText("ui-seed-group")
 			page.ExpectText(SeedCredentialName)
 			page.ExpectText("https://example.invalid")
+		},
+	}, {
+		Name: "131-admin-minimax-tenant-detail-cli",
+		Run: func(_ testing.TB, page *Page) {
+			page.GotoAdmin("/providers/minimax-tenants/" + url.PathEscape(SeedMiniMaxTenantName))
+			page.ExpectText(SeedMiniMaxTenantName)
+			page.ClickRole("tab", "CLI")
+			page.ExpectText("MiniMaxTenant Resource Spec")
+			page.ExpectText(`"kind": "MiniMaxTenant"`)
+			page.ExpectText("gizclaw admin minimax-tenants --context <admin-cli-context> get '" + SeedMiniMaxTenantName + "'")
+			page.ExpectText("gizclaw admin minimax-tenants --context <admin-cli-context> sync-voices '" + SeedMiniMaxTenantName + "'")
 		},
 	}}
 }

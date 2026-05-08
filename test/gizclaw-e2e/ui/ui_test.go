@@ -21,6 +21,7 @@ func allStories() []Story {
 		adminChannelDetailStories(),
 		adminCredentialsListStories(),
 		adminMiniMaxTenantsListStories(),
+		adminVolcTenantsListStories(),
 		adminVoicesListStories(),
 		adminWorkspaceTemplatesListStories(),
 		adminWorkspacesListStories(),

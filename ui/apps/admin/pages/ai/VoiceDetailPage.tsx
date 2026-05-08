@@ -1,4 +1,4 @@
-import { ChevronLeft, Copy, RefreshCw } from "lucide-react";
+import { ChevronLeft, RefreshCw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
@@ -6,14 +6,13 @@ import { getResource, getVoice, type Resource, type Voice } from "../../../../pa
 import { expectData, toMessage } from "../../../../packages/components/api";
 import { Badge } from "../../../../packages/components/badge";
 import { Button } from "../../../../packages/components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../packages/components/card";
 import { DetailBlock } from "../../../../packages/components/detail-block";
 import { EmptyState } from "../../../../packages/components/empty-state";
 import { ErrorBanner } from "../../../../packages/components/banners";
 import { PageBreadcrumb } from "../../../../packages/components/page-breadcrumb";
 import { Skeleton } from "../../../../packages/components/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../../packages/components/tabs";
-import { formatDate, formatValue } from "../../lib/format";
+import { ResourceCliPanel } from "../../components/ResourceCliPanel";
 
 export function VoiceDetailPage(): JSX.Element {
   const params = useParams();
@@ -22,7 +21,6 @@ export function VoiceDetailPage(): JSX.Element {
   const [voiceResource, setVoiceResource] = useState<Resource | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
 
   const load = async (): Promise<void> => {
     if (voiceID === "") {
@@ -49,15 +47,6 @@ export function VoiceDetailPage(): JSX.Element {
   useEffect(() => {
     void load();
   }, [voiceID]);
-
-  const copyJSON = async (): Promise<void> => {
-    if (voiceResource === null) {
-      return;
-    }
-    await navigator.clipboard.writeText(JSON.stringify(voiceResource, null, 2));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
-  };
 
   if (voiceID === "") {
     return <EmptyState description="Missing voice ID in the URL." title="Invalid route" />;
@@ -141,34 +130,12 @@ export function VoiceDetailPage(): JSX.Element {
           </TabsContent>
 
           <TabsContent className="space-y-4" value="cli">
-            <Card>
-              <CardHeader>
-                <CardTitle>CLI Commands</CardTitle>
-                <CardDescription>Declarative admin resources use JSON. Use a separate CLI context instead of reusing the UI context.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <pre className="overflow-auto rounded-md bg-muted p-4 text-xs leading-5">
-                  {cliCommands(voice)}
-                </pre>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-                <div className="space-y-1">
-                  <CardTitle>Voice Resource Spec</CardTitle>
-                  <CardDescription>{voiceResourceDescription(voice)}</CardDescription>
-                </div>
-                <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void copyJSON()} size="sm" variant="outline">
-                  <Copy className="size-4" />
-                  {copied ? "Copied" : "Copy Spec"}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <pre className="max-h-[36rem] overflow-auto rounded-md bg-muted p-4 text-xs leading-5">
-                  {JSON.stringify(voiceResource, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
+            <ResourceCliPanel
+              commands={cliCommands(voice)}
+              resource={voiceResource}
+              resourceDescription={voiceResourceDescription(voice)}
+              resourceTitle="Voice Resource Spec"
+            />
           </TabsContent>
         </Tabs>
       )}

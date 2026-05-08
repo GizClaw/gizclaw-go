@@ -1,5 +1,5 @@
 // User story: As an admin operator, I can perform peer actions against real
-// seeded registrations, including approve, refresh, channel save, block, and delete.
+// seeded registrations, including approve, refresh, channel save, block, and reset.
 package ui_test
 
 import (
@@ -13,12 +13,15 @@ func adminPeerActionsStories() []Story {
 			Name: "112-admin-peer-actions",
 			Run: func(_ testing.TB, page *Page) {
 				page.GotoAdmin("/peers/" + url.PathEscape(page.Seed.ActionDevicePublicKey))
+				page.ClickRole("button", "Refresh Peer")
+				page.ExpectText("Peer refreshed.")
+				page.ClickRole("tab", "Edit")
 				page.ClickRole("button", "Approve")
 				page.ExpectText("Peer approved as gear.")
-				page.ClickRole("button", "Refresh")
-				page.ExpectText("Peer refreshed.")
+				page.ClickRole("tab", "Edit")
 				page.ClickRole("button", "Save Channel")
 				page.ExpectText("Desired channel updated to stable.")
+				page.ClickRole("tab", "Edit")
 				page.ClickRole("button", "Block")
 				page.ExpectText("Peer blocked.")
 			},
@@ -27,7 +30,8 @@ func adminPeerActionsStories() []Story {
 			Name: "112-admin-peer-delete",
 			Run: func(_ testing.TB, page *Page) {
 				page.GotoAdmin("/peers/" + url.PathEscape(page.Seed.DeleteDevicePublicKey))
-				page.ClickRole("button", "Delete")
+				page.ClickRole("tab", "Edit")
+				page.ClickRole("button", "Reset")
 				page.ExpectURLSuffix("/peers")
 				page.ExpectText("Peers")
 			},

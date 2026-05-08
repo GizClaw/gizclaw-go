@@ -12,6 +12,7 @@ import { FirmwareUploadPage } from "./pages/firmware/FirmwareUploadPage";
 import { PeerDetailPage } from "./pages/peers/PeerDetailPage";
 import { PeersListPage } from "./pages/peers/PeersListPage";
 import { OverviewPage } from "./pages/overview/OverviewPage";
+import { CredentialDetailPage } from "./pages/providers/CredentialDetailPage";
 import { CredentialsListPage } from "./pages/providers/CredentialsListPage";
 import { MiniMaxTenantDetailPage } from "./pages/providers/MiniMaxTenantDetailPage";
 import { MiniMaxTenantsListPage } from "./pages/providers/MiniMaxTenantsListPage";
@@ -31,6 +32,7 @@ export function AppRoutes(): JSX.Element {
         <Route element={<DepotDetailPage />} path="firmware/:depot" />
         <Route element={<ChannelDetailPage />} path="firmware/:depot/:channel" />
         <Route element={<CredentialsListPage />} path="providers/credentials" />
+        <Route element={<CredentialDetailPage />} path="providers/credentials/:name" />
         <Route element={<MiniMaxTenantsListPage />} path="providers/minimax-tenants" />
         <Route element={<MiniMaxTenantDetailPage />} path="providers/minimax-tenants/:name" />
         <Route element={<VolcTenantsListPage />} path="providers/volc-tenants" />

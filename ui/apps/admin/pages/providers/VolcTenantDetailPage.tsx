@@ -1,8 +1,8 @@
-import { ChevronLeft, Copy, RefreshCw, Save } from "lucide-react";
+import { ChevronLeft, RefreshCw, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
-import { getVolcTenant, listCredentials, putVolcTenant, syncVolcTenantVoices, type Credential, type VolcTenant } from "../../../../packages/adminservice";
+import { getResource, getVolcTenant, listCredentials, putVolcTenant, syncVolcTenantVoices, type Credential, type Resource, type VolcTenant } from "../../../../packages/adminservice";
 import { expectData, toMessage } from "../../../../packages/components/api";
 import { Badge } from "../../../../packages/components/badge";
 import { Button } from "../../../../packages/components/button";
@@ -16,6 +16,7 @@ import { PageBreadcrumb } from "../../../../packages/components/page-breadcrumb"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../../packages/components/select";
 import { Skeleton } from "../../../../packages/components/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../../packages/components/tabs";
+import { ResourceCliPanel } from "../../components/ResourceCliPanel";
 
 type VolcTenantForm = {
   appID: string;
@@ -30,6 +31,7 @@ export function VolcTenantDetailPage(): JSX.Element {
   const params = useParams();
   const tenantName = useMemo(() => decodeRouteParam(params.name ?? ""), [params.name]);
   const [tenant, setTenant] = useState<VolcTenant | null>(null);
+  const [tenantResource, setTenantResource] = useState<Resource | null>(null);
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [form, setForm] = useState<VolcTenantForm>(() => emptyForm());
   const [loading, setLoading] = useState(true);
@@ -37,7 +39,6 @@ export function VolcTenantDetailPage(): JSX.Element {
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [copied, setCopied] = useState(false);
 
   const load = async (): Promise<void> => {
     if (tenantName === "") {
@@ -49,11 +50,13 @@ export function VolcTenantDetailPage(): JSX.Element {
     setError("");
     setNotice("");
     try {
-      const [nextTenant, credentialList] = await Promise.all([
+      const [nextTenant, nextResource, credentialList] = await Promise.all([
         expectData(getVolcTenant({ path: { name: tenantName } })),
+        expectData(getResource({ path: { kind: "VolcTenant", name: tenantName } })),
         expectData(listCredentials({ query: { limit: 200 } })),
       ]);
       setTenant(nextTenant);
+      setTenantResource(nextResource);
       setForm(formFromTenant(nextTenant));
       setCredentials(credentialList.items ?? []);
     } catch (err) {
@@ -91,6 +94,7 @@ export function VolcTenantDetailPage(): JSX.Element {
       );
       setTenant(updated);
       setForm(formFromTenant(updated));
+      setTenantResource(await expectData(getResource({ path: { kind: "VolcTenant", name: updated.name } })));
       setNotice("Volcengine tenant saved.");
     } catch (err) {
       setError(toMessage(err));
@@ -115,15 +119,6 @@ export function VolcTenantDetailPage(): JSX.Element {
     } finally {
       setSyncing(false);
     }
-  };
-
-  const copyJSON = async (): Promise<void> => {
-    if (tenant === null) {
-      return;
-    }
-    await navigator.clipboard.writeText(JSON.stringify(tenant, null, 2));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
   };
 
   if (tenantName === "") {
@@ -182,7 +177,7 @@ export function VolcTenantDetailPage(): JSX.Element {
           <TabsList>
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="edit">Edit</TabsTrigger>
-            <TabsTrigger value="debug">Debug</TabsTrigger>
+            <TabsTrigger value="cli">CLI</TabsTrigger>
           </TabsList>
 
           <TabsContent className="space-y-4" value="summary">
@@ -270,24 +265,13 @@ export function VolcTenantDetailPage(): JSX.Element {
             </Card>
           </TabsContent>
 
-          <TabsContent value="debug">
-            <Card>
-              <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-                <div className="space-y-1">
-                  <CardTitle>Raw Tenant JSON</CardTitle>
-                  <CardDescription>Exact API shape returned by the admin service.</CardDescription>
-                </div>
-                <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void copyJSON()} size="sm" variant="outline">
-                  <Copy className="size-4" />
-                  {copied ? "Copied" : "Copy JSON"}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <pre className="max-h-[36rem] overflow-auto rounded-md bg-muted p-4 text-xs leading-5">
-                  {JSON.stringify(tenant, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
+          <TabsContent className="space-y-4" value="cli">
+            <ResourceCliPanel
+              commands={volcTenantCliCommands(tenant)}
+              resource={tenantResource}
+              resourceDescription="JSON returned by the resource API and accepted by admin apply. Voice synchronization remains a separate CLI action."
+              resourceTitle="VolcTenant Resource Spec"
+            />
           </TabsContent>
         </Tabs>
       )}
@@ -336,4 +320,28 @@ function mergeCredentialOptions(credentials: Credential[], currentName: string):
     return credentials;
   }
   return [{ name: currentName, provider: "unknown", method: "api_key", body: {}, created_at: "", updated_at: "" }, ...credentials];
+}
+
+function volcTenantCliCommands(tenant: VolcTenant): string {
+  const name = shellQuote(tenant.name);
+  return [
+    `# Read this tenant through the Volcengine tenant CLI`,
+    `gizclaw admin volc-tenants --context <admin-cli-context> get ${name}`,
+    ``,
+    `# Re-sync voices from this Volcengine tenant`,
+    `gizclaw admin volc-tenants --context <admin-cli-context> sync-voices ${name}`,
+    ``,
+    `# Show this declarative tenant resource`,
+    `gizclaw admin --context <admin-cli-context> show VolcTenant ${name}`,
+    ``,
+    `# Apply/update from a JSON file`,
+    `gizclaw admin --context <admin-cli-context> apply -f volc-tenant.json`,
+    ``,
+    `# Delete this tenant resource`,
+    `gizclaw admin --context <admin-cli-context> delete VolcTenant ${name}`,
+  ].join("\n");
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
 }

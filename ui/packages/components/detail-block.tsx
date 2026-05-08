@@ -12,15 +12,15 @@ interface DetailBlockProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const DetailBlock = React.forwardRef<HTMLDivElement, DetailBlockProps>(
   ({ className, items, title, ...props }, ref) => (
-    <Card ref={ref} className={className} {...props}>
+    <Card ref={ref} className={cn("min-w-0", className)} {...props}>
       <CardHeader className="pb-3">
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {items.map(([label, value]) => (
-          <div className="flex items-start justify-between gap-4 text-sm" key={label}>
-            <span className="text-muted-foreground">{label}</span>
-            <span className={cn("max-w-[16rem] text-right text-foreground")}>{formatDetailValue(value)}</span>
+          <div className="flex min-w-0 items-start justify-between gap-4 text-sm" key={label}>
+            <span className="shrink-0 text-muted-foreground">{label}</span>
+            <span className={cn("block min-w-0 max-w-[min(16rem,65%)] break-words text-right text-foreground")}>{formatDetailValue(value)}</span>
           </div>
         ))}
       </CardContent>

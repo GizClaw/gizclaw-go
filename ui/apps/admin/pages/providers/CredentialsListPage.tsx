@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
+import type { KeyboardEvent, MouseEvent } from "react";
 import { Eye, EyeOff, RefreshCw, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { Badge } from "../../../../packages/components/badge";
 import { Button } from "../../../../packages/components/button";
@@ -16,6 +18,7 @@ import { useCursorListPage } from "../../hooks/useCursorListPage";
 import { formatDate } from "../../lib/format";
 
 export function CredentialsListPage(): JSX.Element {
+  const navigate = useNavigate();
   const [selectedCredential, setSelectedCredential] = useState<Credential | null>(null);
   const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh } = useCursorListPage<Credential>(async (query) => {
     const result = await expectData(listCredentials({ query }));
@@ -25,6 +28,26 @@ export function CredentialsListPage(): JSX.Element {
       nextCursor: result.next_cursor ?? null,
     };
   });
+
+  const openCredential = (name: string): void => {
+    navigate(`/providers/credentials/${encodeURIComponent(name)}`);
+  };
+
+  const handleRowKeyDown = (event: KeyboardEvent<HTMLTableRowElement>, name: string): void => {
+    if (isInteractiveTarget(event.target)) {
+      return;
+    }
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+    event.preventDefault();
+    openCredential(name);
+  };
+
+  const openBodyDialog = (event: MouseEvent<HTMLButtonElement>, credential: Credential): void => {
+    event.stopPropagation();
+    setSelectedCredential(credential);
+  };
 
   return (
     <div className="space-y-6">
@@ -105,7 +128,14 @@ export function CredentialsListPage(): JSX.Element {
                 </TableHeader>
                 <TableBody>
                   {items.map((credential) => (
-                    <TableRow key={credential.name}>
+                    <TableRow
+                      className="cursor-pointer hover:bg-muted/40"
+                      key={credential.name}
+                      onClick={() => openCredential(credential.name)}
+                      onKeyDown={(event) => handleRowKeyDown(event, credential.name)}
+                      role="link"
+                      tabIndex={0}
+                    >
                       <TableCell className="font-medium">{credential.name}</TableCell>
                       <TableCell>{credential.provider}</TableCell>
                       <TableCell>
@@ -116,7 +146,7 @@ export function CredentialsListPage(): JSX.Element {
                         <Button
                           aria-label={`View body keys for ${credential.name}`}
                           className="h-8 min-w-fit gap-2 px-2 text-xs"
-                          onClick={() => setSelectedCredential(credential)}
+                          onClick={(event) => openBodyDialog(event, credential)}
                           type="button"
                           variant="outline"
                         >
@@ -225,4 +255,8 @@ function maskCredentialBodyValue(value: string): string {
     return `${value.slice(0, 1)}****${value.slice(-1)}`;
   }
   return `${value.slice(0, 6)}******${value.slice(-4)}`;
+}
+
+function isInteractiveTarget(target: EventTarget): boolean {
+  return target instanceof Element && target.closest("a,button,input,select,textarea") !== null;
 }

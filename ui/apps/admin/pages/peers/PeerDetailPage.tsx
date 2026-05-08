@@ -1,6 +1,5 @@
-import type { ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, Ban, Check, ChevronLeft, Database, Download, RefreshCw, Save, Server, Trash2, Upload } from "lucide-react";
+import { Ban, Check, ChevronLeft, RefreshCw, Save, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { expectData, toMessage } from "../../../../packages/components/api";
@@ -15,12 +14,15 @@ import {
   approveGear,
   blockGear,
   deleteGear,
+  getResource,
   putGearConfig,
   refreshGear,
   type Configuration,
   type GearRole,
+  type Resource,
 } from "../../../../packages/adminservice";
 
+import { ResourceCliPanel } from "../../components/ResourceCliPanel";
 import { DetailBlock } from "../../../../packages/components/detail-block";
 import { ErrorBanner, NoticeBanner } from "../../../../packages/components/banners";
 import { EmptyState } from "../../../../packages/components/empty-state";
@@ -49,6 +51,7 @@ export function PeerDetailPage(): JSX.Element {
   const [peerActionBusy, setPeerActionBusy] = useState<string | null>(null);
   const [approveRole, setApproveRole] = useState<GearRole>("gear");
   const [configChannel, setConfigChannel] = useState("stable");
+  const [gearConfigResource, setGearConfigResource] = useState<Resource | null>(null);
 
   const registration = detail.data?.registration ?? null;
   const isBlocked = registration?.status === "blocked";
@@ -62,6 +65,23 @@ export function PeerDetailPage(): JSX.Element {
       setApproveRole(detail.data.registration.role);
     }
   }, [detail.data?.config?.firmware?.channel, detail.data?.registration?.role]);
+
+  const loadGearConfigResource = useCallback(async () => {
+    if (publicKey === "") {
+      setGearConfigResource(null);
+      return;
+    }
+    try {
+      const resource = await expectData(getResource({ path: { kind: "GearConfig", name: publicKey } }));
+      setGearConfigResource(resource);
+    } catch {
+      setGearConfigResource(null);
+    }
+  }, [publicKey]);
+
+  useEffect(() => {
+    void loadGearConfigResource();
+  }, [loadGearConfigResource]);
 
   const runPeerAction = useCallback(async (name: string, action: () => Promise<void>, successMessage: string) => {
     setPeerActionBusy(name);
@@ -179,10 +199,11 @@ export function PeerDetailPage(): JSX.Element {
           }),
         );
         await detail.reload();
+        await loadGearConfigResource();
       },
       `Desired channel updated to ${configChannel}.`,
     );
-  }, [configChannel, detail.data?.config, detail, publicKey, runPeerAction]);
+  }, [configChannel, detail.data?.config, detail, loadGearConfigResource, publicKey, runPeerAction]);
 
   if (publicKey === "") {
     return <EmptyState description="Missing peer public key in the URL." title="Invalid route" />;
@@ -234,109 +255,16 @@ export function PeerDetailPage(): JSX.Element {
         <div className="space-y-4">
           {peerNotice !== null ? <NoticeBanner message={peerNotice.message} tone={peerNotice.tone} /> : null}
 
-          <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Peer Actions</CardTitle>
-                <CardDescription>Approve, restore, block, refresh, or remove this peer registration.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField
-                  description={
-                    isBlocked
-                      ? "Choose the role to assign when this peer is restored."
-                      : "Choose the role to assign when this peer moves into service, or block it from this same flow."
-                  }
-                  label={isBlocked ? "Restore role" : "Approval role"}
-                >
-                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-                    <Select onValueChange={(value) => setApproveRole(value as GearRole)} value={approveRole}>
-                      <SelectTrigger id="approve-role">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gear">gear</SelectItem>
-                        <SelectItem value="server">server</SelectItem>
-                        <SelectItem value="admin">admin</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <div className="flex flex-wrap gap-2">
-                      {isBlocked ? (
-                        <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleUnblock()} type="button">
-                          <Check className="size-4" />
-                          Unblock
-                        </Button>
-                      ) : (
-                        <>
-                          <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleApprove()} type="button">
-                            <Check className="size-4" />
-                            {isApproved ? "Save Role" : "Approve"}
-                          </Button>
-                          <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleBlock()} type="button" variant="outline">
-                            <Ban className="size-4" />
-                            Block
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </FormField>
-
-                <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
-                  <div className="space-y-1">
-                    <div className="text-sm font-medium">Operational actions</div>
-                    <p className="text-sm leading-6 text-muted-foreground">
-                      Pull the latest state from the peer or remove the registration entirely.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button disabled={peerActionBusy !== null} onClick={() => void handleRefreshPeer()} type="button" variant="outline">
-                      <RefreshCw className="size-4" />
-                      Refresh
-                    </Button>
-                    <Button disabled={peerActionBusy !== null} onClick={() => void handleDeletePeer()} type="button" variant="outline">
-                      <Trash2 className="size-4" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Firmware Policy</CardTitle>
-                <CardDescription>Set the desired firmware channel for this peer.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <FormField description="This controls which release stream the peer should follow." label="Desired channel">
-                  <Select onValueChange={setConfigChannel} value={configChannel}>
-                    <SelectTrigger id="peer-channel">
-                      <SelectValue placeholder="Select channel" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="stable">stable</SelectItem>
-                      <SelectItem value="beta">beta</SelectItem>
-                      <SelectItem value="testing">testing</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </FormField>
-                <div className="flex justify-end border-t pt-4">
-                  <Button disabled={peerActionBusy !== null} onClick={() => void handleSaveChannel()} type="button">
-                    <Save className="size-4" />
-                    Save Channel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="space-y-1">
+          <div className="flex min-w-0 flex-col gap-3 rounded-xl border bg-muted/30 p-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0 space-y-1">
               <div className="text-base font-semibold">{peerTitle(detail.data?.info, registration.public_key)}</div>
               <div className="text-sm text-muted-foreground break-all">{registration.public_key}</div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button disabled={peerActionBusy !== null} onClick={() => void handleRefreshPeer()} size="sm" type="button" variant="outline">
+                <RefreshCw className="size-4" />
+                Refresh Peer
+              </Button>
               <Badge variant="outline">{registration.role}</Badge>
               {registration.auto_registered ? <Badge variant="secondary">Auto Registered</Badge> : null}
               {detail.data?.runtime?.online ? <Badge variant="success">Online</Badge> : <Badge variant="outline">Offline</Badge>}
@@ -344,16 +272,14 @@ export function PeerDetailPage(): JSX.Element {
           </div>
 
           <Tabs className="space-y-4" defaultValue="info">
-            <TabsList className="grid h-auto w-full grid-cols-5">
+            <TabsList className="grid h-auto w-full grid-cols-3 lg:w-[26rem]">
               <TabsTrigger value="info">Info</TabsTrigger>
-              <TabsTrigger value="config">Config</TabsTrigger>
-              <TabsTrigger value="runtime">Runtime</TabsTrigger>
-              <TabsTrigger value="ota">OTA</TabsTrigger>
-              <TabsTrigger value="raw">Raw</TabsTrigger>
+              <TabsTrigger value="edit">Edit</TabsTrigger>
+              <TabsTrigger value="cli">CLI</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="info">
-              <div className="grid gap-4 lg:grid-cols-2">
+            <TabsContent className="space-y-4" value="info">
+              <div className="grid gap-4 xl:grid-cols-2">
                 <DetailBlock
                   items={[
                     ["Name", detail.data?.info?.name],
@@ -361,34 +287,46 @@ export function PeerDetailPage(): JSX.Element {
                     ["Manufacturer", detail.data?.info?.hardware?.manufacturer],
                     ["Model", detail.data?.info?.hardware?.model],
                     ["Revision", detail.data?.info?.hardware?.hardware_revision],
+                    ["Depot", detail.data?.info?.hardware?.depot],
+                    ["Firmware", detail.data?.info?.hardware?.firmware_semver],
                   ]}
                   title="Peer Info"
                 />
                 <DetailBlock
                   items={[
+                    ["Public Key", registration.public_key],
+                    ["Role", registration.role],
+                    ["Status", registration.status],
+                    ["Auto registered", registration.auto_registered ? "Yes" : "No"],
                     ["Created", registration.created_at],
                     ["Approved", registration.approved_at],
                     ["Updated", registration.updated_at],
-                    ["Role", registration.role],
-                    ["Status", registration.status],
                   ]}
                   title="Registration"
                 />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="config">
-              <div className="grid gap-4 lg:grid-cols-2">
                 <DetailBlock
                   items={[
                     ["Channel", detail.data?.config?.firmware?.channel],
-                    ["Depot", detail.data?.info?.hardware?.depot],
-                    ["Firmware", detail.data?.info?.hardware?.firmware_semver],
+                    ["Resource kind", "GearConfig"],
+                    ["Resource name", registration.public_key],
                     ["Certifications", String(detail.data?.config?.certifications?.length ?? 0)],
                   ]}
                   title="Configuration"
                 />
-                <Card>
+                <DetailBlock
+                  items={[
+                    ["Online", detail.data?.runtime?.online ? "Yes" : "No"],
+                    ["Last Seen", formatDate(detail.data?.runtime?.last_seen_at)],
+                    ["Last Address", detail.data?.runtime?.last_addr],
+                    ["RX Bytes", formatBytes(detail.data?.runtime?.rx_bytes)],
+                    ["TX Bytes", formatBytes(detail.data?.runtime?.tx_bytes)],
+                  ]}
+                  title="Runtime"
+                />
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-2">
+                <Card className="min-w-0">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Certifications</CardTitle>
                     <CardDescription>Attached compliance metadata.</CardDescription>
@@ -408,66 +346,144 @@ export function PeerDetailPage(): JSX.Element {
                     )}
                   </CardContent>
                 </Card>
+
+                <Card className="min-w-0">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">OTA Summary</CardTitle>
+                    <CardDescription>Latest OTA state reported for this peer.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <pre className="max-h-80 min-w-0 overflow-x-auto rounded-lg border bg-muted/50 p-4 text-xs leading-6 text-foreground">
+                      {JSON.stringify(detail.data?.ota ?? null, null, 2)}
+                    </pre>
+                  </CardContent>
+                </Card>
               </div>
-            </TabsContent>
 
-            <TabsContent value="runtime">
-              <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
-                <RuntimeMetric icon={Activity} label="Online" value={detail.data?.runtime?.online ? "Yes" : "No"} />
-                <RuntimeMetric icon={Server} label="Last Seen" value={formatDate(detail.data?.runtime?.last_seen_at)} />
-                <RuntimeMetric icon={Database} label="Last Address" value={detail.data?.runtime?.last_addr ?? "—"} />
-                <RuntimeMetric icon={Download} label="RX Bytes" value={formatBytes(detail.data?.runtime?.rx_bytes)} />
-                <RuntimeMetric icon={Upload} label="TX Bytes" value={formatBytes(detail.data?.runtime?.tx_bytes)} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="ota">
-              <Card>
+              <Card className="min-w-0">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Raw Detail</CardTitle>
+                  <CardDescription>Combined registration, info, config, runtime, and OTA payloads.</CardDescription>
+                </CardHeader>
                 <CardContent className="pt-6">
-                  <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 text-xs leading-6 text-foreground">
-                    {JSON.stringify(detail.data?.ota ?? null, null, 2)}
-                  </pre>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="raw">
-              <Card>
-                <CardContent className="pt-6">
-                  <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 text-xs leading-6 text-foreground">
+                  <pre className="max-h-[32rem] min-w-0 overflow-x-auto rounded-lg border bg-muted/50 p-4 text-xs leading-6 text-foreground">
                     {JSON.stringify(detail.data, null, 2)}
                   </pre>
                 </CardContent>
               </Card>
             </TabsContent>
+
+            <TabsContent className="space-y-4" value="edit">
+              <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Peer Actions</CardTitle>
+                    <CardDescription>Approve, restore, block, refresh, or reset this peer registration.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      description={
+                        isBlocked
+                          ? "Choose the role to assign when this peer is restored."
+                          : "Choose the role to assign when this peer moves into service, or block it from this same flow."
+                      }
+                      label={isBlocked ? "Restore role" : "Approval role"}
+                    >
+                      <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                        <Select onValueChange={(value) => setApproveRole(value as GearRole)} value={approveRole}>
+                          <SelectTrigger id="approve-role">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="gear">gear</SelectItem>
+                            <SelectItem value="server">server</SelectItem>
+                            <SelectItem value="admin">admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="flex flex-wrap gap-2">
+                          {isBlocked ? (
+                            <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleUnblock()} type="button">
+                              <Check className="size-4" />
+                              Unblock
+                            </Button>
+                          ) : (
+                            <>
+                              <Button className="w-full md:w-auto" disabled={peerActionBusy !== null} onClick={() => void handleApprove()} type="button">
+                                <Check className="size-4" />
+                                {isApproved ? "Save Role" : "Approve"}
+                              </Button>
+                              <Button
+                                className="w-full md:w-auto"
+                                disabled={peerActionBusy !== null}
+                                onClick={() => void handleBlock()}
+                                type="button"
+                                variant="outline"
+                              >
+                                <Ban className="size-4" />
+                                Block
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </FormField>
+
+                    <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium">Registration reset</div>
+                        <p className="text-sm leading-6 text-muted-foreground">Reset the peer registration back to the unapproved state.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button disabled={peerActionBusy !== null} onClick={() => void handleDeletePeer()} type="button" variant="outline">
+                          <Trash2 className="size-4" />
+                          Reset
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Firmware Policy</CardTitle>
+                    <CardDescription>Set the desired firmware channel for this peer.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField description="This controls which release stream the peer should follow." label="Desired channel">
+                      <Select onValueChange={setConfigChannel} value={configChannel}>
+                        <SelectTrigger id="peer-channel">
+                          <SelectValue placeholder="Select channel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="stable">stable</SelectItem>
+                          <SelectItem value="beta">beta</SelectItem>
+                          <SelectItem value="testing">testing</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormField>
+                    <div className="flex justify-end border-t pt-4">
+                      <Button disabled={peerActionBusy !== null} onClick={() => void handleSaveChannel()} type="button">
+                        <Save className="size-4" />
+                        Save Channel
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent className="space-y-4" value="cli">
+              <ResourceCliPanel
+                commands={peerCliCommands(registration.public_key, registration.role, configChannel)}
+                resource={gearConfigResource}
+                resourceDescription="JSON returned by the resource API and accepted by admin apply. GearConfig manages desired peer configuration."
+                resourceTitle="GearConfig Resource Spec"
+              />
+            </TabsContent>
           </Tabs>
         </div>
       )}
     </div>
-  );
-}
-
-function RuntimeMetric({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-}): JSX.Element {
-  return (
-    <Card className="shadow-sm">
-      <CardHeader className="gap-3 pb-4">
-        <div className="flex size-10 items-center justify-center rounded-lg border bg-primary/5 text-primary">
-          <Icon className="size-4" />
-        </div>
-        <div className="space-y-1">
-          <CardDescription>{label}</CardDescription>
-          <CardTitle className="text-base">{value}</CardTitle>
-        </div>
-      </CardHeader>
-    </Card>
   );
 }
 
@@ -487,4 +503,42 @@ function formatBytes(value: number | undefined): string {
   }
   const precision = size >= 10 || unitIndex === 0 ? 0 : 1;
   return `${size.toFixed(precision)} ${units[unitIndex]}`;
+}
+
+function peerCliCommands(publicKey: string, role: GearRole, channel: string): string {
+  const key = shellQuote(publicKey);
+  const nextRole = shellQuote(role === "unspecified" ? "gear" : role);
+  const nextChannel = shellQuote(channel);
+  return [
+    `# Read this peer registration`,
+    `gizclaw admin gears --context <admin-cli-context> get ${key}`,
+    ``,
+    `# Read peer snapshots`,
+    `gizclaw admin gears --context <admin-cli-context> info ${key}`,
+    `gizclaw admin gears --context <admin-cli-context> config ${key}`,
+    `gizclaw admin gears --context <admin-cli-context> runtime ${key}`,
+    `gizclaw admin gears --context <admin-cli-context> ota ${key}`,
+    ``,
+    `# Refresh state from the device-side API`,
+    `gizclaw admin gears --context <admin-cli-context> refresh ${key}`,
+    ``,
+    `# Approve or block this peer`,
+    `gizclaw admin gears --context <admin-cli-context> approve ${key} ${nextRole}`,
+    `gizclaw admin gears --context <admin-cli-context> block ${key}`,
+    ``,
+    `# Update desired configuration`,
+    `gizclaw admin gears --context <admin-cli-context> set-firmware-channel ${key} ${nextChannel}`,
+    `gizclaw admin gears --context <admin-cli-context> put-config ${key} --file config.json`,
+    ``,
+    `# Show/apply the declarative GearConfig resource`,
+    `gizclaw admin --context <admin-cli-context> show GearConfig ${key}`,
+    `gizclaw admin --context <admin-cli-context> apply -f gear-config.json`,
+    ``,
+    `# Reset this peer registration`,
+    `gizclaw admin gears --context <admin-cli-context> delete ${key}`,
+  ].join("\n");
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
 }
