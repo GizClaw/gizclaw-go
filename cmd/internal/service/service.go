@@ -272,9 +272,8 @@ func newServiceConfig(spec Spec) *kservice.Config {
 		Arguments:        []string{InternalRunFlag, spec.WorkspaceRoot},
 		WorkingDirectory: spec.WorkspaceRoot,
 		Option: kservice.KeyValue{
-			"KeepAlive":  true,
-			"RunAtLoad":  false,
-			"UserService": true,
+			"KeepAlive": true,
+			"RunAtLoad": false,
 		},
 	}
 }
