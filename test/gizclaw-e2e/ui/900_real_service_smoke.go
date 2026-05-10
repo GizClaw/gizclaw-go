@@ -16,8 +16,13 @@ func realServiceSmokeStories() []Story {
 
 			page.GotoPlay("/")
 			page.ClickRole("button", "Start Video Call")
+			page.ClickRole("button", "Logs")
 			page.ExpectText("rpc.response")
-			page.ExpectText("build_commit")
+			page.ExpectText("peer.ping")
+			page.ClickRole("button", "Close RPC logs")
+			page.ClickRole("button", "Get Info")
+			page.ClickRole("button", "Logs")
+			page.ExpectText("Seeded UI Device")
 		},
 	}}
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	adminui "github.com/GizClaw/gizclaw-go/ui/apps/admin"
 	playui "github.com/GizClaw/gizclaw-go/ui/apps/play"
+	"github.com/pion/webrtc/v4"
 	"github.com/playwright-community/playwright-go"
 
 	clitest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/cmd"
@@ -381,6 +382,7 @@ func startTestUI(t testing.TB, name string, client *gizclaw.Client, uiFS fs.FS) 
 	mux := http.NewServeMux()
 	mux.Handle("/api/", client.ProxyHandler())
 	mux.Handle("/api", client.ProxyHandler())
+	registerTestPlayWebRTCRoute(mux, client)
 	mux.Handle("/", staticWithSPAFallback(uiFS))
 
 	server := httptest.NewServer(mux)
@@ -399,12 +401,102 @@ func startErrorTestUI(t testing.TB, name string, uiFS fs.FS) string {
 	mux.HandleFunc("/api", func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
 	})
+	mux.HandleFunc("/webrtc/offer", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
+	})
 	mux.Handle("/", staticWithSPAFallback(uiFS))
 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 	t.Logf("%s test UI listening on %s", name, server.URL)
 	return server.URL
+}
+
+type testPlayWebRTCOfferRequest struct {
+	SDP  string `json:"sdp"`
+	Type string `json:"type"`
+}
+
+type testPlayWebRTCAnswerResponse struct {
+	SDP  string `json:"sdp"`
+	Type string `json:"type"`
+}
+
+func registerTestPlayWebRTCRoute(mux *http.ServeMux, client *gizclaw.Client) {
+	mux.HandleFunc("/webrtc/offer", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		handleTestPlayWebRTCOffer(w, r, client)
+	})
+}
+
+func handleTestPlayWebRTCOffer(w http.ResponseWriter, r *http.Request, client *gizclaw.Client) {
+	var req testPlayWebRTCOfferRequest
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		http.Error(w, "invalid offer json", http.StatusBadRequest)
+		return
+	}
+	if req.Type != webrtc.SDPTypeOffer.String() || strings.TrimSpace(req.SDP) == "" {
+		http.Error(w, "invalid webrtc offer", http.StatusBadRequest)
+		return
+	}
+	pc, err := webrtc.NewPeerConnection(webrtc.Configuration{})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	registration, err := client.RegisterTo(pc)
+	if err != nil {
+		_ = pc.Close()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
+		switch state {
+		case webrtc.PeerConnectionStateFailed, webrtc.PeerConnectionStateDisconnected, webrtc.PeerConnectionStateClosed:
+			_ = registration.Close()
+			_ = pc.Close()
+		}
+	})
+	if err := pc.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: req.SDP}); err != nil {
+		_ = registration.Close()
+		_ = pc.Close()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	answer, err := pc.CreateAnswer(nil)
+	if err != nil {
+		_ = registration.Close()
+		_ = pc.Close()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	gatherComplete := webrtc.GatheringCompletePromise(pc)
+	if err := pc.SetLocalDescription(answer); err != nil {
+		_ = registration.Close()
+		_ = pc.Close()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	select {
+	case <-gatherComplete:
+	case <-r.Context().Done():
+		_ = registration.Close()
+		_ = pc.Close()
+		return
+	}
+	local := pc.LocalDescription()
+	if local == nil {
+		_ = registration.Close()
+		_ = pc.Close()
+		http.Error(w, "missing local description", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(testPlayWebRTCAnswerResponse{SDP: local.SDP, Type: local.Type.String()})
 }
 
 func staticWithSPAFallback(uiFS fs.FS) http.Handler {

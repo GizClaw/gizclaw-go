@@ -17,6 +17,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(
 		newCreateCmd(),
 		newUseCmd(),
+		newDeleteCmd(),
 		newListCmd(),
 		newInfoCmd(),
 		newShowCmd(),
@@ -86,6 +87,25 @@ func newUseCmd() *cobra.Command {
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Switched to context %q.\n", args[0])
+			return nil
+		},
+	}
+}
+
+func newDeleteCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "delete <name>",
+		Short: "Delete a context",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			store, err := clicontext.DefaultStore()
+			if err != nil {
+				return err
+			}
+			if err := store.Delete(args[0]); err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "Deleted context %q.\n", args[0])
 			return nil
 		},
 	}

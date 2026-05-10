@@ -64,6 +64,15 @@ func TestStoreCreateDuplicate(t *testing.T) {
 	}
 }
 
+func TestStoreCreateRejectsInvalidName(t *testing.T) {
+	s := &Store{Root: t.TempDir()}
+	for _, bad := range []string{"", "../escape", "a/b", ".", ".."} {
+		if err := s.Create(bad, "addr", testServerPublicKey); err == nil {
+			t.Fatalf("Create(%q) should fail", bad)
+		}
+	}
+}
+
 func TestStoreCurrentAutoSet(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
 	if err := s.Create("first", "addr", testServerPublicKey); err != nil {
@@ -119,6 +128,61 @@ func TestStoreUseNonExistent(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
 	if err := s.Use("nope"); err == nil {
 		t.Fatal("Use(nonexistent) should fail")
+	}
+}
+
+func TestStoreDeleteNonCurrent(t *testing.T) {
+	s := &Store{Root: t.TempDir()}
+	if err := s.Create("first", "addr", testServerPublicKey); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Create("second", "addr", testServerPublicKey); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete("second"); err != nil {
+		t.Fatalf("Delete err=%v", err)
+	}
+	if _, err := os.Stat(filepath.Join(s.Root, "second")); !os.IsNotExist(err) {
+		t.Fatalf("deleted context still exists or stat failed: %v", err)
+	}
+	_, current, err := s.List()
+	if err != nil {
+		t.Fatalf("List err=%v", err)
+	}
+	if current != "first" {
+		t.Fatalf("current=%q, want first", current)
+	}
+}
+
+func TestStoreDeleteCurrentClearsCurrent(t *testing.T) {
+	s := &Store{Root: t.TempDir()}
+	if err := s.Create("only", "addr", testServerPublicKey); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Delete("only"); err != nil {
+		t.Fatalf("Delete current err=%v", err)
+	}
+	if current, err := s.Current(); err != nil || current != nil {
+		t.Fatalf("Current after delete = %v, err=%v; want nil", current, err)
+	}
+	_, currentName, err := s.List()
+	if err != nil {
+		t.Fatalf("List err=%v", err)
+	}
+	if currentName != "" {
+		t.Fatalf("List current=%q, want empty", currentName)
+	}
+}
+
+func TestStoreDeleteRejectsInvalidOrMissing(t *testing.T) {
+	s := &Store{Root: t.TempDir()}
+	for _, bad := range []string{"", "../escape", "a/b", ".", ".."} {
+		if err := s.Delete(bad); err == nil {
+			t.Fatalf("Delete(%q) should fail", bad)
+		}
+	}
+	if err := s.Delete("missing"); err == nil {
+		t.Fatal("Delete(missing) should fail")
 	}
 }
 

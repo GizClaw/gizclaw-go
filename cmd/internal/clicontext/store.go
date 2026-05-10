@@ -31,6 +31,9 @@ func DefaultStore() (*Store, error) {
 
 // Create creates a new CLI context directory with a generated key pair and config.
 func (s *Store) Create(name, serverAddr, serverPubKey string) error {
+	if err := validateName(name); err != nil {
+		return err
+	}
 	dir := filepath.Join(s.Root, name)
 	if _, err := os.Stat(dir); err == nil {
 		return fmt.Errorf("clicontext: %q already exists", name)
@@ -67,6 +70,9 @@ func (s *Store) Create(name, serverAddr, serverPubKey string) error {
 
 // Use switches the current CLI context by updating the symlink.
 func (s *Store) Use(name string) error {
+	if err := validateName(name); err != nil {
+		return err
+	}
 	dir := filepath.Join(s.Root, name)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		return fmt.Errorf("clicontext: %q does not exist", name)
@@ -76,6 +82,36 @@ func (s *Store) Use(name string) error {
 	_ = os.Remove(link)
 	if err := os.Symlink(name, link); err != nil {
 		return fmt.Errorf("clicontext: symlink: %w", err)
+	}
+	return nil
+}
+
+// Delete removes a CLI context by name. If the deleted context is current, the
+// current symlink is removed and no replacement context is selected.
+func (s *Store) Delete(name string) error {
+	if err := validateName(name); err != nil {
+		return err
+	}
+	dir := filepath.Join(s.Root, name)
+	info, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("clicontext: %q does not exist", name)
+	}
+	if err != nil {
+		return fmt.Errorf("clicontext: stat %q: %w", name, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("clicontext: %q is not a context directory", name)
+	}
+
+	if err := os.RemoveAll(dir); err != nil {
+		return fmt.Errorf("clicontext: delete %q: %w", name, err)
+	}
+	link := filepath.Join(s.Root, currentLink)
+	if target, err := os.Readlink(link); err == nil && filepath.Base(filepath.Clean(target)) == name {
+		if err := os.Remove(link); err != nil && !os.IsNotExist(err) {
+			return fmt.Errorf("clicontext: remove current link: %w", err)
+		}
 	}
 	return nil
 }
@@ -100,8 +136,8 @@ func (s *Store) Current() (*CLIContext, error) {
 
 // LoadByName loads a CLI context by its plain name (no path separators allowed).
 func (s *Store) LoadByName(name string) (*CLIContext, error) {
-	if name == "" || strings.ContainsAny(name, "/\\") || name == "." || name == ".." {
-		return nil, fmt.Errorf("clicontext: invalid name %q", name)
+	if err := validateName(name); err != nil {
+		return nil, err
 	}
 	dir := filepath.Join(s.Root, name)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
@@ -137,4 +173,11 @@ func (s *Store) List() (names []string, current string, err error) {
 	}
 	sort.Strings(names)
 	return names, current, nil
+}
+
+func validateName(name string) error {
+	if name == "" || strings.ContainsAny(name, "/\\") || name == "." || name == ".." {
+		return fmt.Errorf("clicontext: invalid name %q", name)
+	}
+	return nil
 }

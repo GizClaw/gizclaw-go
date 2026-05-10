@@ -12,7 +12,7 @@ func playShellStories() []Story {
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoPlay("/")
 			page.ExpectText("WebRTC Play")
-			page.ExpectText("RPC Log")
+			page.ExpectText("Logs")
 			page.ExpectText("Controls")
 			page.ExpectText("Start Video Call")
 			page.ExpectText("Dark")

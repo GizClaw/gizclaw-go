@@ -13,7 +13,8 @@ func playActionErrorsStories() []Story {
 			page.GotoErrorPlay("/")
 			page.ClickRole("button", "Start Video Call")
 			page.ExpectText("RPC failed")
-			page.ExpectText("rpc.error")
+			page.ClickRole("button", "Logs")
+			page.ExpectText("webrtc.error")
 			page.ExpectText("no gizclaw client configured for error scenario")
 		},
 	}}
