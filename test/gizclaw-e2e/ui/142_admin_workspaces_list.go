@@ -1,5 +1,5 @@
 // User story: As an admin operator, I can browse seeded workspaces and verify
-// their associated workspace template.
+// their associated workflow.
 package ui_test
 
 import (
@@ -13,7 +13,7 @@ func adminWorkspacesListStories() []Story {
 			page.GotoAdmin("/ai/workspaces")
 			page.ExpectText("Workspaces")
 			page.ExpectText(SeedWorkspaceName)
-			page.ExpectText(SeedWorkspaceTemplateName)
+			page.ExpectText(SeedWorkflowName)
 			page.ExpectText("Refresh")
 		},
 	}}

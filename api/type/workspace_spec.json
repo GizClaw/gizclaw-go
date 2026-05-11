@@ -11,11 +11,11 @@
       "WorkspaceSpec": {
         "type": "object",
         "required": [
-          "workspace_template_name"
+          "workflow_name"
         ],
         "properties": {
-          "workspace_template_name": {
-            "$ref": "./workspace_template_name.json#/components/schemas/WorkspaceTemplateName"
+          "workflow_name": {
+            "$ref": "./workflow_name.json#/components/schemas/WorkflowName"
           },
           "parameters": {
             "type": "object",

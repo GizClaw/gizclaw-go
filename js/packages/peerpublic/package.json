@@ -1,0 +1,9 @@
+{
+  "name": "@gizclaw/peerpublic",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./client.gen": "./client.gen.ts"
+  }
+}

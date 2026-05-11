@@ -226,8 +226,8 @@ Cases:
 - `506-admin-voices`
   - verify voice list/get and filters through admin CLI
   - status: implemented
-- `507-admin-workspace-templates`
-  - verify workspace template list/get through admin CLI
+- `507-admin-workflows`
+  - verify workflow list/get through admin CLI
   - status: implemented
 - `508-admin-workspaces`
   - verify workspace list/get through admin CLI

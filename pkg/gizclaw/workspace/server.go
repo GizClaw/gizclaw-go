@@ -16,7 +16,7 @@ import (
 
 var (
 	workspacesRoot = kv.Key{"by-name"}
-	templatesRoot  = kv.Key{"by-name"}
+	workflowsRoot  = kv.Key{"by-name"}
 )
 
 const (
@@ -26,7 +26,7 @@ const (
 
 type Server struct {
 	Store         kv.Store
-	TemplateStore kv.Store
+	WorkflowStore kv.Store
 }
 
 type WorkspaceAdminService interface {
@@ -68,11 +68,11 @@ func (s *Server) CreateWorkspace(ctx context.Context, request adminservice.Creat
 	if err != nil {
 		return adminservice.CreateWorkspace400JSONResponse(apitypes.NewErrorResponse("INVALID_WORKSPACE", err.Error())), nil
 	}
-	templateStore, err := s.templateStore()
+	workflowStore, err := s.workflowStore()
 	if err != nil {
 		return adminservice.CreateWorkspace500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	if err := validateReferences(ctx, templateStore, normalized); err != nil {
+	if err := validateReferences(ctx, workflowStore, normalized); err != nil {
 		return adminservice.CreateWorkspace400JSONResponse(apitypes.NewErrorResponse("INVALID_WORKSPACE", err.Error())), nil
 	}
 	if _, err := store.Get(ctx, workspaceKey(string(normalized.Name))); err == nil {
@@ -82,11 +82,11 @@ func (s *Server) CreateWorkspace(ctx context.Context, request adminservice.Creat
 	}
 	now := time.Now().UTC()
 	workspace := apitypes.Workspace{
-		CreatedAt:             now,
-		Name:                  normalized.Name,
-		Parameters:            cloneParameters(normalized.Parameters),
-		UpdatedAt:             now,
-		WorkspaceTemplateName: normalized.WorkspaceTemplateName,
+		CreatedAt:    now,
+		Name:         normalized.Name,
+		Parameters:   cloneParameters(normalized.Parameters),
+		UpdatedAt:    now,
+		WorkflowName: normalized.WorkflowName,
 	}
 	if err := writeWorkspace(ctx, store, workspace); err != nil {
 		return adminservice.CreateWorkspace500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
@@ -153,11 +153,11 @@ func (s *Server) PutWorkspace(ctx context.Context, request adminservice.PutWorks
 	if err != nil {
 		return adminservice.PutWorkspace400JSONResponse(apitypes.NewErrorResponse("INVALID_WORKSPACE", err.Error())), nil
 	}
-	templateStore, err := s.templateStore()
+	workflowStore, err := s.workflowStore()
 	if err != nil {
 		return adminservice.PutWorkspace500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	if err := validateReferences(ctx, templateStore, normalized); err != nil {
+	if err := validateReferences(ctx, workflowStore, normalized); err != nil {
 		return adminservice.PutWorkspace400JSONResponse(apitypes.NewErrorResponse("INVALID_WORKSPACE", err.Error())), nil
 	}
 	previous, err := getWorkspace(ctx, store, name)
@@ -166,11 +166,11 @@ func (s *Server) PutWorkspace(ctx context.Context, request adminservice.PutWorks
 	}
 	now := time.Now().UTC()
 	workspace := apitypes.Workspace{
-		CreatedAt:             now,
-		Name:                  normalized.Name,
-		Parameters:            cloneParameters(normalized.Parameters),
-		UpdatedAt:             now,
-		WorkspaceTemplateName: normalized.WorkspaceTemplateName,
+		CreatedAt:    now,
+		Name:         normalized.Name,
+		Parameters:   cloneParameters(normalized.Parameters),
+		UpdatedAt:    now,
+		WorkflowName: normalized.WorkflowName,
 	}
 	if err == nil {
 		workspace.CreatedAt = previous.CreatedAt
@@ -229,21 +229,21 @@ func normalizeWorkspaceUpsert(in adminservice.WorkspaceUpsert, expectedName stri
 	if expectedName != "" && name != expectedName {
 		return adminservice.WorkspaceUpsert{}, fmt.Errorf("name %q must match path name %q", name, expectedName)
 	}
-	templateName := strings.TrimSpace(string(in.WorkspaceTemplateName))
-	if templateName == "" {
-		return adminservice.WorkspaceUpsert{}, errors.New("workspace_template_name is required")
+	workflowName := strings.TrimSpace(string(in.WorkflowName))
+	if workflowName == "" {
+		return adminservice.WorkspaceUpsert{}, errors.New("workflow_name is required")
 	}
 	return adminservice.WorkspaceUpsert{
-		Name:                  apitypes.WorkspaceName(name),
-		Parameters:            cloneParameters(in.Parameters),
-		WorkspaceTemplateName: apitypes.WorkspaceTemplateName(templateName),
+		Name:         apitypes.WorkspaceName(name),
+		Parameters:   cloneParameters(in.Parameters),
+		WorkflowName: apitypes.WorkflowName(workflowName),
 	}, nil
 }
 
 func validateReferences(ctx context.Context, store kv.Store, workspace adminservice.WorkspaceUpsert) error {
-	if _, err := store.Get(ctx, templateReferenceKey(string(workspace.WorkspaceTemplateName))); err != nil {
+	if _, err := store.Get(ctx, workflowReferenceKey(string(workspace.WorkflowName))); err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return fmt.Errorf("workspace template %q not found", workspace.WorkspaceTemplateName)
+			return fmt.Errorf("workflow %q not found", workspace.WorkflowName)
 		}
 		return err
 	}
@@ -254,8 +254,8 @@ func workspaceKey(name string) kv.Key {
 	return append(append(kv.Key{}, workspacesRoot...), escapeStoreSegment(name))
 }
 
-func templateReferenceKey(name string) kv.Key {
-	return append(append(kv.Key{}, templatesRoot...), escapeStoreSegment(name))
+func workflowReferenceKey(name string) kv.Key {
+	return append(append(kv.Key{}, workflowsRoot...), escapeStoreSegment(name))
 }
 
 func escapeStoreSegment(value string) string {
@@ -323,15 +323,15 @@ func (s *Server) store() (kv.Store, error) {
 	return s.Store, nil
 }
 
-func (s *Server) templateStore() (kv.Store, error) {
+func (s *Server) workflowStore() (kv.Store, error) {
 	if s == nil {
-		return nil, errors.New("workspace template store not configured")
+		return nil, errors.New("workflow store not configured")
 	}
-	if s.TemplateStore != nil {
-		return s.TemplateStore, nil
+	if s.WorkflowStore != nil {
+		return s.WorkflowStore, nil
 	}
 	if s.Store == nil {
-		return nil, errors.New("workspace template store not configured")
+		return nil, errors.New("workflow store not configured")
 	}
 	return s.Store, nil
 }

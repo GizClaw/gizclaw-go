@@ -19,15 +19,15 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
-	adminui "github.com/GizClaw/gizclaw-go/ui/apps/admin"
-	playui "github.com/GizClaw/gizclaw-go/ui/apps/play"
+	adminui "github.com/GizClaw/gizclaw-go/cmd/ui/admin"
+	playui "github.com/GizClaw/gizclaw-go/cmd/ui/play"
 	"github.com/pion/webrtc/v4"
 )
 
 const uiAPIProxyTimeout = 30 * time.Second
 
 func ListenAndServeAdminUI(ctxName, addr string, out io.Writer) error {
-	return listenAndServeUI(ctxName, addr, "GizClaw Admin UI", adminui.FS(), out, nil, nil)
+	return listenAndServeUI(ctxName, addr, "GizClaw Admin UI", adminui.FS(), out, nil, registerAdminUIRoutes)
 }
 
 func ListenAndServePlayUI(ctxName, addr string, out io.Writer) error {
@@ -290,6 +290,16 @@ func registerPlayUIRoutes(ctxName string) func(*http.ServeMux) {
 			handlePlayWebRTCOffer(w, r, ctxName)
 		})
 	}
+}
+
+func registerAdminUIRoutes(mux *http.ServeMux) {
+	redirect := func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/ai/workflows", http.StatusFound)
+	}
+	mux.HandleFunc("/workspace-templates", redirect)
+	mux.HandleFunc("/workspace-templates/", redirect)
+	mux.HandleFunc("/ai/workspace-templates", redirect)
+	mux.HandleFunc("/ai/workspace-templates/", redirect)
 }
 
 func handlePlayWebRTCOffer(w http.ResponseWriter, r *http.Request, ctxName string) {

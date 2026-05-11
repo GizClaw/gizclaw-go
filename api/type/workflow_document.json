@@ -1,0 +1,16 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workflow Document Type",
+    "description": "WorkflowDocument schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "WorkflowDocument": {
+        "$ref": "./workflows/flowcraft.json#/components/schemas/FlowcraftWorkflow"
+      }
+    }
+  }
+}

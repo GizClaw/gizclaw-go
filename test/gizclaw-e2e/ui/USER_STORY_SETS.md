@@ -97,7 +97,7 @@ Each case file should describe:
 ### `140-*` Admin AI Catalogs
 
 - `140-admin-voices-list`
-- `141-admin-workspace-templates-list`
+- `141-admin-workflows-list`
 - `142-admin-workspaces-list`
 
 ### `150-*` Admin Navigation Smoke
@@ -124,7 +124,7 @@ Cases:
 
 - `900_real_service_smoke.go`
   - require the already running `gizclaw service`
-  - seed admin/device registrations, firmware, provider resources, voices, templates, and workspaces
+  - seed admin/device registrations, firmware, provider resources, voices, workflows, and workspaces
   - start embedded Admin and Play UI test servers without `gizclaw * --listen`
   - verify Admin pages and Play actions without Playwright route mocks or TypeScript specs
   - status: implemented

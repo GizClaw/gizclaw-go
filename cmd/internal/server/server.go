@@ -85,14 +85,11 @@ func New(cfg Config) (srv *CmdServer, err error) {
 		if gizServer.WorkspaceStore, err = ss.KV(cfg.Workspaces.Store); err != nil {
 			return nil, fmt.Errorf("server: workspaces store: %w", err)
 		}
-		if gizServer.WorkspaceTemplateStore, err = ss.KV(cfg.Workspaces.TemplatesStore); err != nil {
-			return nil, fmt.Errorf("server: workspace template reference store: %w", err)
-		}
 		if gizServer.DepotMetadataStore, err = ss.KV(cfg.Depots.MetadataStore); err != nil {
 			return nil, fmt.Errorf("server: firmware metadata store: %w", err)
 		}
-		if gizServer.TemplateStore, err = ss.KV(cfg.WorkspaceTemplates.Store); err != nil {
-			return nil, fmt.Errorf("server: workspace templates store: %w", err)
+		if gizServer.WorkflowStore, err = ss.KV(cfg.Workflows.Store); err != nil {
+			return nil, fmt.Errorf("server: workflows store: %w", err)
 		}
 	}
 	return &CmdServer{Server: gizServer, stores: ss}, nil

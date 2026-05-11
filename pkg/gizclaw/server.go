@@ -9,10 +9,11 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/mmx"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/modelcatalog"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspacetemplate"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -32,10 +33,10 @@ type Server struct {
 	MiniMaxCredentialStore kv.Store
 	MiniMaxTenantStore     kv.Store
 	VolcTenantStore        kv.Store
+	ModelStore             kv.Store
 	VoiceStore             kv.Store
 	WorkspaceStore         kv.Store
-	TemplateStore          kv.Store
-	WorkspaceTemplateStore kv.Store
+	WorkflowStore          kv.Store
 	PublicLoginStore       kv.Store
 	BuildCommit            string
 	ServerPublicKey        giznet.PublicKey
@@ -173,11 +174,11 @@ func (s *Server) init() error {
 	legacySharedStore := s.CredentialStore == nil &&
 		s.MiniMaxTenantStore == nil &&
 		s.VolcTenantStore == nil &&
+		s.ModelStore == nil &&
 		s.VoiceStore == nil &&
 		s.MiniMaxCredentialStore == nil &&
 		s.WorkspaceStore == nil &&
-		s.TemplateStore == nil &&
-		s.WorkspaceTemplateStore == nil &&
+		s.WorkflowStore == nil &&
 		s.DepotMetadataStore == nil &&
 		s.PublicLoginStore == nil
 	gearStore := s.GearStore
@@ -188,10 +189,10 @@ func (s *Server) init() error {
 	miniMaxCredentialStore := moduleStore(s.MiniMaxCredentialStore, credentialStore, "")
 	miniMaxTenantStore := moduleStore(s.MiniMaxTenantStore, s.GearStore, "minimax-tenants")
 	volcTenantStore := moduleStore(s.VolcTenantStore, miniMaxTenantStore, "volc-tenants")
+	modelStore := moduleStore(s.ModelStore, s.GearStore, "models")
 	voiceStore := moduleStore(s.VoiceStore, s.GearStore, "voices")
 	workspaceStore := moduleStore(s.WorkspaceStore, s.GearStore, "workspaces")
-	templateStore := moduleStore(s.TemplateStore, s.GearStore, "workspace-templates")
-	workspaceTemplateStore := moduleStore(s.WorkspaceTemplateStore, templateStore, "")
+	workflowStore := moduleStore(s.WorkflowStore, s.GearStore, "workflows")
 	depotMetadataStore := moduleStore(s.DepotMetadataStore, s.GearStore, "firmware-depots")
 	publicLoginStore := moduleStore(s.PublicLoginStore, s.GearStore, "public-login")
 
@@ -212,9 +213,10 @@ func (s *Server) init() error {
 			return resolveGearTarget(ctx, gearsServer, publicKey)
 		},
 	}
-	workspaceTemplateServer := &workspacetemplate.Server{Store: templateStore}
-	workspaceServer := &workspace.Server{Store: workspaceStore, TemplateStore: workspaceTemplateStore}
+	workflowServer := &workflow.Server{Store: workflowStore}
+	workspaceServer := &workspace.Server{Store: workspaceStore, WorkflowStore: workflowStore}
 	credentialServer := &credential.Server{Store: credentialStore}
+	modelServer := &modelcatalog.Server{Store: modelStore}
 	mmxServer := &mmx.Server{
 		TenantStore:     miniMaxTenantStore,
 		VolcTenantStore: volcTenantStore,
@@ -222,24 +224,26 @@ func (s *Server) init() error {
 		CredentialStore: miniMaxCredentialStore,
 	}
 	resourceManager := resourcemanager.New(resourcemanager.Services{
-		Credentials:        credentialServer,
-		Gears:              gearsServer,
-		MiniMax:            mmxServer,
-		Workspaces:         workspaceServer,
-		WorkspaceTemplates: workspaceTemplateServer,
+		Credentials: credentialServer,
+		Gears:       gearsServer,
+		Models:      modelServer,
+		MiniMax:     mmxServer,
+		Workspaces:  workspaceServer,
+		Workflows:   workflowServer,
 	})
 
 	s.manager = manager
 	s.peerService = &PeerService{
 		manager: manager,
 		admin: &adminService{
-			CredentialAdminService:        credentialServer,
-			FirmwareAdminService:          firmwareServer,
-			GearsAdminService:             gearsServer,
-			MiniMaxAdminService:           mmxServer,
-			WorkspaceAdminService:         workspaceServer,
-			WorkspaceTemplateAdminService: workspaceTemplateServer,
-			ResourceManager:               resourceManager,
+			CredentialAdminService: credentialServer,
+			FirmwareAdminService:   firmwareServer,
+			GearsAdminService:      gearsServer,
+			AdminService:           modelServer,
+			MiniMaxAdminService:    mmxServer,
+			WorkspaceAdminService:  workspaceServer,
+			WorkflowAdminService:   workflowServer,
+			ResourceManager:        resourceManager,
 		},
 		gear: &gearAPIBundle{
 			FirmwareGearService: firmwareServer,

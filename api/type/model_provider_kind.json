@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Model Provider Kind Type",
+    "description": "ModelProviderKind schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ModelProviderKind": {
+        "type": "string",
+        "description": "Model provider kind",
+        "example": "openai-compatible"
+      }
+    }
+  }
+}

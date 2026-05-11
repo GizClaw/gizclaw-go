@@ -93,11 +93,11 @@ func mustResource(t *testing.T, raw string) apitypes.Resource {
 	return resource
 }
 
-func mustWorkflowTemplateDocument(t *testing.T, raw string) apitypes.WorkflowTemplateDocument {
+func mustWorkflowDocument(t *testing.T, raw string) apitypes.WorkflowDocument {
 	t.Helper()
-	var doc apitypes.WorkflowTemplateDocument
+	var doc apitypes.WorkflowDocument
 	if err := json.Unmarshal([]byte(raw), &doc); err != nil {
-		t.Fatalf("unmarshal workflow template document: %v", err)
+		t.Fatalf("unmarshal workflow document: %v", err)
 	}
 	return doc
 }

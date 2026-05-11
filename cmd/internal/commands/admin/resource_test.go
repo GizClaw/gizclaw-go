@@ -120,7 +120,7 @@ func TestAdminResourceApplyReadsStdin(t *testing.T) {
 		"kind": "Workspace",
 		"metadata": {"name": "demo-workspace"},
 		"spec": {
-			"workspace_template_name": "demo-template",
+			"workflow_name": "demo-workflow",
 			"parameters": {"mode": "test"}
 		}
 	}`)

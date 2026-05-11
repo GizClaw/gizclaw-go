@@ -19,8 +19,8 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
-	adminui "github.com/GizClaw/gizclaw-go/ui/apps/admin"
-	playui "github.com/GizClaw/gizclaw-go/ui/apps/play"
+	adminui "github.com/GizClaw/gizclaw-go/cmd/ui/admin"
+	playui "github.com/GizClaw/gizclaw-go/cmd/ui/play"
 	"github.com/pion/webrtc/v4"
 	"github.com/playwright-community/playwright-go"
 
@@ -36,7 +36,7 @@ const (
 	SeedVolcCredentialName    = itest.SeedVolcCredentialName
 	SeedVolcTenantName        = itest.SeedVolcTenantName
 	SeedVolcVoiceID           = itest.SeedVolcVoiceID
-	SeedWorkspaceTemplateName = itest.SeedWorkspaceTemplateName
+	SeedWorkflowName = itest.SeedWorkflowName
 	SeedWorkspaceName         = itest.SeedWorkspaceName
 )
 

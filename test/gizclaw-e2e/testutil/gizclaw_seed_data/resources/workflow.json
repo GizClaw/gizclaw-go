@@ -1,0 +1,16 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "Workflow",
+  "metadata": {
+    "name": "ui-seed-workflow"
+  },
+  "spec": {
+    "apiVersion": "gizclaw.flowcraft/v1alpha1",
+    "kind": "FlowcraftWorkflow",
+    "metadata": {
+      "name": "ui-seed-workflow",
+      "description": "Seeded workflow for UI real-service tests"
+    },
+    "spec": {}
+  }
+}

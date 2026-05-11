@@ -12,7 +12,7 @@
         "type": "object",
         "required": [
           "name",
-          "workspace_template_name",
+          "workflow_name",
           "created_at",
           "updated_at"
         ],
@@ -20,8 +20,8 @@
           "name": {
             "$ref": "./workspace_name.json#/components/schemas/WorkspaceName"
           },
-          "workspace_template_name": {
-            "$ref": "./workspace_template_name.json#/components/schemas/WorkspaceTemplateName"
+          "workflow_name": {
+            "$ref": "./workflow_name.json#/components/schemas/WorkflowName"
           },
           "parameters": {
             "type": "object",

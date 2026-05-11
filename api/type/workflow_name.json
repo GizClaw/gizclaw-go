@@ -1,0 +1,17 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workflow Name Type",
+    "description": "WorkflowName schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "WorkflowName": {
+        "type": "string",
+        "description": "Workflow name"
+      }
+    }
+  }
+}

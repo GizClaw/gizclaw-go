@@ -1,0 +1,69 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Model Type",
+    "description": "Model schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Model": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "source",
+          "provider",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "./model_id.json#/components/schemas/ModelID"
+          },
+          "kind": {
+            "$ref": "./model_kind.json#/components/schemas/ModelKind"
+          },
+          "source": {
+            "$ref": "./model_source.json#/components/schemas/ModelSource"
+          },
+          "provider": {
+            "$ref": "./model_provider.json#/components/schemas/ModelProvider"
+          },
+          "name": {
+            "type": "string",
+            "example": "MiniMax M2.5"
+          },
+          "description": {
+            "type": "string",
+            "example": "OpenAI-compatible chat model"
+          },
+          "provider_data": {
+            "type": "object",
+            "description": "Provider-specific data keyed by provider kind.",
+            "additionalProperties": true,
+            "example": {
+              "openai-compatible": {
+                "base_url": "https://api.minimax.chat/v1",
+                "upstream_model": "MiniMax-M2.5"
+              }
+            }
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

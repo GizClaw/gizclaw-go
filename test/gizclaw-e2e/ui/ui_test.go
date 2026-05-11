@@ -23,7 +23,7 @@ func allStories() []Story {
 		adminMiniMaxTenantsListStories(),
 		adminVolcTenantsListStories(),
 		adminVoicesListStories(),
-		adminWorkspaceTemplatesListStories(),
+		adminWorkflowsListStories(),
 		adminWorkspacesListStories(),
 		adminSidebarNavigationStories(),
 		playShellStories(),

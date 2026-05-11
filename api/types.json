@@ -125,6 +125,27 @@
       "CredentialBody": {
         "$ref": "./type/credential_body.json#/components/schemas/CredentialBody"
       },
+      "Model": {
+        "$ref": "./type/model.json#/components/schemas/Model"
+      },
+      "ModelID": {
+        "$ref": "./type/model_id.json#/components/schemas/ModelID"
+      },
+      "ModelKind": {
+        "$ref": "./type/model_kind.json#/components/schemas/ModelKind"
+      },
+      "ModelSource": {
+        "$ref": "./type/model_source.json#/components/schemas/ModelSource"
+      },
+      "ModelProviderKind": {
+        "$ref": "./type/model_provider_kind.json#/components/schemas/ModelProviderKind"
+      },
+      "ModelProviderName": {
+        "$ref": "./type/model_provider_name.json#/components/schemas/ModelProviderName"
+      },
+      "ModelProvider": {
+        "$ref": "./type/model_provider.json#/components/schemas/ModelProvider"
+      },
       "MiniMaxTenantName": {
         "$ref": "./type/minimax_tenant_name.json#/components/schemas/MiniMaxTenantName"
       },
@@ -167,8 +188,8 @@
       "Voice": {
         "$ref": "./type/voice.json#/components/schemas/Voice"
       },
-      "WorkspaceTemplateName": {
-        "$ref": "./type/workspace_template_name.json#/components/schemas/WorkspaceTemplateName"
+      "WorkflowName": {
+        "$ref": "./type/workflow_name.json#/components/schemas/WorkflowName"
       },
       "WorkspaceName": {
         "$ref": "./type/workspace_name.json#/components/schemas/WorkspaceName"
@@ -191,6 +212,9 @@
       "CredentialResource": {
         "$ref": "./resource/credential.json#/components/schemas/CredentialResource"
       },
+      "ModelResource": {
+        "$ref": "./resource/model.json#/components/schemas/ModelResource"
+      },
       "MiniMaxTenantResource": {
         "$ref": "./resource/minimax_tenant.json#/components/schemas/MiniMaxTenantResource"
       },
@@ -200,8 +224,8 @@
       "VoiceResource": {
         "$ref": "./resource/voice.json#/components/schemas/VoiceResource"
       },
-      "WorkspaceTemplateResource": {
-        "$ref": "./resource/workspace_template.json#/components/schemas/WorkspaceTemplateResource"
+      "WorkflowResource": {
+        "$ref": "./resource/workflow.json#/components/schemas/WorkflowResource"
       },
       "WorkspaceResource": {
         "$ref": "./resource/workspace.json#/components/schemas/WorkspaceResource"
@@ -211,6 +235,9 @@
       },
       "CredentialSpec": {
         "$ref": "./type/credential_spec.json#/components/schemas/CredentialSpec"
+      },
+      "ModelSpec": {
+        "$ref": "./type/model_spec.json#/components/schemas/ModelSpec"
       },
       "MiniMaxTenantSpec": {
         "$ref": "./type/minimax_tenant_spec.json#/components/schemas/MiniMaxTenantSpec"
@@ -239,23 +266,20 @@
       "Workspace": {
         "$ref": "./type/workspace.json#/components/schemas/Workspace"
       },
-      "WorkflowTemplateDocument": {
-        "$ref": "./type/workflow_template_document.json#/components/schemas/WorkflowTemplateDocument"
+      "WorkflowDocument": {
+        "$ref": "./type/workflow_document.json#/components/schemas/WorkflowDocument"
       },
-      "TemplateMetadata": {
-        "$ref": "./type/template_metadata.json#/components/schemas/TemplateMetadata"
+      "WorkflowAPIVersion": {
+        "$ref": "./type/workflow_api_version.json#/components/schemas/WorkflowAPIVersion"
       },
-      "SingleAgentGraphWorkflowTemplate": {
-        "$ref": "./type/single_agent_graph_workflow_template.json#/components/schemas/SingleAgentGraphWorkflowTemplate"
+      "WorkflowMetadata": {
+        "$ref": "./type/workflow_metadata.json#/components/schemas/WorkflowMetadata"
       },
-      "SingleAgentGraphWorkflowSpec": {
-        "$ref": "./type/single_agent_graph_workflow_spec.json#/components/schemas/SingleAgentGraphWorkflowSpec"
+      "FlowcraftWorkflow": {
+        "$ref": "./type/workflows/flowcraft.json#/components/schemas/FlowcraftWorkflow"
       },
-      "MultiAgentGraphWorkflowTemplate": {
-        "$ref": "./type/multi_agent_graph_workflow_template.json#/components/schemas/MultiAgentGraphWorkflowTemplate"
-      },
-      "MultiAgentGraphWorkflowSpec": {
-        "$ref": "./type/multi_agent_graph_workflow_spec.json#/components/schemas/MultiAgentGraphWorkflowSpec"
+      "FlowcraftWorkflowSpec": {
+        "$ref": "./type/workflows/flowcraft.json#/components/schemas/FlowcraftWorkflowSpec"
       }
     }
   }

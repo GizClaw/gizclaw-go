@@ -27,8 +27,8 @@ func TestAdminWorkspacesUserStory(t *testing.T) {
 
 	get := h.RunCLI("admin", "workspaces", "get", "workspace-a", "--context", "admin-a")
 	get.MustSucceed(t)
-	if !strings.Contains(get.Stdout, `"workspace_template_name":"demo-assistant"`) {
-		t.Fatalf("workspaces get missing template name:\n%s", get.Stdout)
+	if !strings.Contains(get.Stdout, `"workflow_name":"demo-assistant"`) {
+		t.Fatalf("workspaces get missing workflow name:\n%s", get.Stdout)
 	}
 }
 
@@ -43,18 +43,18 @@ func seedWorkspace(t *testing.T, h *clitest.Harness) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	templateResp, err := api.CreateWorkspaceTemplateWithResponse(ctx, templateDocument(t, "demo-assistant"))
+	workflowResp, err := api.CreateWorkflowWithResponse(ctx, workflowDocument(t, "demo-assistant"))
 	if err != nil {
-		t.Fatalf("seed workspace template: %v", err)
+		t.Fatalf("seed workflow: %v", err)
 	}
-	if templateResp.JSON200 == nil {
-		t.Fatalf("seed workspace template got status %d: %s", templateResp.StatusCode(), strings.TrimSpace(string(templateResp.Body)))
+	if workflowResp.JSON200 == nil {
+		t.Fatalf("seed workflow got status %d: %s", workflowResp.StatusCode(), strings.TrimSpace(string(workflowResp.Body)))
 	}
 	params := map[string]interface{}{"city": "shanghai"}
 	workspaceResp, err := api.CreateWorkspaceWithResponse(ctx, adminservice.WorkspaceUpsert{
-		Name:                  "workspace-a",
-		WorkspaceTemplateName: "demo-assistant",
-		Parameters:            &params,
+		Name:         "workspace-a",
+		WorkflowName: "demo-assistant",
+		Parameters:   &params,
 	})
 	if err != nil {
 		t.Fatalf("seed workspace: %v", err)
@@ -64,19 +64,15 @@ func seedWorkspace(t *testing.T, h *clitest.Harness) {
 	}
 }
 
-func templateDocument(t *testing.T, name string) apitypes.WorkflowTemplateDocument {
+func workflowDocument(t *testing.T, name string) apitypes.WorkflowDocument {
 	t.Helper()
 
-	var doc apitypes.WorkflowTemplateDocument
-	if err := doc.FromSingleAgentGraphWorkflowTemplate(apitypes.SingleAgentGraphWorkflowTemplate{
-		ApiVersion: apitypes.WorkflowTemplateAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       apitypes.SingleAgentGraphWorkflowTemplateKindSingleAgentGraphWorkflowTemplate,
-		Metadata: apitypes.TemplateMetadata{
+	return apitypes.WorkflowDocument{
+		ApiVersion: apitypes.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
+		Kind:       apitypes.FlowcraftWorkflowKindFlowcraftWorkflow,
+		Metadata: apitypes.WorkflowMetadata{
 			Name: name,
 		},
-		Spec: apitypes.SingleAgentGraphWorkflowSpec{},
-	}); err != nil {
-		t.Fatalf("build template document: %v", err)
+		Spec: apitypes.FlowcraftWorkflowSpec{},
 	}
-	return doc
 }

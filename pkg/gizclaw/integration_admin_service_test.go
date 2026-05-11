@@ -94,7 +94,7 @@ func TestIntegrationAdminServiceFirmwareLifecycle(t *testing.T) {
 	}
 }
 
-func TestIntegrationAdminServiceWorkspaceTemplateLifecycle(t *testing.T) {
+func TestIntegrationAdminServiceWorkflowLifecycle(t *testing.T) {
 	ts := startTestServer(t)
 
 	admin := newTestClient(t, ts)
@@ -104,46 +104,42 @@ func TestIntegrationAdminServiceWorkspaceTemplateLifecycle(t *testing.T) {
 		t.Fatalf("admin register error: %v", err)
 	}
 
-	createDoc := mustWorkflowTemplateDocument(t, `{
+	createDoc := mustWorkflowDocument(t, `{
 		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "SingleAgentGraphWorkflowTemplate",
+		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "demo-assistant",
-			"description": "single-agent graph workflow"
+			"description": "flowcraft workflow"
 		},
 		"spec": {}
 	}`)
-	created, err := createWorkspaceTemplate(context.Background(), admin, createDoc)
+	created, err := createWorkflow(context.Background(), admin, createDoc)
 	if err != nil {
-		t.Fatalf("CreateWorkspaceTemplate error: %v", err)
+		t.Fatalf("CreateWorkflow error: %v", err)
 	}
-	if kind, err := created.Discriminator(); err != nil || kind != "SingleAgentGraphWorkflowTemplate" {
-		t.Fatalf("CreateWorkspaceTemplate discriminator = %q, %v", kind, err)
+	if created.Kind != apitypes.FlowcraftWorkflowKindFlowcraftWorkflow {
+		t.Fatalf("CreateWorkflow kind = %q", created.Kind)
 	}
 
-	items, err := listWorkspaceTemplates(context.Background(), admin)
+	items, err := listWorkflows(context.Background(), admin)
 	if err != nil {
-		t.Fatalf("ListWorkspaceTemplates error: %v", err)
+		t.Fatalf("ListWorkflows error: %v", err)
 	}
 	if len(items) != 1 {
-		t.Fatalf("ListWorkspaceTemplates len = %d", len(items))
+		t.Fatalf("ListWorkflows len = %d", len(items))
 	}
 
-	got, err := getWorkspaceTemplate(context.Background(), admin, "demo-assistant")
+	got, err := getWorkflow(context.Background(), admin, "demo-assistant")
 	if err != nil {
-		t.Fatalf("GetWorkspaceTemplate error: %v", err)
+		t.Fatalf("GetWorkflow error: %v", err)
 	}
-	gotSingle, err := got.AsSingleAgentGraphWorkflowTemplate()
-	if err != nil {
-		t.Fatalf("AsSingleAgentGraphWorkflowTemplate error: %v", err)
-	}
-	if gotSingle.Metadata.Name != "demo-assistant" {
-		t.Fatalf("GetWorkspaceTemplate name = %q", gotSingle.Metadata.Name)
+	if got.Metadata.Name != "demo-assistant" {
+		t.Fatalf("GetWorkflow name = %q", got.Metadata.Name)
 	}
 
-	updateDoc := mustWorkflowTemplateDocument(t, `{
+	updateDoc := mustWorkflowDocument(t, `{
 		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "SingleAgentGraphWorkflowTemplate",
+		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "demo-assistant",
 			"description": "updated description"
@@ -154,23 +150,19 @@ func TestIntegrationAdminServiceWorkspaceTemplateLifecycle(t *testing.T) {
 			}
 		}
 	}`)
-	updated, err := putWorkspaceTemplate(context.Background(), admin, "demo-assistant", updateDoc)
+	updated, err := putWorkflow(context.Background(), admin, "demo-assistant", updateDoc)
 	if err != nil {
-		t.Fatalf("PutWorkspaceTemplate error: %v", err)
+		t.Fatalf("PutWorkflow error: %v", err)
 	}
-	updatedSingle, err := updated.AsSingleAgentGraphWorkflowTemplate()
-	if err != nil {
-		t.Fatalf("updated.AsSingleAgentGraphWorkflowTemplate error: %v", err)
-	}
-	if updatedSingle.Metadata.Description == nil || *updatedSingle.Metadata.Description != "updated description" {
-		t.Fatalf("PutWorkspaceTemplate description = %#v", updatedSingle.Metadata.Description)
+	if updated.Metadata.Description == nil || *updated.Metadata.Description != "updated description" {
+		t.Fatalf("PutWorkflow description = %#v", updated.Metadata.Description)
 	}
 
-	if _, err := deleteWorkspaceTemplate(context.Background(), admin, "demo-assistant"); err != nil {
-		t.Fatalf("DeleteWorkspaceTemplate error: %v", err)
+	if _, err := deleteWorkflow(context.Background(), admin, "demo-assistant"); err != nil {
+		t.Fatalf("DeleteWorkflow error: %v", err)
 	}
-	if _, err := getWorkspaceTemplate(context.Background(), admin, "demo-assistant"); err == nil {
-		t.Fatal("GetWorkspaceTemplate after delete expected error")
+	if _, err := getWorkflow(context.Background(), admin, "demo-assistant"); err == nil {
+		t.Fatal("GetWorkflow after delete expected error")
 	}
 }
 
@@ -184,21 +176,21 @@ func TestIntegrationAdminServiceWorkspaceLifecycle(t *testing.T) {
 		t.Fatalf("admin register error: %v", err)
 	}
 
-	templateDoc := mustWorkflowTemplateDocument(t, `{
+	workflowDoc := mustWorkflowDocument(t, `{
 		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "SingleAgentGraphWorkflowTemplate",
+		"kind": "FlowcraftWorkflow",
 		"metadata": {
-			"name": "demo-template"
+			"name": "demo-workflow"
 		},
 		"spec": {}
 	}`)
-	if _, err := createWorkspaceTemplate(context.Background(), admin, templateDoc); err != nil {
-		t.Fatalf("CreateWorkspaceTemplate error: %v", err)
+	if _, err := createWorkflow(context.Background(), admin, workflowDoc); err != nil {
+		t.Fatalf("CreateWorkflow error: %v", err)
 	}
 
 	createBody := adminservice.WorkspaceUpsert{
-		Name:                  "demo-workspace",
-		WorkspaceTemplateName: "demo-template",
+		Name:         "demo-workspace",
+		WorkflowName: "demo-workflow",
 	}
 	created, err := createWorkspace(context.Background(), admin, createBody)
 	if err != nil {
@@ -220,14 +212,14 @@ func TestIntegrationAdminServiceWorkspaceLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetWorkspace error: %v", err)
 	}
-	if got.WorkspaceTemplateName != "demo-template" {
-		t.Fatalf("GetWorkspace template = %q", got.WorkspaceTemplateName)
+	if got.WorkflowName != "demo-workflow" {
+		t.Fatalf("GetWorkspace workflow = %q", got.WorkflowName)
 	}
 
 	updated, err := putWorkspace(context.Background(), admin, "demo-workspace", adminservice.WorkspaceUpsert{
-		Name:                  "demo-workspace",
-		WorkspaceTemplateName: "demo-template",
-		Parameters:            &map[string]interface{}{"mode": "updated"},
+		Name:         "demo-workspace",
+		WorkflowName: "demo-workflow",
+		Parameters:   &map[string]interface{}{"mode": "updated"},
 	})
 	if err != nil {
 		t.Fatalf("PutWorkspace error: %v", err)
@@ -329,10 +321,10 @@ func TestIntegrationAdminServiceCredentialLifecycle(t *testing.T) {
 	}
 }
 
-func mustWorkflowTemplateDocument(t *testing.T, raw string) apitypes.WorkflowTemplateDocument {
+func mustWorkflowDocument(t *testing.T, raw string) apitypes.WorkflowDocument {
 	t.Helper()
 
-	var doc apitypes.WorkflowTemplateDocument
+	var doc apitypes.WorkflowDocument
 	if err := json.Unmarshal([]byte(raw), &doc); err != nil {
 		t.Fatalf("json.Unmarshal() error = %v", err)
 	}

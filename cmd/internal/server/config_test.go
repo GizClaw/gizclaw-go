@@ -26,7 +26,7 @@ func TestNewWithLayeredStorageConfig(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = srv.Close() })
 
-	if srv.GearStore == nil || srv.CredentialStore == nil || srv.MiniMaxTenantStore == nil || srv.VoiceStore == nil || srv.WorkspaceStore == nil || srv.WorkspaceTemplateStore == nil || srv.TemplateStore == nil || srv.DepotMetadataStore == nil {
+	if srv.GearStore == nil || srv.CredentialStore == nil || srv.MiniMaxTenantStore == nil || srv.VoiceStore == nil || srv.WorkspaceStore == nil || srv.WorkflowStore == nil || srv.DepotMetadataStore == nil {
 		t.Fatalf("module stores not wired: %+v", srv)
 	}
 	if srv.DepotStore == nil {
@@ -79,16 +79,10 @@ func TestNewWithLayeredStorageReportsStoreErrors(t *testing.T) {
 		t.Fatalf("New(missing workspaces store) = %v", err)
 	}
 
-	missingWorkspaceTemplateRefCfg := validLayeredConfig(dir)
-	missingWorkspaceTemplateRefCfg.Workspaces.TemplatesStore = "missing"
-	if _, err := New(missingWorkspaceTemplateRefCfg); err == nil || !strings.Contains(err.Error(), "server: workspace template reference store:") {
-		t.Fatalf("New(missing workspace template reference store) = %v", err)
-	}
-
-	missingTemplatesCfg := validLayeredConfig(dir)
-	missingTemplatesCfg.WorkspaceTemplates.Store = "missing"
-	if _, err := New(missingTemplatesCfg); err == nil || !strings.Contains(err.Error(), "server: workspace templates store:") {
-		t.Fatalf("New(missing templates store) = %v", err)
+	missingWorkflowsCfg := validLayeredConfig(dir)
+	missingWorkflowsCfg.Workflows.Store = "missing"
+	if _, err := New(missingWorkflowsCfg); err == nil || !strings.Contains(err.Error(), "server: workflows store:") {
+		t.Fatalf("New(missing workflows store) = %v", err)
 	}
 
 	missingFirmwareMetadataCfg := validLayeredConfig(dir)
@@ -225,9 +219,9 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 			VoicesStore:      "runtime-voices",
 			CredentialsStore: "runtime-credentials",
 		},
-		Workspaces:         WorkspacesConfig{Store: "runtime-workspaces", TemplatesStore: "runtime-templates"},
-		WorkspaceTemplates: WorkspaceTemplatesConfig{Store: "runtime-templates"},
-		Depots:             DepotsConfig{Store: "runtime-depots"},
+		Workspaces: WorkspacesConfig{Store: "runtime-workspaces"},
+		Workflows:  WorkflowsConfig{Store: "runtime-workflows"},
+		Depots:     DepotsConfig{Store: "runtime-depots"},
 	}
 	fileCfg := ConfigFile{
 		ListenAddr:     ":1234",
@@ -247,9 +241,9 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 			VoicesStore:      "file-voices",
 			CredentialsStore: "file-credentials",
 		},
-		Workspaces:         WorkspacesConfig{Store: "file-workspaces", TemplatesStore: "file-templates"},
-		WorkspaceTemplates: WorkspaceTemplatesConfig{Store: "file-templates"},
-		Depots:             DepotsConfig{Store: "file-depots"},
+		Workspaces: WorkspacesConfig{Store: "file-workspaces"},
+		Workflows:  WorkflowsConfig{Store: "file-workflows"},
+		Depots:     DepotsConfig{Store: "file-depots"},
 	}
 
 	merged, err := mergeFileConfig(runtimeCfg, fileCfg)
@@ -280,11 +274,11 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	if merged.MiniMax.TenantsStore != "runtime-tenants" || merged.MiniMax.VoicesStore != "runtime-voices" || merged.MiniMax.CredentialsStore != "runtime-credentials" {
 		t.Fatalf("MiniMax = %+v", merged.MiniMax)
 	}
-	if merged.Workspaces.Store != "runtime-workspaces" || merged.Workspaces.TemplatesStore != "runtime-templates" {
+	if merged.Workspaces.Store != "runtime-workspaces" {
 		t.Fatalf("Workspaces = %+v", merged.Workspaces)
 	}
-	if merged.WorkspaceTemplates.Store != "runtime-templates" {
-		t.Fatalf("WorkspaceTemplates.Store = %q", merged.WorkspaceTemplates.Store)
+	if merged.Workflows.Store != "runtime-workflows" {
+		t.Fatalf("Workflows.Store = %q", merged.Workflows.Store)
 	}
 }
 
@@ -318,13 +312,13 @@ func TestValidateReportsSpecificMissingFields(t *testing.T) {
 
 func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 	base := Config{
-		Storage:            map[string]storage.Config{"memory": {Kind: storage.KindKeyValue, Memory: &storage.MemoryConfig{}}},
-		Gears:              GearsConfig{Store: "gears"},
-		Credentials:        CredentialsConfig{Store: "credentials"},
-		MiniMax:            MiniMaxConfig{TenantsStore: "minimax-tenants", VoicesStore: "voices", CredentialsStore: "credentials"},
-		Workspaces:         WorkspacesConfig{Store: "workspaces", TemplatesStore: "workspace-templates"},
-		WorkspaceTemplates: WorkspaceTemplatesConfig{Store: "workspace-templates"},
-		Depots:             DepotsConfig{Store: "firmware", MetadataStore: "firmware-depots"},
+		Storage:     map[string]storage.Config{"memory": {Kind: storage.KindKeyValue, Memory: &storage.MemoryConfig{}}},
+		Gears:       GearsConfig{Store: "gears"},
+		Credentials: CredentialsConfig{Store: "credentials"},
+		MiniMax:     MiniMaxConfig{TenantsStore: "minimax-tenants", VoicesStore: "voices", CredentialsStore: "credentials"},
+		Workspaces:  WorkspacesConfig{Store: "workspaces"},
+		Workflows:   WorkflowsConfig{Store: "workflows"},
+		Depots:      DepotsConfig{Store: "firmware", MetadataStore: "firmware-depots"},
 	}
 	tests := []struct {
 		name string
@@ -336,8 +330,7 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 		{"missing minimax voices", func(c *Config) { c.MiniMax.VoicesStore = "" }, "server: minimax.voices-store is required"},
 		{"missing minimax credentials", func(c *Config) { c.MiniMax.CredentialsStore = "" }, "server: minimax.credentials-store is required"},
 		{"missing workspaces", func(c *Config) { c.Workspaces.Store = "" }, "server: workspaces.store is required"},
-		{"missing workspace template reference", func(c *Config) { c.Workspaces.TemplatesStore = "" }, "server: workspaces.templates-store is required"},
-		{"missing workspace templates", func(c *Config) { c.WorkspaceTemplates.Store = "" }, "server: workspace-templates.store is required"},
+		{"missing workflows", func(c *Config) { c.Workflows.Store = "" }, "server: workflows.store is required"},
 		{"missing depot metadata", func(c *Config) { c.Depots.MetadataStore = "" }, "server: depots.metadata-store is required"},
 	}
 	for _, tc := range tests {
@@ -419,13 +412,13 @@ func validLayeredConfig(dir string) Config {
 			},
 		},
 		Stores: map[string]stores.Config{
-			"gears":               {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "gears"},
-			"credentials":         {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "credentials"},
-			"minimax-tenants":     {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "minimax-tenants"},
-			"voices":              {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "voices"},
-			"workspaces":          {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workspaces"},
-			"workspace-templates": {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workspace-templates"},
-			"firmware-depots":     {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "firmware-depots"},
+			"gears":           {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "gears"},
+			"credentials":     {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "credentials"},
+			"minimax-tenants": {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "minimax-tenants"},
+			"voices":          {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "voices"},
+			"workspaces":      {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workspaces"},
+			"workflows":       {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workflows"},
+			"firmware-depots": {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "firmware-depots"},
 			"firmware": {
 				Kind:    stores.KindDepotStore,
 				Storage: "firmware-depot",
@@ -441,8 +434,8 @@ func validLayeredConfig(dir string) Config {
 			VoicesStore:      "voices",
 			CredentialsStore: "credentials",
 		},
-		Workspaces:         WorkspacesConfig{Store: "workspaces", TemplatesStore: "workspace-templates"},
-		WorkspaceTemplates: WorkspaceTemplatesConfig{Store: "workspace-templates"},
-		Depots:             DepotsConfig{Store: "firmware", MetadataStore: "firmware-depots"},
+		Workspaces: WorkspacesConfig{Store: "workspaces"},
+		Workflows:  WorkflowsConfig{Store: "workflows"},
+		Depots:     DepotsConfig{Store: "firmware", MetadataStore: "firmware-depots"},
 	}
 }

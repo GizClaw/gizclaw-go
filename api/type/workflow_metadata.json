@@ -1,0 +1,29 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Workflow Metadata Type",
+    "description": "WorkflowMetadata schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "WorkflowMetadata": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "demo-assistant"
+          },
+          "description": {
+            "type": "string",
+            "example": "flowcraft workflow"
+          }
+        }
+      }
+    }
+  }
+}

@@ -51,10 +51,10 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: workspaces
-  workspace-templates:
+  workflows:
     kind: keyvalue
     storage: memory
-    prefix: workspace-templates
+    prefix: workflows
   firmware-depots:
     kind: keyvalue
     storage: memory
@@ -76,9 +76,8 @@ minimax:
   credentials-store: credentials
 workspaces:
   store: workspaces
-  templates-store: workspace-templates
-workspace-templates:
-  store: workspace-templates
+workflows:
+  store: workflows
 depots:
   store: firmware
   metadata-store: firmware-depots
@@ -178,8 +177,7 @@ minimax:
   credentials-store: fw
 workspaces:
   store: fw
-  templates-store: fw
-workspace-templates:
+workflows:
   store: fw
 depots:
   store: fw
@@ -321,10 +319,10 @@ stores:
     kind: keyvalue
     storage: main-kv
     prefix: workspaces
-  workspace-templates:
+  workflows:
     kind: keyvalue
     storage: main-kv
-    prefix: workspace-templates
+    prefix: workflows
   firmware-depots:
     kind: keyvalue
     storage: main-kv
@@ -346,9 +344,8 @@ minimax:
   credentials-store: credentials
 workspaces:
   store: workspaces
-  templates-store: workspace-templates
-workspace-templates:
-  store: workspace-templates
+workflows:
+  store: workflows
 depots:
   store: firmware
   metadata-store: firmware-depots

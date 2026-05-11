@@ -1,0 +1,52 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Flowcraft Workflow Type",
+    "description": "FlowcraftWorkflow schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "FlowcraftWorkflow": {
+        "type": "object",
+        "required": [
+          "apiVersion",
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "properties": {
+          "apiVersion": {
+            "$ref": "../workflow_api_version.json#/components/schemas/WorkflowAPIVersion"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "FlowcraftWorkflow"
+            ]
+          },
+          "metadata": {
+            "$ref": "../workflow_metadata.json#/components/schemas/WorkflowMetadata"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/FlowcraftWorkflowSpec"
+          }
+        },
+        "example": {
+          "apiVersion": "gizclaw.flowcraft/v1alpha1",
+          "kind": "FlowcraftWorkflow",
+          "metadata": {
+            "name": "demo-assistant",
+            "description": "flowcraft workflow"
+          },
+          "spec": {}
+        }
+      },
+      "FlowcraftWorkflowSpec": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  }
+}

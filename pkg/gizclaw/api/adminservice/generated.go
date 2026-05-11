@@ -86,6 +86,32 @@ type MiniMaxTenantUpsert struct {
 	Name externalRef0.MiniMaxTenantName `json:"name"`
 }
 
+// ModelList defines model for ModelList.
+type ModelList struct {
+	HasNext    bool                 `json:"has_next"`
+	Items      []externalRef0.Model `json:"items"`
+	NextCursor *string              `json:"next_cursor,omitempty"`
+}
+
+// ModelUpsert defines model for ModelUpsert.
+type ModelUpsert struct {
+	Description *string `json:"description,omitempty"`
+
+	// Id Global model identifier
+	Id externalRef0.ModelID `json:"id"`
+
+	// Kind Model capability kind
+	Kind     externalRef0.ModelKind     `json:"kind"`
+	Name     *string                    `json:"name,omitempty"`
+	Provider externalRef0.ModelProvider `json:"provider"`
+
+	// ProviderData Provider-specific data keyed by provider kind.
+	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
+
+	// Source How the model entered the global catalog
+	Source externalRef0.ModelSource `json:"source"`
+}
+
 // PublicKeyResponse defines model for PublicKeyResponse.
 type PublicKeyResponse struct {
 	PublicKey string `json:"public_key"`
@@ -162,18 +188,18 @@ type VolcTenantUpsert struct {
 	ResourceIds *[]externalRef0.VolcResourceID `json:"resource_ids,omitempty"`
 }
 
+// WorkflowList defines model for WorkflowList.
+type WorkflowList struct {
+	HasNext    bool                            `json:"has_next"`
+	Items      []externalRef0.WorkflowDocument `json:"items"`
+	NextCursor *string                         `json:"next_cursor,omitempty"`
+}
+
 // WorkspaceList defines model for WorkspaceList.
 type WorkspaceList struct {
 	HasNext    bool                     `json:"has_next"`
 	Items      []externalRef0.Workspace `json:"items"`
 	NextCursor *string                  `json:"next_cursor,omitempty"`
-}
-
-// WorkspaceTemplateList defines model for WorkspaceTemplateList.
-type WorkspaceTemplateList struct {
-	HasNext    bool                                    `json:"has_next"`
-	Items      []externalRef0.WorkflowTemplateDocument `json:"items"`
-	NextCursor *string                                 `json:"next_cursor,omitempty"`
 }
 
 // WorkspaceUpsert defines model for WorkspaceUpsert.
@@ -182,8 +208,8 @@ type WorkspaceUpsert struct {
 	Name       externalRef0.WorkspaceName `json:"name"`
 	Parameters *map[string]interface{}    `json:"parameters,omitempty"`
 
-	// WorkspaceTemplateName Workspace template name
-	WorkspaceTemplateName externalRef0.WorkspaceTemplateName `json:"workspace_template_name"`
+	// WorkflowName Workflow name
+	WorkflowName externalRef0.WorkflowName `json:"workflow_name"`
 }
 
 // Channel defines model for channel.
@@ -206,6 +232,21 @@ type Limit = int32
 
 // MiniMaxTenantName MiniMax tenant name
 type MiniMaxTenantName = externalRef0.MiniMaxTenantName
+
+// ModelID Global model identifier
+type ModelID = externalRef0.ModelID
+
+// ModelKind Model capability kind
+type ModelKind = externalRef0.ModelKind
+
+// ModelProviderKind Model provider kind
+type ModelProviderKind = externalRef0.ModelProviderKind
+
+// ModelProviderName Model provider instance name
+type ModelProviderName = externalRef0.ModelProviderName
+
+// ModelSource How the model entered the global catalog
+type ModelSource = externalRef0.ModelSource
 
 // PublicKey defines model for publicKey.
 type PublicKey = string
@@ -231,11 +272,11 @@ type VoiceSource = externalRef0.VoiceSource
 // VolcTenantName Volcengine tenant name.
 type VolcTenantName = externalRef0.VolcTenantName
 
+// WorkflowName Workflow name
+type WorkflowName = externalRef0.WorkflowName
+
 // WorkspaceName Workspace name
 type WorkspaceName = externalRef0.WorkspaceName
-
-// WorkspaceTemplateName Workspace template name
-type WorkspaceTemplateName = externalRef0.WorkspaceTemplateName
 
 // ListCredentialsParams defines parameters for ListCredentials.
 type ListCredentialsParams struct {
@@ -294,6 +335,27 @@ type ListMiniMaxTenantsParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListModelsParams defines parameters for ListModels.
+type ListModelsParams struct {
+	// Kind Filter models by kind
+	Kind *ModelKind `form:"kind,omitempty" json:"kind,omitempty"`
+
+	// Source Filter models by source
+	Source *ModelSource `form:"source,omitempty" json:"source,omitempty"`
+
+	// ProviderKind Filter models by provider kind
+	ProviderKind *ModelProviderKind `form:"providerKind,omitempty" json:"providerKind,omitempty"`
+
+	// ProviderName Filter models by provider instance name
+	ProviderName *ModelProviderName `form:"providerName,omitempty" json:"providerName,omitempty"`
+
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListVoicesParams defines parameters for ListVoices.
 type ListVoicesParams struct {
 	// Source Filter voices by source
@@ -321,8 +383,8 @@ type ListVolcTenantsParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
-// ListWorkspaceTemplatesParams defines parameters for ListWorkspaceTemplates.
-type ListWorkspaceTemplatesParams struct {
+// ListWorkflowsParams defines parameters for ListWorkflows.
+type ListWorkflowsParams struct {
 	// Cursor Opaque cursor returned by the previous list response
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 
@@ -363,6 +425,12 @@ type CreateMiniMaxTenantJSONRequestBody = MiniMaxTenantUpsert
 // PutMiniMaxTenantJSONRequestBody defines body for PutMiniMaxTenant for application/json ContentType.
 type PutMiniMaxTenantJSONRequestBody = MiniMaxTenantUpsert
 
+// CreateModelJSONRequestBody defines body for CreateModel for application/json ContentType.
+type CreateModelJSONRequestBody = ModelUpsert
+
+// PutModelJSONRequestBody defines body for PutModel for application/json ContentType.
+type PutModelJSONRequestBody = ModelUpsert
+
 // PutResourceJSONRequestBody defines body for PutResource for application/json ContentType.
 type PutResourceJSONRequestBody = externalRef0.Resource
 
@@ -378,11 +446,11 @@ type CreateVolcTenantJSONRequestBody = VolcTenantUpsert
 // PutVolcTenantJSONRequestBody defines body for PutVolcTenant for application/json ContentType.
 type PutVolcTenantJSONRequestBody = VolcTenantUpsert
 
-// CreateWorkspaceTemplateJSONRequestBody defines body for CreateWorkspaceTemplate for application/json ContentType.
-type CreateWorkspaceTemplateJSONRequestBody = externalRef0.WorkflowTemplateDocument
+// CreateWorkflowJSONRequestBody defines body for CreateWorkflow for application/json ContentType.
+type CreateWorkflowJSONRequestBody = externalRef0.WorkflowDocument
 
-// PutWorkspaceTemplateJSONRequestBody defines body for PutWorkspaceTemplate for application/json ContentType.
-type PutWorkspaceTemplateJSONRequestBody = externalRef0.WorkflowTemplateDocument
+// PutWorkflowJSONRequestBody defines body for PutWorkflow for application/json ContentType.
+type PutWorkflowJSONRequestBody = externalRef0.WorkflowDocument
 
 // CreateWorkspaceJSONRequestBody defines body for CreateWorkspace for application/json ContentType.
 type CreateWorkspaceJSONRequestBody = WorkspaceUpsert
@@ -584,6 +652,25 @@ type ClientInterface interface {
 	// SyncMiniMaxTenantVoices request
 	SyncMiniMaxTenantVoices(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListModels request
+	ListModels(ctx context.Context, params *ListModelsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateModelWithBody request with any body
+	CreateModelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateModel(ctx context.Context, body CreateModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteModel request
+	DeleteModel(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetModel request
+	GetModel(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutModelWithBody request with any body
+	PutModelWithBody(ctx context.Context, id ModelID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutModel(ctx context.Context, id ModelID, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// DeleteResource request
 	DeleteResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -636,24 +723,24 @@ type ClientInterface interface {
 	// SyncVolcTenantVoices request
 	SyncVolcTenantVoices(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListWorkspaceTemplates request
-	ListWorkspaceTemplates(ctx context.Context, params *ListWorkspaceTemplatesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ListWorkflows request
+	ListWorkflows(ctx context.Context, params *ListWorkflowsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateWorkspaceTemplateWithBody request with any body
-	CreateWorkspaceTemplateWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// CreateWorkflowWithBody request with any body
+	CreateWorkflowWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	CreateWorkspaceTemplate(ctx context.Context, body CreateWorkspaceTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateWorkflow(ctx context.Context, body CreateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// DeleteWorkspaceTemplate request
-	DeleteWorkspaceTemplate(ctx context.Context, name WorkspaceTemplateName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// DeleteWorkflow request
+	DeleteWorkflow(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetWorkspaceTemplate request
-	GetWorkspaceTemplate(ctx context.Context, name WorkspaceTemplateName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetWorkflow request
+	GetWorkflow(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PutWorkspaceTemplateWithBody request with any body
-	PutWorkspaceTemplateWithBody(ctx context.Context, name WorkspaceTemplateName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// PutWorkflowWithBody request with any body
+	PutWorkflowWithBody(ctx context.Context, name WorkflowName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutWorkspaceTemplate(ctx context.Context, name WorkspaceTemplateName, body PutWorkspaceTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutWorkflow(ctx context.Context, name WorkflowName, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWorkspaces request
 	ListWorkspaces(ctx context.Context, params *ListWorkspacesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1191,6 +1278,90 @@ func (c *Client) SyncMiniMaxTenantVoices(ctx context.Context, name MiniMaxTenant
 	return c.Client.Do(req)
 }
 
+func (c *Client) ListModels(ctx context.Context, params *ListModelsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListModelsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateModelWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateModelRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateModel(ctx context.Context, body CreateModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateModelRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteModel(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteModelRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetModel(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetModelRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutModelWithBody(ctx context.Context, id ModelID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutModelRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutModel(ctx context.Context, id ModelID, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutModelRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
 func (c *Client) DeleteResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteResourceRequest(c.Server, kind, name)
 	if err != nil {
@@ -1419,8 +1590,8 @@ func (c *Client) SyncVolcTenantVoices(ctx context.Context, name VolcTenantName, 
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListWorkspaceTemplates(ctx context.Context, params *ListWorkspaceTemplatesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListWorkspaceTemplatesRequest(c.Server, params)
+func (c *Client) ListWorkflows(ctx context.Context, params *ListWorkflowsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListWorkflowsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1431,8 +1602,8 @@ func (c *Client) ListWorkspaceTemplates(ctx context.Context, params *ListWorkspa
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateWorkspaceTemplateWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateWorkspaceTemplateRequestWithBody(c.Server, contentType, body)
+func (c *Client) CreateWorkflowWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWorkflowRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1443,8 +1614,8 @@ func (c *Client) CreateWorkspaceTemplateWithBody(ctx context.Context, contentTyp
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateWorkspaceTemplate(ctx context.Context, body CreateWorkspaceTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateWorkspaceTemplateRequest(c.Server, body)
+func (c *Client) CreateWorkflow(ctx context.Context, body CreateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateWorkflowRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1455,8 +1626,8 @@ func (c *Client) CreateWorkspaceTemplate(ctx context.Context, body CreateWorkspa
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteWorkspaceTemplate(ctx context.Context, name WorkspaceTemplateName, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewDeleteWorkspaceTemplateRequest(c.Server, name)
+func (c *Client) DeleteWorkflow(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteWorkflowRequest(c.Server, name)
 	if err != nil {
 		return nil, err
 	}
@@ -1467,8 +1638,8 @@ func (c *Client) DeleteWorkspaceTemplate(ctx context.Context, name WorkspaceTemp
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetWorkspaceTemplate(ctx context.Context, name WorkspaceTemplateName, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetWorkspaceTemplateRequest(c.Server, name)
+func (c *Client) GetWorkflow(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetWorkflowRequest(c.Server, name)
 	if err != nil {
 		return nil, err
 	}
@@ -1479,8 +1650,8 @@ func (c *Client) GetWorkspaceTemplate(ctx context.Context, name WorkspaceTemplat
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutWorkspaceTemplateWithBody(ctx context.Context, name WorkspaceTemplateName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutWorkspaceTemplateRequestWithBody(c.Server, name, contentType, body)
+func (c *Client) PutWorkflowWithBody(ctx context.Context, name WorkflowName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutWorkflowRequestWithBody(c.Server, name, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1491,8 +1662,8 @@ func (c *Client) PutWorkspaceTemplateWithBody(ctx context.Context, name Workspac
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutWorkspaceTemplate(ctx context.Context, name WorkspaceTemplateName, body PutWorkspaceTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutWorkspaceTemplateRequest(c.Server, name, body)
+func (c *Client) PutWorkflow(ctx context.Context, name WorkflowName, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutWorkflowRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3127,6 +3298,290 @@ func NewSyncMiniMaxTenantVoicesRequest(server string, name MiniMaxTenantName) (*
 	return req, nil
 }
 
+// NewListModelsRequest generates requests for ListModels
+func NewListModelsRequest(server string, params *ListModelsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/models")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Kind != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "kind", *params.Kind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Source != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "source", *params.Source, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ProviderKind != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "providerKind", *params.ProviderKind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ProviderName != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "providerName", *params.ProviderName, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateModelRequest calls the generic CreateModel builder with application/json body
+func NewCreateModelRequest(server string, body CreateModelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateModelRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateModelRequestWithBody generates requests for CreateModel with any type of body
+func NewCreateModelRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/models")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteModelRequest generates requests for DeleteModel
+func NewDeleteModelRequest(server string, id ModelID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/models/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetModelRequest generates requests for GetModel
+func NewGetModelRequest(server string, id ModelID) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/models/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutModelRequest calls the generic PutModel builder with application/json body
+func NewPutModelRequest(server string, id ModelID, body PutModelJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutModelRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewPutModelRequestWithBody generates requests for PutModel with any type of body
+func NewPutModelRequestWithBody(server string, id ModelID, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/models/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewDeleteResourceRequest generates requests for DeleteResource
 func NewDeleteResourceRequest(server string, kind ResourceKind, name ResourceName) (*http.Request, error) {
 	var err error
@@ -3785,8 +4240,8 @@ func NewSyncVolcTenantVoicesRequest(server string, name VolcTenantName) (*http.R
 	return req, nil
 }
 
-// NewListWorkspaceTemplatesRequest generates requests for ListWorkspaceTemplates
-func NewListWorkspaceTemplatesRequest(server string, params *ListWorkspaceTemplatesParams) (*http.Request, error) {
+// NewListWorkflowsRequest generates requests for ListWorkflows
+func NewListWorkflowsRequest(server string, params *ListWorkflowsParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -3794,7 +4249,7 @@ func NewListWorkspaceTemplatesRequest(server string, params *ListWorkspaceTempla
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/workspace-templates")
+	operationPath := fmt.Sprintf("/workflows")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3850,19 +4305,19 @@ func NewListWorkspaceTemplatesRequest(server string, params *ListWorkspaceTempla
 	return req, nil
 }
 
-// NewCreateWorkspaceTemplateRequest calls the generic CreateWorkspaceTemplate builder with application/json body
-func NewCreateWorkspaceTemplateRequest(server string, body CreateWorkspaceTemplateJSONRequestBody) (*http.Request, error) {
+// NewCreateWorkflowRequest calls the generic CreateWorkflow builder with application/json body
+func NewCreateWorkflowRequest(server string, body CreateWorkflowJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewCreateWorkspaceTemplateRequestWithBody(server, "application/json", bodyReader)
+	return NewCreateWorkflowRequestWithBody(server, "application/json", bodyReader)
 }
 
-// NewCreateWorkspaceTemplateRequestWithBody generates requests for CreateWorkspaceTemplate with any type of body
-func NewCreateWorkspaceTemplateRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+// NewCreateWorkflowRequestWithBody generates requests for CreateWorkflow with any type of body
+func NewCreateWorkflowRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -3870,7 +4325,7 @@ func NewCreateWorkspaceTemplateRequestWithBody(server string, contentType string
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/workspace-templates")
+	operationPath := fmt.Sprintf("/workflows")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3890,8 +4345,8 @@ func NewCreateWorkspaceTemplateRequestWithBody(server string, contentType string
 	return req, nil
 }
 
-// NewDeleteWorkspaceTemplateRequest generates requests for DeleteWorkspaceTemplate
-func NewDeleteWorkspaceTemplateRequest(server string, name WorkspaceTemplateName) (*http.Request, error) {
+// NewDeleteWorkflowRequest generates requests for DeleteWorkflow
+func NewDeleteWorkflowRequest(server string, name WorkflowName) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3906,7 +4361,7 @@ func NewDeleteWorkspaceTemplateRequest(server string, name WorkspaceTemplateName
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/workspace-templates/%s", pathParam0)
+	operationPath := fmt.Sprintf("/workflows/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3924,8 +4379,8 @@ func NewDeleteWorkspaceTemplateRequest(server string, name WorkspaceTemplateName
 	return req, nil
 }
 
-// NewGetWorkspaceTemplateRequest generates requests for GetWorkspaceTemplate
-func NewGetWorkspaceTemplateRequest(server string, name WorkspaceTemplateName) (*http.Request, error) {
+// NewGetWorkflowRequest generates requests for GetWorkflow
+func NewGetWorkflowRequest(server string, name WorkflowName) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3940,7 +4395,7 @@ func NewGetWorkspaceTemplateRequest(server string, name WorkspaceTemplateName) (
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/workspace-templates/%s", pathParam0)
+	operationPath := fmt.Sprintf("/workflows/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3958,19 +4413,19 @@ func NewGetWorkspaceTemplateRequest(server string, name WorkspaceTemplateName) (
 	return req, nil
 }
 
-// NewPutWorkspaceTemplateRequest calls the generic PutWorkspaceTemplate builder with application/json body
-func NewPutWorkspaceTemplateRequest(server string, name WorkspaceTemplateName, body PutWorkspaceTemplateJSONRequestBody) (*http.Request, error) {
+// NewPutWorkflowRequest calls the generic PutWorkflow builder with application/json body
+func NewPutWorkflowRequest(server string, name WorkflowName, body PutWorkflowJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewPutWorkspaceTemplateRequestWithBody(server, name, "application/json", bodyReader)
+	return NewPutWorkflowRequestWithBody(server, name, "application/json", bodyReader)
 }
 
-// NewPutWorkspaceTemplateRequestWithBody generates requests for PutWorkspaceTemplate with any type of body
-func NewPutWorkspaceTemplateRequestWithBody(server string, name WorkspaceTemplateName, contentType string, body io.Reader) (*http.Request, error) {
+// NewPutWorkflowRequestWithBody generates requests for PutWorkflow with any type of body
+func NewPutWorkflowRequestWithBody(server string, name WorkflowName, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3985,7 +4440,7 @@ func NewPutWorkspaceTemplateRequestWithBody(server string, name WorkspaceTemplat
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/workspace-templates/%s", pathParam0)
+	operationPath := fmt.Sprintf("/workflows/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -4389,6 +4844,25 @@ type ClientWithResponsesInterface interface {
 	// SyncMiniMaxTenantVoicesWithResponse request
 	SyncMiniMaxTenantVoicesWithResponse(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*SyncMiniMaxTenantVoicesResponse, error)
 
+	// ListModelsWithResponse request
+	ListModelsWithResponse(ctx context.Context, params *ListModelsParams, reqEditors ...RequestEditorFn) (*ListModelsResponse, error)
+
+	// CreateModelWithBodyWithResponse request with any body
+	CreateModelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateModelResponse, error)
+
+	CreateModelWithResponse(ctx context.Context, body CreateModelJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateModelResponse, error)
+
+	// DeleteModelWithResponse request
+	DeleteModelWithResponse(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*DeleteModelResponse, error)
+
+	// GetModelWithResponse request
+	GetModelWithResponse(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*GetModelResponse, error)
+
+	// PutModelWithBodyWithResponse request with any body
+	PutModelWithBodyWithResponse(ctx context.Context, id ModelID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutModelResponse, error)
+
+	PutModelWithResponse(ctx context.Context, id ModelID, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*PutModelResponse, error)
+
 	// DeleteResourceWithResponse request
 	DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error)
 
@@ -4441,24 +4915,24 @@ type ClientWithResponsesInterface interface {
 	// SyncVolcTenantVoicesWithResponse request
 	SyncVolcTenantVoicesWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*SyncVolcTenantVoicesResponse, error)
 
-	// ListWorkspaceTemplatesWithResponse request
-	ListWorkspaceTemplatesWithResponse(ctx context.Context, params *ListWorkspaceTemplatesParams, reqEditors ...RequestEditorFn) (*ListWorkspaceTemplatesResponse, error)
+	// ListWorkflowsWithResponse request
+	ListWorkflowsWithResponse(ctx context.Context, params *ListWorkflowsParams, reqEditors ...RequestEditorFn) (*ListWorkflowsResponse, error)
 
-	// CreateWorkspaceTemplateWithBodyWithResponse request with any body
-	CreateWorkspaceTemplateWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkspaceTemplateResponse, error)
+	// CreateWorkflowWithBodyWithResponse request with any body
+	CreateWorkflowWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkflowResponse, error)
 
-	CreateWorkspaceTemplateWithResponse(ctx context.Context, body CreateWorkspaceTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceTemplateResponse, error)
+	CreateWorkflowWithResponse(ctx context.Context, body CreateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkflowResponse, error)
 
-	// DeleteWorkspaceTemplateWithResponse request
-	DeleteWorkspaceTemplateWithResponse(ctx context.Context, name WorkspaceTemplateName, reqEditors ...RequestEditorFn) (*DeleteWorkspaceTemplateResponse, error)
+	// DeleteWorkflowWithResponse request
+	DeleteWorkflowWithResponse(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error)
 
-	// GetWorkspaceTemplateWithResponse request
-	GetWorkspaceTemplateWithResponse(ctx context.Context, name WorkspaceTemplateName, reqEditors ...RequestEditorFn) (*GetWorkspaceTemplateResponse, error)
+	// GetWorkflowWithResponse request
+	GetWorkflowWithResponse(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error)
 
-	// PutWorkspaceTemplateWithBodyWithResponse request with any body
-	PutWorkspaceTemplateWithBodyWithResponse(ctx context.Context, name WorkspaceTemplateName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkspaceTemplateResponse, error)
+	// PutWorkflowWithBodyWithResponse request with any body
+	PutWorkflowWithBodyWithResponse(ctx context.Context, name WorkflowName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error)
 
-	PutWorkspaceTemplateWithResponse(ctx context.Context, name WorkspaceTemplateName, body PutWorkspaceTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkspaceTemplateResponse, error)
+	PutWorkflowWithResponse(ctx context.Context, name WorkflowName, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error)
 
 	// ListWorkspacesWithResponse request
 	ListWorkspacesWithResponse(ctx context.Context, params *ListWorkspacesParams, reqEditors ...RequestEditorFn) (*ListWorkspacesResponse, error)
@@ -5309,6 +5783,127 @@ func (r SyncMiniMaxTenantVoicesResponse) StatusCode() int {
 	return 0
 }
 
+type ListModelsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ModelList
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListModelsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListModelsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateModelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Model
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateModelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateModelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteModelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Model
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteModelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteModelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetModelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Model
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetModelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetModelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutModelResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Model
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutModelResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutModelResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type DeleteResourceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -5655,15 +6250,15 @@ func (r SyncVolcTenantVoicesResponse) StatusCode() int {
 	return 0
 }
 
-type ListWorkspaceTemplatesResponse struct {
+type ListWorkflowsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *WorkspaceTemplateList
+	JSON200      *WorkflowList
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r ListWorkspaceTemplatesResponse) Status() string {
+func (r ListWorkflowsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5671,24 +6266,24 @@ func (r ListWorkspaceTemplatesResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ListWorkspaceTemplatesResponse) StatusCode() int {
+func (r ListWorkflowsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type CreateWorkspaceTemplateResponse struct {
+type CreateWorkflowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.WorkflowTemplateDocument
+	JSON200      *externalRef0.WorkflowDocument
 	JSON400      *externalRef0.ErrorResponse
 	JSON409      *externalRef0.ErrorResponse
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r CreateWorkspaceTemplateResponse) Status() string {
+func (r CreateWorkflowResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5696,23 +6291,23 @@ func (r CreateWorkspaceTemplateResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r CreateWorkspaceTemplateResponse) StatusCode() int {
+func (r CreateWorkflowResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type DeleteWorkspaceTemplateResponse struct {
+type DeleteWorkflowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.WorkflowTemplateDocument
+	JSON200      *externalRef0.WorkflowDocument
 	JSON404      *externalRef0.ErrorResponse
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r DeleteWorkspaceTemplateResponse) Status() string {
+func (r DeleteWorkflowResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5720,23 +6315,23 @@ func (r DeleteWorkspaceTemplateResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r DeleteWorkspaceTemplateResponse) StatusCode() int {
+func (r DeleteWorkflowResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetWorkspaceTemplateResponse struct {
+type GetWorkflowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.WorkflowTemplateDocument
+	JSON200      *externalRef0.WorkflowDocument
 	JSON404      *externalRef0.ErrorResponse
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r GetWorkspaceTemplateResponse) Status() string {
+func (r GetWorkflowResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5744,23 +6339,23 @@ func (r GetWorkspaceTemplateResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetWorkspaceTemplateResponse) StatusCode() int {
+func (r GetWorkflowResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type PutWorkspaceTemplateResponse struct {
+type PutWorkflowResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.WorkflowTemplateDocument
+	JSON200      *externalRef0.WorkflowDocument
 	JSON400      *externalRef0.ErrorResponse
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r PutWorkspaceTemplateResponse) Status() string {
+func (r PutWorkflowResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5768,7 +6363,7 @@ func (r PutWorkspaceTemplateResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r PutWorkspaceTemplateResponse) StatusCode() int {
+func (r PutWorkflowResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -6274,6 +6869,67 @@ func (c *ClientWithResponses) SyncMiniMaxTenantVoicesWithResponse(ctx context.Co
 	return ParseSyncMiniMaxTenantVoicesResponse(rsp)
 }
 
+// ListModelsWithResponse request returning *ListModelsResponse
+func (c *ClientWithResponses) ListModelsWithResponse(ctx context.Context, params *ListModelsParams, reqEditors ...RequestEditorFn) (*ListModelsResponse, error) {
+	rsp, err := c.ListModels(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListModelsResponse(rsp)
+}
+
+// CreateModelWithBodyWithResponse request with arbitrary body returning *CreateModelResponse
+func (c *ClientWithResponses) CreateModelWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateModelResponse, error) {
+	rsp, err := c.CreateModelWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateModelResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateModelWithResponse(ctx context.Context, body CreateModelJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateModelResponse, error) {
+	rsp, err := c.CreateModel(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateModelResponse(rsp)
+}
+
+// DeleteModelWithResponse request returning *DeleteModelResponse
+func (c *ClientWithResponses) DeleteModelWithResponse(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*DeleteModelResponse, error) {
+	rsp, err := c.DeleteModel(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteModelResponse(rsp)
+}
+
+// GetModelWithResponse request returning *GetModelResponse
+func (c *ClientWithResponses) GetModelWithResponse(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*GetModelResponse, error) {
+	rsp, err := c.GetModel(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetModelResponse(rsp)
+}
+
+// PutModelWithBodyWithResponse request with arbitrary body returning *PutModelResponse
+func (c *ClientWithResponses) PutModelWithBodyWithResponse(ctx context.Context, id ModelID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutModelResponse, error) {
+	rsp, err := c.PutModelWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutModelResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutModelWithResponse(ctx context.Context, id ModelID, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*PutModelResponse, error) {
+	rsp, err := c.PutModel(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutModelResponse(rsp)
+}
+
 // DeleteResourceWithResponse request returning *DeleteResourceResponse
 func (c *ClientWithResponses) DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error) {
 	rsp, err := c.DeleteResource(ctx, kind, name, reqEditors...)
@@ -6440,65 +7096,65 @@ func (c *ClientWithResponses) SyncVolcTenantVoicesWithResponse(ctx context.Conte
 	return ParseSyncVolcTenantVoicesResponse(rsp)
 }
 
-// ListWorkspaceTemplatesWithResponse request returning *ListWorkspaceTemplatesResponse
-func (c *ClientWithResponses) ListWorkspaceTemplatesWithResponse(ctx context.Context, params *ListWorkspaceTemplatesParams, reqEditors ...RequestEditorFn) (*ListWorkspaceTemplatesResponse, error) {
-	rsp, err := c.ListWorkspaceTemplates(ctx, params, reqEditors...)
+// ListWorkflowsWithResponse request returning *ListWorkflowsResponse
+func (c *ClientWithResponses) ListWorkflowsWithResponse(ctx context.Context, params *ListWorkflowsParams, reqEditors ...RequestEditorFn) (*ListWorkflowsResponse, error) {
+	rsp, err := c.ListWorkflows(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseListWorkspaceTemplatesResponse(rsp)
+	return ParseListWorkflowsResponse(rsp)
 }
 
-// CreateWorkspaceTemplateWithBodyWithResponse request with arbitrary body returning *CreateWorkspaceTemplateResponse
-func (c *ClientWithResponses) CreateWorkspaceTemplateWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkspaceTemplateResponse, error) {
-	rsp, err := c.CreateWorkspaceTemplateWithBody(ctx, contentType, body, reqEditors...)
+// CreateWorkflowWithBodyWithResponse request with arbitrary body returning *CreateWorkflowResponse
+func (c *ClientWithResponses) CreateWorkflowWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateWorkflowResponse, error) {
+	rsp, err := c.CreateWorkflowWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateWorkspaceTemplateResponse(rsp)
+	return ParseCreateWorkflowResponse(rsp)
 }
 
-func (c *ClientWithResponses) CreateWorkspaceTemplateWithResponse(ctx context.Context, body CreateWorkspaceTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceTemplateResponse, error) {
-	rsp, err := c.CreateWorkspaceTemplate(ctx, body, reqEditors...)
+func (c *ClientWithResponses) CreateWorkflowWithResponse(ctx context.Context, body CreateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkflowResponse, error) {
+	rsp, err := c.CreateWorkflow(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseCreateWorkspaceTemplateResponse(rsp)
+	return ParseCreateWorkflowResponse(rsp)
 }
 
-// DeleteWorkspaceTemplateWithResponse request returning *DeleteWorkspaceTemplateResponse
-func (c *ClientWithResponses) DeleteWorkspaceTemplateWithResponse(ctx context.Context, name WorkspaceTemplateName, reqEditors ...RequestEditorFn) (*DeleteWorkspaceTemplateResponse, error) {
-	rsp, err := c.DeleteWorkspaceTemplate(ctx, name, reqEditors...)
+// DeleteWorkflowWithResponse request returning *DeleteWorkflowResponse
+func (c *ClientWithResponses) DeleteWorkflowWithResponse(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error) {
+	rsp, err := c.DeleteWorkflow(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseDeleteWorkspaceTemplateResponse(rsp)
+	return ParseDeleteWorkflowResponse(rsp)
 }
 
-// GetWorkspaceTemplateWithResponse request returning *GetWorkspaceTemplateResponse
-func (c *ClientWithResponses) GetWorkspaceTemplateWithResponse(ctx context.Context, name WorkspaceTemplateName, reqEditors ...RequestEditorFn) (*GetWorkspaceTemplateResponse, error) {
-	rsp, err := c.GetWorkspaceTemplate(ctx, name, reqEditors...)
+// GetWorkflowWithResponse request returning *GetWorkflowResponse
+func (c *ClientWithResponses) GetWorkflowWithResponse(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error) {
+	rsp, err := c.GetWorkflow(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetWorkspaceTemplateResponse(rsp)
+	return ParseGetWorkflowResponse(rsp)
 }
 
-// PutWorkspaceTemplateWithBodyWithResponse request with arbitrary body returning *PutWorkspaceTemplateResponse
-func (c *ClientWithResponses) PutWorkspaceTemplateWithBodyWithResponse(ctx context.Context, name WorkspaceTemplateName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkspaceTemplateResponse, error) {
-	rsp, err := c.PutWorkspaceTemplateWithBody(ctx, name, contentType, body, reqEditors...)
+// PutWorkflowWithBodyWithResponse request with arbitrary body returning *PutWorkflowResponse
+func (c *ClientWithResponses) PutWorkflowWithBodyWithResponse(ctx context.Context, name WorkflowName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error) {
+	rsp, err := c.PutWorkflowWithBody(ctx, name, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePutWorkspaceTemplateResponse(rsp)
+	return ParsePutWorkflowResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutWorkspaceTemplateWithResponse(ctx context.Context, name WorkspaceTemplateName, body PutWorkspaceTemplateJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkspaceTemplateResponse, error) {
-	rsp, err := c.PutWorkspaceTemplate(ctx, name, body, reqEditors...)
+func (c *ClientWithResponses) PutWorkflowWithResponse(ctx context.Context, name WorkflowName, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error) {
+	rsp, err := c.PutWorkflow(ctx, name, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePutWorkspaceTemplateResponse(rsp)
+	return ParsePutWorkflowResponse(rsp)
 }
 
 // ListWorkspacesWithResponse request returning *ListWorkspacesResponse
@@ -7885,6 +8541,213 @@ func ParseSyncMiniMaxTenantVoicesResponse(rsp *http.Response) (*SyncMiniMaxTenan
 	return response, nil
 }
 
+// ParseListModelsResponse parses an HTTP response from a ListModelsWithResponse call
+func ParseListModelsResponse(rsp *http.Response) (*ListModelsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListModelsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ModelList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateModelResponse parses an HTTP response from a CreateModelWithResponse call
+func ParseCreateModelResponse(rsp *http.Response) (*CreateModelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateModelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Model
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteModelResponse parses an HTTP response from a DeleteModelWithResponse call
+func ParseDeleteModelResponse(rsp *http.Response) (*DeleteModelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteModelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Model
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetModelResponse parses an HTTP response from a GetModelWithResponse call
+func ParseGetModelResponse(rsp *http.Response) (*GetModelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetModelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Model
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutModelResponse parses an HTTP response from a PutModelWithResponse call
+func ParsePutModelResponse(rsp *http.Response) (*PutModelResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutModelResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Model
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDeleteResourceResponse parses an HTTP response from a DeleteResourceWithResponse call
 func ParseDeleteResourceResponse(rsp *http.Response) (*DeleteResourceResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -8515,22 +9378,22 @@ func ParseSyncVolcTenantVoicesResponse(rsp *http.Response) (*SyncVolcTenantVoice
 	return response, nil
 }
 
-// ParseListWorkspaceTemplatesResponse parses an HTTP response from a ListWorkspaceTemplatesWithResponse call
-func ParseListWorkspaceTemplatesResponse(rsp *http.Response) (*ListWorkspaceTemplatesResponse, error) {
+// ParseListWorkflowsResponse parses an HTTP response from a ListWorkflowsWithResponse call
+func ParseListWorkflowsResponse(rsp *http.Response) (*ListWorkflowsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ListWorkspaceTemplatesResponse{
+	response := &ListWorkflowsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest WorkspaceTemplateList
+		var dest WorkflowList
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -8548,22 +9411,22 @@ func ParseListWorkspaceTemplatesResponse(rsp *http.Response) (*ListWorkspaceTemp
 	return response, nil
 }
 
-// ParseCreateWorkspaceTemplateResponse parses an HTTP response from a CreateWorkspaceTemplateWithResponse call
-func ParseCreateWorkspaceTemplateResponse(rsp *http.Response) (*CreateWorkspaceTemplateResponse, error) {
+// ParseCreateWorkflowResponse parses an HTTP response from a CreateWorkflowWithResponse call
+func ParseCreateWorkflowResponse(rsp *http.Response) (*CreateWorkflowResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &CreateWorkspaceTemplateResponse{
+	response := &CreateWorkflowResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.WorkflowTemplateDocument
+		var dest externalRef0.WorkflowDocument
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -8595,22 +9458,22 @@ func ParseCreateWorkspaceTemplateResponse(rsp *http.Response) (*CreateWorkspaceT
 	return response, nil
 }
 
-// ParseDeleteWorkspaceTemplateResponse parses an HTTP response from a DeleteWorkspaceTemplateWithResponse call
-func ParseDeleteWorkspaceTemplateResponse(rsp *http.Response) (*DeleteWorkspaceTemplateResponse, error) {
+// ParseDeleteWorkflowResponse parses an HTTP response from a DeleteWorkflowWithResponse call
+func ParseDeleteWorkflowResponse(rsp *http.Response) (*DeleteWorkflowResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &DeleteWorkspaceTemplateResponse{
+	response := &DeleteWorkflowResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.WorkflowTemplateDocument
+		var dest externalRef0.WorkflowDocument
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -8635,22 +9498,22 @@ func ParseDeleteWorkspaceTemplateResponse(rsp *http.Response) (*DeleteWorkspaceT
 	return response, nil
 }
 
-// ParseGetWorkspaceTemplateResponse parses an HTTP response from a GetWorkspaceTemplateWithResponse call
-func ParseGetWorkspaceTemplateResponse(rsp *http.Response) (*GetWorkspaceTemplateResponse, error) {
+// ParseGetWorkflowResponse parses an HTTP response from a GetWorkflowWithResponse call
+func ParseGetWorkflowResponse(rsp *http.Response) (*GetWorkflowResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetWorkspaceTemplateResponse{
+	response := &GetWorkflowResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.WorkflowTemplateDocument
+		var dest externalRef0.WorkflowDocument
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -8675,22 +9538,22 @@ func ParseGetWorkspaceTemplateResponse(rsp *http.Response) (*GetWorkspaceTemplat
 	return response, nil
 }
 
-// ParsePutWorkspaceTemplateResponse parses an HTTP response from a PutWorkspaceTemplateWithResponse call
-func ParsePutWorkspaceTemplateResponse(rsp *http.Response) (*PutWorkspaceTemplateResponse, error) {
+// ParsePutWorkflowResponse parses an HTTP response from a PutWorkflowWithResponse call
+func ParsePutWorkflowResponse(rsp *http.Response) (*PutWorkflowResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &PutWorkspaceTemplateResponse{
+	response := &PutWorkflowResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.WorkflowTemplateDocument
+		var dest externalRef0.WorkflowDocument
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -9022,6 +9885,21 @@ type ServerInterface interface {
 	// Sync voices from a MiniMax tenant into the global voice catalog
 	// (POST /minimax-tenants/{name}/@sync-voices)
 	SyncMiniMaxTenantVoices(c *fiber.Ctx, name MiniMaxTenantName) error
+	// List all models
+	// (GET /models)
+	ListModels(c *fiber.Ctx, params ListModelsParams) error
+	// Create a model
+	// (POST /models)
+	CreateModel(c *fiber.Ctx) error
+	// Delete a model
+	// (DELETE /models/{id})
+	DeleteModel(c *fiber.Ctx, id ModelID) error
+	// Get a model
+	// (GET /models/{id})
+	GetModel(c *fiber.Ctx, id ModelID) error
+	// Create or update a model
+	// (PUT /models/{id})
+	PutModel(c *fiber.Ctx, id ModelID) error
 	// Delete an admin resource
 	// (DELETE /resources/{kind}/{name})
 	DeleteResource(c *fiber.Ctx, kind ResourceKind, name ResourceName) error
@@ -9064,21 +9942,21 @@ type ServerInterface interface {
 	// Sync voices from a Volcengine tenant into the global voice catalog
 	// (POST /volc-tenants/{name}/@sync-voices)
 	SyncVolcTenantVoices(c *fiber.Ctx, name VolcTenantName) error
-	// List all workspace templates
-	// (GET /workspace-templates)
-	ListWorkspaceTemplates(c *fiber.Ctx, params ListWorkspaceTemplatesParams) error
-	// Create a workspace template
-	// (POST /workspace-templates)
-	CreateWorkspaceTemplate(c *fiber.Ctx) error
-	// Delete a workspace template
-	// (DELETE /workspace-templates/{name})
-	DeleteWorkspaceTemplate(c *fiber.Ctx, name WorkspaceTemplateName) error
-	// Get a workspace template
-	// (GET /workspace-templates/{name})
-	GetWorkspaceTemplate(c *fiber.Ctx, name WorkspaceTemplateName) error
-	// Create or update a workspace template
-	// (PUT /workspace-templates/{name})
-	PutWorkspaceTemplate(c *fiber.Ctx, name WorkspaceTemplateName) error
+	// List all workflows
+	// (GET /workflows)
+	ListWorkflows(c *fiber.Ctx, params ListWorkflowsParams) error
+	// Create a workflow
+	// (POST /workflows)
+	CreateWorkflow(c *fiber.Ctx) error
+	// Delete a workflow
+	// (DELETE /workflows/{name})
+	DeleteWorkflow(c *fiber.Ctx, name WorkflowName) error
+	// Get a workflow
+	// (GET /workflows/{name})
+	GetWorkflow(c *fiber.Ctx, name WorkflowName) error
+	// Create or update a workflow
+	// (PUT /workflows/{name})
+	PutWorkflow(c *fiber.Ctx, name WorkflowName) error
 	// List all workspaces
 	// (GET /workspaces)
 	ListWorkspaces(c *fiber.Ctx, params ListWorkspacesParams) error
@@ -9800,6 +10678,119 @@ func (siw *ServerInterfaceWrapper) SyncMiniMaxTenantVoices(c *fiber.Ctx) error {
 	return siw.Handler.SyncMiniMaxTenantVoices(c, name)
 }
 
+// ListModels operation middleware
+func (siw *ServerInterfaceWrapper) ListModels(c *fiber.Ctx) error {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListModelsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", query, &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter kind: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "source" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source", query, &params.Source, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter source: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "providerKind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "providerKind", query, &params.ProviderKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter providerKind: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "providerName" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "providerName", query, &params.ProviderName, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter providerName: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListModels(c, params)
+}
+
+// CreateModel operation middleware
+func (siw *ServerInterfaceWrapper) CreateModel(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateModel(c)
+}
+
+// DeleteModel operation middleware
+func (siw *ServerInterfaceWrapper) DeleteModel(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id ModelID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteModel(c, id)
+}
+
+// GetModel operation middleware
+func (siw *ServerInterfaceWrapper) GetModel(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id ModelID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.GetModel(c, id)
+}
+
+// PutModel operation middleware
+func (siw *ServerInterfaceWrapper) PutModel(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id ModelID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.PutModel(c, id)
+}
+
 // DeleteResource operation middleware
 func (siw *ServerInterfaceWrapper) DeleteResource(c *fiber.Ctx) error {
 
@@ -10079,13 +11070,13 @@ func (siw *ServerInterfaceWrapper) SyncVolcTenantVoices(c *fiber.Ctx) error {
 	return siw.Handler.SyncVolcTenantVoices(c, name)
 }
 
-// ListWorkspaceTemplates operation middleware
-func (siw *ServerInterfaceWrapper) ListWorkspaceTemplates(c *fiber.Ctx) error {
+// ListWorkflows operation middleware
+func (siw *ServerInterfaceWrapper) ListWorkflows(c *fiber.Ctx) error {
 
 	var err error
 
 	// Parameter object where we will unmarshal all parameters from the context
-	var params ListWorkspaceTemplatesParams
+	var params ListWorkflowsParams
 
 	var query url.Values
 	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
@@ -10107,61 +11098,61 @@ func (siw *ServerInterfaceWrapper) ListWorkspaceTemplates(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
 	}
 
-	return siw.Handler.ListWorkspaceTemplates(c, params)
+	return siw.Handler.ListWorkflows(c, params)
 }
 
-// CreateWorkspaceTemplate operation middleware
-func (siw *ServerInterfaceWrapper) CreateWorkspaceTemplate(c *fiber.Ctx) error {
+// CreateWorkflow operation middleware
+func (siw *ServerInterfaceWrapper) CreateWorkflow(c *fiber.Ctx) error {
 
-	return siw.Handler.CreateWorkspaceTemplate(c)
+	return siw.Handler.CreateWorkflow(c)
 }
 
-// DeleteWorkspaceTemplate operation middleware
-func (siw *ServerInterfaceWrapper) DeleteWorkspaceTemplate(c *fiber.Ctx) error {
+// DeleteWorkflow operation middleware
+func (siw *ServerInterfaceWrapper) DeleteWorkflow(c *fiber.Ctx) error {
 
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkspaceTemplateName
+	var name WorkflowName
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
 	}
 
-	return siw.Handler.DeleteWorkspaceTemplate(c, name)
+	return siw.Handler.DeleteWorkflow(c, name)
 }
 
-// GetWorkspaceTemplate operation middleware
-func (siw *ServerInterfaceWrapper) GetWorkspaceTemplate(c *fiber.Ctx) error {
+// GetWorkflow operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkflow(c *fiber.Ctx) error {
 
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkspaceTemplateName
+	var name WorkflowName
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
 	}
 
-	return siw.Handler.GetWorkspaceTemplate(c, name)
+	return siw.Handler.GetWorkflow(c, name)
 }
 
-// PutWorkspaceTemplate operation middleware
-func (siw *ServerInterfaceWrapper) PutWorkspaceTemplate(c *fiber.Ctx) error {
+// PutWorkflow operation middleware
+func (siw *ServerInterfaceWrapper) PutWorkflow(c *fiber.Ctx) error {
 
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkspaceTemplateName
+	var name WorkflowName
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
 	}
 
-	return siw.Handler.PutWorkspaceTemplate(c, name)
+	return siw.Handler.PutWorkflow(c, name)
 }
 
 // ListWorkspaces operation middleware
@@ -10340,6 +11331,16 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Post(options.BaseURL+"/minimax-tenants/:name/@sync-voices", wrapper.SyncMiniMaxTenantVoices)
 
+	router.Get(options.BaseURL+"/models", wrapper.ListModels)
+
+	router.Post(options.BaseURL+"/models", wrapper.CreateModel)
+
+	router.Delete(options.BaseURL+"/models/:id", wrapper.DeleteModel)
+
+	router.Get(options.BaseURL+"/models/:id", wrapper.GetModel)
+
+	router.Put(options.BaseURL+"/models/:id", wrapper.PutModel)
+
 	router.Delete(options.BaseURL+"/resources/:kind/:name", wrapper.DeleteResource)
 
 	router.Get(options.BaseURL+"/resources/:kind/:name", wrapper.GetResource)
@@ -10368,15 +11369,15 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Post(options.BaseURL+"/volc-tenants/:name/@sync-voices", wrapper.SyncVolcTenantVoices)
 
-	router.Get(options.BaseURL+"/workspace-templates", wrapper.ListWorkspaceTemplates)
+	router.Get(options.BaseURL+"/workflows", wrapper.ListWorkflows)
 
-	router.Post(options.BaseURL+"/workspace-templates", wrapper.CreateWorkspaceTemplate)
+	router.Post(options.BaseURL+"/workflows", wrapper.CreateWorkflow)
 
-	router.Delete(options.BaseURL+"/workspace-templates/:name", wrapper.DeleteWorkspaceTemplate)
+	router.Delete(options.BaseURL+"/workflows/:name", wrapper.DeleteWorkflow)
 
-	router.Get(options.BaseURL+"/workspace-templates/:name", wrapper.GetWorkspaceTemplate)
+	router.Get(options.BaseURL+"/workflows/:name", wrapper.GetWorkflow)
 
-	router.Put(options.BaseURL+"/workspace-templates/:name", wrapper.PutWorkspaceTemplate)
+	router.Put(options.BaseURL+"/workflows/:name", wrapper.PutWorkflow)
 
 	router.Get(options.BaseURL+"/workspaces", wrapper.ListWorkspaces)
 
@@ -11532,6 +12533,191 @@ func (response SyncMiniMaxTenantVoices502JSONResponse) VisitSyncMiniMaxTenantVoi
 	return ctx.JSON(&response)
 }
 
+type ListModelsRequestObject struct {
+	Params ListModelsParams
+}
+
+type ListModelsResponseObject interface {
+	VisitListModelsResponse(ctx *fiber.Ctx) error
+}
+
+type ListModels200JSONResponse ModelList
+
+func (response ListModels200JSONResponse) VisitListModelsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListModels500JSONResponse externalRef0.ErrorResponse
+
+func (response ListModels500JSONResponse) VisitListModelsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateModelRequestObject struct {
+	Body *CreateModelJSONRequestBody
+}
+
+type CreateModelResponseObject interface {
+	VisitCreateModelResponse(ctx *fiber.Ctx) error
+}
+
+type CreateModel200JSONResponse externalRef0.Model
+
+func (response CreateModel200JSONResponse) VisitCreateModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateModel400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateModel400JSONResponse) VisitCreateModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateModel409JSONResponse externalRef0.ErrorResponse
+
+func (response CreateModel409JSONResponse) VisitCreateModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type CreateModel500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateModel500JSONResponse) VisitCreateModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteModelRequestObject struct {
+	Id ModelID `json:"id"`
+}
+
+type DeleteModelResponseObject interface {
+	VisitDeleteModelResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteModel200JSONResponse externalRef0.Model
+
+func (response DeleteModel200JSONResponse) VisitDeleteModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteModel404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteModel404JSONResponse) VisitDeleteModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteModel500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteModel500JSONResponse) VisitDeleteModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetModelRequestObject struct {
+	Id ModelID `json:"id"`
+}
+
+type GetModelResponseObject interface {
+	VisitGetModelResponse(ctx *fiber.Ctx) error
+}
+
+type GetModel200JSONResponse externalRef0.Model
+
+func (response GetModel200JSONResponse) VisitGetModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetModel404JSONResponse externalRef0.ErrorResponse
+
+func (response GetModel404JSONResponse) VisitGetModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetModel500JSONResponse externalRef0.ErrorResponse
+
+func (response GetModel500JSONResponse) VisitGetModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutModelRequestObject struct {
+	Id   ModelID `json:"id"`
+	Body *PutModelJSONRequestBody
+}
+
+type PutModelResponseObject interface {
+	VisitPutModelResponse(ctx *fiber.Ctx) error
+}
+
+type PutModel200JSONResponse externalRef0.Model
+
+func (response PutModel200JSONResponse) VisitPutModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutModel400JSONResponse externalRef0.ErrorResponse
+
+func (response PutModel400JSONResponse) VisitPutModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutModel409JSONResponse externalRef0.ErrorResponse
+
+func (response PutModel409JSONResponse) VisitPutModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type PutModel500JSONResponse externalRef0.ErrorResponse
+
+func (response PutModel500JSONResponse) VisitPutModelResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
 type DeleteResourceRequestObject struct {
 	Kind ResourceKind `json:"kind"`
 	Name ResourceName `json:"name"`
@@ -12119,176 +13305,176 @@ func (response SyncVolcTenantVoices502JSONResponse) VisitSyncVolcTenantVoicesRes
 	return ctx.JSON(&response)
 }
 
-type ListWorkspaceTemplatesRequestObject struct {
-	Params ListWorkspaceTemplatesParams
+type ListWorkflowsRequestObject struct {
+	Params ListWorkflowsParams
 }
 
-type ListWorkspaceTemplatesResponseObject interface {
-	VisitListWorkspaceTemplatesResponse(ctx *fiber.Ctx) error
+type ListWorkflowsResponseObject interface {
+	VisitListWorkflowsResponse(ctx *fiber.Ctx) error
 }
 
-type ListWorkspaceTemplates200JSONResponse WorkspaceTemplateList
+type ListWorkflows200JSONResponse WorkflowList
 
-func (response ListWorkspaceTemplates200JSONResponse) VisitListWorkspaceTemplatesResponse(ctx *fiber.Ctx) error {
+func (response ListWorkflows200JSONResponse) VisitListWorkflowsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type ListWorkspaceTemplates500JSONResponse externalRef0.ErrorResponse
+type ListWorkflows500JSONResponse externalRef0.ErrorResponse
 
-func (response ListWorkspaceTemplates500JSONResponse) VisitListWorkspaceTemplatesResponse(ctx *fiber.Ctx) error {
+func (response ListWorkflows500JSONResponse) VisitListWorkflowsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspaceTemplateRequestObject struct {
-	Body *CreateWorkspaceTemplateJSONRequestBody
+type CreateWorkflowRequestObject struct {
+	Body *CreateWorkflowJSONRequestBody
 }
 
-type CreateWorkspaceTemplateResponseObject interface {
-	VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error
+type CreateWorkflowResponseObject interface {
+	VisitCreateWorkflowResponse(ctx *fiber.Ctx) error
 }
 
-type CreateWorkspaceTemplate200JSONResponse externalRef0.WorkflowTemplateDocument
+type CreateWorkflow200JSONResponse externalRef0.WorkflowDocument
 
-func (response CreateWorkspaceTemplate200JSONResponse) VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response CreateWorkflow200JSONResponse) VisitCreateWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspaceTemplate400JSONResponse externalRef0.ErrorResponse
+type CreateWorkflow400JSONResponse externalRef0.ErrorResponse
 
-func (response CreateWorkspaceTemplate400JSONResponse) VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response CreateWorkflow400JSONResponse) VisitCreateWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(400)
 
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspaceTemplate409JSONResponse externalRef0.ErrorResponse
+type CreateWorkflow409JSONResponse externalRef0.ErrorResponse
 
-func (response CreateWorkspaceTemplate409JSONResponse) VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response CreateWorkflow409JSONResponse) VisitCreateWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(409)
 
 	return ctx.JSON(&response)
 }
 
-type CreateWorkspaceTemplate500JSONResponse externalRef0.ErrorResponse
+type CreateWorkflow500JSONResponse externalRef0.ErrorResponse
 
-func (response CreateWorkspaceTemplate500JSONResponse) VisitCreateWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response CreateWorkflow500JSONResponse) VisitCreateWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
 
-type DeleteWorkspaceTemplateRequestObject struct {
-	Name WorkspaceTemplateName `json:"name"`
+type DeleteWorkflowRequestObject struct {
+	Name WorkflowName `json:"name"`
 }
 
-type DeleteWorkspaceTemplateResponseObject interface {
-	VisitDeleteWorkspaceTemplateResponse(ctx *fiber.Ctx) error
+type DeleteWorkflowResponseObject interface {
+	VisitDeleteWorkflowResponse(ctx *fiber.Ctx) error
 }
 
-type DeleteWorkspaceTemplate200JSONResponse externalRef0.WorkflowTemplateDocument
+type DeleteWorkflow200JSONResponse externalRef0.WorkflowDocument
 
-func (response DeleteWorkspaceTemplate200JSONResponse) VisitDeleteWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response DeleteWorkflow200JSONResponse) VisitDeleteWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type DeleteWorkspaceTemplate404JSONResponse externalRef0.ErrorResponse
+type DeleteWorkflow404JSONResponse externalRef0.ErrorResponse
 
-func (response DeleteWorkspaceTemplate404JSONResponse) VisitDeleteWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response DeleteWorkflow404JSONResponse) VisitDeleteWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(404)
 
 	return ctx.JSON(&response)
 }
 
-type DeleteWorkspaceTemplate500JSONResponse externalRef0.ErrorResponse
+type DeleteWorkflow500JSONResponse externalRef0.ErrorResponse
 
-func (response DeleteWorkspaceTemplate500JSONResponse) VisitDeleteWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response DeleteWorkflow500JSONResponse) VisitDeleteWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
 
-type GetWorkspaceTemplateRequestObject struct {
-	Name WorkspaceTemplateName `json:"name"`
+type GetWorkflowRequestObject struct {
+	Name WorkflowName `json:"name"`
 }
 
-type GetWorkspaceTemplateResponseObject interface {
-	VisitGetWorkspaceTemplateResponse(ctx *fiber.Ctx) error
+type GetWorkflowResponseObject interface {
+	VisitGetWorkflowResponse(ctx *fiber.Ctx) error
 }
 
-type GetWorkspaceTemplate200JSONResponse externalRef0.WorkflowTemplateDocument
+type GetWorkflow200JSONResponse externalRef0.WorkflowDocument
 
-func (response GetWorkspaceTemplate200JSONResponse) VisitGetWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response GetWorkflow200JSONResponse) VisitGetWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type GetWorkspaceTemplate404JSONResponse externalRef0.ErrorResponse
+type GetWorkflow404JSONResponse externalRef0.ErrorResponse
 
-func (response GetWorkspaceTemplate404JSONResponse) VisitGetWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response GetWorkflow404JSONResponse) VisitGetWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(404)
 
 	return ctx.JSON(&response)
 }
 
-type GetWorkspaceTemplate500JSONResponse externalRef0.ErrorResponse
+type GetWorkflow500JSONResponse externalRef0.ErrorResponse
 
-func (response GetWorkspaceTemplate500JSONResponse) VisitGetWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response GetWorkflow500JSONResponse) VisitGetWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
 
-type PutWorkspaceTemplateRequestObject struct {
-	Name WorkspaceTemplateName `json:"name"`
-	Body *PutWorkspaceTemplateJSONRequestBody
+type PutWorkflowRequestObject struct {
+	Name WorkflowName `json:"name"`
+	Body *PutWorkflowJSONRequestBody
 }
 
-type PutWorkspaceTemplateResponseObject interface {
-	VisitPutWorkspaceTemplateResponse(ctx *fiber.Ctx) error
+type PutWorkflowResponseObject interface {
+	VisitPutWorkflowResponse(ctx *fiber.Ctx) error
 }
 
-type PutWorkspaceTemplate200JSONResponse externalRef0.WorkflowTemplateDocument
+type PutWorkflow200JSONResponse externalRef0.WorkflowDocument
 
-func (response PutWorkspaceTemplate200JSONResponse) VisitPutWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response PutWorkflow200JSONResponse) VisitPutWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type PutWorkspaceTemplate400JSONResponse externalRef0.ErrorResponse
+type PutWorkflow400JSONResponse externalRef0.ErrorResponse
 
-func (response PutWorkspaceTemplate400JSONResponse) VisitPutWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response PutWorkflow400JSONResponse) VisitPutWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(400)
 
 	return ctx.JSON(&response)
 }
 
-type PutWorkspaceTemplate500JSONResponse externalRef0.ErrorResponse
+type PutWorkflow500JSONResponse externalRef0.ErrorResponse
 
-func (response PutWorkspaceTemplate500JSONResponse) VisitPutWorkspaceTemplateResponse(ctx *fiber.Ctx) error {
+func (response PutWorkflow500JSONResponse) VisitPutWorkflowResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
@@ -12578,6 +13764,21 @@ type StrictServerInterface interface {
 	// Sync voices from a MiniMax tenant into the global voice catalog
 	// (POST /minimax-tenants/{name}/@sync-voices)
 	SyncMiniMaxTenantVoices(ctx context.Context, request SyncMiniMaxTenantVoicesRequestObject) (SyncMiniMaxTenantVoicesResponseObject, error)
+	// List all models
+	// (GET /models)
+	ListModels(ctx context.Context, request ListModelsRequestObject) (ListModelsResponseObject, error)
+	// Create a model
+	// (POST /models)
+	CreateModel(ctx context.Context, request CreateModelRequestObject) (CreateModelResponseObject, error)
+	// Delete a model
+	// (DELETE /models/{id})
+	DeleteModel(ctx context.Context, request DeleteModelRequestObject) (DeleteModelResponseObject, error)
+	// Get a model
+	// (GET /models/{id})
+	GetModel(ctx context.Context, request GetModelRequestObject) (GetModelResponseObject, error)
+	// Create or update a model
+	// (PUT /models/{id})
+	PutModel(ctx context.Context, request PutModelRequestObject) (PutModelResponseObject, error)
 	// Delete an admin resource
 	// (DELETE /resources/{kind}/{name})
 	DeleteResource(ctx context.Context, request DeleteResourceRequestObject) (DeleteResourceResponseObject, error)
@@ -12620,21 +13821,21 @@ type StrictServerInterface interface {
 	// Sync voices from a Volcengine tenant into the global voice catalog
 	// (POST /volc-tenants/{name}/@sync-voices)
 	SyncVolcTenantVoices(ctx context.Context, request SyncVolcTenantVoicesRequestObject) (SyncVolcTenantVoicesResponseObject, error)
-	// List all workspace templates
-	// (GET /workspace-templates)
-	ListWorkspaceTemplates(ctx context.Context, request ListWorkspaceTemplatesRequestObject) (ListWorkspaceTemplatesResponseObject, error)
-	// Create a workspace template
-	// (POST /workspace-templates)
-	CreateWorkspaceTemplate(ctx context.Context, request CreateWorkspaceTemplateRequestObject) (CreateWorkspaceTemplateResponseObject, error)
-	// Delete a workspace template
-	// (DELETE /workspace-templates/{name})
-	DeleteWorkspaceTemplate(ctx context.Context, request DeleteWorkspaceTemplateRequestObject) (DeleteWorkspaceTemplateResponseObject, error)
-	// Get a workspace template
-	// (GET /workspace-templates/{name})
-	GetWorkspaceTemplate(ctx context.Context, request GetWorkspaceTemplateRequestObject) (GetWorkspaceTemplateResponseObject, error)
-	// Create or update a workspace template
-	// (PUT /workspace-templates/{name})
-	PutWorkspaceTemplate(ctx context.Context, request PutWorkspaceTemplateRequestObject) (PutWorkspaceTemplateResponseObject, error)
+	// List all workflows
+	// (GET /workflows)
+	ListWorkflows(ctx context.Context, request ListWorkflowsRequestObject) (ListWorkflowsResponseObject, error)
+	// Create a workflow
+	// (POST /workflows)
+	CreateWorkflow(ctx context.Context, request CreateWorkflowRequestObject) (CreateWorkflowResponseObject, error)
+	// Delete a workflow
+	// (DELETE /workflows/{name})
+	DeleteWorkflow(ctx context.Context, request DeleteWorkflowRequestObject) (DeleteWorkflowResponseObject, error)
+	// Get a workflow
+	// (GET /workflows/{name})
+	GetWorkflow(ctx context.Context, request GetWorkflowRequestObject) (GetWorkflowResponseObject, error)
+	// Create or update a workflow
+	// (PUT /workflows/{name})
+	PutWorkflow(ctx context.Context, request PutWorkflowRequestObject) (PutWorkflowResponseObject, error)
 	// List all workspaces
 	// (GET /workspaces)
 	ListWorkspaces(ctx context.Context, request ListWorkspacesRequestObject) (ListWorkspacesResponseObject, error)
@@ -13669,6 +14870,151 @@ func (sh *strictHandler) SyncMiniMaxTenantVoices(ctx *fiber.Ctx, name MiniMaxTen
 	return nil
 }
 
+// ListModels operation middleware
+func (sh *strictHandler) ListModels(ctx *fiber.Ctx, params ListModelsParams) error {
+	var request ListModelsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListModels(ctx.UserContext(), request.(ListModelsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListModels")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListModelsResponseObject); ok {
+		if err := validResponse.VisitListModelsResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateModel operation middleware
+func (sh *strictHandler) CreateModel(ctx *fiber.Ctx) error {
+	var request CreateModelRequestObject
+
+	var body CreateModelJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateModel(ctx.UserContext(), request.(CreateModelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateModel")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateModelResponseObject); ok {
+		if err := validResponse.VisitCreateModelResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteModel operation middleware
+func (sh *strictHandler) DeleteModel(ctx *fiber.Ctx, id ModelID) error {
+	var request DeleteModelRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteModel(ctx.UserContext(), request.(DeleteModelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteModel")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteModelResponseObject); ok {
+		if err := validResponse.VisitDeleteModelResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetModel operation middleware
+func (sh *strictHandler) GetModel(ctx *fiber.Ctx, id ModelID) error {
+	var request GetModelRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetModel(ctx.UserContext(), request.(GetModelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetModel")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetModelResponseObject); ok {
+		if err := validResponse.VisitGetModelResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutModel operation middleware
+func (sh *strictHandler) PutModel(ctx *fiber.Ctx, id ModelID) error {
+	var request PutModelRequestObject
+
+	request.Id = id
+
+	var body PutModelJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutModel(ctx.UserContext(), request.(PutModelRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutModel")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutModelResponseObject); ok {
+		if err := validResponse.VisitPutModelResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
 // DeleteResource operation middleware
 func (sh *strictHandler) DeleteResource(ctx *fiber.Ctx, kind ResourceKind, name ResourceName) error {
 	var request DeleteResourceRequestObject
@@ -14082,25 +15428,25 @@ func (sh *strictHandler) SyncVolcTenantVoices(ctx *fiber.Ctx, name VolcTenantNam
 	return nil
 }
 
-// ListWorkspaceTemplates operation middleware
-func (sh *strictHandler) ListWorkspaceTemplates(ctx *fiber.Ctx, params ListWorkspaceTemplatesParams) error {
-	var request ListWorkspaceTemplatesRequestObject
+// ListWorkflows operation middleware
+func (sh *strictHandler) ListWorkflows(ctx *fiber.Ctx, params ListWorkflowsParams) error {
+	var request ListWorkflowsRequestObject
 
 	request.Params = params
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.ListWorkspaceTemplates(ctx.UserContext(), request.(ListWorkspaceTemplatesRequestObject))
+		return sh.ssi.ListWorkflows(ctx.UserContext(), request.(ListWorkflowsRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListWorkspaceTemplates")
+		handler = middleware(handler, "ListWorkflows")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(ListWorkspaceTemplatesResponseObject); ok {
-		if err := validResponse.VisitListWorkspaceTemplatesResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(ListWorkflowsResponseObject); ok {
+		if err := validResponse.VisitListWorkflowsResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14109,29 +15455,29 @@ func (sh *strictHandler) ListWorkspaceTemplates(ctx *fiber.Ctx, params ListWorks
 	return nil
 }
 
-// CreateWorkspaceTemplate operation middleware
-func (sh *strictHandler) CreateWorkspaceTemplate(ctx *fiber.Ctx) error {
-	var request CreateWorkspaceTemplateRequestObject
+// CreateWorkflow operation middleware
+func (sh *strictHandler) CreateWorkflow(ctx *fiber.Ctx) error {
+	var request CreateWorkflowRequestObject
 
-	var body CreateWorkspaceTemplateJSONRequestBody
+	var body CreateWorkflowJSONRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	request.Body = &body
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.CreateWorkspaceTemplate(ctx.UserContext(), request.(CreateWorkspaceTemplateRequestObject))
+		return sh.ssi.CreateWorkflow(ctx.UserContext(), request.(CreateWorkflowRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "CreateWorkspaceTemplate")
+		handler = middleware(handler, "CreateWorkflow")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(CreateWorkspaceTemplateResponseObject); ok {
-		if err := validResponse.VisitCreateWorkspaceTemplateResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(CreateWorkflowResponseObject); ok {
+		if err := validResponse.VisitCreateWorkflowResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14140,25 +15486,25 @@ func (sh *strictHandler) CreateWorkspaceTemplate(ctx *fiber.Ctx) error {
 	return nil
 }
 
-// DeleteWorkspaceTemplate operation middleware
-func (sh *strictHandler) DeleteWorkspaceTemplate(ctx *fiber.Ctx, name WorkspaceTemplateName) error {
-	var request DeleteWorkspaceTemplateRequestObject
+// DeleteWorkflow operation middleware
+func (sh *strictHandler) DeleteWorkflow(ctx *fiber.Ctx, name WorkflowName) error {
+	var request DeleteWorkflowRequestObject
 
 	request.Name = name
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.DeleteWorkspaceTemplate(ctx.UserContext(), request.(DeleteWorkspaceTemplateRequestObject))
+		return sh.ssi.DeleteWorkflow(ctx.UserContext(), request.(DeleteWorkflowRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "DeleteWorkspaceTemplate")
+		handler = middleware(handler, "DeleteWorkflow")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(DeleteWorkspaceTemplateResponseObject); ok {
-		if err := validResponse.VisitDeleteWorkspaceTemplateResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(DeleteWorkflowResponseObject); ok {
+		if err := validResponse.VisitDeleteWorkflowResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14167,25 +15513,25 @@ func (sh *strictHandler) DeleteWorkspaceTemplate(ctx *fiber.Ctx, name WorkspaceT
 	return nil
 }
 
-// GetWorkspaceTemplate operation middleware
-func (sh *strictHandler) GetWorkspaceTemplate(ctx *fiber.Ctx, name WorkspaceTemplateName) error {
-	var request GetWorkspaceTemplateRequestObject
+// GetWorkflow operation middleware
+func (sh *strictHandler) GetWorkflow(ctx *fiber.Ctx, name WorkflowName) error {
+	var request GetWorkflowRequestObject
 
 	request.Name = name
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.GetWorkspaceTemplate(ctx.UserContext(), request.(GetWorkspaceTemplateRequestObject))
+		return sh.ssi.GetWorkflow(ctx.UserContext(), request.(GetWorkflowRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetWorkspaceTemplate")
+		handler = middleware(handler, "GetWorkflow")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(GetWorkspaceTemplateResponseObject); ok {
-		if err := validResponse.VisitGetWorkspaceTemplateResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(GetWorkflowResponseObject); ok {
+		if err := validResponse.VisitGetWorkflowResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14194,31 +15540,31 @@ func (sh *strictHandler) GetWorkspaceTemplate(ctx *fiber.Ctx, name WorkspaceTemp
 	return nil
 }
 
-// PutWorkspaceTemplate operation middleware
-func (sh *strictHandler) PutWorkspaceTemplate(ctx *fiber.Ctx, name WorkspaceTemplateName) error {
-	var request PutWorkspaceTemplateRequestObject
+// PutWorkflow operation middleware
+func (sh *strictHandler) PutWorkflow(ctx *fiber.Ctx, name WorkflowName) error {
+	var request PutWorkflowRequestObject
 
 	request.Name = name
 
-	var body PutWorkspaceTemplateJSONRequestBody
+	var body PutWorkflowJSONRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	request.Body = &body
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.PutWorkspaceTemplate(ctx.UserContext(), request.(PutWorkspaceTemplateRequestObject))
+		return sh.ssi.PutWorkflow(ctx.UserContext(), request.(PutWorkflowRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PutWorkspaceTemplate")
+		handler = middleware(handler, "PutWorkflow")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(PutWorkspaceTemplateResponseObject); ok {
-		if err := validResponse.VisitPutWorkspaceTemplateResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(PutWorkflowResponseObject); ok {
+		if err := validResponse.VisitPutWorkflowResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

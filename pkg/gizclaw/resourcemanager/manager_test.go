@@ -44,10 +44,11 @@ func TestGetReturnsNotFoundByKind(t *testing.T) {
 	}{
 		{name: "credential", kind: apitypes.ResourceKindCredential, manager: New(Services{Credentials: newFakeCredentials()}), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "gear config", kind: apitypes.ResourceKindGearConfig, manager: New(Services{Gears: newFakeGears()}), wantCode: "GEAR_NOT_FOUND"},
+		{name: "model", kind: apitypes.ResourceKindModel, manager: newModelManager(), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "minimax tenant", kind: apitypes.ResourceKindMiniMaxTenant, manager: New(Services{MiniMax: newFakeMiniMax()}), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "voice", kind: apitypes.ResourceKindVoice, manager: New(Services{MiniMax: newFakeMiniMax()}), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "workspace", kind: apitypes.ResourceKindWorkspace, manager: New(Services{Workspaces: newFakeWorkspaces()}), wantCode: "RESOURCE_NOT_FOUND"},
-		{name: "workspace template", kind: apitypes.ResourceKindWorkspaceTemplate, manager: New(Services{WorkspaceTemplates: newFakeWorkspaceTemplates()}), wantCode: "RESOURCE_NOT_FOUND"},
+		{name: "workflow", kind: apitypes.ResourceKindWorkflow, manager: New(Services{Workflows: newFakeWorkflows()}), wantCode: "RESOURCE_NOT_FOUND"},
 	}
 
 	for _, tc := range tests {
@@ -94,10 +95,11 @@ func TestPutRejectsMissingServicesByKind(t *testing.T) {
 	}{
 		{name: "credential", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
 		{name: "gear config", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"GearConfig","metadata":{"name":"gear"},"spec":{}}`},
+		{name: "model", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`},
 		{name: "minimax tenant", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`},
 		{name: "voice", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
-		{name: "workspace", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workspace_template_name":"template"}}`},
-		{name: "workspace template", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"WorkspaceTemplate","metadata":{"name":"template"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"SingleAgentGraphWorkflowTemplate","metadata":{"name":"template"},"spec":{}}}`},
+		{name: "workspace", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`},
+		{name: "workflow", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`},
 	}
 
 	for _, tc := range tests {
@@ -110,11 +112,12 @@ func TestPutRejectsMissingServicesByKind(t *testing.T) {
 
 func TestPutRejectsUnsupportedVersionByKind(t *testing.T) {
 	manager := New(Services{
-		Credentials:        newFakeCredentials(),
-		Gears:              newFakeGears(),
-		MiniMax:            newFakeMiniMax(),
-		Workspaces:         newFakeWorkspaces(),
-		WorkspaceTemplates: newFakeWorkspaceTemplates(),
+		Credentials: newFakeCredentials(),
+		Gears:       newFakeGears(),
+		Models:      newModelManager().services.Models,
+		MiniMax:     newFakeMiniMax(),
+		Workspaces:  newFakeWorkspaces(),
+		Workflows:   newFakeWorkflows(),
 	})
 	tests := []struct {
 		name     string
@@ -122,11 +125,12 @@ func TestPutRejectsUnsupportedVersionByKind(t *testing.T) {
 	}{
 		{name: "credential", resource: `{"apiVersion":"unsupported","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
 		{name: "gear config", resource: `{"apiVersion":"unsupported","kind":"GearConfig","metadata":{"name":"gear"},"spec":{}}`},
+		{name: "model", resource: `{"apiVersion":"unsupported","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`},
 		{name: "minimax tenant", resource: `{"apiVersion":"unsupported","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`},
 		{name: "resource list", resource: `{"apiVersion":"unsupported","kind":"ResourceList","metadata":{"name":"bundle"},"spec":{"items":[]}}`},
 		{name: "voice", resource: `{"apiVersion":"unsupported","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
-		{name: "workspace", resource: `{"apiVersion":"unsupported","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workspace_template_name":"template"}}`},
-		{name: "workspace template", resource: `{"apiVersion":"unsupported","kind":"WorkspaceTemplate","metadata":{"name":"template"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"SingleAgentGraphWorkflowTemplate","metadata":{"name":"template"},"spec":{}}}`},
+		{name: "workspace", resource: `{"apiVersion":"unsupported","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`},
+		{name: "workflow", resource: `{"apiVersion":"unsupported","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`},
 	}
 
 	for _, tc := range tests {
@@ -166,10 +170,11 @@ func TestDeleteRejectsMissingServicesByKind(t *testing.T) {
 		kind apitypes.ResourceKind
 	}{
 		{name: "credential", kind: apitypes.ResourceKindCredential},
+		{name: "model", kind: apitypes.ResourceKindModel},
 		{name: "minimax tenant", kind: apitypes.ResourceKindMiniMaxTenant},
 		{name: "voice", kind: apitypes.ResourceKindVoice},
 		{name: "workspace", kind: apitypes.ResourceKindWorkspace},
-		{name: "workspace template", kind: apitypes.ResourceKindWorkspaceTemplate},
+		{name: "workflow", kind: apitypes.ResourceKindWorkflow},
 	}
 
 	for _, tc := range tests {
@@ -187,10 +192,11 @@ func TestDeleteReturnsNotFoundByKind(t *testing.T) {
 		manager *Manager
 	}{
 		{name: "credential", kind: apitypes.ResourceKindCredential, manager: New(Services{Credentials: newFakeCredentials()})},
+		{name: "model", kind: apitypes.ResourceKindModel, manager: newModelManager()},
 		{name: "minimax tenant", kind: apitypes.ResourceKindMiniMaxTenant, manager: New(Services{MiniMax: newFakeMiniMax()})},
 		{name: "voice", kind: apitypes.ResourceKindVoice, manager: New(Services{MiniMax: newFakeMiniMax()})},
 		{name: "workspace", kind: apitypes.ResourceKindWorkspace, manager: New(Services{Workspaces: newFakeWorkspaces()})},
-		{name: "workspace template", kind: apitypes.ResourceKindWorkspaceTemplate, manager: New(Services{WorkspaceTemplates: newFakeWorkspaceTemplates()})},
+		{name: "workflow", kind: apitypes.ResourceKindWorkflow, manager: New(Services{Workflows: newFakeWorkflows()})},
 	}
 
 	for _, tc := range tests {
@@ -203,22 +209,25 @@ func TestDeleteReturnsNotFoundByKind(t *testing.T) {
 
 func TestDeleteRemovesResourcesByKind(t *testing.T) {
 	credentials := newFakeCredentials()
+	models := newModelManager().services.Models
 	minimax := newFakeMiniMax()
 	workspaces := newFakeWorkspaces()
-	templates := newFakeWorkspaceTemplates()
+	workflows := newFakeWorkflows()
 	manager := New(Services{
-		Credentials:        credentials,
-		MiniMax:            minimax,
-		Workspaces:         workspaces,
-		WorkspaceTemplates: templates,
+		Credentials: credentials,
+		Models:      models,
+		MiniMax:     minimax,
+		Workspaces:  workspaces,
+		Workflows:   workflows,
 	})
 
 	for _, resource := range []apitypes.Resource{
 		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"credential"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`),
+		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`),
 		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`),
 		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`),
-		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"WorkspaceTemplate","metadata":{"name":"template"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"SingleAgentGraphWorkflowTemplate","metadata":{"name":"template"},"spec":{}}}`),
-		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workspace_template_name":"template"}}`),
+		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`),
+		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`),
 	} {
 		if _, err := manager.Put(context.Background(), resource); err != nil {
 			t.Fatalf("Put() error = %v", err)
@@ -230,10 +239,11 @@ func TestDeleteRemovesResourcesByKind(t *testing.T) {
 		name string
 	}{
 		{apitypes.ResourceKindCredential, "credential"},
+		{apitypes.ResourceKindModel, "model"},
 		{apitypes.ResourceKindMiniMaxTenant, "tenant"},
 		{apitypes.ResourceKindVoice, "voice"},
 		{apitypes.ResourceKindWorkspace, "workspace"},
-		{apitypes.ResourceKindWorkspaceTemplate, "template"},
+		{apitypes.ResourceKindWorkflow, "workflow"},
 	}
 	for _, tc := range tests {
 		t.Run(string(tc.kind), func(t *testing.T) {
@@ -270,10 +280,11 @@ func TestApplyRejectsMissingServicesByKind(t *testing.T) {
 	}{
 		{name: "credential", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
 		{name: "gear config", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"GearConfig","metadata":{"name":"gear"},"spec":{}}`},
+		{name: "model", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`},
 		{name: "minimax tenant", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`},
 		{name: "voice", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
-		{name: "workspace", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workspace_template_name":"template"}}`},
-		{name: "workspace template", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"WorkspaceTemplate","metadata":{"name":"template"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"SingleAgentGraphWorkflowTemplate","metadata":{"name":"template"},"spec":{}}}`},
+		{name: "workspace", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`},
+		{name: "workflow", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`},
 	}
 
 	for _, tc := range tests {
@@ -286,11 +297,12 @@ func TestApplyRejectsMissingServicesByKind(t *testing.T) {
 
 func TestApplyRejectsUnsupportedVersionByKind(t *testing.T) {
 	manager := New(Services{
-		Credentials:        newFakeCredentials(),
-		Gears:              newFakeGears(),
-		MiniMax:            newFakeMiniMax(),
-		Workspaces:         newFakeWorkspaces(),
-		WorkspaceTemplates: newFakeWorkspaceTemplates(),
+		Credentials: newFakeCredentials(),
+		Gears:       newFakeGears(),
+		Models:      newModelManager().services.Models,
+		MiniMax:     newFakeMiniMax(),
+		Workspaces:  newFakeWorkspaces(),
+		Workflows:   newFakeWorkflows(),
 	})
 	tests := []struct {
 		name     string
@@ -298,11 +310,12 @@ func TestApplyRejectsUnsupportedVersionByKind(t *testing.T) {
 	}{
 		{name: "credential", resource: `{"apiVersion":"unsupported","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
 		{name: "gear config", resource: `{"apiVersion":"unsupported","kind":"GearConfig","metadata":{"name":"gear"},"spec":{}}`},
+		{name: "model", resource: `{"apiVersion":"unsupported","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`},
 		{name: "minimax tenant", resource: `{"apiVersion":"unsupported","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`},
 		{name: "resource list", resource: `{"apiVersion":"unsupported","kind":"ResourceList","metadata":{"name":"bundle"},"spec":{"items":[]}}`},
 		{name: "voice", resource: `{"apiVersion":"unsupported","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
-		{name: "workspace", resource: `{"apiVersion":"unsupported","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workspace_template_name":"template"}}`},
-		{name: "workspace template", resource: `{"apiVersion":"unsupported","kind":"WorkspaceTemplate","metadata":{"name":"template"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"SingleAgentGraphWorkflowTemplate","metadata":{"name":"template"},"spec":{}}}`},
+		{name: "workspace", resource: `{"apiVersion":"unsupported","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`},
+		{name: "workflow", resource: `{"apiVersion":"unsupported","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`},
 	}
 
 	for _, tc := range tests {

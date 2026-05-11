@@ -151,6 +151,22 @@ func TestUIAPIProxyConnectErrorReturnsUnavailable(t *testing.T) {
 	}
 }
 
+func TestAdminUIRedirectsLegacyWorkspaceTemplateRoutes(t *testing.T) {
+	mux := http.NewServeMux()
+	registerAdminUIRoutes(mux)
+
+	for _, path := range []string{"/workspace-templates", "/workspace-templates/demo", "/ai/workspace-templates", "/ai/workspace-templates/demo"} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusFound {
+			t.Fatalf("GET %s status = %d, want %d", path, rec.Code, http.StatusFound)
+		}
+		if got := rec.Header().Get("Location"); got != "/ai/workflows" {
+			t.Fatalf("GET %s Location = %q, want /ai/workflows", path, got)
+		}
+	}
+}
+
 type fakeUIAPIProxyClient struct {
 	handler http.Handler
 	closed  atomic.Bool

@@ -1,0 +1,18 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Model Provider Name Type",
+    "description": "ModelProviderName schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ModelProviderName": {
+        "type": "string",
+        "description": "Model provider instance name",
+        "example": "minimax-cn"
+      }
+    }
+  }
+}

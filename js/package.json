@@ -1,0 +1,11 @@
+{
+  "name": "@gizclaw/codegen",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen:sdk": "openapi-ts && node scripts/write-package-manifests.mjs"
+  },
+  "devDependencies": {
+    "@hey-api/openapi-ts": "^0.96.0"
+  }
+}

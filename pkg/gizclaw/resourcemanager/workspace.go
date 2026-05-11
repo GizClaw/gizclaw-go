@@ -94,16 +94,16 @@ func (m *Manager) deleteWorkspace(ctx context.Context, name adminservice.Workspa
 
 func workspaceSpec(workspace apitypes.Workspace) apitypes.WorkspaceSpec {
 	return apitypes.WorkspaceSpec{
-		Parameters:            workspace.Parameters,
-		WorkspaceTemplateName: workspace.WorkspaceTemplateName,
+		Parameters:   workspace.Parameters,
+		WorkflowName: workspace.WorkflowName,
 	}
 }
 
 func workspaceUpsert(resource apitypes.WorkspaceResource) adminservice.WorkspaceUpsert {
 	return adminservice.WorkspaceUpsert{
-		Name:                  apitypes.WorkspaceName(resource.Metadata.Name),
-		Parameters:            resource.Spec.Parameters,
-		WorkspaceTemplateName: resource.Spec.WorkspaceTemplateName,
+		Name:         apitypes.WorkspaceName(resource.Metadata.Name),
+		Parameters:   resource.Spec.Parameters,
+		WorkflowName: resource.Spec.WorkflowName,
 	}
 }
 

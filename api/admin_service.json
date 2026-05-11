@@ -32,6 +32,10 @@
       "description": "Provider credential operations"
     },
     {
+      "name": "Models",
+      "description": "Global model catalog operations"
+    },
+    {
       "name": "MiniMaxTenants",
       "description": "MiniMax tenant operations"
     },
@@ -44,8 +48,8 @@
       "description": "Global voice catalog operations"
     },
     {
-      "name": "WorkspaceTemplates",
-      "description": "Workspace template document operations"
+      "name": "Workflows",
+      "description": "Workflow document operations"
     },
     {
       "name": "Workspaces",
@@ -699,12 +703,12 @@
         }
       }
     },
-    "/workspace-templates": {
+    "/workflows": {
       "get": {
-        "operationId": "listWorkspaceTemplates",
-        "summary": "List all workspace templates",
+        "operationId": "listWorkflows",
+        "summary": "List all workflows",
         "tags": [
-          "WorkspaceTemplates"
+          "Workflows"
         ],
         "parameters": [
           {
@@ -716,11 +720,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Workspace template list",
+            "description": "Workflow list",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WorkspaceTemplateList"
+                  "$ref": "#/components/schemas/WorkflowList"
                 }
               }
             }
@@ -738,34 +742,34 @@
         }
       },
       "post": {
-        "operationId": "createWorkspaceTemplate",
-        "summary": "Create a workspace template",
+        "operationId": "createWorkflow",
+        "summary": "Create a workflow",
         "tags": [
-          "WorkspaceTemplates"
+          "Workflows"
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./types.json#/components/schemas/WorkflowTemplateDocument"
+                "$ref": "./types.json#/components/schemas/WorkflowDocument"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Created workspace template",
+            "description": "Created workflow",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/WorkflowTemplateDocument"
+                  "$ref": "./types.json#/components/schemas/WorkflowDocument"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid template payload",
+            "description": "Invalid workflow payload",
             "content": {
               "application/json": {
                 "schema": {
@@ -775,7 +779,7 @@
             }
           },
           "409": {
-            "description": "Template already exists",
+            "description": "Workflow already exists",
             "content": {
               "application/json": {
                 "schema": {
@@ -1021,6 +1025,270 @@
           },
           "404": {
             "description": "Credential not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models": {
+      "get": {
+        "operationId": "listModels",
+        "summary": "List all models",
+        "tags": [
+          "Models"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/modelKind"
+          },
+          {
+            "$ref": "#/components/parameters/modelSource"
+          },
+          {
+            "$ref": "#/components/parameters/modelProviderKind"
+          },
+          {
+            "$ref": "#/components/parameters/modelProviderName"
+          },
+          {
+            "$ref": "#/components/parameters/cursor"
+          },
+          {
+            "$ref": "#/components/parameters/limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Model list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createModel",
+        "summary": "Create a model",
+        "tags": [
+          "Models"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Model"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid model payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Model already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/models/{id}": {
+      "get": {
+        "operationId": "getModel",
+        "summary": "Get a model",
+        "tags": [
+          "Models"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/modelID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Model"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Model not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putModel",
+        "summary": "Create or update a model",
+        "tags": [
+          "Models"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/modelID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Model"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid model payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Model cannot be modified because source is sync",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteModel",
+        "summary": "Delete a model",
+        "tags": [
+          "Models"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/modelID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted model",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Model"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Model not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1327,8 +1595,8 @@
               }
             }
           },
-          "502": {
-            "description": "Upstream MiniMax sync failed",
+          "500": {
+            "description": "Internal error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1337,8 +1605,8 @@
               }
             }
           },
-          "500": {
-            "description": "Internal error",
+          "502": {
+            "description": "Upstream MiniMax sync failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -1635,8 +1903,8 @@
               }
             }
           },
-          "502": {
-            "description": "Upstream Volcengine sync failed",
+          "500": {
+            "description": "Internal error",
             "content": {
               "application/json": {
                 "schema": {
@@ -1645,8 +1913,8 @@
               }
             }
           },
-          "500": {
-            "description": "Internal error",
+          "502": {
+            "description": "Upstream Volcengine sync failed",
             "content": {
               "application/json": {
                 "schema": {
@@ -1919,31 +2187,31 @@
         }
       }
     },
-    "/workspace-templates/{name}": {
+    "/workflows/{name}": {
       "get": {
-        "operationId": "getWorkspaceTemplate",
-        "summary": "Get a workspace template",
+        "operationId": "getWorkflow",
+        "summary": "Get a workflow",
         "tags": [
-          "WorkspaceTemplates"
+          "Workflows"
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workspaceTemplateName"
+            "$ref": "#/components/parameters/workflowName"
           }
         ],
         "responses": {
           "200": {
-            "description": "Workspace template document",
+            "description": "Workflow document",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/WorkflowTemplateDocument"
+                  "$ref": "./types.json#/components/schemas/WorkflowDocument"
                 }
               }
             }
           },
           "404": {
-            "description": "Workspace template not found",
+            "description": "Workflow not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -1965,14 +2233,14 @@
         }
       },
       "put": {
-        "operationId": "putWorkspaceTemplate",
-        "summary": "Create or update a workspace template",
+        "operationId": "putWorkflow",
+        "summary": "Create or update a workflow",
         "tags": [
-          "WorkspaceTemplates"
+          "Workflows"
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workspaceTemplateName"
+            "$ref": "#/components/parameters/workflowName"
           }
         ],
         "requestBody": {
@@ -1980,24 +2248,24 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./types.json#/components/schemas/WorkflowTemplateDocument"
+                "$ref": "./types.json#/components/schemas/WorkflowDocument"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Stored workspace template",
+            "description": "Stored workflow",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/WorkflowTemplateDocument"
+                  "$ref": "./types.json#/components/schemas/WorkflowDocument"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid template payload",
+            "description": "Invalid workflow payload",
             "content": {
               "application/json": {
                 "schema": {
@@ -2019,29 +2287,29 @@
         }
       },
       "delete": {
-        "operationId": "deleteWorkspaceTemplate",
-        "summary": "Delete a workspace template",
+        "operationId": "deleteWorkflow",
+        "summary": "Delete a workflow",
         "tags": [
-          "WorkspaceTemplates"
+          "Workflows"
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workspaceTemplateName"
+            "$ref": "#/components/parameters/workflowName"
           }
         ],
         "responses": {
           "200": {
-            "description": "Deleted workspace template",
+            "description": "Deleted workflow",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/WorkflowTemplateDocument"
+                  "$ref": "./types.json#/components/schemas/WorkflowDocument"
                 }
               }
             }
           },
           "404": {
-            "description": "Workspace template not found",
+            "description": "Workflow not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3136,6 +3404,68 @@
           }
         }
       },
+      "ModelList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/Model"
+            }
+          }
+        }
+      },
+      "ModelUpsert": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "source",
+          "provider"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "./types.json#/components/schemas/ModelID"
+          },
+          "kind": {
+            "$ref": "./types.json#/components/schemas/ModelKind"
+          },
+          "source": {
+            "$ref": "./types.json#/components/schemas/ModelSource"
+          },
+          "provider": {
+            "$ref": "./types.json#/components/schemas/ModelProvider"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "provider_data": {
+            "type": "object",
+            "description": "Provider-specific data keyed by provider kind.",
+            "additionalProperties": true,
+            "example": {
+              "openai-compatible": {
+                "base_url": "https://api.minimax.chat/v1",
+                "upstream_model": "MiniMax-M2.5"
+              }
+            }
+          }
+        }
+      },
       "MiniMaxTenantUpsert": {
         "type": "object",
         "required": [
@@ -3383,14 +3713,14 @@
         "type": "object",
         "required": [
           "name",
-          "workspace_template_name"
+          "workflow_name"
         ],
         "properties": {
           "name": {
             "$ref": "./types.json#/components/schemas/WorkspaceName"
           },
-          "workspace_template_name": {
-            "$ref": "./types.json#/components/schemas/WorkspaceTemplateName"
+          "workflow_name": {
+            "$ref": "./types.json#/components/schemas/WorkflowName"
           },
           "parameters": {
             "type": "object",
@@ -3421,7 +3751,7 @@
           }
         }
       },
-      "WorkspaceTemplateList": {
+      "WorkflowList": {
         "type": "object",
         "required": [
           "items",
@@ -3438,7 +3768,7 @@
           "items": {
             "type": "array",
             "items": {
-              "$ref": "./types.json#/components/schemas/WorkflowTemplateDocument"
+              "$ref": "./types.json#/components/schemas/WorkflowDocument"
             }
           }
         }
@@ -3492,13 +3822,13 @@
           "type": "string"
         }
       },
-      "workspaceTemplateName": {
+      "workflowName": {
         "name": "name",
         "in": "path",
         "required": true,
-        "description": "Workspace template name",
+        "description": "Workflow name",
         "schema": {
-          "$ref": "./types.json#/components/schemas/WorkspaceTemplateName"
+          "$ref": "./types.json#/components/schemas/WorkflowName"
         }
       },
       "workspaceName": {
@@ -3598,6 +3928,51 @@
         "description": "Filter voices by provider instance name",
         "schema": {
           "$ref": "./types.json#/components/schemas/VoiceProviderName"
+        }
+      },
+      "modelID": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Model identifier",
+        "schema": {
+          "$ref": "./types.json#/components/schemas/ModelID"
+        }
+      },
+      "modelKind": {
+        "name": "kind",
+        "in": "query",
+        "required": false,
+        "description": "Filter models by kind",
+        "schema": {
+          "$ref": "./types.json#/components/schemas/ModelKind"
+        }
+      },
+      "modelSource": {
+        "name": "source",
+        "in": "query",
+        "required": false,
+        "description": "Filter models by source",
+        "schema": {
+          "$ref": "./types.json#/components/schemas/ModelSource"
+        }
+      },
+      "modelProviderKind": {
+        "name": "providerKind",
+        "in": "query",
+        "required": false,
+        "description": "Filter models by provider kind",
+        "schema": {
+          "$ref": "./types.json#/components/schemas/ModelProviderKind"
+        }
+      },
+      "modelProviderName": {
+        "name": "providerName",
+        "in": "query",
+        "required": false,
+        "description": "Filter models by provider instance name",
+        "schema": {
+          "$ref": "./types.json#/components/schemas/ModelProviderName"
         }
       }
     }

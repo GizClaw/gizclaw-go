@@ -164,7 +164,7 @@ func TestAdminHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	for _, want := range []string{"apply", "delete", "show", "gears", "firmware", "credentials", "minimax-tenants", "volc-tenants", "voices", "workspace-templates", "workspaces"} {
+	for _, want := range []string{"apply", "delete", "show", "gears", "firmware", "credentials", "minimax-tenants", "volc-tenants", "voices", "workflows", "workspaces"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("admin help missing %q: %s", want, out)
 		}
@@ -184,7 +184,7 @@ func TestAdminResourceHelp(t *testing.T) {
 		{[]string{"admin", "minimax-tenants", "--help"}, []string{"list", "get", "sync-voices"}, []string{"create", "put", "delete"}},
 		{[]string{"admin", "volc-tenants", "--help"}, []string{"list", "get", "sync-voices"}, []string{"create", "put", "delete"}},
 		{[]string{"admin", "voices", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete"}},
-		{[]string{"admin", "workspace-templates", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete"}},
+		{[]string{"admin", "workflows", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete"}},
 		{[]string{"admin", "workspaces", "--help"}, []string{"list", "get"}, []string{"create", "put", "delete"}},
 	} {
 		root := New()

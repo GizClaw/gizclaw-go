@@ -1,0 +1,23 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Model Kind Type",
+    "description": "ModelKind schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ModelKind": {
+        "type": "string",
+        "description": "Model capability kind",
+        "enum": [
+          "llm",
+          "tts",
+          "asr"
+        ],
+        "example": "llm"
+      }
+    }
+  }
+}

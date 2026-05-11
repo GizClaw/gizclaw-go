@@ -18,7 +18,7 @@ func TestApplyWorkspaceCreatesResource(t *testing.T) {
 		"kind": "Workspace",
 		"metadata": {"name": "demo"},
 		"spec": {
-			"workspace_template_name": "template",
+			"workflow_name": "workflow",
 			"parameters": {"topic": "demo"}
 		}
 	}`))
@@ -31,19 +31,19 @@ func TestApplyWorkspaceCreatesResource(t *testing.T) {
 	if workspaces.putCount != 1 {
 		t.Fatalf("putCount = %d, want 1", workspaces.putCount)
 	}
-	if workspaces.items["demo"].WorkspaceTemplateName != "template" {
-		t.Fatalf("workspace template = %q, want template", workspaces.items["demo"].WorkspaceTemplateName)
+	if workspaces.items["demo"].WorkflowName != "workflow" {
+		t.Fatalf("workflow = %q, want workflow", workspaces.items["demo"].WorkflowName)
 	}
 }
 
 func TestGetWorkspaceReturnsResource(t *testing.T) {
 	workspaces := newFakeWorkspaces()
 	workspaces.items["demo"] = apitypes.Workspace{
-		CreatedAt:             time.Now().UTC(),
-		Name:                  "demo",
-		Parameters:            &map[string]interface{}{"topic": "demo"},
-		UpdatedAt:             time.Now().UTC(),
-		WorkspaceTemplateName: "template",
+		CreatedAt:    time.Now().UTC(),
+		Name:         "demo",
+		Parameters:   &map[string]interface{}{"topic": "demo"},
+		UpdatedAt:    time.Now().UTC(),
+		WorkflowName: "workflow",
 	}
 	manager := New(Services{Workspaces: workspaces})
 
@@ -58,8 +58,8 @@ func TestGetWorkspaceReturnsResource(t *testing.T) {
 	if workspace.Metadata.Name != "demo" {
 		t.Fatalf("metadata.name = %q, want demo", workspace.Metadata.Name)
 	}
-	if workspace.Spec.WorkspaceTemplateName != "template" {
-		t.Fatalf("workspace_template_name = %q, want template", workspace.Spec.WorkspaceTemplateName)
+	if workspace.Spec.WorkflowName != "workflow" {
+		t.Fatalf("workflow_name = %q, want workflow", workspace.Spec.WorkflowName)
 	}
 }
 
@@ -72,7 +72,7 @@ func TestPutWorkspaceWritesResource(t *testing.T) {
 		"kind": "Workspace",
 		"metadata": {"name": "demo"},
 		"spec": {
-			"workspace_template_name": "template"
+			"workflow_name": "workflow"
 		}
 	}`))
 	if err != nil {
@@ -86,10 +86,10 @@ func TestPutWorkspaceWritesResource(t *testing.T) {
 func TestApplyWorkspaceUnchangedSkipsPut(t *testing.T) {
 	workspaces := newFakeWorkspaces()
 	workspaces.items["demo"] = apitypes.Workspace{
-		CreatedAt:             time.Now().UTC(),
-		Name:                  "demo",
-		UpdatedAt:             time.Now().UTC(),
-		WorkspaceTemplateName: "template",
+		CreatedAt:    time.Now().UTC(),
+		Name:         "demo",
+		UpdatedAt:    time.Now().UTC(),
+		WorkflowName: "workflow",
 	}
 	manager := New(Services{Workspaces: workspaces})
 
@@ -98,7 +98,7 @@ func TestApplyWorkspaceUnchangedSkipsPut(t *testing.T) {
 		"kind": "Workspace",
 		"metadata": {"name": "demo"},
 		"spec": {
-			"workspace_template_name": "template"
+			"workflow_name": "workflow"
 		}
 	}`))
 	if err != nil {
@@ -115,10 +115,10 @@ func TestApplyWorkspaceUnchangedSkipsPut(t *testing.T) {
 func TestApplyWorkspaceUpdatesResource(t *testing.T) {
 	workspaces := newFakeWorkspaces()
 	workspaces.items["demo"] = apitypes.Workspace{
-		CreatedAt:             time.Now().UTC(),
-		Name:                  "demo",
-		UpdatedAt:             time.Now().UTC(),
-		WorkspaceTemplateName: "old-template",
+		CreatedAt:    time.Now().UTC(),
+		Name:         "demo",
+		UpdatedAt:    time.Now().UTC(),
+		WorkflowName: "old-workflow",
 	}
 	manager := New(Services{Workspaces: workspaces})
 
@@ -127,7 +127,7 @@ func TestApplyWorkspaceUpdatesResource(t *testing.T) {
 		"kind": "Workspace",
 		"metadata": {"name": "demo"},
 		"spec": {
-			"workspace_template_name": "new-template"
+			"workflow_name": "new-workflow"
 		}
 	}`))
 	if err != nil {
@@ -209,11 +209,11 @@ func (f *fakeWorkspaces) PutWorkspace(_ context.Context, request adminservice.Pu
 	body := *request.Body
 	now := time.Now().UTC()
 	item := apitypes.Workspace{
-		CreatedAt:             now,
-		Name:                  body.Name,
-		Parameters:            body.Parameters,
-		UpdatedAt:             now,
-		WorkspaceTemplateName: body.WorkspaceTemplateName,
+		CreatedAt:    now,
+		Name:         body.Name,
+		Parameters:   body.Parameters,
+		UpdatedAt:    now,
+		WorkflowName: body.WorkflowName,
 	}
 	f.items[string(request.Name)] = item
 	return adminservice.PutWorkspace200JSONResponse(item), nil

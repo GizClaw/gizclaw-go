@@ -14,9 +14,10 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/mmx"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/modelcatalog"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspacetemplate"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
 )
@@ -25,9 +26,10 @@ type adminService struct {
 	credential.CredentialAdminService
 	firmware.FirmwareAdminService
 	gear.GearsAdminService
+	modelcatalog.AdminService
 	mmx.MiniMaxAdminService
 	workspace.WorkspaceAdminService
-	workspacetemplate.WorkspaceTemplateAdminService
+	workflow.WorkflowAdminService
 	ResourceManager *resourcemanager.Manager
 }
 

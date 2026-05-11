@@ -458,16 +458,16 @@ func rollbackFirmware(ctx context.Context, c *gizclaw.Client, depot string) (api
 	return apitypes.Depot{}, responseError(resp.StatusCode, body)
 }
 
-func listWorkspaceTemplates(ctx context.Context, c *gizclaw.Client) ([]apitypes.WorkflowTemplateDocument, error) {
+func listWorkflows(ctx context.Context, c *gizclaw.Client) ([]apitypes.WorkflowDocument, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return nil, err
 	}
 	limit := adminservice.Limit(200)
 	var cursor *adminservice.Cursor
-	items := make([]apitypes.WorkflowTemplateDocument, 0)
+	items := make([]apitypes.WorkflowDocument, 0)
 	for {
-		resp, err := api.ListWorkspaceTemplatesWithResponse(ctx, &adminservice.ListWorkspaceTemplatesParams{
+		resp, err := api.ListWorkflowsWithResponse(ctx, &adminservice.ListWorkflowsParams{
 			Cursor: cursor,
 			Limit:  &limit,
 		})
@@ -486,64 +486,64 @@ func listWorkspaceTemplates(ctx context.Context, c *gizclaw.Client) ([]apitypes.
 	}
 }
 
-func createWorkspaceTemplate(ctx context.Context, c *gizclaw.Client, doc apitypes.WorkflowTemplateDocument) (apitypes.WorkflowTemplateDocument, error) {
+func createWorkflow(ctx context.Context, c *gizclaw.Client, doc apitypes.WorkflowDocument) (apitypes.WorkflowDocument, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return apitypes.WorkflowTemplateDocument{}, err
+		return apitypes.WorkflowDocument{}, err
 	}
-	resp, err := api.CreateWorkspaceTemplateWithResponse(ctx, doc)
+	resp, err := api.CreateWorkflowWithResponse(ctx, doc)
 	if err != nil {
-		return apitypes.WorkflowTemplateDocument{}, err
+		return apitypes.WorkflowDocument{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return apitypes.WorkflowTemplateDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
+	return apitypes.WorkflowDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
 }
 
-func getWorkspaceTemplate(ctx context.Context, c *gizclaw.Client, name string) (apitypes.WorkflowTemplateDocument, error) {
+func getWorkflow(ctx context.Context, c *gizclaw.Client, name string) (apitypes.WorkflowDocument, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return apitypes.WorkflowTemplateDocument{}, err
+		return apitypes.WorkflowDocument{}, err
 	}
-	resp, err := api.GetWorkspaceTemplateWithResponse(ctx, name)
+	resp, err := api.GetWorkflowWithResponse(ctx, name)
 	if err != nil {
-		return apitypes.WorkflowTemplateDocument{}, err
+		return apitypes.WorkflowDocument{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return apitypes.WorkflowTemplateDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+	return apitypes.WorkflowDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
 }
 
-func putWorkspaceTemplate(ctx context.Context, c *gizclaw.Client, name string, doc apitypes.WorkflowTemplateDocument) (apitypes.WorkflowTemplateDocument, error) {
+func putWorkflow(ctx context.Context, c *gizclaw.Client, name string, doc apitypes.WorkflowDocument) (apitypes.WorkflowDocument, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return apitypes.WorkflowTemplateDocument{}, err
+		return apitypes.WorkflowDocument{}, err
 	}
-	resp, err := api.PutWorkspaceTemplateWithResponse(ctx, name, doc)
+	resp, err := api.PutWorkflowWithResponse(ctx, name, doc)
 	if err != nil {
-		return apitypes.WorkflowTemplateDocument{}, err
+		return apitypes.WorkflowDocument{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return apitypes.WorkflowTemplateDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON500)
+	return apitypes.WorkflowDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON500)
 }
 
-func deleteWorkspaceTemplate(ctx context.Context, c *gizclaw.Client, name string) (apitypes.WorkflowTemplateDocument, error) {
+func deleteWorkflow(ctx context.Context, c *gizclaw.Client, name string) (apitypes.WorkflowDocument, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
-		return apitypes.WorkflowTemplateDocument{}, err
+		return apitypes.WorkflowDocument{}, err
 	}
-	resp, err := api.DeleteWorkspaceTemplateWithResponse(ctx, name)
+	resp, err := api.DeleteWorkflowWithResponse(ctx, name)
 	if err != nil {
-		return apitypes.WorkflowTemplateDocument{}, err
+		return apitypes.WorkflowDocument{}, err
 	}
 	if resp.JSON200 != nil {
 		return *resp.JSON200, nil
 	}
-	return apitypes.WorkflowTemplateDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
+	return apitypes.WorkflowDocument{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
 }
 
 func listWorkspaces(ctx context.Context, c *gizclaw.Client) ([]apitypes.Workspace, error) {

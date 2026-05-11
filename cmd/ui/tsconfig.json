@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "types": ["react", "react-dom"]
+  },
+  "include": [
+    "global.d.ts",
+    "admin/**/*.ts",
+    "admin/**/*.tsx",
+    "play/**/*.ts",
+    "play/**/*.tsx",
+    "../../js/packages/**/*.ts"
+  ]
+}

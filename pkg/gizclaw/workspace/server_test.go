@@ -15,11 +15,11 @@ func TestServerWorkspacesCRUD(t *testing.T) {
 
 	srv := newTestServer(t)
 	ctx := context.Background()
-	seedTemplate(t, srv, "template-1")
+	seedWorkflow(t, srv, "workflow-1")
 
 	createBody := mustWorkspaceUpsert(t, `{
 		"name": "alpha",
-		"workspace_template_name": "template-1",
+		"workflow_name": "workflow-1",
 		"parameters": {"mode": "demo"}
 	}`)
 
@@ -31,7 +31,7 @@ func TestServerWorkspacesCRUD(t *testing.T) {
 	if !ok {
 		t.Fatalf("CreateWorkspace() response = %#v", createResp)
 	}
-	if created.Name != "alpha" || created.WorkspaceTemplateName != "template-1" {
+	if created.Name != "alpha" || created.WorkflowName != "workflow-1" {
 		t.Fatalf("CreateWorkspace() workspace = %#v", created)
 	}
 	if created.CreatedAt.IsZero() || created.UpdatedAt.IsZero() {
@@ -64,7 +64,7 @@ func TestServerWorkspacesCRUD(t *testing.T) {
 
 	updateBody := mustWorkspaceUpsert(t, `{
 		"name": "alpha",
-		"workspace_template_name": "template-1",
+		"workflow_name": "workflow-1",
 		"parameters": {"mode": "updated"}
 	}`)
 	putResp, err := srv.PutWorkspace(ctx, adminservice.PutWorkspaceRequestObject{
@@ -104,12 +104,12 @@ func TestServerListWorkspacesPagination(t *testing.T) {
 
 	srv := newTestServer(t)
 	ctx := context.Background()
-	seedTemplate(t, srv, "template-1")
+	seedWorkflow(t, srv, "workflow-1")
 
 	for _, name := range []string{"alpha", "beta", "gamma"} {
 		body := adminservice.WorkspaceUpsert{
-			Name:                  apitypes.WorkspaceName(name),
-			WorkspaceTemplateName: "template-1",
+			Name:         apitypes.WorkspaceName(name),
+			WorkflowName: "workflow-1",
 		}
 		if _, err := srv.CreateWorkspace(ctx, adminservice.CreateWorkspaceRequestObject{Body: &body}); err != nil {
 			t.Fatalf("CreateWorkspace(%q) error = %v", name, err)
@@ -155,18 +155,18 @@ func TestServerRejectsInvalidWorkspaceReferences(t *testing.T) {
 
 	srv := newTestServer(t)
 	ctx := context.Background()
-	seedTemplate(t, srv, "template-1")
+	seedWorkflow(t, srv, "workflow-1")
 
-	missingTemplate := mustWorkspaceUpsert(t, `{
+	missingWorkflow := mustWorkspaceUpsert(t, `{
 		"name": "alpha",
-		"workspace_template_name": "missing-template"
+		"workflow_name": "missing-workflow"
 	}`)
-	resp, err := srv.CreateWorkspace(ctx, adminservice.CreateWorkspaceRequestObject{Body: &missingTemplate})
+	resp, err := srv.CreateWorkspace(ctx, adminservice.CreateWorkspaceRequestObject{Body: &missingWorkflow})
 	if err != nil {
-		t.Fatalf("CreateWorkspace(missing template) error = %v", err)
+		t.Fatalf("CreateWorkspace(missing workflow) error = %v", err)
 	}
 	if _, ok := resp.(adminservice.CreateWorkspace400JSONResponse); !ok {
-		t.Fatalf("CreateWorkspace(missing template) response = %#v", resp)
+		t.Fatalf("CreateWorkspace(missing workflow) response = %#v", resp)
 	}
 
 	nilCreateResp, err := srv.CreateWorkspace(ctx, adminservice.CreateWorkspaceRequestObject{})
@@ -179,7 +179,7 @@ func TestServerRejectsInvalidWorkspaceReferences(t *testing.T) {
 
 	blankName := mustWorkspaceUpsert(t, `{
 		"name": " ",
-		"workspace_template_name": "template-1"
+		"workflow_name": "workflow-1"
 	}`)
 	blankResp, err := srv.CreateWorkspace(ctx, adminservice.CreateWorkspaceRequestObject{Body: &blankName})
 	if err != nil {
@@ -195,11 +195,11 @@ func TestServerPutRejectsPathNameMismatch(t *testing.T) {
 
 	srv := newTestServer(t)
 	ctx := context.Background()
-	seedTemplate(t, srv, "template-1")
+	seedWorkflow(t, srv, "workflow-1")
 
 	body := mustWorkspaceUpsert(t, `{
 		"name": "other",
-		"workspace_template_name": "template-1"
+		"workflow_name": "workflow-1"
 	}`)
 	resp, err := srv.PutWorkspace(ctx, adminservice.PutWorkspaceRequestObject{
 		Name: "expected",
@@ -226,11 +226,11 @@ func TestServerWorkspaceConflictAndMissingDelete(t *testing.T) {
 
 	srv := newTestServer(t)
 	ctx := context.Background()
-	seedTemplate(t, srv, "template-1")
+	seedWorkflow(t, srv, "workflow-1")
 
 	body := mustWorkspaceUpsert(t, `{
 		"name": "alpha",
-		"workspace_template_name": "template-1"
+		"workflow_name": "workflow-1"
 	}`)
 	if _, err := srv.CreateWorkspace(ctx, adminservice.CreateWorkspaceRequestObject{Body: &body}); err != nil {
 		t.Fatalf("CreateWorkspace(seed) error = %v", err)
@@ -259,23 +259,23 @@ func TestServerStoreHelpers(t *testing.T) {
 	if _, err := nilServer.store(); err == nil {
 		t.Fatal("nil server store() error = nil")
 	}
-	if _, err := nilServer.templateStore(); err == nil {
-		t.Fatal("nil server templateStore() error = nil")
+	if _, err := nilServer.workflowStore(); err == nil {
+		t.Fatal("nil server workflowStore() error = nil")
 	}
-	if _, err := (&Server{}).templateStore(); err == nil {
-		t.Fatal("empty server templateStore() error = nil")
+	if _, err := (&Server{}).workflowStore(); err == nil {
+		t.Fatal("empty server workflowStore() error = nil")
 	}
 
 	base := kv.NewMemory(nil)
 	srv := &Server{Store: base}
-	if got, err := srv.templateStore(); err != nil || got != base {
-		t.Fatalf("templateStore fallback = %v, %v", got, err)
+	if got, err := srv.workflowStore(); err != nil || got != base {
+		t.Fatalf("workflowStore fallback = %v, %v", got, err)
 	}
 
-	templates := kv.NewMemory(nil)
-	srv.TemplateStore = templates
-	if got, err := srv.templateStore(); err != nil || got != templates {
-		t.Fatalf("templateStore explicit = %v, %v", got, err)
+	workflows := kv.NewMemory(nil)
+	srv.WorkflowStore = workflows
+	if got, err := srv.workflowStore(); err != nil || got != workflows {
+		t.Fatalf("workflowStore explicit = %v, %v", got, err)
 	}
 }
 
@@ -289,19 +289,19 @@ func newTestServer(t *testing.T) *Server {
 	t.Cleanup(func() { _ = store.Close() })
 	return &Server{
 		Store:         kv.Prefixed(store, kv.Key{"workspaces"}),
-		TemplateStore: kv.Prefixed(store, kv.Key{"workspace-templates"}),
+		WorkflowStore: kv.Prefixed(store, kv.Key{"workflows"}),
 	}
 }
 
-func seedTemplate(t *testing.T, srv *Server, name string) {
+func seedWorkflow(t *testing.T, srv *Server, name string) {
 	t.Helper()
 
-	store, err := srv.templateStore()
+	store, err := srv.workflowStore()
 	if err != nil {
-		t.Fatalf("template store: %v", err)
+		t.Fatalf("workflow store: %v", err)
 	}
-	if err := store.Set(context.Background(), templateReferenceKey(name), []byte(`{}`)); err != nil {
-		t.Fatalf("seed template %q: %v", name, err)
+	if err := store.Set(context.Background(), workflowReferenceKey(name), []byte(`{}`)); err != nil {
+		t.Fatalf("seed workflow %q: %v", name, err)
 	}
 }
 

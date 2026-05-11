@@ -11,17 +11,17 @@ import (
 )
 
 type Config struct {
-	KeyPair            *giznet.KeyPair
-	ListenAddr         string
-	AdminPublicKey     giznet.PublicKey
-	Storage            map[string]storage.Config
-	Stores             map[string]stores.Config
-	Gears              GearsConfig
-	Credentials        CredentialsConfig
-	MiniMax            MiniMaxConfig
-	Workspaces         WorkspacesConfig
-	WorkspaceTemplates WorkspaceTemplatesConfig
-	Depots             DepotsConfig
+	KeyPair        *giznet.KeyPair
+	ListenAddr     string
+	AdminPublicKey giznet.PublicKey
+	Storage        map[string]storage.Config
+	Stores         map[string]stores.Config
+	Gears          GearsConfig
+	Credentials    CredentialsConfig
+	MiniMax        MiniMaxConfig
+	Workspaces     WorkspacesConfig
+	Workflows      WorkflowsConfig
+	Depots         DepotsConfig
 }
 
 type GearsConfig struct {
@@ -39,11 +39,10 @@ type MiniMaxConfig struct {
 }
 
 type WorkspacesConfig struct {
-	Store          string `yaml:"store"`
-	TemplatesStore string `yaml:"templates-store"`
+	Store string `yaml:"store"`
 }
 
-type WorkspaceTemplatesConfig struct {
+type WorkflowsConfig struct {
 	Store string `yaml:"store"`
 }
 
@@ -53,16 +52,16 @@ type DepotsConfig struct {
 }
 
 type ConfigFile struct {
-	ListenAddr         string                    `yaml:"listen"`
-	AdminPublicKey     giznet.PublicKey          `yaml:"admin-public-key"`
-	Storage            map[string]storage.Config `yaml:"storage"`
-	Stores             map[string]stores.Config  `yaml:"stores"`
-	Gears              GearsConfig               `yaml:"gears"`
-	Credentials        CredentialsConfig         `yaml:"credentials"`
-	MiniMax            MiniMaxConfig             `yaml:"minimax"`
-	Workspaces         WorkspacesConfig          `yaml:"workspaces"`
-	WorkspaceTemplates WorkspaceTemplatesConfig  `yaml:"workspace-templates"`
-	Depots             DepotsConfig              `yaml:"depots"`
+	ListenAddr     string                    `yaml:"listen"`
+	AdminPublicKey giznet.PublicKey          `yaml:"admin-public-key"`
+	Storage        map[string]storage.Config `yaml:"storage"`
+	Stores         map[string]stores.Config  `yaml:"stores"`
+	Gears          GearsConfig               `yaml:"gears"`
+	Credentials    CredentialsConfig         `yaml:"credentials"`
+	MiniMax        MiniMaxConfig             `yaml:"minimax"`
+	Workspaces     WorkspacesConfig          `yaml:"workspaces"`
+	Workflows      WorkflowsConfig           `yaml:"workflows"`
+	Depots         DepotsConfig              `yaml:"depots"`
 }
 
 func LoadConfig(path string) (ConfigFile, error) {
@@ -71,16 +70,16 @@ func LoadConfig(path string) (ConfigFile, error) {
 		return ConfigFile{}, err
 	}
 	var raw struct {
-		ListenAddr         string                    `yaml:"listen"`
-		AdminPublicKey     *giznet.PublicKey         `yaml:"admin-public-key"`
-		Storage            map[string]storage.Config `yaml:"storage"`
-		Stores             map[string]stores.Config  `yaml:"stores"`
-		Gears              GearsConfig               `yaml:"gears"`
-		Credentials        CredentialsConfig         `yaml:"credentials"`
-		MiniMax            MiniMaxConfig             `yaml:"minimax"`
-		Workspaces         WorkspacesConfig          `yaml:"workspaces"`
-		WorkspaceTemplates WorkspaceTemplatesConfig  `yaml:"workspace-templates"`
-		Depots             DepotsConfig              `yaml:"depots"`
+		ListenAddr     string                    `yaml:"listen"`
+		AdminPublicKey *giznet.PublicKey         `yaml:"admin-public-key"`
+		Storage        map[string]storage.Config `yaml:"storage"`
+		Stores         map[string]stores.Config  `yaml:"stores"`
+		Gears          GearsConfig               `yaml:"gears"`
+		Credentials    CredentialsConfig         `yaml:"credentials"`
+		MiniMax        MiniMaxConfig             `yaml:"minimax"`
+		Workspaces     WorkspacesConfig          `yaml:"workspaces"`
+		Workflows      WorkflowsConfig           `yaml:"workflows"`
+		Depots         DepotsConfig              `yaml:"depots"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return ConfigFile{}, err
@@ -93,16 +92,16 @@ func LoadConfig(path string) (ConfigFile, error) {
 		adminPublicKey = *raw.AdminPublicKey
 	}
 	cfg := ConfigFile{
-		ListenAddr:         raw.ListenAddr,
-		AdminPublicKey:     adminPublicKey,
-		Storage:            raw.Storage,
-		Stores:             raw.Stores,
-		Gears:              raw.Gears,
-		Credentials:        raw.Credentials,
-		MiniMax:            raw.MiniMax,
-		Workspaces:         raw.Workspaces,
-		WorkspaceTemplates: raw.WorkspaceTemplates,
-		Depots:             raw.Depots,
+		ListenAddr:     raw.ListenAddr,
+		AdminPublicKey: adminPublicKey,
+		Storage:        raw.Storage,
+		Stores:         raw.Stores,
+		Gears:          raw.Gears,
+		Credentials:    raw.Credentials,
+		MiniMax:        raw.MiniMax,
+		Workspaces:     raw.Workspaces,
+		Workflows:      raw.Workflows,
+		Depots:         raw.Depots,
 	}
 	return cfg, nil
 }
@@ -130,7 +129,7 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	cfg.Credentials = mergeCredentialsConfig(cfg.Credentials, fileCfg.Credentials)
 	cfg.MiniMax = mergeMiniMaxConfig(cfg.MiniMax, fileCfg.MiniMax)
 	cfg.Workspaces = mergeWorkspacesConfig(cfg.Workspaces, fileCfg.Workspaces)
-	cfg.WorkspaceTemplates = mergeWorkspaceTemplatesConfig(cfg.WorkspaceTemplates, fileCfg.WorkspaceTemplates)
+	cfg.Workflows = mergeWorkflowsConfig(cfg.Workflows, fileCfg.Workflows)
 	cfg.Depots = mergeDepotsConfig(cfg.Depots, fileCfg.Depots)
 	return cfg, nil
 }
@@ -176,13 +175,10 @@ func mergeWorkspacesConfig(runtime WorkspacesConfig, file WorkspacesConfig) Work
 	if runtime.Store == "" {
 		runtime.Store = file.Store
 	}
-	if runtime.TemplatesStore == "" {
-		runtime.TemplatesStore = file.TemplatesStore
-	}
 	return runtime
 }
 
-func mergeWorkspaceTemplatesConfig(runtime WorkspaceTemplatesConfig, file WorkspaceTemplatesConfig) WorkspaceTemplatesConfig {
+func mergeWorkflowsConfig(runtime WorkflowsConfig, file WorkflowsConfig) WorkflowsConfig {
 	if runtime.Store == "" {
 		runtime.Store = file.Store
 	}
@@ -232,11 +228,8 @@ func (cfg Config) validate() error {
 	if cfg.Workspaces.Store == "" {
 		return fmt.Errorf("server: workspaces.store is required")
 	}
-	if cfg.Workspaces.TemplatesStore == "" {
-		return fmt.Errorf("server: workspaces.templates-store is required")
-	}
-	if cfg.WorkspaceTemplates.Store == "" {
-		return fmt.Errorf("server: workspace-templates.store is required")
+	if cfg.Workflows.Store == "" {
+		return fmt.Errorf("server: workflows.store is required")
 	}
 	if cfg.Depots.MetadataStore == "" {
 		return fmt.Errorf("server: depots.metadata-store is required")

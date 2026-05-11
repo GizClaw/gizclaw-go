@@ -22,7 +22,7 @@ func adminSidebarNavigationStories() []Story {
 				{label: "Credentials", heading: "Credentials", path: "/providers/credentials"},
 				{label: "MiniMax Tenants", heading: "MiniMax Tenants", path: "/providers/minimax-tenants"},
 				{label: "Voices", heading: "Voices", path: "/ai/voices"},
-				{label: "Workspace Templates", heading: "Workspace Templates", path: "/ai/workspace-templates"},
+				{label: "Workflows", heading: "Workflows", path: "/ai/workflows"},
 				{label: "Workspaces", heading: "Workspaces", path: "/ai/workspaces"},
 			} {
 				page.ClickNavigationLink(destination.label)

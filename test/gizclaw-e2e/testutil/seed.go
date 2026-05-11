@@ -20,15 +20,15 @@ import (
 )
 
 const (
-	SeedDepotName             = "ui-seed-depot"
-	SeedCredentialName        = "ui-seed-credential"
-	SeedMiniMaxTenantName     = "ui-seed-tenant"
-	SeedVoiceID               = "ui-seed-voice"
-	SeedVolcCredentialName    = "ui-seed-volc-credential"
-	SeedVolcTenantName        = "ui-seed-volc-tenant"
-	SeedVolcVoiceID           = "volc-tenant:ui-seed-volc-tenant:ICL_ui_seed_voice"
-	SeedWorkspaceTemplateName = "ui-seed-template"
-	SeedWorkspaceName         = "ui-seed-workspace"
+	SeedDepotName          = "ui-seed-depot"
+	SeedCredentialName     = "ui-seed-credential"
+	SeedMiniMaxTenantName  = "ui-seed-tenant"
+	SeedVoiceID            = "ui-seed-voice"
+	SeedVolcCredentialName = "ui-seed-volc-credential"
+	SeedVolcTenantName     = "ui-seed-volc-tenant"
+	SeedVolcVoiceID        = "volc-tenant:ui-seed-volc-tenant:ICL_ui_seed_voice"
+	SeedWorkflowName       = "ui-seed-workflow"
+	SeedWorkspaceName      = "ui-seed-workspace"
 )
 
 //go:embed gizclaw_seed_data/**/*.json
@@ -92,20 +92,20 @@ func ApplyAdminCatalogSeed(ctx context.Context, api *adminservice.ClientWithResp
 }
 
 func ApplyWorkspaceSeed(ctx context.Context, api *adminservice.ClientWithResponses) error {
-	var templateResource apitypes.Resource
-	if err := readSeedJSON("gizclaw_seed_data/resources/workspace_template.json", &templateResource); err != nil {
+	var workflowResource apitypes.Resource
+	if err := readSeedJSON("gizclaw_seed_data/resources/workflow.json", &workflowResource); err != nil {
 		return err
 	}
-	template, err := templateResource.AsWorkspaceTemplateResource()
+	workflow, err := workflowResource.AsWorkflowResource()
 	if err != nil {
 		return err
 	}
-	templateResp, err := api.PutWorkspaceTemplateWithResponse(ctx, template.Metadata.Name, template.Spec)
+	workflowResp, err := api.PutWorkflowWithResponse(ctx, workflow.Metadata.Name, workflow.Spec)
 	if err != nil {
 		return err
 	}
-	if templateResp.JSON200 == nil {
-		return seedResponseError("put workspace template", templateResp.StatusCode(), templateResp.Body, templateResp.JSON400, templateResp.JSON500)
+	if workflowResp.JSON200 == nil {
+		return seedResponseError("put workflow", workflowResp.StatusCode(), workflowResp.Body, workflowResp.JSON400, workflowResp.JSON500)
 	}
 
 	var workspaceResource apitypes.Resource
@@ -117,9 +117,9 @@ func ApplyWorkspaceSeed(ctx context.Context, api *adminservice.ClientWithRespons
 		return err
 	}
 	workspaceResp, err := api.PutWorkspaceWithResponse(ctx, workspace.Metadata.Name, adminservice.WorkspaceUpsert{
-		Name:                  workspace.Metadata.Name,
-		Parameters:            workspace.Spec.Parameters,
-		WorkspaceTemplateName: workspace.Spec.WorkspaceTemplateName,
+		Name:         workspace.Metadata.Name,
+		Parameters:   workspace.Spec.Parameters,
+		WorkflowName: workspace.Spec.WorkflowName,
 	})
 	if err != nil {
 		return err

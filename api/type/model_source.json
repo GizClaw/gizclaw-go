@@ -1,0 +1,22 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Model Source Type",
+    "description": "ModelSource schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ModelSource": {
+        "type": "string",
+        "description": "How the model entered the global catalog",
+        "enum": [
+          "sync",
+          "manual"
+        ],
+        "example": "manual"
+      }
+    }
+  }
+}

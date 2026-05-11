@@ -31,10 +31,10 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: workspaces
-  workspace-templates:
+  workflows:
     kind: keyvalue
     storage: memory
-    prefix: workspace-templates
+    prefix: workflows
   firmware-depots:
     kind: keyvalue
     storage: memory
@@ -56,9 +56,8 @@ minimax:
   credentials-store: credentials
 workspaces:
   store: workspaces
-  templates-store: workspace-templates
-workspace-templates:
-  store: workspace-templates
+workflows:
+  store: workflows
 depots:
   store: firmware
   metadata-store: firmware-depots

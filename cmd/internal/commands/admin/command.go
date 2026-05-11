@@ -10,8 +10,8 @@ import (
 	minimaxtenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/minimaxtenants"
 	voicescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/voices"
 	volctenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/volctenants"
+	workflowscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/workflows"
 	workspacescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/workspaces"
-	workspacetemplatescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/workspacetemplates"
 	"github.com/spf13/cobra"
 )
 
@@ -42,7 +42,7 @@ func NewCmd() *cobra.Command {
 		minimaxtenantscmd.NewCmd(),
 		volctenantscmd.NewCmd(),
 		voicescmd.NewCmd(),
-		workspacetemplatescmd.NewCmd(),
+		workflowscmd.NewCmd(),
 		workspacescmd.NewCmd(),
 	)
 	return cmd
