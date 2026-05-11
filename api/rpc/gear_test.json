@@ -1,0 +1,79 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "RPC Gear Test Types",
+    "description": "Schemas for gear.test.run RPC method.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GearTestMode": {
+        "type": "string",
+        "description": "Built-in gear test mode.",
+        "enum": [
+          "audio-play",
+          "audio-loopback",
+          "download",
+          "upload"
+        ],
+        "x-enum-varnames": [
+          "AudioPlay",
+          "AudioLoopback",
+          "Download",
+          "Upload"
+        ]
+      },
+      "GearRunTestRequest": {
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/GearTestMode"
+          },
+          "workflow": {
+            "type": "string",
+            "description": "Optional workflow or agent override for the test mode."
+          },
+          "params": {
+            "type": "object",
+            "description": "Mode-specific test parameters.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "GearRunTestResponse": {
+        "type": "object",
+        "required": [
+          "mode",
+          "status"
+        ],
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/GearTestMode"
+          },
+          "workflow": {
+            "type": "string",
+            "description": "Workflow or agent selected for this test run."
+          },
+          "status": {
+            "type": "string",
+            "description": "Current test run status.",
+            "enum": [
+              "started"
+            ],
+            "x-enum-varnames": [
+              "Started"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

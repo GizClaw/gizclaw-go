@@ -54,6 +54,8 @@ func (s *rpcServer) dispatch(ctx context.Context, req *rpcapi.RPCRequest) (*rpca
 		return s.handleRegisterGear(ctx, req)
 	case rpcapi.RPCMethodGearRuntimeGet:
 		return s.handleGetRuntime(ctx, req)
+	case rpcapi.RPCMethodGearTestRun:
+		return s.handleRunTest(ctx, req)
 	default:
 		return rpcapi.Error{RequestID: req.Id, Code: rpcapi.RPCErrorCodeMethodNotFound, Message: fmt.Sprintf("unknown method: %s", req.Method)}.RPCResponse(), nil
 	}
@@ -256,6 +258,16 @@ func (s *rpcServer) handleGetRuntime(ctx context.Context, req *rpcapi.RPCRequest
 	default:
 		return rpcUnexpectedResponse(req.Id, resp), nil
 	}
+}
+
+func (s *rpcServer) handleRunTest(ctx context.Context, req *rpcapi.RPCRequest) (*rpcapi.RPCResponse, error) {
+	if req.Params == nil {
+		return rpcapi.Error{RequestID: req.Id, Code: rpcapi.RPCErrorCodeInvalidParams, Message: "missing params"}.RPCResponse(), nil
+	}
+	if _, err := req.Params.AsGearRunTestRequest(); err != nil {
+		return rpcInvalidParams(req.Id), nil
+	}
+	return rpcapi.Error{RequestID: req.Id, Code: rpcapi.RPCErrorCodeInternalError, Message: "gear.test.run is not implemented"}.RPCResponse(), nil
 }
 
 func (s *rpcServer) gearContext(ctx context.Context) context.Context {

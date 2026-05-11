@@ -8,14 +8,14 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
 
-func TestApplyGearConfigUpdatesResource(t *testing.T) {
-	gears := newFakeGears()
-	gears.configs["gear-key"] = apitypes.Configuration{}
-	manager := New(Services{Gears: gears})
+func TestApplyPeerConfigUpdatesResource(t *testing.T) {
+	peers := newFakePeers()
+	peers.configs["gear-key"] = apitypes.Configuration{}
+	manager := New(Services{Peers: peers})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
-		"kind": "GearConfig",
+		"kind": "PeerConfig",
 		"metadata": {"name": "gear-key"},
 		"spec": {
 			"firmware": {"channel": "stable"}
@@ -27,29 +27,29 @@ func TestApplyGearConfigUpdatesResource(t *testing.T) {
 	if result.Action != apitypes.ApplyActionUpdated {
 		t.Fatalf("action = %q, want updated", result.Action)
 	}
-	if gears.putCount != 1 {
-		t.Fatalf("putCount = %d, want 1", gears.putCount)
+	if peers.putCount != 1 {
+		t.Fatalf("putCount = %d, want 1", peers.putCount)
 	}
-	if gears.configs["gear-key"].Firmware == nil || gears.configs["gear-key"].Firmware.Channel == nil {
+	if peers.configs["gear-key"].Firmware == nil || peers.configs["gear-key"].Firmware.Channel == nil {
 		t.Fatal("stored firmware channel is nil, want stable")
 	}
 }
 
-func TestGetGearConfigReturnsResource(t *testing.T) {
+func TestGetPeerConfigReturnsResource(t *testing.T) {
 	channel := apitypes.GearFirmwareChannel("stable")
-	gears := newFakeGears()
-	gears.configs["gear-key"] = apitypes.Configuration{
+	peers := newFakePeers()
+	peers.configs["gear-key"] = apitypes.Configuration{
 		Firmware: &apitypes.FirmwareConfig{Channel: &channel},
 	}
-	manager := New(Services{Gears: gears})
+	manager := New(Services{Peers: peers})
 
-	resource, err := manager.Get(context.Background(), apitypes.ResourceKindGearConfig, "gear-key")
+	resource, err := manager.Get(context.Background(), apitypes.ResourceKindPeerConfig, "gear-key")
 	if err != nil {
 		t.Fatalf("Get returned error: %v", err)
 	}
-	config, err := resource.AsGearConfigResource()
+	config, err := resource.AsPeerConfigResource()
 	if err != nil {
-		t.Fatalf("AsGearConfigResource returned error: %v", err)
+		t.Fatalf("AsPeerConfigResource returned error: %v", err)
 	}
 	if config.Metadata.Name != "gear-key" {
 		t.Fatalf("metadata.name = %q, want gear-key", config.Metadata.Name)
@@ -59,14 +59,14 @@ func TestGetGearConfigReturnsResource(t *testing.T) {
 	}
 }
 
-func TestPutGearConfigWritesResource(t *testing.T) {
-	gears := newFakeGears()
-	gears.configs["gear-key"] = apitypes.Configuration{}
-	manager := New(Services{Gears: gears})
+func TestPutPeerConfigWritesResource(t *testing.T) {
+	peers := newFakePeers()
+	peers.configs["gear-key"] = apitypes.Configuration{}
+	manager := New(Services{Peers: peers})
 
 	_, err := manager.Put(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
-		"kind": "GearConfig",
+		"kind": "PeerConfig",
 		"metadata": {"name": "gear-key"},
 		"spec": {
 			"firmware": {"channel": "testing"}
@@ -75,22 +75,22 @@ func TestPutGearConfigWritesResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Put returned error: %v", err)
 	}
-	if gears.putCount != 1 {
-		t.Fatalf("putCount = %d, want 1", gears.putCount)
+	if peers.putCount != 1 {
+		t.Fatalf("putCount = %d, want 1", peers.putCount)
 	}
 }
 
-func TestApplyGearConfigUnchangedSkipsPut(t *testing.T) {
+func TestApplyPeerConfigUnchangedSkipsPut(t *testing.T) {
 	channel := apitypes.GearFirmwareChannel("stable")
-	gears := newFakeGears()
-	gears.configs["gear-key"] = apitypes.Configuration{
+	peers := newFakePeers()
+	peers.configs["gear-key"] = apitypes.Configuration{
 		Firmware: &apitypes.FirmwareConfig{Channel: &channel},
 	}
-	manager := New(Services{Gears: gears})
+	manager := New(Services{Peers: peers})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
-		"kind": "GearConfig",
+		"kind": "PeerConfig",
 		"metadata": {"name": "gear-key"},
 		"spec": {
 			"firmware": {"channel": "stable"}
@@ -102,106 +102,106 @@ func TestApplyGearConfigUnchangedSkipsPut(t *testing.T) {
 	if result.Action != apitypes.ApplyActionUnchanged {
 		t.Fatalf("action = %q, want unchanged", result.Action)
 	}
-	if gears.putCount != 0 {
-		t.Fatalf("putCount = %d, want 0", gears.putCount)
+	if peers.putCount != 0 {
+		t.Fatalf("putCount = %d, want 0", peers.putCount)
 	}
 }
 
 func TestGearServiceErrorResponses(t *testing.T) {
-	gears := newFakeGears()
-	manager := New(Services{Gears: gears})
+	peers := newFakePeers()
+	manager := New(Services{Peers: peers})
 
-	_, err := manager.getGearConfig(context.Background(), "missing")
+	_, err := manager.getPeerConfig(context.Background(), "missing")
 	assertResourceError(t, err, 404, "GEAR_NOT_FOUND")
 
-	gears.configs["gear-key"] = apitypes.Configuration{}
-	gears.putStatus = 400
-	err = manager.putGearConfig(context.Background(), "gear-key", apitypes.Configuration{})
+	peers.configs["gear-key"] = apitypes.Configuration{}
+	peers.putStatus = 400
+	err = manager.putPeerConfig(context.Background(), "gear-key", apitypes.Configuration{})
 	assertResourceError(t, err, 400, "INVALID_PARAMS")
 
-	gears.putStatus = 404
-	err = manager.putGearConfig(context.Background(), "gear-key", apitypes.Configuration{})
+	peers.putStatus = 404
+	err = manager.putPeerConfig(context.Background(), "gear-key", apitypes.Configuration{})
 	assertResourceError(t, err, 404, "GEAR_NOT_FOUND")
 }
 
-type fakeGears struct {
+type fakePeers struct {
 	configs   map[string]apitypes.Configuration
 	putCount  int
 	putStatus int
 }
 
-func newFakeGears() *fakeGears {
-	return &fakeGears{configs: map[string]apitypes.Configuration{}}
+func newFakePeers() *fakePeers {
+	return &fakePeers{configs: map[string]apitypes.Configuration{}}
 }
 
-func (f *fakeGears) ListGears(context.Context, adminservice.ListGearsRequestObject) (adminservice.ListGearsResponseObject, error) {
+func (f *fakePeers) ListPeers(context.Context, adminservice.ListPeersRequestObject) (adminservice.ListPeersResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) ListByCertification(context.Context, adminservice.ListByCertificationRequestObject) (adminservice.ListByCertificationResponseObject, error) {
+func (f *fakePeers) ListPeersByCertification(context.Context, adminservice.ListPeersByCertificationRequestObject) (adminservice.ListPeersByCertificationResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) ListByFirmware(context.Context, adminservice.ListByFirmwareRequestObject) (adminservice.ListByFirmwareResponseObject, error) {
+func (f *fakePeers) ListPeersByFirmware(context.Context, adminservice.ListPeersByFirmwareRequestObject) (adminservice.ListPeersByFirmwareResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) ResolveByIMEI(context.Context, adminservice.ResolveByIMEIRequestObject) (adminservice.ResolveByIMEIResponseObject, error) {
+func (f *fakePeers) ResolvePeerByIMEI(context.Context, adminservice.ResolvePeerByIMEIRequestObject) (adminservice.ResolvePeerByIMEIResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) ListByLabel(context.Context, adminservice.ListByLabelRequestObject) (adminservice.ListByLabelResponseObject, error) {
+func (f *fakePeers) ListPeersByLabel(context.Context, adminservice.ListPeersByLabelRequestObject) (adminservice.ListPeersByLabelResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) ResolveBySN(context.Context, adminservice.ResolveBySNRequestObject) (adminservice.ResolveBySNResponseObject, error) {
+func (f *fakePeers) ResolvePeerBySN(context.Context, adminservice.ResolvePeerBySNRequestObject) (adminservice.ResolvePeerBySNResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) DeleteGear(context.Context, adminservice.DeleteGearRequestObject) (adminservice.DeleteGearResponseObject, error) {
+func (f *fakePeers) DeletePeer(context.Context, adminservice.DeletePeerRequestObject) (adminservice.DeletePeerResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) GetGear(context.Context, adminservice.GetGearRequestObject) (adminservice.GetGearResponseObject, error) {
+func (f *fakePeers) GetPeer(context.Context, adminservice.GetPeerRequestObject) (adminservice.GetPeerResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) GetGearConfig(_ context.Context, request adminservice.GetGearConfigRequestObject) (adminservice.GetGearConfigResponseObject, error) {
+func (f *fakePeers) GetPeerConfig(_ context.Context, request adminservice.GetPeerConfigRequestObject) (adminservice.GetPeerConfigResponseObject, error) {
 	config, ok := f.configs[string(request.PublicKey)]
 	if !ok {
-		return adminservice.GetGearConfig404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", "not found")), nil
+		return adminservice.GetPeerConfig404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", "not found")), nil
 	}
-	return adminservice.GetGearConfig200JSONResponse(config), nil
+	return adminservice.GetPeerConfig200JSONResponse(config), nil
 }
 
-func (f *fakeGears) PutGearConfig(_ context.Context, request adminservice.PutGearConfigRequestObject) (adminservice.PutGearConfigResponseObject, error) {
+func (f *fakePeers) PutPeerConfig(_ context.Context, request adminservice.PutPeerConfigRequestObject) (adminservice.PutPeerConfigResponseObject, error) {
 	switch f.putStatus {
 	case 400:
-		return adminservice.PutGearConfig400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", "invalid")), nil
+		return adminservice.PutPeerConfig400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", "invalid")), nil
 	case 404:
-		return adminservice.PutGearConfig404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", "not found")), nil
+		return adminservice.PutPeerConfig404JSONResponse(apitypes.NewErrorResponse("GEAR_NOT_FOUND", "not found")), nil
 	}
 	f.putCount++
 	f.configs[string(request.PublicKey)] = *request.Body
-	return adminservice.PutGearConfig200JSONResponse(*request.Body), nil
+	return adminservice.PutPeerConfig200JSONResponse(*request.Body), nil
 }
 
-func (f *fakeGears) GetGearInfo(context.Context, adminservice.GetGearInfoRequestObject) (adminservice.GetGearInfoResponseObject, error) {
+func (f *fakePeers) GetPeerInfo(context.Context, adminservice.GetPeerInfoRequestObject) (adminservice.GetPeerInfoResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) GetGearRuntime(context.Context, adminservice.GetGearRuntimeRequestObject) (adminservice.GetGearRuntimeResponseObject, error) {
+func (f *fakePeers) GetPeerRuntime(context.Context, adminservice.GetPeerRuntimeRequestObject) (adminservice.GetPeerRuntimeResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) ApproveGear(context.Context, adminservice.ApproveGearRequestObject) (adminservice.ApproveGearResponseObject, error) {
+func (f *fakePeers) ApprovePeer(context.Context, adminservice.ApprovePeerRequestObject) (adminservice.ApprovePeerResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) BlockGear(context.Context, adminservice.BlockGearRequestObject) (adminservice.BlockGearResponseObject, error) {
+func (f *fakePeers) BlockPeer(context.Context, adminservice.BlockPeerRequestObject) (adminservice.BlockPeerResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakeGears) RefreshGear(context.Context, adminservice.RefreshGearRequestObject) (adminservice.RefreshGearResponseObject, error) {
+func (f *fakePeers) RefreshPeer(context.Context, adminservice.RefreshPeerRequestObject) (adminservice.RefreshPeerResponseObject, error) {
 	return nil, nil
 }

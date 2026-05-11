@@ -204,8 +204,8 @@ Cases:
   - provision an admin-capable context against a prepared server fixture
   - verify admin CLI commands can connect successfully
   - status: implemented
-- `501-admin-list-gears`
-  - prepare server state with one or more gears
+- `501-admin-list-peers`
+  - prepare server state with one or more peers
   - run admin/gear listing commands through CLI
   - verify output shape and target selection
   - status: implemented

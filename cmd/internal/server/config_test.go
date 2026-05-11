@@ -26,7 +26,7 @@ func TestNewWithLayeredStorageConfig(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = srv.Close() })
 
-	if srv.GearStore == nil || srv.CredentialStore == nil || srv.MiniMaxTenantStore == nil || srv.VoiceStore == nil || srv.WorkspaceStore == nil || srv.WorkflowStore == nil || srv.DepotMetadataStore == nil {
+	if srv.PeerStore == nil || srv.CredentialStore == nil || srv.MiniMaxTenantStore == nil || srv.VoiceStore == nil || srv.WorkspaceStore == nil || srv.WorkflowStore == nil || srv.DepotMetadataStore == nil {
 		t.Fatalf("module stores not wired: %+v", srv)
 	}
 	if srv.DepotStore == nil {
@@ -106,7 +106,7 @@ func TestNewWithPreparedConfig(t *testing.T) {
 			"mem": {Kind: stores.KindKeyValue, Backend: "memory"},
 			"fw":  {Kind: stores.KindFS, Backend: "filesystem", Dir: filepath.Join(dir, "firmware")},
 		},
-		Gears: GearsConfig{
+		Peers: PeersConfig{
 			Store: "mem",
 		},
 		Depots: DepotsConfig{Store: "fw"},
@@ -116,8 +116,8 @@ func TestNewWithPreparedConfig(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = srv.Close() })
 
-	if srv.GearStore == nil {
-		t.Fatal("GearStore is nil")
+	if srv.PeerStore == nil {
+		t.Fatal("PeerStore is nil")
 	}
 	if srv.DepotStore == nil {
 		t.Fatal("DepotStore is nil")
@@ -210,8 +210,8 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		Stores: map[string]stores.Config{
 			"runtime": {Kind: "keyvalue", Backend: "memory"},
 		},
-		Gears: GearsConfig{
-			Store: "runtime-gears",
+		Peers: PeersConfig{
+			Store: "runtime-peers",
 		},
 		Credentials: CredentialsConfig{Store: "runtime-credentials"},
 		MiniMax: MiniMaxConfig{
@@ -232,8 +232,8 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		Stores: map[string]stores.Config{
 			"file": {Kind: "keyvalue", Backend: "memory"},
 		},
-		Gears: GearsConfig{
-			Store: "file-gears",
+		Peers: PeersConfig{
+			Store: "file-peers",
 		},
 		Credentials: CredentialsConfig{Store: "file-credentials"},
 		MiniMax: MiniMaxConfig{
@@ -262,8 +262,8 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	if len(merged.Storage) != 1 || merged.Storage["runtime-storage"].Backend != "memory" {
 		t.Fatalf("Storage = %+v", merged.Storage)
 	}
-	if merged.Gears.Store != "runtime-gears" {
-		t.Fatalf("Gears.Store = %q", merged.Gears.Store)
+	if merged.Peers.Store != "runtime-peers" {
+		t.Fatalf("Peers.Store = %q", merged.Peers.Store)
 	}
 	if merged.Depots.Store != "runtime-depots" {
 		t.Fatalf("Depots.Store = %q", merged.Depots.Store)
@@ -289,13 +289,13 @@ func TestValidateReportsSpecificMissingFields(t *testing.T) {
 		want string
 	}{
 		{
-			name: "missing gears store",
+			name: "missing peers store",
 			cfg:  Config{Depots: DepotsConfig{Store: "d"}},
-			want: "server: gears.store is required",
+			want: "server: peers.store is required",
 		},
 		{
 			name: "missing depots store",
-			cfg:  Config{Gears: GearsConfig{Store: "g"}},
+			cfg:  Config{Peers: PeersConfig{Store: "g"}},
 			want: "server: depots.store is required",
 		},
 	}
@@ -313,7 +313,7 @@ func TestValidateReportsSpecificMissingFields(t *testing.T) {
 func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 	base := Config{
 		Storage:     map[string]storage.Config{"memory": {Kind: storage.KindKeyValue, Memory: &storage.MemoryConfig{}}},
-		Gears:       GearsConfig{Store: "gears"},
+		Peers:       PeersConfig{Store: "peers"},
 		Credentials: CredentialsConfig{Store: "credentials"},
 		MiniMax:     MiniMaxConfig{TenantsStore: "minimax-tenants", VoicesStore: "voices", CredentialsStore: "credentials"},
 		Workspaces:  WorkspacesConfig{Store: "workspaces"},
@@ -347,7 +347,7 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 
 func TestPrepareConfigGeneratesKeyPairAndDefaultListenAddr(t *testing.T) {
 	cfg, err := prepareConfig(Config{
-		Gears:  GearsConfig{Store: "g"},
+		Peers:  PeersConfig{Store: "g"},
 		Depots: DepotsConfig{Store: "d"},
 	})
 	if err != nil {
@@ -366,7 +366,7 @@ func TestNewRejectsUnknownStores(t *testing.T) {
 		Stores: map[string]stores.Config{
 			"bad": {Kind: "keyvalue", Backend: "unknown"},
 		},
-		Gears:  GearsConfig{Store: "bad"},
+		Peers:  PeersConfig{Store: "bad"},
 		Depots: DepotsConfig{Store: "bad"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "server: stores:") {
@@ -381,10 +381,10 @@ func TestNewRejectsMissingNamedStores(t *testing.T) {
 		Stores: map[string]stores.Config{
 			"fw": {Kind: "filestore", Backend: "filesystem", Dir: filepath.Join(dir, "firmware")},
 		},
-		Gears:  GearsConfig{Store: "missing"},
+		Peers:  PeersConfig{Store: "missing"},
 		Depots: DepotsConfig{Store: "fw"},
 	})
-	if err == nil || !strings.Contains(err.Error(), "server: gears store:") {
+	if err == nil || !strings.Contains(err.Error(), "server: peers store:") {
 		t.Fatalf("New error = %v", err)
 	}
 
@@ -392,7 +392,7 @@ func TestNewRejectsMissingNamedStores(t *testing.T) {
 		Stores: map[string]stores.Config{
 			"mem": {Kind: "keyvalue", Backend: "memory"},
 		},
-		Gears:  GearsConfig{Store: "mem"},
+		Peers:  PeersConfig{Store: "mem"},
 		Depots: DepotsConfig{Store: "missing"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "server: firmware store:") {
@@ -412,7 +412,7 @@ func validLayeredConfig(dir string) Config {
 			},
 		},
 		Stores: map[string]stores.Config{
-			"gears":           {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "gears"},
+			"peers":           {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "peers"},
 			"credentials":     {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "credentials"},
 			"minimax-tenants": {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "minimax-tenants"},
 			"voices":          {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "voices"},
@@ -427,7 +427,7 @@ func validLayeredConfig(dir string) Config {
 				},
 			},
 		},
-		Gears:       GearsConfig{Store: "gears"},
+		Peers:       PeersConfig{Store: "peers"},
 		Credentials: CredentialsConfig{Store: "credentials"},
 		MiniMax: MiniMaxConfig{
 			TenantsStore:     "minimax-tenants",

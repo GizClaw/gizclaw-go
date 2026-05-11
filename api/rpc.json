@@ -53,6 +53,9 @@
               },
               {
                 "$ref": "./rpc/gear_runtime.json#/components/schemas/GearGetRuntimeRequest"
+              },
+              {
+                "$ref": "./rpc/gear_test.json#/components/schemas/GearRunTestRequest"
               }
             ]
           }
@@ -99,6 +102,9 @@
               },
               {
                 "$ref": "./rpc/gear_runtime.json#/components/schemas/GearGetRuntimeResponse"
+              },
+              {
+                "$ref": "./rpc/gear_test.json#/components/schemas/GearRunTestResponse"
               }
             ]
           },
@@ -118,7 +124,8 @@
           "gear.ota.get",
           "gear.registration.get",
           "gear.registration.register",
-          "gear.runtime.get"
+          "gear.runtime.get",
+          "gear.test.run"
         ]
       },
       "RPCVersion": {

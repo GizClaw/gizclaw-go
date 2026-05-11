@@ -50,9 +50,9 @@ func New(cfg Config) (srv *CmdServer, err error) {
 		}
 	}()
 
-	gearsKV, err := ss.KV(cfg.Gears.Store)
+	gearsKV, err := ss.KV(cfg.Peers.Store)
 	if err != nil {
-		return nil, fmt.Errorf("server: gears store: %w", err)
+		return nil, fmt.Errorf("server: peers store: %w", err)
 	}
 
 	fwStore, err := ss.DepotStore(cfg.Depots.Store)
@@ -63,7 +63,7 @@ func New(cfg Config) (srv *CmdServer, err error) {
 	gizServer := &gizclaw.Server{
 		KeyPair:         cfg.KeyPair,
 		ListenAddr:      cfg.ListenAddr,
-		GearStore:       gearsKV,
+		PeerStore:       gearsKV,
 		BuildCommit:     BuildCommit,
 		ServerPublicKey: cfg.KeyPair.Public,
 		AdminPublicKey:  cfg.AdminPublicKey,

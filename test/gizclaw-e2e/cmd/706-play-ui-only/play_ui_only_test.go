@@ -65,7 +65,7 @@ func TestPlayListenAutoRegistersCurrentContext(t *testing.T) {
 	}()
 
 	publicKey := h.ContextPublicKey("play-a")
-	result, err := h.RunCLIUntilSuccess("admin", "gears", "get", publicKey, "--context", "admin-a")
+	result, err := h.RunCLIUntilSuccess("admin", "peers", "get", publicKey, "--context", "admin-a")
 	if err != nil {
 		t.Fatalf("play UI did not auto-register context: %v\nplay stdout:\n%s\nplay stderr:\n%s", err, stdout.String(), stderr.String())
 	}
@@ -94,7 +94,7 @@ func TestPlayListenDoesNotRegisterWhenListenFails(t *testing.T) {
 	}
 
 	publicKey := h.ContextPublicKey("play-a")
-	get := h.RunCLI("admin", "gears", "get", publicKey, "--context", "admin-a")
+	get := h.RunCLI("admin", "peers", "get", publicKey, "--context", "admin-a")
 	if get.Err == nil {
 		t.Fatalf("play should not auto-register when listen fails:\n%s", get.Stdout)
 	}

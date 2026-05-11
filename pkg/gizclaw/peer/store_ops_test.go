@@ -1,4 +1,4 @@
-package gear
+package peer
 
 import (
 	"context"
@@ -170,7 +170,7 @@ func TestStoreOpsLoadGearMissing(t *testing.T) {
 	server := &Server{Store: mustBadgerInMemory(t, nil)}
 
 	_, err := server.LoadGear(context.Background(), giznet.PublicKey{1})
-	if !errors.Is(err, ErrGearNotFound) {
+	if !errors.Is(err, ErrPeerNotFound) {
 		t.Fatalf("LoadGear missing err = %v", err)
 	}
 }

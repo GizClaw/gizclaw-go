@@ -16,7 +16,7 @@ type Config struct {
 	AdminPublicKey giznet.PublicKey
 	Storage        map[string]storage.Config
 	Stores         map[string]stores.Config
-	Gears          GearsConfig
+	Peers          PeersConfig
 	Credentials    CredentialsConfig
 	MiniMax        MiniMaxConfig
 	Workspaces     WorkspacesConfig
@@ -24,7 +24,7 @@ type Config struct {
 	Depots         DepotsConfig
 }
 
-type GearsConfig struct {
+type PeersConfig struct {
 	Store string `yaml:"store"`
 }
 
@@ -56,7 +56,7 @@ type ConfigFile struct {
 	AdminPublicKey giznet.PublicKey          `yaml:"admin-public-key"`
 	Storage        map[string]storage.Config `yaml:"storage"`
 	Stores         map[string]stores.Config  `yaml:"stores"`
-	Gears          GearsConfig               `yaml:"gears"`
+	Peers          PeersConfig               `yaml:"peers"`
 	Credentials    CredentialsConfig         `yaml:"credentials"`
 	MiniMax        MiniMaxConfig             `yaml:"minimax"`
 	Workspaces     WorkspacesConfig          `yaml:"workspaces"`
@@ -74,7 +74,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 		AdminPublicKey *giznet.PublicKey         `yaml:"admin-public-key"`
 		Storage        map[string]storage.Config `yaml:"storage"`
 		Stores         map[string]stores.Config  `yaml:"stores"`
-		Gears          GearsConfig               `yaml:"gears"`
+		Peers          PeersConfig               `yaml:"peers"`
 		Credentials    CredentialsConfig         `yaml:"credentials"`
 		MiniMax        MiniMaxConfig             `yaml:"minimax"`
 		Workspaces     WorkspacesConfig          `yaml:"workspaces"`
@@ -96,7 +96,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 		AdminPublicKey: adminPublicKey,
 		Storage:        raw.Storage,
 		Stores:         raw.Stores,
-		Gears:          raw.Gears,
+		Peers:          raw.Peers,
 		Credentials:    raw.Credentials,
 		MiniMax:        raw.MiniMax,
 		Workspaces:     raw.Workspaces,
@@ -125,7 +125,7 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	if len(cfg.Storage) == 0 {
 		cfg.Storage = fileCfg.Storage
 	}
-	cfg.Gears = mergeGearsConfig(cfg.Gears, fileCfg.Gears)
+	cfg.Peers = mergePeersConfig(cfg.Peers, fileCfg.Peers)
 	cfg.Credentials = mergeCredentialsConfig(cfg.Credentials, fileCfg.Credentials)
 	cfg.MiniMax = mergeMiniMaxConfig(cfg.MiniMax, fileCfg.MiniMax)
 	cfg.Workspaces = mergeWorkspacesConfig(cfg.Workspaces, fileCfg.Workspaces)
@@ -134,7 +134,7 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	return cfg, nil
 }
 
-func mergeGearsConfig(runtime GearsConfig, file GearsConfig) GearsConfig {
+func mergePeersConfig(runtime PeersConfig, file PeersConfig) PeersConfig {
 	if runtime.Store == "" {
 		runtime.Store = file.Store
 	}
@@ -204,8 +204,8 @@ func prepareConfig(cfg Config) (Config, error) {
 }
 
 func (cfg Config) validate() error {
-	if cfg.Gears.Store == "" {
-		return fmt.Errorf("server: gears.store is required")
+	if cfg.Peers.Store == "" {
+		return fmt.Errorf("server: peers.store is required")
 	}
 	if cfg.Depots.Store == "" {
 		return fmt.Errorf("server: depots.store is required")

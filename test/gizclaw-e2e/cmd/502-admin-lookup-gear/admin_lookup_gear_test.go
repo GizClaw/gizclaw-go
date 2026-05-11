@@ -24,19 +24,19 @@ func TestAdminLookupGearUserStory(t *testing.T) {
 
 	devicePubKey := h.ContextPublicKey("device-a")
 
-	resolve := h.RunCLI("admin", "gears", "resolve-sn", "device-a-sn", "--context", "admin-a")
+	resolve := h.RunCLI("admin", "peers", "resolve-sn", "device-a-sn", "--context", "admin-a")
 	resolve.MustSucceed(t)
 	if !strings.Contains(resolve.Stdout, devicePubKey) {
 		t.Fatalf("expected resolved public key %q:\n%s", devicePubKey, resolve.Stdout)
 	}
 
-	get := h.RunCLI("admin", "gears", "get", devicePubKey, "--context", "admin-a")
+	get := h.RunCLI("admin", "peers", "get", devicePubKey, "--context", "admin-a")
 	get.MustSucceed(t)
 	if !strings.Contains(get.Stdout, `"public_key":"`+devicePubKey+`"`) {
 		t.Fatalf("expected get output to include device public key:\n%s", get.Stdout)
 	}
 
-	info := h.RunCLI("admin", "gears", "info", devicePubKey, "--context", "admin-a")
+	info := h.RunCLI("admin", "peers", "info", devicePubKey, "--context", "admin-a")
 	info.MustSucceed(t)
 	for _, fragment := range []string{`"sn":"device-a-sn"`, `"manufacturer":"Acme"`, `"model":"Model-A"`} {
 		if !strings.Contains(info.Stdout, fragment) {

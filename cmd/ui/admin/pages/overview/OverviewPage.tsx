@@ -16,9 +16,9 @@ import { formatRelease, formatServerTime, formatShortKey } from "../../lib/forma
 export function OverviewPage(): JSX.Element {
   const navigate = useNavigate();
   const dashboard = useOverviewData();
-  const latestPeers = dashboard.gears.slice(0, 5);
+  const latestPeers = dashboard.peers.slice(0, 5);
   const latestDepots = dashboard.depots.slice(0, 4);
-  const autoCount = dashboard.gears.filter((gear) => gear.auto_registered).length;
+  const autoCount = dashboard.peers.filter((gear) => gear.auto_registered).length;
   const openPath = (path: string) => {
     navigate(path);
   };
@@ -55,10 +55,10 @@ export function OverviewPage(): JSX.Element {
           description="First page snapshot"
           icon={Boxes}
           label="Peers This Page"
-          value={String(dashboard.gears.length)}
+          value={String(dashboard.peers.length)}
         />
         <MetricCard
-          description={`${dashboard.gears.length - autoCount} manual or approved on this page`}
+          description={`${dashboard.peers.length - autoCount} manual or approved on this page`}
           icon={ShieldCheck}
           label="Auto Registered"
           value={String(autoCount)}

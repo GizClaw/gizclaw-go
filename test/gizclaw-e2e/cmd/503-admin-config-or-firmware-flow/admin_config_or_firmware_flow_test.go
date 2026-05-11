@@ -47,7 +47,7 @@ func TestAdminConfigOrFirmwareFlowUserStory(t *testing.T) {
 		t.Fatalf("expected firmware list output to include depot:\n%s", listAfter.Stdout)
 	}
 
-	setChannel := h.RunCLI("admin", "gears", "set-firmware-channel", devicePubKey, "stable", "--context", "admin-a")
+	setChannel := h.RunCLI("admin", "peers", "set-firmware-channel", devicePubKey, "stable", "--context", "admin-a")
 	setChannel.MustSucceed(t)
 	if !strings.Contains(setChannel.Stdout, `"channel":"stable"`) {
 		t.Fatalf("expected set-firmware-channel output to include stable channel:\n%s", setChannel.Stdout)
@@ -55,9 +55,9 @@ func TestAdminConfigOrFirmwareFlowUserStory(t *testing.T) {
 
 	configPath := filepath.Join(h.SandboxDir, "gear-config.json")
 	if err := os.WriteFile(configPath, []byte(`{"firmware":{"channel":"beta"}}`), 0o644); err != nil {
-		t.Fatalf("write gear config: %v", err)
+		t.Fatalf("write peer config: %v", err)
 	}
-	putConfig := h.RunCLI("admin", "gears", "put-config", devicePubKey, "--file", configPath, "--context", "admin-a")
+	putConfig := h.RunCLI("admin", "peers", "put-config", devicePubKey, "--file", configPath, "--context", "admin-a")
 	putConfig.MustSucceed(t)
 	if !strings.Contains(putConfig.Stdout, `"channel":"beta"`) {
 		t.Fatalf("expected put-config output to include beta channel:\n%s", putConfig.Stdout)

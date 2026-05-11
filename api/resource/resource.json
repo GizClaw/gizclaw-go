@@ -26,7 +26,7 @@
           "Voice",
           "Workflow",
           "Workspace",
-          "GearConfig",
+          "PeerConfig",
           "ResourceList"
         ]
       },
@@ -38,7 +38,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Resource name. For GearConfig this is the gear public key."
+            "description": "Resource name. For PeerConfig this is the peer public key."
           },
           "annotations": {
             "type": "object",
@@ -78,7 +78,7 @@
             "$ref": "./workspace.json#/components/schemas/WorkspaceResource"
           },
           {
-            "$ref": "./gear_config.json#/components/schemas/GearConfigResource"
+            "$ref": "./peer_config.json#/components/schemas/PeerConfigResource"
           },
           {
             "$ref": "./resource_list.json#/components/schemas/ResourceListResource"
@@ -94,7 +94,7 @@
             "Voice": "./voice.json#/components/schemas/VoiceResource",
             "Workflow": "./workflow.json#/components/schemas/WorkflowResource",
             "Workspace": "./workspace.json#/components/schemas/WorkspaceResource",
-            "GearConfig": "./gear_config.json#/components/schemas/GearConfigResource",
+            "PeerConfig": "./peer_config.json#/components/schemas/PeerConfigResource",
             "ResourceList": "./resource_list.json#/components/schemas/ResourceListResource"
           }
         }

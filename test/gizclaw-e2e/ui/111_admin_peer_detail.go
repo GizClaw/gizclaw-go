@@ -26,8 +26,8 @@ func adminPeerDetailStories() []Story {
 			page.ExpectText("Firmware Policy")
 
 			page.ClickRole("tab", "CLI")
-			page.ExpectText("GearConfig Resource Spec")
-			page.ExpectText("gizclaw admin gears")
+			page.ExpectText("PeerConfig Resource Spec")
+			page.ExpectText("gizclaw admin peers")
 		},
 	}}
 }

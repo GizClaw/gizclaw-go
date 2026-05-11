@@ -1,4 +1,4 @@
-package gear
+package peer
 
 import (
 	"context"
@@ -24,7 +24,7 @@ func (m stubPeerManager) PeerRuntime(context.Context, giznet.PublicKey) apitypes
 	return m.runtime
 }
 
-func (m stubPeerManager) RefreshGear(context.Context, giznet.PublicKey) (adminservice.RefreshResult, bool, error) {
+func (m stubPeerManager) RefreshPeer(context.Context, giznet.PublicKey) (adminservice.RefreshResult, bool, error) {
 	return m.refreshResult, m.refreshOnline, m.refreshErr
 }
 
@@ -60,37 +60,37 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("RegisterGear error: %v", err)
 	}
 
-	getResp, err := server.GetGear(ctx, adminservice.GetGearRequestObject{
+	getResp, err := server.GetPeer(ctx, adminservice.GetPeerRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
-		t.Fatalf("GetGear error: %v", err)
+		t.Fatalf("GetPeer error: %v", err)
 	}
-	getRegistered, ok := getResp.(adminservice.GetGear200JSONResponse)
+	getRegistered, ok := getResp.(adminservice.GetPeer200JSONResponse)
 	if !ok {
-		t.Fatalf("GetGear response type = %T", getResp)
+		t.Fatalf("GetPeer response type = %T", getResp)
 	}
 	if getRegistered.PublicKey != peerPublicKey {
-		t.Fatalf("GetGear = %+v", getRegistered)
+		t.Fatalf("GetPeer = %+v", getRegistered)
 	}
 
-	listResp, err := server.ListGears(ctx, adminservice.ListGearsRequestObject{})
+	listResp, err := server.ListPeers(ctx, adminservice.ListPeersRequestObject{})
 	if err != nil {
-		t.Fatalf("ListGears error: %v", err)
+		t.Fatalf("ListPeers error: %v", err)
 	}
-	listed, ok := listResp.(adminservice.ListGears200JSONResponse)
+	listed, ok := listResp.(adminservice.ListPeers200JSONResponse)
 	if !ok {
-		t.Fatalf("ListGears response type = %T", listResp)
+		t.Fatalf("ListPeers response type = %T", listResp)
 	}
 	if len(listed.Items) != 1 || listed.Items[0].PublicKey != peerPublicKey {
-		t.Fatalf("ListGears items = %+v", listed.Items)
+		t.Fatalf("ListPeers items = %+v", listed.Items)
 	}
 
 	stable := apitypes.GearFirmwareChannel("stable")
 	adminStable := apitypes.GearFirmwareChannel(stable)
-	putConfigResp, err := server.PutGearConfig(ctx, adminservice.PutGearConfigRequestObject{
+	putConfigResp, err := server.PutPeerConfig(ctx, adminservice.PutPeerConfigRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
-		Body: &adminservice.PutGearConfigJSONRequestBody{
+		Body: &adminservice.PutPeerConfigJSONRequestBody{
 			Certifications: &[]apitypes.GearCertification{{
 				Type:      apitypes.GearCertificationType("license"),
 				Authority: apitypes.GearCertificationAuthority("ce"),
@@ -100,155 +100,162 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		},
 	})
 	if err != nil {
-		t.Fatalf("PutGearConfig error: %v", err)
+		t.Fatalf("PutPeerConfig error: %v", err)
 	}
-	if _, ok := putConfigResp.(adminservice.PutGearConfig200JSONResponse); !ok {
-		t.Fatalf("PutGearConfig response type = %T", putConfigResp)
+	if _, ok := putConfigResp.(adminservice.PutPeerConfig200JSONResponse); !ok {
+		t.Fatalf("PutPeerConfig response type = %T", putConfigResp)
 	}
 
-	getConfigResp, err := server.GetGearConfig(ctx, adminservice.GetGearConfigRequestObject{
+	getConfigResp, err := server.GetPeerConfig(ctx, adminservice.GetPeerConfigRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
-		t.Fatalf("GetGearConfig error: %v", err)
+		t.Fatalf("GetPeerConfig error: %v", err)
 	}
-	cfg, ok := getConfigResp.(adminservice.GetGearConfig200JSONResponse)
+	cfg, ok := getConfigResp.(adminservice.GetPeerConfig200JSONResponse)
 	if !ok {
-		t.Fatalf("GetGearConfig response type = %T", getConfigResp)
+		t.Fatalf("GetPeerConfig response type = %T", getConfigResp)
 	}
 	if cfg.Firmware == nil || cfg.Firmware.Channel == nil || *cfg.Firmware.Channel != stable {
-		t.Fatalf("GetGearConfig = %+v", cfg)
+		t.Fatalf("GetPeerConfig = %+v", cfg)
 	}
 
-	getInfoResp, err := server.GetGearInfo(ctx, adminservice.GetGearInfoRequestObject{
+	getInfoResp, err := server.GetPeerInfo(ctx, adminservice.GetPeerInfoRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
-		t.Fatalf("GetGearInfo error: %v", err)
+		t.Fatalf("GetPeerInfo error: %v", err)
 	}
-	info, ok := getInfoResp.(adminservice.GetGearInfo200JSONResponse)
+	info, ok := getInfoResp.(adminservice.GetPeerInfo200JSONResponse)
 	if !ok {
-		t.Fatalf("GetGearInfo response type = %T", getInfoResp)
+		t.Fatalf("GetPeerInfo response type = %T", getInfoResp)
 	}
 	if info.Hardware == nil || info.Hardware.Imeis == nil || len(*info.Hardware.Imeis) != 1 {
-		t.Fatalf("GetGearInfo = %+v", info)
+		t.Fatalf("GetPeerInfo = %+v", info)
 	}
 
-	byFirmwareResp, err := server.ListByFirmware(ctx, adminservice.ListByFirmwareRequestObject{
+	byFirmwareResp, err := server.ListPeersByFirmware(ctx, adminservice.ListPeersByFirmwareRequestObject{
 		Depot:   depot,
 		Channel: apitypes.GearFirmwareChannel(stable),
 	})
 	if err != nil {
-		t.Fatalf("ListByFirmware error: %v", err)
+		t.Fatalf("ListPeersByFirmware error: %v", err)
 	}
-	byFirmware, ok := byFirmwareResp.(adminservice.ListByFirmware200JSONResponse)
+	byFirmware, ok := byFirmwareResp.(adminservice.ListPeersByFirmware200JSONResponse)
 	if !ok {
-		t.Fatalf("ListByFirmware response type = %T", byFirmwareResp)
+		t.Fatalf("ListPeersByFirmware response type = %T", byFirmwareResp)
 	}
 	if len(byFirmware.Items) != 1 || byFirmware.Items[0].PublicKey != peerPublicKey {
-		t.Fatalf("ListByFirmware items = %+v", byFirmware.Items)
+		t.Fatalf("ListPeersByFirmware items = %+v", byFirmware.Items)
 	}
 
-	resolveSNResp, err := server.ResolveBySN(ctx, adminservice.ResolveBySNRequestObject{Sn: sn})
+	resolveSNResp, err := server.ResolvePeerBySN(ctx, adminservice.ResolvePeerBySNRequestObject{Sn: sn})
 	if err != nil {
-		t.Fatalf("ResolveBySN error: %v", err)
+		t.Fatalf("ResolvePeerBySN error: %v", err)
 	}
-	resolvedSN, ok := resolveSNResp.(adminservice.ResolveBySN200JSONResponse)
+	resolvedSN, ok := resolveSNResp.(adminservice.ResolvePeerBySN200JSONResponse)
 	if !ok {
-		t.Fatalf("ResolveBySN response type = %T", resolveSNResp)
+		t.Fatalf("ResolvePeerBySN response type = %T", resolveSNResp)
 	}
 	if resolvedSN.PublicKey != peerPublicKey {
-		t.Fatalf("ResolveBySN = %+v", resolvedSN)
+		t.Fatalf("ResolvePeerBySN = %+v", resolvedSN)
 	}
 
-	byLabelResp, err := server.ListByLabel(ctx, adminservice.ListByLabelRequestObject{Key: labelKey, Value: labelValue})
+	byLabelResp, err := server.ListPeersByLabel(ctx, adminservice.ListPeersByLabelRequestObject{Key: labelKey, Value: labelValue})
 	if err != nil {
-		t.Fatalf("ListByLabel error: %v", err)
+		t.Fatalf("ListPeersByLabel error: %v", err)
 	}
-	byLabel, ok := byLabelResp.(adminservice.ListByLabel200JSONResponse)
+	byLabel, ok := byLabelResp.(adminservice.ListPeersByLabel200JSONResponse)
 	if !ok {
-		t.Fatalf("ListByLabel response type = %T", byLabelResp)
+		t.Fatalf("ListPeersByLabel response type = %T", byLabelResp)
 	}
 	if len(byLabel.Items) != 1 || byLabel.Items[0].PublicKey != peerPublicKey {
-		t.Fatalf("ListByLabel items = %+v", byLabel.Items)
+		t.Fatalf("ListPeersByLabel items = %+v", byLabel.Items)
 	}
 
-	resolveIMEIResp, err := server.ResolveByIMEI(ctx, adminservice.ResolveByIMEIRequestObject{
+	resolveIMEIResp, err := server.ResolvePeerByIMEI(ctx, adminservice.ResolvePeerByIMEIRequestObject{
 		Tac:    tac,
 		Serial: serial,
 	})
 	if err != nil {
-		t.Fatalf("ResolveByIMEI error: %v", err)
+		t.Fatalf("ResolvePeerByIMEI error: %v", err)
 	}
-	resolvedIMEI, ok := resolveIMEIResp.(adminservice.ResolveByIMEI200JSONResponse)
+	resolvedIMEI, ok := resolveIMEIResp.(adminservice.ResolvePeerByIMEI200JSONResponse)
 	if !ok {
-		t.Fatalf("ResolveByIMEI response type = %T", resolveIMEIResp)
+		t.Fatalf("ResolvePeerByIMEI response type = %T", resolveIMEIResp)
 	}
 	if resolvedIMEI.PublicKey != peerPublicKey {
-		t.Fatalf("ResolveByIMEI = %+v", resolvedIMEI)
+		t.Fatalf("ResolvePeerByIMEI = %+v", resolvedIMEI)
 	}
 
-	byCertificationResp, err := server.ListByCertification(ctx, adminservice.ListByCertificationRequestObject{
+	byCertificationResp, err := server.ListPeersByCertification(ctx, adminservice.ListPeersByCertificationRequestObject{
 		Type:      apitypes.GearCertificationType("license"),
 		Authority: apitypes.GearCertificationAuthority("ce"),
 		Id:        certID,
 	})
 	if err != nil {
-		t.Fatalf("ListByCertification error: %v", err)
+		t.Fatalf("ListPeersByCertification error: %v", err)
 	}
-	byCertification, ok := byCertificationResp.(adminservice.ListByCertification200JSONResponse)
+	byCertification, ok := byCertificationResp.(adminservice.ListPeersByCertification200JSONResponse)
 	if !ok {
-		t.Fatalf("ListByCertification response type = %T", byCertificationResp)
+		t.Fatalf("ListPeersByCertification response type = %T", byCertificationResp)
 	}
 	if len(byCertification.Items) != 1 || byCertification.Items[0].PublicKey != peerPublicKey {
-		t.Fatalf("ListByCertification items = %+v", byCertification.Items)
+		t.Fatalf("ListPeersByCertification items = %+v", byCertification.Items)
 	}
 
-	approveResp, err := server.ApproveGear(ctx, adminservice.ApproveGearRequestObject{
+	approveResp, err := server.ApprovePeer(ctx, adminservice.ApprovePeerRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
-		Body:      &adminservice.ApproveGearJSONRequestBody{Role: apitypes.GearRoleGear},
+		Body:      &adminservice.ApprovePeerJSONRequestBody{Role: apitypes.GearRoleGear},
 	})
 	if err != nil {
-		t.Fatalf("ApproveGear error: %v", err)
+		t.Fatalf("ApprovePeer error: %v", err)
 	}
-	approved, ok := approveResp.(adminservice.ApproveGear200JSONResponse)
+	approved, ok := approveResp.(adminservice.ApprovePeer200JSONResponse)
 	if !ok {
-		t.Fatalf("ApproveGear response type = %T", approveResp)
+		t.Fatalf("ApprovePeer response type = %T", approveResp)
 	}
 	if approved.Role != apitypes.GearRoleGear || approved.Status != apitypes.GearStatusActive {
-		t.Fatalf("ApproveGear = %+v", approved)
+		t.Fatalf("ApprovePeer = %+v", approved)
 	}
 
-	blockResp, err := server.BlockGear(ctx, adminservice.BlockGearRequestObject{
+	blockResp, err := server.BlockPeer(ctx, adminservice.BlockPeerRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
-		t.Fatalf("BlockGear error: %v", err)
+		t.Fatalf("BlockPeer error: %v", err)
 	}
-	blocked, ok := blockResp.(adminservice.BlockGear200JSONResponse)
+	blocked, ok := blockResp.(adminservice.BlockPeer200JSONResponse)
 	if !ok {
-		t.Fatalf("BlockGear response type = %T", blockResp)
+		t.Fatalf("BlockPeer response type = %T", blockResp)
 	}
 	if blocked.Status != apitypes.GearStatusBlocked {
-		t.Fatalf("BlockGear = %+v", blocked)
+		t.Fatalf("BlockPeer = %+v", blocked)
 	}
 
-	deleteResp, err := server.DeleteGear(ctx, adminservice.DeleteGearRequestObject{
+	deleteResp, err := server.DeletePeer(ctx, adminservice.DeletePeerRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
-		t.Fatalf("DeleteGear error: %v", err)
+		t.Fatalf("DeletePeer error: %v", err)
 	}
-	deleted, ok := deleteResp.(adminservice.DeleteGear200JSONResponse)
+	deleted, ok := deleteResp.(adminservice.DeletePeer200JSONResponse)
 	if !ok {
-		t.Fatalf("DeleteGear response type = %T", deleteResp)
+		t.Fatalf("DeletePeer response type = %T", deleteResp)
 	}
-	if deleted.Role != apitypes.GearRoleUnspecified || deleted.Status != apitypes.GearStatusUnspecified || deleted.ApprovedAt != nil {
-		t.Fatalf("DeleteGear = %+v", deleted)
+	if deleted.Role != apitypes.GearRoleGear || deleted.Status != apitypes.GearStatusBlocked || deleted.ApprovedAt == nil {
+		t.Fatalf("DeletePeer = %+v", deleted)
+	}
+	getDeletedResp, err := server.GetPeer(ctx, adminservice.GetPeerRequestObject{PublicKey: adminservice.PublicKey(peerPublicKey)})
+	if err != nil {
+		t.Fatalf("GetPeer after DeletePeer error: %v", err)
+	}
+	if _, ok := getDeletedResp.(adminservice.GetPeer404JSONResponse); !ok {
+		t.Fatalf("GetPeer after DeletePeer response type = %T", getDeletedResp)
 	}
 }
 
-func TestServerListGearsPagination(t *testing.T) {
+func TestServerListPeersPagination(t *testing.T) {
 	server := &Server{
 		Store: mustBadgerInMemory(t, nil),
 	}
@@ -280,67 +287,67 @@ func TestServerListGearsPagination(t *testing.T) {
 	registerGear(gearC, "us")
 
 	limit := adminservice.Limit(1)
-	resp, err := server.ListGears(context.Background(), adminservice.ListGearsRequestObject{
-		Params: adminservice.ListGearsParams{
+	resp, err := server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
+		Params: adminservice.ListPeersParams{
 			Limit: &limit,
 		},
 	})
 	if err != nil {
-		t.Fatalf("ListGears pagination error: %v", err)
+		t.Fatalf("ListPeers pagination error: %v", err)
 	}
-	listed, ok := resp.(adminservice.ListGears200JSONResponse)
+	listed, ok := resp.(adminservice.ListPeers200JSONResponse)
 	if !ok {
-		t.Fatalf("ListGears response type = %T", resp)
+		t.Fatalf("ListPeers response type = %T", resp)
 	}
 	if !listed.HasNext || listed.NextCursor == nil || *listed.NextCursor != gearAText {
-		t.Fatalf("ListGears pagination metadata = %+v", listed)
+		t.Fatalf("ListPeers pagination metadata = %+v", listed)
 	}
 	if len(listed.Items) != 1 || listed.Items[0].PublicKey != gearAText {
-		t.Fatalf("ListGears paged items = %+v", listed.Items)
+		t.Fatalf("ListPeers paged items = %+v", listed.Items)
 	}
 
-	firstFilteredResp, err := server.ListByLabel(context.Background(), adminservice.ListByLabelRequestObject{
+	firstFilteredResp, err := server.ListPeersByLabel(context.Background(), adminservice.ListPeersByLabelRequestObject{
 		Key:   "region",
 		Value: "cn",
-		Params: adminservice.ListByLabelParams{
+		Params: adminservice.ListPeersByLabelParams{
 			Limit: &limit,
 		},
 	})
 	if err != nil {
-		t.Fatalf("ListByLabel pagination error: %v", err)
+		t.Fatalf("ListPeersByLabel pagination error: %v", err)
 	}
-	firstFiltered, ok := firstFilteredResp.(adminservice.ListByLabel200JSONResponse)
+	firstFiltered, ok := firstFilteredResp.(adminservice.ListPeersByLabel200JSONResponse)
 	if !ok {
-		t.Fatalf("ListByLabel response type = %T", firstFilteredResp)
+		t.Fatalf("ListPeersByLabel response type = %T", firstFilteredResp)
 	}
 	if !firstFiltered.HasNext || firstFiltered.NextCursor == nil || *firstFiltered.NextCursor != gearAText {
-		t.Fatalf("ListByLabel first page metadata = %+v", firstFiltered)
+		t.Fatalf("ListPeersByLabel first page metadata = %+v", firstFiltered)
 	}
 
-	filteredResp, err := server.ListByLabel(context.Background(), adminservice.ListByLabelRequestObject{
+	filteredResp, err := server.ListPeersByLabel(context.Background(), adminservice.ListPeersByLabelRequestObject{
 		Key:   "region",
 		Value: "cn",
-		Params: adminservice.ListByLabelParams{
+		Params: adminservice.ListPeersByLabelParams{
 			Cursor: firstFiltered.NextCursor,
 			Limit:  &limit,
 		},
 	})
 	if err != nil {
-		t.Fatalf("ListByLabel second page error: %v", err)
+		t.Fatalf("ListPeersByLabel second page error: %v", err)
 	}
-	filtered, ok := filteredResp.(adminservice.ListByLabel200JSONResponse)
+	filtered, ok := filteredResp.(adminservice.ListPeersByLabel200JSONResponse)
 	if !ok {
-		t.Fatalf("ListByLabel second response type = %T", filteredResp)
+		t.Fatalf("ListPeersByLabel second response type = %T", filteredResp)
 	}
 	if filtered.HasNext || filtered.NextCursor != nil {
-		t.Fatalf("ListByLabel pagination metadata = %+v", filtered)
+		t.Fatalf("ListPeersByLabel pagination metadata = %+v", filtered)
 	}
 	if len(filtered.Items) != 1 || filtered.Items[0].PublicKey != gearBText {
-		t.Fatalf("ListByLabel paged items = %+v", filtered.Items)
+		t.Fatalf("ListPeersByLabel paged items = %+v", filtered.Items)
 	}
 }
 
-func TestServerListGearsPaginationPreservesCreationOrder(t *testing.T) {
+func TestServerListPeersPaginationPreservesCreationOrder(t *testing.T) {
 	server := &Server{
 		Store: mustBadgerInMemory(t, nil),
 	}
@@ -369,42 +376,42 @@ func TestServerListGearsPaginationPreservesCreationOrder(t *testing.T) {
 	registerGear(gearC)
 
 	limit := adminservice.Limit(2)
-	resp, err := server.ListGears(context.Background(), adminservice.ListGearsRequestObject{
-		Params: adminservice.ListGearsParams{Limit: &limit},
+	resp, err := server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
+		Params: adminservice.ListPeersParams{Limit: &limit},
 	})
 	if err != nil {
-		t.Fatalf("ListGears first page error: %v", err)
+		t.Fatalf("ListPeers first page error: %v", err)
 	}
-	firstPage, ok := resp.(adminservice.ListGears200JSONResponse)
+	firstPage, ok := resp.(adminservice.ListPeers200JSONResponse)
 	if !ok {
-		t.Fatalf("ListGears first response type = %T", resp)
+		t.Fatalf("ListPeers first response type = %T", resp)
 	}
 	if len(firstPage.Items) != 2 || firstPage.Items[0].PublicKey != gearBText || firstPage.Items[1].PublicKey != gearAText {
-		t.Fatalf("ListGears first page = %+v", firstPage.Items)
+		t.Fatalf("ListPeers first page = %+v", firstPage.Items)
 	}
 	if !firstPage.HasNext || firstPage.NextCursor == nil || *firstPage.NextCursor != gearAText {
-		t.Fatalf("ListGears first page metadata = %+v", firstPage)
+		t.Fatalf("ListPeers first page metadata = %+v", firstPage)
 	}
 
-	resp, err = server.ListGears(context.Background(), adminservice.ListGearsRequestObject{
-		Params: adminservice.ListGearsParams{
+	resp, err = server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
+		Params: adminservice.ListPeersParams{
 			Cursor: firstPage.NextCursor,
 			Limit:  &limit,
 		},
 	})
 	if err != nil {
-		t.Fatalf("ListGears second page error: %v", err)
+		t.Fatalf("ListPeers second page error: %v", err)
 	}
-	secondPage, ok := resp.(adminservice.ListGears200JSONResponse)
+	secondPage, ok := resp.(adminservice.ListPeers200JSONResponse)
 	if !ok {
-		t.Fatalf("ListGears second response type = %T", resp)
+		t.Fatalf("ListPeers second response type = %T", resp)
 	}
 	if len(secondPage.Items) != 1 || secondPage.Items[0].PublicKey != gearCText {
-		t.Fatalf("ListGears second page = %+v", secondPage.Items)
+		t.Fatalf("ListPeers second page = %+v", secondPage.Items)
 	}
 }
 
-func TestServerListGearsLimitClampsToConfiguredBounds(t *testing.T) {
+func TestServerListPeersLimitClampsToConfiguredBounds(t *testing.T) {
 	server := &Server{
 		Store: mustBadgerInMemory(t, nil),
 	}
@@ -419,33 +426,33 @@ func TestServerListGearsLimitClampsToConfiguredBounds(t *testing.T) {
 	}
 
 	zero := adminservice.Limit(0)
-	resp, err := server.ListGears(context.Background(), adminservice.ListGearsRequestObject{
-		Params: adminservice.ListGearsParams{Limit: &zero},
+	resp, err := server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
+		Params: adminservice.ListPeersParams{Limit: &zero},
 	})
 	if err != nil {
-		t.Fatalf("ListGears zero limit error: %v", err)
+		t.Fatalf("ListPeers zero limit error: %v", err)
 	}
-	defaultPage, ok := resp.(adminservice.ListGears200JSONResponse)
+	defaultPage, ok := resp.(adminservice.ListPeers200JSONResponse)
 	if !ok {
-		t.Fatalf("ListGears zero limit response type = %T", resp)
+		t.Fatalf("ListPeers zero limit response type = %T", resp)
 	}
 	if len(defaultPage.Items) != 3 || defaultPage.HasNext {
-		t.Fatalf("ListGears zero limit = %+v", defaultPage)
+		t.Fatalf("ListPeers zero limit = %+v", defaultPage)
 	}
 
 	tooLarge := adminservice.Limit(999)
-	resp, err = server.ListGears(context.Background(), adminservice.ListGearsRequestObject{
-		Params: adminservice.ListGearsParams{Limit: &tooLarge},
+	resp, err = server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
+		Params: adminservice.ListPeersParams{Limit: &tooLarge},
 	})
 	if err != nil {
-		t.Fatalf("ListGears large limit error: %v", err)
+		t.Fatalf("ListPeers large limit error: %v", err)
 	}
-	clampedPage, ok := resp.(adminservice.ListGears200JSONResponse)
+	clampedPage, ok := resp.(adminservice.ListPeers200JSONResponse)
 	if !ok {
-		t.Fatalf("ListGears large limit response type = %T", resp)
+		t.Fatalf("ListPeers large limit response type = %T", resp)
 	}
 	if len(clampedPage.Items) != 3 || clampedPage.HasNext {
-		t.Fatalf("ListGears large limit = %+v", clampedPage)
+		t.Fatalf("ListPeers large limit = %+v", clampedPage)
 	}
 }
 
@@ -483,18 +490,18 @@ func TestServerRuntimeHandlers(t *testing.T) {
 		t.Fatalf("RegisterGear error: %v", err)
 	}
 
-	getGearRuntimeResp, err := server.GetGearRuntime(context.Background(), adminservice.GetGearRuntimeRequestObject{
+	getGearRuntimeResp, err := server.GetPeerRuntime(context.Background(), adminservice.GetPeerRuntimeRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
-		t.Fatalf("GetGearRuntime error: %v", err)
+		t.Fatalf("GetPeerRuntime error: %v", err)
 	}
-	gearRuntime, ok := getGearRuntimeResp.(adminservice.GetGearRuntime200JSONResponse)
+	gearRuntime, ok := getGearRuntimeResp.(adminservice.GetPeerRuntime200JSONResponse)
 	if !ok {
-		t.Fatalf("GetGearRuntime response type = %T", getGearRuntimeResp)
+		t.Fatalf("GetPeerRuntime response type = %T", getGearRuntimeResp)
 	}
 	if !gearRuntime.Online || gearRuntime.LastAddr == nil || *gearRuntime.LastAddr != runtimeAddr {
-		t.Fatalf("GetGearRuntime = %+v", gearRuntime)
+		t.Fatalf("GetPeerRuntime = %+v", gearRuntime)
 	}
 
 	getRuntimeResp, err := server.GetRuntime(gearCtx, gearservice.GetRuntimeRequestObject{})
@@ -509,18 +516,18 @@ func TestServerRuntimeHandlers(t *testing.T) {
 		t.Fatalf("GetRuntime = %+v", publicRuntime)
 	}
 
-	refreshResp, err := server.RefreshGear(context.Background(), adminservice.RefreshGearRequestObject{
+	refreshResp, err := server.RefreshPeer(context.Background(), adminservice.RefreshPeerRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
 	})
 	if err != nil {
-		t.Fatalf("RefreshGear error: %v", err)
+		t.Fatalf("RefreshPeer error: %v", err)
 	}
-	refreshed, ok := refreshResp.(adminservice.RefreshGear200JSONResponse)
+	refreshed, ok := refreshResp.(adminservice.RefreshPeer200JSONResponse)
 	if !ok {
-		t.Fatalf("RefreshGear response type = %T", refreshResp)
+		t.Fatalf("RefreshPeer response type = %T", refreshResp)
 	}
 	if refreshed.Gear.PublicKey != peerPublicKey || refreshed.UpdatedFields == nil || len(*refreshed.UpdatedFields) != 1 {
-		t.Fatalf("RefreshGear = %+v", refreshed)
+		t.Fatalf("RefreshPeer = %+v", refreshed)
 	}
 }
 
@@ -651,14 +658,14 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 
 	stable := apitypes.GearFirmwareChannel("stable")
 	adminStable := apitypes.GearFirmwareChannel(stable)
-	_, err = server.PutGearConfig(context.Background(), adminservice.PutGearConfigRequestObject{
+	_, err = server.PutPeerConfig(context.Background(), adminservice.PutPeerConfigRequestObject{
 		PublicKey: adminservice.PublicKey(peerPublicKey),
-		Body: &adminservice.PutGearConfigJSONRequestBody{
+		Body: &adminservice.PutPeerConfigJSONRequestBody{
 			Firmware: &apitypes.FirmwareConfig{Channel: &adminStable},
 		},
 	})
 	if err != nil {
-		t.Fatalf("PutGearConfig error: %v", err)
+		t.Fatalf("PutPeerConfig error: %v", err)
 	}
 
 	getConfigResp, err := server.GetConfig(gearCtx, gearservice.GetConfigRequestObject{})

@@ -6,12 +6,12 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
-func testServerSecurityPolicy(gears *gear.Server) *ServerSecurityPolicy {
-	return (*ServerSecurityPolicy)(&Server{manager: NewManager(gears)})
+func testServerSecurityPolicy(peers *peer.Server) *ServerSecurityPolicy {
+	return (*ServerSecurityPolicy)(&Server{manager: NewManager(peers)})
 }
 
 func TestServerSecurityPolicyAllowsGearServiceForActiveGear(t *testing.T) {
@@ -20,7 +20,7 @@ func TestServerSecurityPolicyAllowsGearServiceForActiveGear(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	service := &peer.Server{Store: mustBadgerInMemory(t, nil)}
 	if _, err := service.SaveGear(context.Background(), apitypes.Gear{
 		PublicKey:     keyPair.Public.String(),
 		Role:          apitypes.GearRoleGear,
@@ -55,7 +55,7 @@ func TestServerSecurityPolicyAllowsAdminServiceForActiveAdminGear(t *testing.T) 
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	service := &peer.Server{Store: mustBadgerInMemory(t, nil)}
 	if _, err := service.SaveGear(context.Background(), apitypes.Gear{
 		PublicKey:     keyPair.Public.String(),
 		Role:          apitypes.GearRoleAdmin,
@@ -78,7 +78,7 @@ func TestServerSecurityPolicyRequiresAdminRoleForAdminService(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	service := &peer.Server{Store: mustBadgerInMemory(t, nil)}
 	if _, err := service.EnsureConnectedGear(context.Background(), keyPair.Public); err != nil {
 		t.Fatalf("EnsureConnectedGear error = %v", err)
 	}
@@ -114,7 +114,7 @@ func TestServerSecurityPolicyAllowsGearServiceForUnknownGear(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	policy := testServerSecurityPolicy(&gear.Server{Store: mustBadgerInMemory(t, nil)})
+	policy := testServerSecurityPolicy(&peer.Server{Store: mustBadgerInMemory(t, nil)})
 	if !policy.AllowService(keyPair.Public, ServiceGear) {
 		t.Fatal("unknown gear should allow gear service for registration")
 	}
@@ -129,7 +129,7 @@ func TestServerSecurityPolicyDeniesProtectedServicesForBlockedGear(t *testing.T)
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	service := &peer.Server{Store: mustBadgerInMemory(t, nil)}
 	ctx := context.Background()
 	if _, err := service.SaveGear(ctx, apitypes.Gear{
 		PublicKey:     keyPair.Public.String(),

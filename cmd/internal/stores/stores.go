@@ -33,10 +33,10 @@ const (
 // Config is the YAML representation of a single logical store entry.
 //
 //	stores:
-//	  gears:
+//	  peers:
 //	    kind: keyvalue
 //	    storage: main-kv
-//	    prefix: gears
+//	    prefix: peers
 type Config struct {
 	Kind          string      `yaml:"kind"`
 	Storage       string      `yaml:"storage"`  // reference to a physical storage backend

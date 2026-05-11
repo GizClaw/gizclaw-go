@@ -36,7 +36,7 @@ export function PeersListPage(): JSX.Element {
     peerList,
     peerPageNumber,
     filter,
-    filteredGears,
+    filteredPeers,
     nextPage,
     prevPage,
     refreshDashboard,
@@ -103,7 +103,7 @@ export function PeersListPage(): JSX.Element {
               </div>
               <div className="flex flex-wrap gap-2">
                 <Badge variant="outline">Page {peerPageNumber}</Badge>
-                <Badge variant="secondary">{dashboard.gears.length} loaded</Badge>
+                <Badge variant="secondary">{dashboard.peers.length} loaded</Badge>
                 {peerList.hasNext ? <Badge variant="outline">More Available</Badge> : null}
               </div>
             </div>
@@ -146,7 +146,7 @@ export function PeersListPage(): JSX.Element {
                   <Skeleton className="h-16 w-full" key={index} />
                 ))}
               </div>
-            ) : filteredGears.length === 0 ? (
+            ) : filteredPeers.length === 0 ? (
               <div className="p-4">
                 <EmptyState
                   description={filter.trim() === "" ? "Peers will appear here as soon as they are registered." : "No peers on this page match the current filter."}
@@ -165,7 +165,7 @@ export function PeersListPage(): JSX.Element {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredGears.map((gear) => {
+                  {filteredPeers.map((gear) => {
                     const name = peerDisplayName(gear, dashboard.infos[gear.public_key]);
                     const copied = copiedPublicKey === gear.public_key;
                     const runtime = dashboard.runtimes[gear.public_key];
@@ -224,7 +224,7 @@ export function PeersListPage(): JSX.Element {
 
             <div className="flex items-center justify-between border-t px-4 py-4 text-sm text-muted-foreground">
               <span>
-                Showing {filteredGears.length} of {dashboard.gears.length} peers on page {peerPageNumber}
+                Showing {filteredPeers.length} of {dashboard.peers.length} peers on page {peerPageNumber}
               </span>
               <span>{peerList.hasNext ? "Next page available" : "End of results"}</span>
             </div>

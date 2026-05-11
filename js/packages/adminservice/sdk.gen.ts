@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApplyResourceData, ApplyResourceErrors, ApplyResourceResponses, ApproveGearData, ApproveGearErrors, ApproveGearResponses, BlockGearData, BlockGearErrors, BlockGearResponses, CreateCredentialData, CreateCredentialErrors, CreateCredentialResponses, CreateMiniMaxTenantData, CreateMiniMaxTenantErrors, CreateMiniMaxTenantResponses, CreateModelData, CreateModelErrors, CreateModelResponses, CreateVoiceData, CreateVoiceErrors, CreateVoiceResponses, CreateVolcTenantData, CreateVolcTenantErrors, CreateVolcTenantResponses, CreateWorkflowData, CreateWorkflowErrors, CreateWorkflowResponses, CreateWorkspaceData, CreateWorkspaceErrors, CreateWorkspaceResponses, DeleteCredentialData, DeleteCredentialErrors, DeleteCredentialResponses, DeleteGearData, DeleteGearErrors, DeleteGearResponses, DeleteMiniMaxTenantData, DeleteMiniMaxTenantErrors, DeleteMiniMaxTenantResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, DeleteVoiceData, DeleteVoiceErrors, DeleteVoiceResponses, DeleteVolcTenantData, DeleteVolcTenantErrors, DeleteVolcTenantResponses, DeleteWorkflowData, DeleteWorkflowErrors, DeleteWorkflowResponses, DeleteWorkspaceData, DeleteWorkspaceErrors, DeleteWorkspaceResponses, GetChannelData, GetChannelErrors, GetChannelResponses, GetCredentialData, GetCredentialErrors, GetCredentialResponses, GetDepotData, GetDepotErrors, GetDepotResponses, GetGearConfigData, GetGearConfigErrors, GetGearConfigResponses, GetGearData, GetGearErrors, GetGearInfoData, GetGearInfoErrors, GetGearInfoResponses, GetGearOtaData, GetGearOtaErrors, GetGearOtaResponses, GetGearResponses, GetGearRuntimeData, GetGearRuntimeResponses, GetMiniMaxTenantData, GetMiniMaxTenantErrors, GetMiniMaxTenantResponses, GetModelData, GetModelErrors, GetModelResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetVoiceData, GetVoiceErrors, GetVoiceResponses, GetVolcTenantData, GetVolcTenantErrors, GetVolcTenantResponses, GetWorkflowData, GetWorkflowErrors, GetWorkflowResponses, GetWorkspaceData, GetWorkspaceErrors, GetWorkspaceResponses, ListByCertificationData, ListByCertificationErrors, ListByCertificationResponses, ListByFirmwareData, ListByFirmwareErrors, ListByFirmwareResponses, ListByLabelData, ListByLabelErrors, ListByLabelResponses, ListCredentialsData, ListCredentialsErrors, ListCredentialsResponses, ListDepotsData, ListDepotsErrors, ListDepotsResponses, ListGearsData, ListGearsErrors, ListGearsResponses, ListMiniMaxTenantsData, ListMiniMaxTenantsErrors, ListMiniMaxTenantsResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListVoicesData, ListVoicesErrors, ListVoicesResponses, ListVolcTenantsData, ListVolcTenantsErrors, ListVolcTenantsResponses, ListWorkflowsData, ListWorkflowsErrors, ListWorkflowsResponses, ListWorkspacesData, ListWorkspacesErrors, ListWorkspacesResponses, PutChannelData, PutChannelErrors, PutChannelResponses, PutCredentialData, PutCredentialErrors, PutCredentialResponses, PutDepotInfoData, PutDepotInfoErrors, PutDepotInfoResponses, PutGearConfigData, PutGearConfigErrors, PutGearConfigResponses, PutMiniMaxTenantData, PutMiniMaxTenantErrors, PutMiniMaxTenantResponses, PutModelData, PutModelErrors, PutModelResponses, PutResourceData, PutResourceErrors, PutResourceResponses, PutVoiceData, PutVoiceErrors, PutVoiceResponses, PutVolcTenantData, PutVolcTenantErrors, PutVolcTenantResponses, PutWorkflowData, PutWorkflowErrors, PutWorkflowResponses, PutWorkspaceData, PutWorkspaceErrors, PutWorkspaceResponses, RefreshGearData, RefreshGearErrors, RefreshGearResponses, ReleaseDepotData, ReleaseDepotErrors, ReleaseDepotResponses, ResolveByImeiData, ResolveByImeiErrors, ResolveByImeiResponses, ResolveBySnData, ResolveBySnErrors, ResolveBySnResponses, RollbackDepotData, RollbackDepotErrors, RollbackDepotResponses, SyncMiniMaxTenantVoicesData, SyncMiniMaxTenantVoicesErrors, SyncMiniMaxTenantVoicesResponses, SyncVolcTenantVoicesData, SyncVolcTenantVoicesErrors, SyncVolcTenantVoicesResponses } from './types.gen';
+import type { ApplyResourceData, ApplyResourceErrors, ApplyResourceResponses, ApprovePeerData, ApprovePeerErrors, ApprovePeerResponses, BlockPeerData, BlockPeerErrors, BlockPeerResponses, CreateCredentialData, CreateCredentialErrors, CreateCredentialResponses, CreateMiniMaxTenantData, CreateMiniMaxTenantErrors, CreateMiniMaxTenantResponses, CreateModelData, CreateModelErrors, CreateModelResponses, CreateVoiceData, CreateVoiceErrors, CreateVoiceResponses, CreateVolcTenantData, CreateVolcTenantErrors, CreateVolcTenantResponses, CreateWorkflowData, CreateWorkflowErrors, CreateWorkflowResponses, CreateWorkspaceData, CreateWorkspaceErrors, CreateWorkspaceResponses, DeleteCredentialData, DeleteCredentialErrors, DeleteCredentialResponses, DeleteMiniMaxTenantData, DeleteMiniMaxTenantErrors, DeleteMiniMaxTenantResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeletePeerData, DeletePeerErrors, DeletePeerResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, DeleteVoiceData, DeleteVoiceErrors, DeleteVoiceResponses, DeleteVolcTenantData, DeleteVolcTenantErrors, DeleteVolcTenantResponses, DeleteWorkflowData, DeleteWorkflowErrors, DeleteWorkflowResponses, DeleteWorkspaceData, DeleteWorkspaceErrors, DeleteWorkspaceResponses, GetChannelData, GetChannelErrors, GetChannelResponses, GetCredentialData, GetCredentialErrors, GetCredentialResponses, GetDepotData, GetDepotErrors, GetDepotResponses, GetMiniMaxTenantData, GetMiniMaxTenantErrors, GetMiniMaxTenantResponses, GetModelData, GetModelErrors, GetModelResponses, GetPeerConfigData, GetPeerConfigErrors, GetPeerConfigResponses, GetPeerData, GetPeerErrors, GetPeerInfoData, GetPeerInfoErrors, GetPeerInfoResponses, GetPeerOtaData, GetPeerOtaErrors, GetPeerOtaResponses, GetPeerResponses, GetPeerRuntimeData, GetPeerRuntimeResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetVoiceData, GetVoiceErrors, GetVoiceResponses, GetVolcTenantData, GetVolcTenantErrors, GetVolcTenantResponses, GetWorkflowData, GetWorkflowErrors, GetWorkflowResponses, GetWorkspaceData, GetWorkspaceErrors, GetWorkspaceResponses, ListCredentialsData, ListCredentialsErrors, ListCredentialsResponses, ListDepotsData, ListDepotsErrors, ListDepotsResponses, ListMiniMaxTenantsData, ListMiniMaxTenantsErrors, ListMiniMaxTenantsResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListPeersByCertificationData, ListPeersByCertificationErrors, ListPeersByCertificationResponses, ListPeersByFirmwareData, ListPeersByFirmwareErrors, ListPeersByFirmwareResponses, ListPeersByLabelData, ListPeersByLabelErrors, ListPeersByLabelResponses, ListPeersData, ListPeersErrors, ListPeersResponses, ListVoicesData, ListVoicesErrors, ListVoicesResponses, ListVolcTenantsData, ListVolcTenantsErrors, ListVolcTenantsResponses, ListWorkflowsData, ListWorkflowsErrors, ListWorkflowsResponses, ListWorkspacesData, ListWorkspacesErrors, ListWorkspacesResponses, PutChannelData, PutChannelErrors, PutChannelResponses, PutCredentialData, PutCredentialErrors, PutCredentialResponses, PutDepotInfoData, PutDepotInfoErrors, PutDepotInfoResponses, PutMiniMaxTenantData, PutMiniMaxTenantErrors, PutMiniMaxTenantResponses, PutModelData, PutModelErrors, PutModelResponses, PutPeerConfigData, PutPeerConfigErrors, PutPeerConfigResponses, PutResourceData, PutResourceErrors, PutResourceResponses, PutVoiceData, PutVoiceErrors, PutVoiceResponses, PutVolcTenantData, PutVolcTenantErrors, PutVolcTenantResponses, PutWorkflowData, PutWorkflowErrors, PutWorkflowResponses, PutWorkspaceData, PutWorkspaceErrors, PutWorkspaceResponses, RefreshPeerData, RefreshPeerErrors, RefreshPeerResponses, ReleaseDepotData, ReleaseDepotErrors, ReleaseDepotResponses, ResolvePeerByImeiData, ResolvePeerByImeiErrors, ResolvePeerByImeiResponses, ResolvePeerBySnData, ResolvePeerBySnErrors, ResolvePeerBySnResponses, RollbackDepotData, RollbackDepotErrors, RollbackDepotResponses, SyncMiniMaxTenantVoicesData, SyncMiniMaxTenantVoicesErrors, SyncMiniMaxTenantVoicesResponses, SyncVolcTenantVoicesData, SyncVolcTenantVoicesErrors, SyncVolcTenantVoicesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -394,50 +394,50 @@ export const putWorkspace = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
- * List all gears
+ * List all peers
  */
-export const listGears = <ThrowOnError extends boolean = false>(options?: Options<ListGearsData, ThrowOnError>) => (options?.client ?? client).get<ListGearsResponses, ListGearsErrors, ThrowOnError>({ url: '/gears', ...options });
+export const listPeers = <ThrowOnError extends boolean = false>(options?: Options<ListPeersData, ThrowOnError>) => (options?.client ?? client).get<ListPeersResponses, ListPeersErrors, ThrowOnError>({ url: '/peers', ...options });
 
 /**
- * Resolve gear public key by serial number
+ * Resolve peer public key by serial number
  */
-export const resolveBySn = <ThrowOnError extends boolean = false>(options: Options<ResolveBySnData, ThrowOnError>) => (options.client ?? client).get<ResolveBySnResponses, ResolveBySnErrors, ThrowOnError>({ url: '/gears/sn/{sn}', ...options });
+export const resolvePeerBySn = <ThrowOnError extends boolean = false>(options: Options<ResolvePeerBySnData, ThrowOnError>) => (options.client ?? client).get<ResolvePeerBySnResponses, ResolvePeerBySnErrors, ThrowOnError>({ url: '/peers/sn/{sn}', ...options });
 
 /**
- * Resolve gear public key by IMEI
+ * Resolve peer public key by IMEI
  */
-export const resolveByImei = <ThrowOnError extends boolean = false>(options: Options<ResolveByImeiData, ThrowOnError>) => (options.client ?? client).get<ResolveByImeiResponses, ResolveByImeiErrors, ThrowOnError>({ url: '/gears/imei/{tac}/{serial}', ...options });
+export const resolvePeerByImei = <ThrowOnError extends boolean = false>(options: Options<ResolvePeerByImeiData, ThrowOnError>) => (options.client ?? client).get<ResolvePeerByImeiResponses, ResolvePeerByImeiErrors, ThrowOnError>({ url: '/peers/imei/{tac}/{serial}', ...options });
 
 /**
- * List gears by label
+ * List peers by label
  */
-export const listByLabel = <ThrowOnError extends boolean = false>(options: Options<ListByLabelData, ThrowOnError>) => (options.client ?? client).get<ListByLabelResponses, ListByLabelErrors, ThrowOnError>({ url: '/gears/label/{key}/{value}', ...options });
+export const listPeersByLabel = <ThrowOnError extends boolean = false>(options: Options<ListPeersByLabelData, ThrowOnError>) => (options.client ?? client).get<ListPeersByLabelResponses, ListPeersByLabelErrors, ThrowOnError>({ url: '/peers/label/{key}/{value}', ...options });
 
 /**
- * List gears by certification
+ * List peers by certification
  */
-export const listByCertification = <ThrowOnError extends boolean = false>(options: Options<ListByCertificationData, ThrowOnError>) => (options.client ?? client).get<ListByCertificationResponses, ListByCertificationErrors, ThrowOnError>({ url: '/gears/certification/{type}/{authority}/{id}', ...options });
+export const listPeersByCertification = <ThrowOnError extends boolean = false>(options: Options<ListPeersByCertificationData, ThrowOnError>) => (options.client ?? client).get<ListPeersByCertificationResponses, ListPeersByCertificationErrors, ThrowOnError>({ url: '/peers/certification/{type}/{authority}/{id}', ...options });
 
 /**
- * List gears by firmware depot and channel
+ * List peers by firmware depot and channel
  */
-export const listByFirmware = <ThrowOnError extends boolean = false>(options: Options<ListByFirmwareData, ThrowOnError>) => (options.client ?? client).get<ListByFirmwareResponses, ListByFirmwareErrors, ThrowOnError>({ url: '/gears/firmware/{depot}/{channel}', ...options });
+export const listPeersByFirmware = <ThrowOnError extends boolean = false>(options: Options<ListPeersByFirmwareData, ThrowOnError>) => (options.client ?? client).get<ListPeersByFirmwareResponses, ListPeersByFirmwareErrors, ThrowOnError>({ url: '/peers/firmware/{depot}/{channel}', ...options });
 
 /**
- * Delete a gear
+ * Delete a peer
  */
-export const deleteGear = <ThrowOnError extends boolean = false>(options: Options<DeleteGearData, ThrowOnError>) => (options.client ?? client).delete<DeleteGearResponses, DeleteGearErrors, ThrowOnError>({ url: '/gears/{publicKey}', ...options });
+export const deletePeer = <ThrowOnError extends boolean = false>(options: Options<DeletePeerData, ThrowOnError>) => (options.client ?? client).delete<DeletePeerResponses, DeletePeerErrors, ThrowOnError>({ url: '/peers/{publicKey}', ...options });
 
 /**
- * Get gear registration
+ * Get peer registration
  */
-export const getGear = <ThrowOnError extends boolean = false>(options: Options<GetGearData, ThrowOnError>) => (options.client ?? client).get<GetGearResponses, GetGearErrors, ThrowOnError>({ url: '/gears/{publicKey}', ...options });
+export const getPeer = <ThrowOnError extends boolean = false>(options: Options<GetPeerData, ThrowOnError>) => (options.client ?? client).get<GetPeerResponses, GetPeerErrors, ThrowOnError>({ url: '/peers/{publicKey}', ...options });
 
 /**
- * Approve a gear with a given role
+ * Approve a peer with a given role
  */
-export const approveGear = <ThrowOnError extends boolean = false>(options: Options<ApproveGearData, ThrowOnError>) => (options.client ?? client).post<ApproveGearResponses, ApproveGearErrors, ThrowOnError>({
-    url: '/gears/{publicKey}/@approve',
+export const approvePeer = <ThrowOnError extends boolean = false>(options: Options<ApprovePeerData, ThrowOnError>) => (options.client ?? client).post<ApprovePeerResponses, ApprovePeerErrors, ThrowOnError>({
+    url: '/peers/{publicKey}/@approve',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -446,30 +446,30 @@ export const approveGear = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
- * Block a gear
+ * Block a peer
  */
-export const blockGear = <ThrowOnError extends boolean = false>(options: Options<BlockGearData, ThrowOnError>) => (options.client ?? client).post<BlockGearResponses, BlockGearErrors, ThrowOnError>({ url: '/gears/{publicKey}/@block', ...options });
+export const blockPeer = <ThrowOnError extends boolean = false>(options: Options<BlockPeerData, ThrowOnError>) => (options.client ?? client).post<BlockPeerResponses, BlockPeerErrors, ThrowOnError>({ url: '/peers/{publicKey}/@block', ...options });
 
 /**
- * Refresh gear info from connected device
+ * Refresh peer info from connected device
  */
-export const refreshGear = <ThrowOnError extends boolean = false>(options: Options<RefreshGearData, ThrowOnError>) => (options.client ?? client).post<RefreshGearResponses, RefreshGearErrors, ThrowOnError>({ url: '/gears/{publicKey}/@refresh', ...options });
+export const refreshPeer = <ThrowOnError extends boolean = false>(options: Options<RefreshPeerData, ThrowOnError>) => (options.client ?? client).post<RefreshPeerResponses, RefreshPeerErrors, ThrowOnError>({ url: '/peers/{publicKey}/@refresh', ...options });
 
 /**
- * Get gear device info
+ * Get peer device info
  */
-export const getGearInfo = <ThrowOnError extends boolean = false>(options: Options<GetGearInfoData, ThrowOnError>) => (options.client ?? client).get<GetGearInfoResponses, GetGearInfoErrors, ThrowOnError>({ url: '/gears/{publicKey}/info', ...options });
+export const getPeerInfo = <ThrowOnError extends boolean = false>(options: Options<GetPeerInfoData, ThrowOnError>) => (options.client ?? client).get<GetPeerInfoResponses, GetPeerInfoErrors, ThrowOnError>({ url: '/peers/{publicKey}/info', ...options });
 
 /**
- * Get gear configuration
+ * Get peer configuration
  */
-export const getGearConfig = <ThrowOnError extends boolean = false>(options: Options<GetGearConfigData, ThrowOnError>) => (options.client ?? client).get<GetGearConfigResponses, GetGearConfigErrors, ThrowOnError>({ url: '/gears/{publicKey}/config', ...options });
+export const getPeerConfig = <ThrowOnError extends boolean = false>(options: Options<GetPeerConfigData, ThrowOnError>) => (options.client ?? client).get<GetPeerConfigResponses, GetPeerConfigErrors, ThrowOnError>({ url: '/peers/{publicKey}/config', ...options });
 
 /**
- * Update gear configuration
+ * Update peer configuration
  */
-export const putGearConfig = <ThrowOnError extends boolean = false>(options: Options<PutGearConfigData, ThrowOnError>) => (options.client ?? client).put<PutGearConfigResponses, PutGearConfigErrors, ThrowOnError>({
-    url: '/gears/{publicKey}/config',
+export const putPeerConfig = <ThrowOnError extends boolean = false>(options: Options<PutPeerConfigData, ThrowOnError>) => (options.client ?? client).put<PutPeerConfigResponses, PutPeerConfigErrors, ThrowOnError>({
+    url: '/peers/{publicKey}/config',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -478,11 +478,11 @@ export const putGearConfig = <ThrowOnError extends boolean = false>(options: Opt
 });
 
 /**
- * Get gear runtime status
+ * Get peer runtime status
  */
-export const getGearRuntime = <ThrowOnError extends boolean = false>(options: Options<GetGearRuntimeData, ThrowOnError>) => (options.client ?? client).get<GetGearRuntimeResponses, unknown, ThrowOnError>({ url: '/gears/{publicKey}/runtime', ...options });
+export const getPeerRuntime = <ThrowOnError extends boolean = false>(options: Options<GetPeerRuntimeData, ThrowOnError>) => (options.client ?? client).get<GetPeerRuntimeResponses, unknown, ThrowOnError>({ url: '/peers/{publicKey}/runtime', ...options });
 
 /**
- * Get gear OTA firmware summary
+ * Get peer OTA firmware summary
  */
-export const getGearOta = <ThrowOnError extends boolean = false>(options: Options<GetGearOtaData, ThrowOnError>) => (options.client ?? client).get<GetGearOtaResponses, GetGearOtaErrors, ThrowOnError>({ url: '/gears/{publicKey}/ota', ...options });
+export const getPeerOta = <ThrowOnError extends boolean = false>(options: Options<GetPeerOtaData, ThrowOnError>) => (options.client ?? client).get<GetPeerOtaResponses, GetPeerOtaErrors, ThrowOnError>({ url: '/peers/{publicKey}/ota', ...options });

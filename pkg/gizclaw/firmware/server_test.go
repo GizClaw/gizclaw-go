@@ -382,7 +382,7 @@ func TestAdminHandlers(t *testing.T) {
 	})
 }
 
-func TestGetGearOTAHandler(t *testing.T) {
+func TestGetPeerOTAHandler(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
@@ -390,38 +390,38 @@ func TestGetGearOTAHandler(t *testing.T) {
 	t.Run("resolver missing", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		resp, err := env.srv.GetGearOTA(ctx, adminservice.GetGearOTARequestObject{})
+		resp, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{})
 		if err != nil {
-			t.Fatalf("GetGearOTA() unexpected error: %v", err)
+			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
 		}
-		if _, ok := resp.(adminservice.GetGearOTA404JSONResponse); !ok {
-			t.Fatalf("GetGearOTA() response = %#v", resp)
+		if _, ok := resp.(adminservice.GetPeerOTA404JSONResponse); !ok {
+			t.Fatalf("GetPeerOTA() response = %#v", resp)
 		}
 	})
 
 	t.Run("invalid public key", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "depot", Stable, nil
 		}
-		if _, err := env.srv.GetGearOTA(ctx, adminservice.GetGearOTARequestObject{PublicKey: "%"}); err == nil {
-			t.Fatal("GetGearOTA() expected invalid params error")
+		if _, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: "%"}); err == nil {
+			t.Fatal("GetPeerOTA() expected invalid params error")
 		}
 	})
 
 	t.Run("resolver says unavailable", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "", "", nil
 		}
-		resp, err := env.srv.GetGearOTA(ctx, adminservice.GetGearOTARequestObject{PublicKey: testCallerPublicKey.String()})
+		resp, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: testCallerPublicKey.String()})
 		if err != nil {
-			t.Fatalf("GetGearOTA() unexpected error: %v", err)
+			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
 		}
-		if _, ok := resp.(adminservice.GetGearOTA404JSONResponse); !ok {
-			t.Fatalf("GetGearOTA() response = %#v", resp)
+		if _, ok := resp.(adminservice.GetPeerOTA404JSONResponse); !ok {
+			t.Fatalf("GetPeerOTA() response = %#v", resp)
 		}
 	})
 
@@ -429,42 +429,42 @@ func TestGetGearOTAHandler(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Stable, "1.0.0", map[string]string{"fw.bin": "firmware"})
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "depot", Stable, nil
 		}
-		resp, err := env.srv.GetGearOTA(ctx, adminservice.GetGearOTARequestObject{PublicKey: testCallerPublicKey.String()})
+		resp, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: testCallerPublicKey.String()})
 		if err != nil {
-			t.Fatalf("GetGearOTA() unexpected error: %v", err)
+			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
 		}
-		if _, ok := resp.(adminservice.GetGearOTA200JSONResponse); !ok {
-			t.Fatalf("GetGearOTA() response = %#v", resp)
+		if _, ok := resp.(adminservice.GetPeerOTA200JSONResponse); !ok {
+			t.Fatalf("GetPeerOTA() response = %#v", resp)
 		}
 	})
 
 	t.Run("resolver error and firmware missing", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "", "", errors.New("boom")
 		}
-		resp, err := env.srv.GetGearOTA(ctx, adminservice.GetGearOTARequestObject{PublicKey: testCallerPublicKey.String()})
+		resp, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: testCallerPublicKey.String()})
 		if err != nil {
-			t.Fatalf("GetGearOTA() unexpected error: %v", err)
+			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
 		}
-		if _, ok := resp.(adminservice.GetGearOTA404JSONResponse); !ok {
-			t.Fatalf("GetGearOTA() response = %#v", resp)
+		if _, ok := resp.(adminservice.GetPeerOTA404JSONResponse); !ok {
+			t.Fatalf("GetPeerOTA() response = %#v", resp)
 		}
 
 		env = newTestEnv(t)
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "depot", Beta, nil
 		}
-		resp, err = env.srv.GetGearOTA(ctx, adminservice.GetGearOTARequestObject{PublicKey: testCallerPublicKey.String()})
+		resp, err = env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: testCallerPublicKey.String()})
 		if err != nil {
-			t.Fatalf("GetGearOTA() unexpected error: %v", err)
+			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
 		}
-		if _, ok := resp.(adminservice.GetGearOTA404JSONResponse); !ok {
-			t.Fatalf("GetGearOTA() response = %#v", resp)
+		if _, ok := resp.(adminservice.GetPeerOTA404JSONResponse); !ok {
+			t.Fatalf("GetPeerOTA() response = %#v", resp)
 		}
 	})
 }
@@ -487,7 +487,7 @@ func TestServerPublicGetOTA(t *testing.T) {
 	t.Run("caller missing", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "depot", Stable, nil
 		}
 		resp, err := env.srv.GetOTA(context.Background(), gearservice.GetOTARequestObject{})
@@ -502,7 +502,7 @@ func TestServerPublicGetOTA(t *testing.T) {
 	t.Run("resolver error", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "", "", errors.New("boom")
 		}
 		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
@@ -519,7 +519,7 @@ func TestServerPublicGetOTA(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			if publicKey != testCallerPublicKey {
 				t.Fatalf("publicKey = %s", publicKey)
 			}
@@ -558,7 +558,7 @@ func TestServerPublicDownloadFirmware(t *testing.T) {
 	t.Run("invalid escaped path", func(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "depot", Stable, nil
 		}
 		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
@@ -575,7 +575,7 @@ func TestServerPublicDownloadFirmware(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "depot", Stable, nil
 		}
 		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
@@ -592,7 +592,7 @@ func TestServerPublicDownloadFirmware(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			return "depot", Stable, nil
 		}
 		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
@@ -615,7 +615,7 @@ func TestServerPublicDownloadFirmware(t *testing.T) {
 		srv := &Server{
 			Store:         store,
 			MetadataStore: env.meta,
-			ResolveGearTarget: func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+			ResolvePeerTarget: func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 				return "depot", Stable, nil
 			},
 		}
@@ -633,7 +633,7 @@ func TestServerPublicDownloadFirmware(t *testing.T) {
 		t.Parallel()
 		env := newTestEnv(t)
 		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 			if publicKey != testCallerPublicKey {
 				t.Fatalf("publicKey = %s", publicKey)
 			}
@@ -669,14 +669,14 @@ func TestResolveCallerTarget(t *testing.T) {
 		t.Fatal("resolveCallerTarget() expected resolver error")
 	}
 
-	env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+	env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 		return "depot", Stable, nil
 	}
 	if _, _, err := env.srv.resolveCallerTarget(context.Background()); err == nil {
 		t.Fatal("resolveCallerTarget() expected caller public key error")
 	}
 
-	env.srv.ResolveGearTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
+	env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
 		return "", "", nil
 	}
 	ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)

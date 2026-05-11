@@ -7,7 +7,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
@@ -68,14 +68,14 @@ func TestManagerSetPeerUpAndDownUpdatesRuntime(t *testing.T) {
 }
 
 func TestManagerEnsureGearCreatesDefaultUnspecifiedGear(t *testing.T) {
-	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	service := &peer.Server{Store: mustBadgerInMemory(t, nil)}
 	manager := NewManager(service)
 	ctx := context.Background()
 	key := giznet.PublicKey{1}
 
-	created, err := manager.EnsureGear(ctx, key)
+	created, err := manager.EnsurePeer(ctx, key)
 	if err != nil {
-		t.Fatalf("EnsureGear error = %v", err)
+		t.Fatalf("EnsurePeer error = %v", err)
 	}
 	if created.PublicKey != key.String() {
 		t.Fatalf("PublicKey = %q, want %q", created.PublicKey, key.String())
@@ -100,7 +100,7 @@ func TestManagerEnsureGearCreatesDefaultUnspecifiedGear(t *testing.T) {
 }
 
 func TestManagerEnsureGearPreservesExistingGear(t *testing.T) {
-	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	service := &peer.Server{Store: mustBadgerInMemory(t, nil)}
 	manager := NewManager(service)
 	ctx := context.Background()
 	key := giznet.PublicKey{1}
@@ -114,24 +114,24 @@ func TestManagerEnsureGearPreservesExistingGear(t *testing.T) {
 		t.Fatalf("SaveGear error = %v", err)
 	}
 
-	got, err := manager.EnsureGear(ctx, key)
+	got, err := manager.EnsurePeer(ctx, key)
 	if err != nil {
-		t.Fatalf("EnsureGear error = %v", err)
+		t.Fatalf("EnsurePeer error = %v", err)
 	}
 	if got.Role != apitypes.GearRoleAdmin || got.Status != apitypes.GearStatusBlocked {
-		t.Fatalf("EnsureGear overwrote existing gear: %+v", got)
+		t.Fatalf("EnsurePeer overwrote existing gear: %+v", got)
 	}
 }
 
 func TestManagerRefreshDeviceErrors(t *testing.T) {
-	service := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	service := &peer.Server{Store: mustBadgerInMemory(t, nil)}
 	manager := NewManager(service)
 	ctx := context.Background()
 	missingKey := giznet.PublicKey{1}
 	deviceKey := giznet.PublicKey{2}
 
-	if _, _, err := manager.RefreshGear(ctx, missingKey); !errors.Is(err, gear.ErrGearNotFound) {
-		t.Fatalf("RefreshGear missing err = %v", err)
+	if _, _, err := manager.RefreshPeer(ctx, missingKey); !errors.Is(err, peer.ErrPeerNotFound) {
+		t.Fatalf("RefreshPeer missing err = %v", err)
 	}
 
 	if _, err := service.SaveGear(ctx, apitypes.Gear{
@@ -144,10 +144,10 @@ func TestManagerRefreshDeviceErrors(t *testing.T) {
 		t.Fatalf("SaveGear error: %v", err)
 	}
 
-	if _, online, err := manager.RefreshGear(ctx, deviceKey); !errors.Is(err, ErrDeviceOffline) {
-		t.Fatalf("RefreshGear offline err = %v", err)
+	if _, online, err := manager.RefreshPeer(ctx, deviceKey); !errors.Is(err, ErrDeviceOffline) {
+		t.Fatalf("RefreshPeer offline err = %v", err)
 	} else if online {
-		t.Fatal("offline RefreshGear should report online=false")
+		t.Fatal("offline RefreshPeer should report online=false")
 	}
 }
 

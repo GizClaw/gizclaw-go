@@ -15,7 +15,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
@@ -34,11 +34,11 @@ const (
 
 type gearAPIBundle struct {
 	firmware.FirmwareGearService
-	gear.GearsGearService
+	peer.GearService
 }
 
 type serverPublic struct {
-	gear.GearsServerPublic
+	peer.ServerPublicService
 	publiclogin.ServerPublic
 }
 
@@ -85,7 +85,7 @@ func (s *PeerService) ensurePeerGear(ctx context.Context, conn *giznet.Conn) err
 	if s == nil || s.manager == nil {
 		return nil
 	}
-	_, err := s.manager.EnsureGear(ctx, conn.PublicKey())
+	_, err := s.manager.EnsurePeer(ctx, conn.PublicKey())
 	return err
 }
 

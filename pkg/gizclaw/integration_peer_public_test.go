@@ -43,9 +43,9 @@ func TestIntegrationPeerPublicRefresh(t *testing.T) {
 		Sn: strPtr("sn-r1"),
 	}
 
-	result, err := waitForRefreshGearSuccess(admin, deviceResult.Gear.PublicKey)
+	result, err := waitForRefreshPeerSuccess(admin, deviceResult.Gear.PublicKey)
 	if err != nil {
-		t.Fatalf("RefreshGear error: %v", err)
+		t.Fatalf("RefreshPeer error: %v", err)
 	}
 	if result.Gear.Device.Hardware == nil || result.Gear.Device.Hardware.Manufacturer == nil || *result.Gear.Device.Hardware.Manufacturer != "Acme" {
 		t.Fatalf("manufacturer = %+v", result.Gear.Device.Hardware)
@@ -73,20 +73,20 @@ func TestIntegrationPeerPublicRefreshReportsOfflineWhenDeviceDisconnected(t *tes
 		t.Fatalf("device close error: %v", err)
 	}
 
-	err = waitForRefreshGearFailure(admin, deviceResult.Gear.PublicKey)
+	err = waitForRefreshPeerFailure(admin, deviceResult.Gear.PublicKey)
 	if err == nil {
-		t.Fatal("RefreshGear should fail when peer disconnects")
+		t.Fatal("RefreshPeer should fail when peer disconnects")
 	}
 	if !isOfflineRefreshError(err) {
-		t.Fatalf("RefreshGear error = %v, want offline-equivalent error", err)
+		t.Fatalf("RefreshPeer error = %v, want offline-equivalent error", err)
 	}
 }
 
-func waitForRefreshGearSuccess(admin *gizclaw.Client, publicKey string) (adminservice.RefreshResult, error) {
+func waitForRefreshPeerSuccess(admin *gizclaw.Client, publicKey string) (adminservice.RefreshResult, error) {
 	var lastResult adminservice.RefreshResult
 	err := waitUntil(testReadyTimeout, func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		result, err := refreshGear(ctx, admin, publicKey)
+		result, err := refreshPeer(ctx, admin, publicKey)
 		cancel()
 		lastResult = result
 		if err == nil &&
@@ -106,11 +106,11 @@ func waitForRefreshGearSuccess(admin *gizclaw.Client, publicKey string) (adminse
 	return lastResult, nil
 }
 
-func waitForRefreshGearFailure(admin *gizclaw.Client, publicKey string) error {
+func waitForRefreshPeerFailure(admin *gizclaw.Client, publicKey string) error {
 	var offlineErr error
 	err := waitUntil(testReadyTimeout, func() error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		_, err := refreshGear(ctx, admin, publicKey)
+		_, err := refreshPeer(ctx, admin, publicKey)
 		cancel()
 		if isOfflineRefreshError(err) {
 			offlineErr = err
@@ -127,7 +127,7 @@ func waitForRefreshGearFailure(admin *gizclaw.Client, publicKey string) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = refreshGear(ctx, admin, publicKey)
+	_, err = refreshPeer(ctx, admin, publicKey)
 	if isOfflineRefreshError(err) {
 		return err
 	}

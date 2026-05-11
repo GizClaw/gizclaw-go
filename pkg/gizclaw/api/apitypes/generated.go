@@ -140,21 +140,6 @@ func (e GearCertificationType) Valid() bool {
 	}
 }
 
-// Defines values for GearConfigResourceKind.
-const (
-	GearConfigResourceKindGearConfig GearConfigResourceKind = "GearConfig"
-)
-
-// Valid indicates whether the value is a known member of the GearConfigResourceKind enum.
-func (e GearConfigResourceKind) Valid() bool {
-	switch e {
-	case GearConfigResourceKindGearConfig:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GearRole.
 const (
 	GearRoleAdmin       GearRole = "admin"
@@ -269,6 +254,21 @@ func (e ModelSource) Valid() bool {
 	}
 }
 
+// Defines values for PeerConfigResourceKind.
+const (
+	PeerConfigResourceKindPeerConfig PeerConfigResourceKind = "PeerConfig"
+)
+
+// Valid indicates whether the value is a known member of the PeerConfigResourceKind enum.
+func (e PeerConfigResourceKind) Valid() bool {
+	switch e {
+	case PeerConfigResourceKindPeerConfig:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ResourceAPIVersion.
 const (
 	ResourceAPIVersionGizclawAdminv1alpha1 ResourceAPIVersion = "gizclaw.admin/v1alpha1"
@@ -287,9 +287,9 @@ func (e ResourceAPIVersion) Valid() bool {
 // Defines values for ResourceKind.
 const (
 	ResourceKindCredential    ResourceKind = "Credential"
-	ResourceKindGearConfig    ResourceKind = "GearConfig"
 	ResourceKindMiniMaxTenant ResourceKind = "MiniMaxTenant"
 	ResourceKindModel         ResourceKind = "Model"
+	ResourceKindPeerConfig    ResourceKind = "PeerConfig"
 	ResourceKindResourceList  ResourceKind = "ResourceList"
 	ResourceKindVoice         ResourceKind = "Voice"
 	ResourceKindVolcTenant    ResourceKind = "VolcTenant"
@@ -302,11 +302,11 @@ func (e ResourceKind) Valid() bool {
 	switch e {
 	case ResourceKindCredential:
 		return true
-	case ResourceKindGearConfig:
-		return true
 	case ResourceKindMiniMaxTenant:
 		return true
 	case ResourceKindModel:
+		return true
+	case ResourceKindPeerConfig:
 		return true
 	case ResourceKindResourceList:
 		return true
@@ -622,18 +622,6 @@ type GearCertificationAuthority string
 // GearCertificationType defines model for GearCertificationType.
 type GearCertificationType string
 
-// GearConfigResource defines model for GearConfigResource.
-type GearConfigResource struct {
-	// ApiVersion API version for declarative GizClaw resources.
-	ApiVersion ResourceAPIVersion     `json:"apiVersion"`
-	Kind       GearConfigResourceKind `json:"kind"`
-	Metadata   ResourceMetadata       `json:"metadata"`
-	Spec       Configuration          `json:"spec"`
-}
-
-// GearConfigResourceKind defines model for GearConfigResource.Kind.
-type GearConfigResourceKind string
-
 // GearFirmwareChannel defines model for GearFirmwareChannel.
 type GearFirmwareChannel = string
 
@@ -804,6 +792,18 @@ type OTASummary struct {
 	FirmwareSemver string      `json:"firmware_semver"`
 }
 
+// PeerConfigResource defines model for PeerConfigResource.
+type PeerConfigResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion     `json:"apiVersion"`
+	Kind       PeerConfigResourceKind `json:"kind"`
+	Metadata   ResourceMetadata       `json:"metadata"`
+	Spec       Configuration          `json:"spec"`
+}
+
+// PeerConfigResourceKind defines model for PeerConfigResource.Kind.
+type PeerConfigResourceKind string
+
 // RefreshIdentifiers defines model for RefreshIdentifiers.
 type RefreshIdentifiers struct {
 	Imeis  *[]GearIMEI  `json:"imeis,omitempty"`
@@ -873,7 +873,7 @@ type ResourceMetadata struct {
 	Annotations *map[string]string `json:"annotations,omitempty"`
 	Labels      *map[string]string `json:"labels,omitempty"`
 
-	// Name Resource name. For GearConfig this is the gear public key.
+	// Name Resource name. For PeerConfig this is the peer public key.
 	Name string `json:"name"`
 }
 
@@ -1270,24 +1270,24 @@ func (t *Resource) MergeWorkspaceResource(v WorkspaceResource) error {
 	return err
 }
 
-// AsGearConfigResource returns the union data inside the Resource as a GearConfigResource
-func (t Resource) AsGearConfigResource() (GearConfigResource, error) {
-	var body GearConfigResource
+// AsPeerConfigResource returns the union data inside the Resource as a PeerConfigResource
+func (t Resource) AsPeerConfigResource() (PeerConfigResource, error) {
+	var body PeerConfigResource
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromGearConfigResource overwrites any union data inside the Resource as the provided GearConfigResource
-func (t *Resource) FromGearConfigResource(v GearConfigResource) error {
-	v.Kind = "GearConfigResource"
+// FromPeerConfigResource overwrites any union data inside the Resource as the provided PeerConfigResource
+func (t *Resource) FromPeerConfigResource(v PeerConfigResource) error {
+	v.Kind = "PeerConfigResource"
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergeGearConfigResource performs a merge with any union data inside the Resource, using the provided GearConfigResource
-func (t *Resource) MergeGearConfigResource(v GearConfigResource) error {
-	v.Kind = "GearConfigResource"
+// MergePeerConfigResource performs a merge with any union data inside the Resource, using the provided PeerConfigResource
+func (t *Resource) MergePeerConfigResource(v PeerConfigResource) error {
+	v.Kind = "PeerConfigResource"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -1342,12 +1342,12 @@ func (t Resource) ValueByDiscriminator() (interface{}, error) {
 	switch discriminator {
 	case "CredentialResource":
 		return t.AsCredentialResource()
-	case "GearConfigResource":
-		return t.AsGearConfigResource()
 	case "MiniMaxTenantResource":
 		return t.AsMiniMaxTenantResource()
 	case "ModelResource":
 		return t.AsModelResource()
+	case "PeerConfigResource":
+		return t.AsPeerConfigResource()
 	case "ResourceListResource":
 		return t.AsResourceListResource()
 	case "VoiceResource":

@@ -24,7 +24,7 @@ func TestPublicHTTPLoginRegisterAndGearAPI(t *testing.T) {
 	}
 	server := &Server{
 		KeyPair:            serverKey,
-		GearStore:          mustBadgerInMemory(t, nil),
+		PeerStore:          mustBadgerInMemory(t, nil),
 		DepotStore:         depotstore.Dir(t.TempDir()),
 		BuildCommit:        "test-build",
 		ServerPublicKey:    serverKey.Public,

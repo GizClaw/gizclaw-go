@@ -1,4 +1,4 @@
-package gearscmd
+package peerscmd
 
 import (
 	"context"
@@ -13,54 +13,78 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type gearConfigClient interface {
-	GetGearConfig(ctx context.Context, publicKey string) (apitypes.Configuration, error)
-	PutGearConfig(ctx context.Context, publicKey string, cfg apitypes.Configuration) (apitypes.Configuration, error)
+type peerConfigClient interface {
+	GetPeerConfig(ctx context.Context, publicKey string) (apitypes.Configuration, error)
+	PutPeerConfig(ctx context.Context, publicKey string, cfg apitypes.Configuration) (apitypes.Configuration, error)
 	Close() error
 }
 
-type gearConfigBridge struct {
+type peerConfigBridge struct {
 	c *gizclaw.Client
 }
 
-func (g *gearConfigBridge) GetGearConfig(ctx context.Context, publicKey string) (apitypes.Configuration, error) {
-	return client.GetGearConfig(ctx, g.c, publicKey)
+func (g *peerConfigBridge) GetPeerConfig(ctx context.Context, publicKey string) (apitypes.Configuration, error) {
+	return getPeerConfig(ctx, g.c, publicKey)
 }
 
-func (g *gearConfigBridge) PutGearConfig(ctx context.Context, publicKey string, cfg apitypes.Configuration) (apitypes.Configuration, error) {
-	return client.PutGearConfig(ctx, g.c, publicKey, cfg)
+func (g *peerConfigBridge) PutPeerConfig(ctx context.Context, publicKey string, cfg apitypes.Configuration) (apitypes.Configuration, error) {
+	return putPeerConfig(ctx, g.c, publicKey, cfg)
 }
 
-func (g *gearConfigBridge) Close() error {
+func (g *peerConfigBridge) Close() error {
 	return g.c.Close()
 }
 
-var openGearConfigClient = func(ctxName string) (gearConfigClient, error) {
-	c, err := client.ConnectFromContext(ctxName)
+var openPeerConfigClient = func(ctxName string) (peerConfigClient, error) {
+	c, err := connectFromContext(ctxName)
 	if err != nil {
 		return nil, err
 	}
-	return &gearConfigBridge{c: c}, nil
+	return &peerConfigBridge{c: c}, nil
 }
 
+var (
+	connectFromContext       = client.ConnectFromContext
+	listPeers                = client.ListPeers
+	getPeer                  = client.GetPeer
+	resolvePeerBySN          = client.ResolvePeerBySN
+	resolvePeerByIMEI        = client.ResolvePeerByIMEI
+	approvePeer              = client.ApprovePeer
+	blockPeer                = client.BlockPeer
+	getPeerInfo              = client.GetPeerInfo
+	getPeerConfig            = client.GetPeerConfig
+	putPeerConfig            = client.PutPeerConfig
+	getPeerRuntime           = client.GetPeerRuntime
+	getPeerOTA               = client.GetPeerOTA
+	listPeersByLabel         = client.ListPeersByLabel
+	listPeersByCertification = client.ListPeersByCertification
+	listPeersByFirmware      = client.ListPeersByFirmware
+	deletePeer               = client.DeletePeer
+	refreshPeer              = client.RefreshPeer
+)
+
 func NewCmd() *cobra.Command {
+	return newCmd("peers", "Manage peers")
+}
+
+func newCmd(use, short string) *cobra.Command {
 	var ctxName string
 	cmd := &cobra.Command{
-		Use:   "gears",
-		Short: "Manage gears",
+		Use:   use,
+		Short: short,
 	}
 	cmd.PersistentFlags().StringVar(&ctxName, "context", "", "context name (default: current)")
 	cmd.AddCommand(
 		&cobra.Command{
 			Use:   "list",
-			Short: "List gears",
+			Short: "List peers",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				items, err := client.ListGears(context.Background(), c)
+				items, err := listPeers(context.Background(), c)
 				if err != nil {
 					return err
 				}
@@ -69,15 +93,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "get <pubkey>",
-			Short: "Get gear registration",
+			Short: "Get peer registration",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.GetGear(context.Background(), c, args[0])
+				item, err := getPeer(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -89,12 +113,12 @@ func NewCmd() *cobra.Command {
 			Short: "Resolve public key by SN",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				publicKey, err := client.ResolveGearBySN(context.Background(), c, args[0])
+				publicKey, err := resolvePeerBySN(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -107,12 +131,12 @@ func NewCmd() *cobra.Command {
 			Short: "Resolve public key by IMEI",
 			Args:  cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				publicKey, err := client.ResolveGearByIMEI(context.Background(), c, args[0], args[1])
+				publicKey, err := resolvePeerByIMEI(context.Background(), c, args[0], args[1])
 				if err != nil {
 					return err
 				}
@@ -122,15 +146,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "approve <pubkey> <role>",
-			Short: "Approve gear role",
+			Short: "Approve peer role",
 			Args:  cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.ApproveGear(context.Background(), c, args[0], apitypes.GearRole(args[1]))
+				item, err := approvePeer(context.Background(), c, args[0], apitypes.GearRole(args[1]))
 				if err != nil {
 					return err
 				}
@@ -140,15 +164,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "block <pubkey>",
-			Short: "Block gear",
+			Short: "Block peer",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.BlockGear(context.Background(), c, args[0])
+				item, err := blockPeer(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -158,15 +182,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "info <pubkey>",
-			Short: "Get gear info snapshot",
+			Short: "Get peer info snapshot",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.GetGearInfo(context.Background(), c, args[0])
+				item, err := getPeerInfo(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -175,15 +199,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "config <pubkey>",
-			Short: "Get gear config snapshot",
+			Short: "Get peer config snapshot",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.GetGearConfig(context.Background(), c, args[0])
+				item, err := getPeerConfig(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -194,15 +218,15 @@ func NewCmd() *cobra.Command {
 		newSetFirmwareChannelCmd(&ctxName),
 		&cobra.Command{
 			Use:   "runtime <pubkey>",
-			Short: "Get gear runtime snapshot",
+			Short: "Get peer runtime snapshot",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.GetGearRuntime(context.Background(), c, args[0])
+				item, err := getPeerRuntime(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -211,15 +235,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "ota <pubkey>",
-			Short: "Get gear OTA summary",
+			Short: "Get peer OTA summary",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.GetGearOTA(context.Background(), c, args[0])
+				item, err := getPeerOTA(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -228,15 +252,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "list-by-label <key> <value>",
-			Short: "List gears by label",
+			Short: "List peers by label",
 			Args:  cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				items, err := client.ListGearsByLabel(context.Background(), c, args[0], args[1])
+				items, err := listPeersByLabel(context.Background(), c, args[0], args[1])
 				if err != nil {
 					return err
 				}
@@ -245,15 +269,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "list-by-certification <type> <authority> <id>",
-			Short: "List gears by certification",
+			Short: "List peers by certification",
 			Args:  cobra.ExactArgs(3),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				items, err := client.ListGearsByCertification(context.Background(), c, apitypes.GearCertificationType(args[0]), apitypes.GearCertificationAuthority(args[1]), args[2])
+				items, err := listPeersByCertification(context.Background(), c, apitypes.GearCertificationType(args[0]), apitypes.GearCertificationAuthority(args[1]), args[2])
 				if err != nil {
 					return err
 				}
@@ -262,15 +286,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "list-by-firmware <depot> <channel>",
-			Short: "List gears by firmware policy",
+			Short: "List peers by firmware policy",
 			Args:  cobra.ExactArgs(2),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				items, err := client.ListGearsByFirmware(context.Background(), c, args[0], apitypes.GearFirmwareChannel(args[1]))
+				items, err := listPeersByFirmware(context.Background(), c, args[0], apitypes.GearFirmwareChannel(args[1]))
 				if err != nil {
 					return err
 				}
@@ -279,15 +303,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "delete <pubkey>",
-			Short: "Reset gear registration",
+			Short: "Delete peer registration",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.DeleteGear(context.Background(), c, args[0])
+				item, err := deletePeer(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -296,15 +320,15 @@ func NewCmd() *cobra.Command {
 		},
 		&cobra.Command{
 			Use:   "refresh <pubkey>",
-			Short: "Refresh gear from device-side API",
+			Short: "Refresh peer from device-side API",
 			Args:  cobra.ExactArgs(1),
 			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := client.ConnectFromContext(ctxName)
+				c, err := connectFromContext(ctxName)
 				if err != nil {
 					return err
 				}
 				defer c.Close()
-				item, err := client.RefreshGear(context.Background(), c, args[0])
+				item, err := refreshPeer(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -319,19 +343,19 @@ func newPutConfigCmd(ctxName *string) *cobra.Command {
 	var file string
 	cmd := &cobra.Command{
 		Use:   "put-config <pubkey> --file <config.json>",
-		Short: "Replace gear config",
+		Short: "Replace peer config",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := cmdutil.ReadJSONFile[apitypes.Configuration](file)
 			if err != nil {
 				return err
 			}
-			c, err := openGearConfigClient(*ctxName)
+			c, err := openPeerConfigClient(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			item, err := c.PutGearConfig(context.Background(), args[0], cfg)
+			item, err := c.PutPeerConfig(context.Background(), args[0], cfg)
 			if err != nil {
 				return err
 			}
@@ -346,16 +370,16 @@ func newPutConfigCmd(ctxName *string) *cobra.Command {
 func newSetFirmwareChannelCmd(ctxName *string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-firmware-channel <pubkey> <channel>",
-		Short: "Set gear firmware channel",
+		Short: "Set peer firmware channel",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := openGearConfigClient(*ctxName)
+			c, err := openPeerConfigClient(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
 
-			cfg, err := c.GetGearConfig(context.Background(), args[0])
+			cfg, err := c.GetPeerConfig(context.Background(), args[0])
 			if err != nil {
 				return err
 			}
@@ -365,7 +389,7 @@ func newSetFirmwareChannelCmd(ctxName *string) *cobra.Command {
 			channel := apitypes.GearFirmwareChannel(args[1])
 			cfg.Firmware.Channel = &channel
 
-			item, err := c.PutGearConfig(context.Background(), args[0], cfg)
+			item, err := c.PutPeerConfig(context.Background(), args[0], cfg)
 			if err != nil {
 				return err
 			}

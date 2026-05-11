@@ -27,7 +27,7 @@ func TestClientRegisterThenReadUserStory(t *testing.T) {
 
 	devicePubKey := h.ContextPublicKey("device-a")
 
-	info := h.RunCLI("admin", "gears", "info", devicePubKey, "--context", "admin-a")
+	info := h.RunCLI("admin", "peers", "info", devicePubKey, "--context", "admin-a")
 	info.MustSucceed(t)
 	for _, fragment := range []string{`"sn":"device-a-sn"`, `"manufacturer":"Acme"`, `"model":"Model-A"`} {
 		if !strings.Contains(info.Stdout, fragment) {

@@ -2,8 +2,8 @@
 
 ## User Story
 
-As an operator, I want a basic firmware and gear configuration flow through the
-CLI so I can verify both depot metadata updates and the renamed gear config
+As an operator, I want a basic firmware and peer configuration flow through the
+CLI so I can verify both depot metadata updates and the renamed peer config
 commands end to end.
 
 ## Scenario
@@ -15,9 +15,9 @@ commands end to end.
 5. Write depot metadata with `gizclaw admin firmware put-info --file`.
 6. Read the depot back with `gizclaw admin firmware get`.
 7. List depots again and verify the depot is visible.
-8. Run `gizclaw admin gears set-firmware-channel <pubkey> stable` and verify it
+8. Run `gizclaw admin peers set-firmware-channel <pubkey> stable` and verify it
    updates the firmware channel without replacing the whole config by position.
-9. Run `gizclaw admin gears put-config <pubkey> --file <config.json>` and verify
+9. Run `gizclaw admin peers put-config <pubkey> --file <config.json>` and verify
    complete config replacement works through file input.
 
 ## Covered Behaviors
@@ -26,4 +26,4 @@ commands end to end.
 - depot metadata can be written through `put-info`
 - the depot can be retrieved afterward
 - `set-firmware-channel` replaces the old channel-only `put-config` usage
-- `put-config --file` writes a full gear configuration document
+- `put-config --file` writes a full peer configuration document

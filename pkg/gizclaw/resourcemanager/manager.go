@@ -7,9 +7,9 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/credential"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/mmx"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/modelcatalog"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 )
@@ -17,7 +17,7 @@ import (
 // Services groups the admin services that own concrete resource writes.
 type Services struct {
 	Credentials credential.CredentialAdminService
-	Gears       gear.GearsAdminService
+	Peers       peer.PeerAdminService
 	Models      modelcatalog.AdminService
 	MiniMax     mmx.MiniMaxAdminService
 	Workspaces  workspace.WorkspaceAdminService
@@ -69,15 +69,15 @@ func (m *Manager) Get(ctx context.Context, kind apitypes.ResourceKind, name stri
 			return apitypes.Resource{}, notFound(kind, name)
 		}
 		return resourceFromCredential(item)
-	case apitypes.ResourceKindGearConfig:
-		if m.services.Gears == nil {
-			return apitypes.Resource{}, missingService("gears")
+	case apitypes.ResourceKindPeerConfig:
+		if m.services.Peers == nil {
+			return apitypes.Resource{}, missingService("peers")
 		}
-		item, err := m.getGearConfig(ctx, adminservice.PublicKey(pathParam(name)))
+		item, err := m.getPeerConfig(ctx, adminservice.PublicKey(pathParam(name)))
 		if err != nil {
 			return apitypes.Resource{}, err
 		}
-		return resourceFromGearConfig(name, item)
+		return resourceFromPeerConfig(name, item)
 	case apitypes.ResourceKindModel:
 		if m.services.Models == nil {
 			return apitypes.Resource{}, missingService("models")
@@ -182,21 +182,21 @@ func (m *Manager) Put(ctx context.Context, resource apitypes.Resource) (apitypes
 			return apitypes.Resource{}, err
 		}
 		return m.Get(ctx, apitypes.ResourceKindCredential, item.Metadata.Name)
-	case string(apitypes.ResourceKindGearConfig), "GearConfigResource":
-		if m.services.Gears == nil {
-			return apitypes.Resource{}, missingService("gears")
+	case string(apitypes.ResourceKindPeerConfig), "PeerConfigResource":
+		if m.services.Peers == nil {
+			return apitypes.Resource{}, missingService("peers")
 		}
-		item, err := resource.AsGearConfigResource()
+		item, err := resource.AsPeerConfigResource()
 		if err != nil {
-			return apitypes.Resource{}, applyError(400, "INVALID_GEAR_CONFIG_RESOURCE", err.Error())
+			return apitypes.Resource{}, applyError(400, "INVALID_PEER_CONFIG_RESOURCE", err.Error())
 		}
 		if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 			return apitypes.Resource{}, err
 		}
-		if err := m.putGearConfig(ctx, adminservice.PublicKey(pathParam(item.Metadata.Name)), item.Spec); err != nil {
+		if err := m.putPeerConfig(ctx, adminservice.PublicKey(pathParam(item.Metadata.Name)), item.Spec); err != nil {
 			return apitypes.Resource{}, err
 		}
-		return m.Get(ctx, apitypes.ResourceKindGearConfig, item.Metadata.Name)
+		return m.Get(ctx, apitypes.ResourceKindPeerConfig, item.Metadata.Name)
 	case string(apitypes.ResourceKindMiniMaxTenant), "MiniMaxTenantResource":
 		if m.services.MiniMax == nil {
 			return apitypes.Resource{}, missingService("minimax")
@@ -330,8 +330,8 @@ func (m *Manager) Delete(ctx context.Context, kind apitypes.ResourceKind, name s
 			return apitypes.Resource{}, notFound(kind, name)
 		}
 		return resourceFromCredential(item)
-	case apitypes.ResourceKindGearConfig:
-		return apitypes.Resource{}, applyError(400, "UNSUPPORTED_RESOURCE_DELETE", "GearConfig cannot be deleted independently")
+	case apitypes.ResourceKindPeerConfig:
+		return apitypes.Resource{}, applyError(400, "UNSUPPORTED_RESOURCE_DELETE", "PeerConfig cannot be deleted independently")
 	case apitypes.ResourceKindModel:
 		if m.services.Models == nil {
 			return apitypes.Resource{}, missingService("models")
@@ -423,8 +423,8 @@ func (m *Manager) Apply(ctx context.Context, resource apitypes.Resource) (apityp
 	switch kind {
 	case string(apitypes.ResourceKindCredential), "CredentialResource":
 		return m.applyCredential(ctx, resource)
-	case string(apitypes.ResourceKindGearConfig), "GearConfigResource":
-		return m.applyGearConfig(ctx, resource)
+	case string(apitypes.ResourceKindPeerConfig), "PeerConfigResource":
+		return m.applyPeerConfig(ctx, resource)
 	case string(apitypes.ResourceKindMiniMaxTenant), "MiniMaxTenantResource":
 		return m.applyMiniMaxTenant(ctx, resource)
 	case string(apitypes.ResourceKindModel), "ModelResource":

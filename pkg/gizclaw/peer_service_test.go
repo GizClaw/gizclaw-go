@@ -12,7 +12,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
@@ -53,7 +53,7 @@ func TestPublicFiberAdapterServerInfo(t *testing.T) {
 		return ctx.Next()
 	})
 	serverpublic.RegisterHandlers(app, serverpublic.NewStrictHandler(&serverPublic{
-		GearsServerPublic: &gear.Server{
+		ServerPublicService: &peer.Server{
 			BuildCommit:     "test-build",
 			ServerPublicKey: giznet.PublicKey{1},
 		},
@@ -127,14 +127,14 @@ func TestPeerServicePublicRoundTrip(t *testing.T) {
 	}
 	defer serverConn.Close()
 
-	gearsServer := &gear.Server{
+	gearsServer := &peer.Server{
 		BuildCommit:     "test-build",
 		ServerPublicKey: serverKey.Public,
 	}
 	service := &PeerService{
 		manager: NewManager(gearsServer),
 		public: &serverPublic{
-			GearsServerPublic: gearsServer,
+			ServerPublicService: gearsServer,
 		},
 	}
 	serveErrCh := make(chan error, 1)
@@ -298,7 +298,7 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 
 	server := &Server{
 		KeyPair:         serverKey,
-		GearStore:       mustBadgerInMemory(t, nil),
+		PeerStore:       mustBadgerInMemory(t, nil),
 		DepotStore:      depotstore.Dir(t.TempDir()),
 		BuildCommit:     "test-build",
 		ServerPublicKey: serverKey.Public,
@@ -320,7 +320,7 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 		if _, ok := server.manager.Peer(clientKey.Public); !ok {
 			return fmt.Errorf("peer not marked online yet")
 		}
-		gear, loadErr := server.manager.Gears.LoadGear(context.Background(), clientKey.Public)
+		gear, loadErr := server.manager.Peers.LoadGear(context.Background(), clientKey.Public)
 		if loadErr != nil {
 			return fmt.Errorf("auto-created gear not ready: %w", loadErr)
 		}

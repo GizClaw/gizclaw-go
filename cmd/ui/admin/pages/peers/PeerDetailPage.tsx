@@ -11,12 +11,12 @@ import { Skeleton } from "../../components/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/tabs";
 
 import {
-  approveGear,
-  blockGear,
-  deleteGear,
+  approvePeer,
+  blockPeer,
+  deletePeer,
   getResource,
-  putGearConfig,
-  refreshGear,
+  putPeerConfig,
+  refreshPeer,
   type Configuration,
   type GearRole,
   type Resource,
@@ -51,7 +51,7 @@ export function PeerDetailPage(): JSX.Element {
   const [peerActionBusy, setPeerActionBusy] = useState<string | null>(null);
   const [approveRole, setApproveRole] = useState<GearRole>("gear");
   const [configChannel, setConfigChannel] = useState("stable");
-  const [gearConfigResource, setGearConfigResource] = useState<Resource | null>(null);
+  const [peerConfigResource, setPeerConfigResource] = useState<Resource | null>(null);
 
   const registration = detail.data?.registration ?? null;
   const isBlocked = registration?.status === "blocked";
@@ -66,22 +66,22 @@ export function PeerDetailPage(): JSX.Element {
     }
   }, [detail.data?.config?.firmware?.channel, detail.data?.registration?.role]);
 
-  const loadGearConfigResource = useCallback(async () => {
+  const loadPeerConfigResource = useCallback(async () => {
     if (publicKey === "") {
-      setGearConfigResource(null);
+      setPeerConfigResource(null);
       return;
     }
     try {
-      const resource = await expectData(getResource({ path: { kind: "GearConfig", name: publicKey } }));
-      setGearConfigResource(resource);
+      const resource = await expectData(getResource({ path: { kind: "PeerConfig", name: publicKey } }));
+      setPeerConfigResource(resource);
     } catch {
-      setGearConfigResource(null);
+      setPeerConfigResource(null);
     }
   }, [publicKey]);
 
   useEffect(() => {
-    void loadGearConfigResource();
-  }, [loadGearConfigResource]);
+    void loadPeerConfigResource();
+  }, [loadPeerConfigResource]);
 
   const runPeerAction = useCallback(async (name: string, action: () => Promise<void>, successMessage: string) => {
     setPeerActionBusy(name);
@@ -105,7 +105,7 @@ export function PeerDetailPage(): JSX.Element {
       "approve",
       async () => {
         await expectData(
-          approveGear({
+          approvePeer({
             body: { role: nextRole },
             path: { publicKey },
           }),
@@ -125,7 +125,7 @@ export function PeerDetailPage(): JSX.Element {
       "unblock",
       async () => {
         await expectData(
-          approveGear({
+          approvePeer({
             body: { role: nextRole },
             path: { publicKey },
           }),
@@ -143,7 +143,7 @@ export function PeerDetailPage(): JSX.Element {
     await runPeerAction(
       "block",
       async () => {
-        await expectData(blockGear({ path: { publicKey } }));
+        await expectData(blockPeer({ path: { publicKey } }));
         await detail.reload();
       },
       "Peer blocked.",
@@ -157,7 +157,7 @@ export function PeerDetailPage(): JSX.Element {
     await runPeerAction(
       "refresh",
       async () => {
-        await expectData(refreshGear({ path: { publicKey } }));
+        await expectData(refreshPeer({ path: { publicKey } }));
         await detail.reload();
       },
       "Peer refreshed.",
@@ -171,7 +171,7 @@ export function PeerDetailPage(): JSX.Element {
     await runPeerAction(
       "delete",
       async () => {
-        await expectData(deleteGear({ path: { publicKey } }));
+        await expectData(deletePeer({ path: { publicKey } }));
         navigate("/peers");
       },
       "Peer deleted.",
@@ -193,17 +193,17 @@ export function PeerDetailPage(): JSX.Element {
           },
         };
         await expectData(
-          putGearConfig({
+          putPeerConfig({
             body: nextConfig,
             path: { publicKey },
           }),
         );
         await detail.reload();
-        await loadGearConfigResource();
+        await loadPeerConfigResource();
       },
       `Desired channel updated to ${configChannel}.`,
     );
-  }, [configChannel, detail.data?.config, detail, loadGearConfigResource, publicKey, runPeerAction]);
+  }, [configChannel, detail.data?.config, detail, loadPeerConfigResource, publicKey, runPeerAction]);
 
   if (publicKey === "") {
     return <EmptyState description="Missing peer public key in the URL." title="Invalid route" />;
@@ -307,7 +307,7 @@ export function PeerDetailPage(): JSX.Element {
                 <DetailBlock
                   items={[
                     ["Channel", detail.data?.config?.firmware?.channel],
-                    ["Resource kind", "GearConfig"],
+                    ["Resource kind", "PeerConfig"],
                     ["Resource name", registration.public_key],
                     ["Certifications", String(detail.data?.config?.certifications?.length ?? 0)],
                   ]}
@@ -475,9 +475,9 @@ export function PeerDetailPage(): JSX.Element {
             <TabsContent className="space-y-4" value="cli">
               <ResourceCliPanel
                 commands={peerCliCommands(registration.public_key, registration.role, configChannel)}
-                resource={gearConfigResource}
-                resourceDescription="JSON returned by the resource API and accepted by admin apply. GearConfig manages desired peer configuration."
-                resourceTitle="GearConfig Resource Spec"
+                resource={peerConfigResource}
+                resourceDescription="JSON returned by the resource API and accepted by admin apply. PeerConfig manages desired peer configuration."
+                resourceTitle="PeerConfig Resource Spec"
               />
             </TabsContent>
           </Tabs>
@@ -511,31 +511,31 @@ function peerCliCommands(publicKey: string, role: GearRole, channel: string): st
   const nextChannel = shellQuote(channel);
   return [
     `# Read this peer registration`,
-    `gizclaw admin gears --context <admin-cli-context> get ${key}`,
+    `gizclaw admin peers --context <admin-cli-context> get ${key}`,
     ``,
     `# Read peer snapshots`,
-    `gizclaw admin gears --context <admin-cli-context> info ${key}`,
-    `gizclaw admin gears --context <admin-cli-context> config ${key}`,
-    `gizclaw admin gears --context <admin-cli-context> runtime ${key}`,
-    `gizclaw admin gears --context <admin-cli-context> ota ${key}`,
+    `gizclaw admin peers --context <admin-cli-context> info ${key}`,
+    `gizclaw admin peers --context <admin-cli-context> config ${key}`,
+    `gizclaw admin peers --context <admin-cli-context> runtime ${key}`,
+    `gizclaw admin peers --context <admin-cli-context> ota ${key}`,
     ``,
     `# Refresh state from the device-side API`,
-    `gizclaw admin gears --context <admin-cli-context> refresh ${key}`,
+    `gizclaw admin peers --context <admin-cli-context> refresh ${key}`,
     ``,
     `# Approve or block this peer`,
-    `gizclaw admin gears --context <admin-cli-context> approve ${key} ${nextRole}`,
-    `gizclaw admin gears --context <admin-cli-context> block ${key}`,
+    `gizclaw admin peers --context <admin-cli-context> approve ${key} ${nextRole}`,
+    `gizclaw admin peers --context <admin-cli-context> block ${key}`,
     ``,
     `# Update desired configuration`,
-    `gizclaw admin gears --context <admin-cli-context> set-firmware-channel ${key} ${nextChannel}`,
-    `gizclaw admin gears --context <admin-cli-context> put-config ${key} --file config.json`,
+    `gizclaw admin peers --context <admin-cli-context> set-firmware-channel ${key} ${nextChannel}`,
+    `gizclaw admin peers --context <admin-cli-context> put-config ${key} --file config.json`,
     ``,
-    `# Show/apply the declarative GearConfig resource`,
-    `gizclaw admin --context <admin-cli-context> show GearConfig ${key}`,
+    `# Show/apply the declarative PeerConfig resource`,
+    `gizclaw admin --context <admin-cli-context> show PeerConfig ${key}`,
     `gizclaw admin --context <admin-cli-context> apply -f gear-config.json`,
     ``,
     `# Reset this peer registration`,
-    `gizclaw admin gears --context <admin-cli-context> delete ${key}`,
+    `gizclaw admin peers --context <admin-cli-context> delete ${key}`,
   ].join("\n");
 }
 

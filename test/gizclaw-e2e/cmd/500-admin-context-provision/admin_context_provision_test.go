@@ -13,6 +13,6 @@ func TestAdminContextProvisionUserStory(t *testing.T) {
 	h.CreateContext("admin-a").MustSucceed(t)
 	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 
-	after := h.RunCLI("admin", "gears", "list", "--context", "admin-a")
+	after := h.RunCLI("admin", "peers", "list", "--context", "admin-a")
 	after.MustSucceed(t)
 }

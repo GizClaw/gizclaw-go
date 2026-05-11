@@ -6,8 +6,8 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
 	credentialscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/credentials"
 	firmwarecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/firmware"
-	gearscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/gears"
 	minimaxtenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/minimaxtenants"
+	peerscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/peers"
 	voicescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/voices"
 	volctenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/volctenants"
 	workflowscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/workflows"
@@ -36,7 +36,7 @@ func NewCmd() *cobra.Command {
 		newApplyCmd(&ctxName),
 		newDeleteCmd(&ctxName),
 		newShowCmd(&ctxName),
-		gearscmd.NewCmd(),
+		peerscmd.NewCmd(),
 		firmwarecmd.NewCmd(),
 		credentialscmd.NewCmd(),
 		minimaxtenantscmd.NewCmd(),

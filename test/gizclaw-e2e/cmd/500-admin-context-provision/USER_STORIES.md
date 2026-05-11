@@ -11,7 +11,7 @@ can be used for later control-plane workflows.
 1. Start a real server with registration enabled.
 2. Create a saved CLI context pointing at that server.
 3. Register the context through the test harness.
-4. Run `gizclaw admin gears list --context admin-a`.
+4. Run `gizclaw admin peers list --context admin-a`.
 5. Verify the admin command can connect and succeeds after provisioning.
 
 ## Covered Behaviors

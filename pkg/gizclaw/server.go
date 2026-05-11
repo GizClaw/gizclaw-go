@@ -7,9 +7,9 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/credential"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/mmx"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/modelcatalog"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
@@ -22,13 +22,13 @@ import (
 // Server holds peer transport configuration. Per-stream protocol handling can be
 // extended later.
 //
-// Set gear/firmware storage config on the struct, then call ListenAndServe.
+// Set peer/firmware storage config on the struct, then call ListenAndServe.
 // Internal runtime state is built automatically on first ListenAndServe.
 type Server struct {
 	KeyPair    *giznet.KeyPair
 	ListenAddr string
 
-	GearStore              kv.Store
+	PeerStore              kv.Store
 	CredentialStore        kv.Store
 	MiniMaxCredentialStore kv.Store
 	MiniMaxTenantStore     kv.Store
@@ -157,8 +157,8 @@ func (s *Server) init() error {
 	if s.manager != nil && s.peerService != nil && s.sessions != nil {
 		return nil
 	}
-	if s.GearStore == nil {
-		return errors.New("gizclaw: nil gear store")
+	if s.PeerStore == nil {
+		return errors.New("gizclaw: nil peer store")
 	}
 	if s.DepotStore == nil {
 		return errors.New("gizclaw: nil depot store")
@@ -181,36 +181,36 @@ func (s *Server) init() error {
 		s.WorkflowStore == nil &&
 		s.DepotMetadataStore == nil &&
 		s.PublicLoginStore == nil
-	gearStore := s.GearStore
+	peerStore := s.PeerStore
 	if legacySharedStore {
-		gearStore = kv.Prefixed(s.GearStore, kv.Key{"gears"})
+		peerStore = kv.Prefixed(s.PeerStore, kv.Key{"peers"})
 	}
-	credentialStore := moduleStore(s.CredentialStore, s.GearStore, "credentials")
+	credentialStore := moduleStore(s.CredentialStore, s.PeerStore, "credentials")
 	miniMaxCredentialStore := moduleStore(s.MiniMaxCredentialStore, credentialStore, "")
-	miniMaxTenantStore := moduleStore(s.MiniMaxTenantStore, s.GearStore, "minimax-tenants")
+	miniMaxTenantStore := moduleStore(s.MiniMaxTenantStore, s.PeerStore, "minimax-tenants")
 	volcTenantStore := moduleStore(s.VolcTenantStore, miniMaxTenantStore, "volc-tenants")
-	modelStore := moduleStore(s.ModelStore, s.GearStore, "models")
-	voiceStore := moduleStore(s.VoiceStore, s.GearStore, "voices")
-	workspaceStore := moduleStore(s.WorkspaceStore, s.GearStore, "workspaces")
-	workflowStore := moduleStore(s.WorkflowStore, s.GearStore, "workflows")
-	depotMetadataStore := moduleStore(s.DepotMetadataStore, s.GearStore, "firmware-depots")
-	publicLoginStore := moduleStore(s.PublicLoginStore, s.GearStore, "public-login")
+	modelStore := moduleStore(s.ModelStore, s.PeerStore, "models")
+	voiceStore := moduleStore(s.VoiceStore, s.PeerStore, "voices")
+	workspaceStore := moduleStore(s.WorkspaceStore, s.PeerStore, "workspaces")
+	workflowStore := moduleStore(s.WorkflowStore, s.PeerStore, "workflows")
+	depotMetadataStore := moduleStore(s.DepotMetadataStore, s.PeerStore, "firmware-depots")
+	publicLoginStore := moduleStore(s.PublicLoginStore, s.PeerStore, "public-login")
 
 	publicLoginServer := publiclogin.NewServer(s.KeyPair, publicLoginStore)
 	sessions := publicLoginServer.SessionManager()
-	gearsServer := &gear.Server{
-		Store:           gearStore,
+	peersServer := &peer.Server{
+		Store:           peerStore,
 		BuildCommit:     s.BuildCommit,
 		ServerPublicKey: serverPublicKey,
 	}
-	manager := NewManager(gearsServer)
-	gearsServer.PeerManager = manager
+	manager := NewManager(peersServer)
+	peersServer.PeerManager = manager
 
 	firmwareServer := &firmware.Server{
 		Store:         s.DepotStore,
 		MetadataStore: depotMetadataStore,
-		ResolveGearTarget: func(ctx context.Context, publicKey giznet.PublicKey) (string, firmware.Channel, error) {
-			return resolveGearTarget(ctx, gearsServer, publicKey)
+		ResolvePeerTarget: func(ctx context.Context, publicKey giznet.PublicKey) (string, firmware.Channel, error) {
+			return resolvePeerTarget(ctx, peersServer, publicKey)
 		},
 	}
 	workflowServer := &workflow.Server{Store: workflowStore}
@@ -225,7 +225,7 @@ func (s *Server) init() error {
 	}
 	resourceManager := resourcemanager.New(resourcemanager.Services{
 		Credentials: credentialServer,
-		Gears:       gearsServer,
+		Peers:       peersServer,
 		Models:      modelServer,
 		MiniMax:     mmxServer,
 		Workspaces:  workspaceServer,
@@ -238,7 +238,7 @@ func (s *Server) init() error {
 		admin: &adminService{
 			CredentialAdminService: credentialServer,
 			FirmwareAdminService:   firmwareServer,
-			GearsAdminService:      gearsServer,
+			PeerAdminService:       peersServer,
 			AdminService:           modelServer,
 			MiniMaxAdminService:    mmxServer,
 			WorkspaceAdminService:  workspaceServer,
@@ -247,11 +247,11 @@ func (s *Server) init() error {
 		},
 		gear: &gearAPIBundle{
 			FirmwareGearService: firmwareServer,
-			GearsGearService:    gearsServer,
+			GearService:         peersServer,
 		},
 		public: &serverPublic{
-			GearsServerPublic: gearsServer,
-			ServerPublic:      publicLoginServer,
+			ServerPublicService: peersServer,
+			ServerPublic:        publicLoginServer,
 		},
 	}
 	s.sessions = sessions
@@ -271,11 +271,11 @@ func moduleStore(configured, fallback kv.Store, defaultPrefix string) kv.Store {
 	return kv.Prefixed(fallback, kv.Key{defaultPrefix})
 }
 
-func resolveGearTarget(ctx context.Context, gearsServer *gear.Server, publicKey giznet.PublicKey) (string, firmware.Channel, error) {
-	if gearsServer == nil {
-		return "", "", errors.New("gizclaw: gears service not configured")
+func resolvePeerTarget(ctx context.Context, peersServer *peer.Server, publicKey giznet.PublicKey) (string, firmware.Channel, error) {
+	if peersServer == nil {
+		return "", "", errors.New("gizclaw: peers service not configured")
 	}
-	gear, err := gearsServer.LoadGear(ctx, publicKey)
+	gear, err := peersServer.LoadGear(ctx, publicKey)
 	if err != nil {
 		return "", "", err
 	}

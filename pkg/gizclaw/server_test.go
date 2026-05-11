@@ -9,7 +9,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 )
@@ -29,7 +29,7 @@ func (p testGiznetSecurityPolicy) AllowService(pk giznet.PublicKey, service uint
 	return p.allowService(pk, service)
 }
 
-func TestServerListenRequiresGearStore(t *testing.T) {
+func TestServerListenRequiresPeerStore(t *testing.T) {
 	keyPair, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair error = %v", err)
@@ -37,8 +37,8 @@ func TestServerListenRequiresGearStore(t *testing.T) {
 
 	server := &Server{KeyPair: keyPair, DepotStore: depotstore.Dir(t.TempDir())}
 	err = server.Listen()
-	if err == nil || !strings.Contains(err.Error(), "nil gear store") {
-		t.Fatalf("Listen error = %v, want nil gear store", err)
+	if err == nil || !strings.Contains(err.Error(), "nil peer store") {
+		t.Fatalf("Listen error = %v, want nil peer store", err)
 	}
 }
 
@@ -48,7 +48,7 @@ func TestServerListenRequiresDepotStore(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 
-	server := &Server{KeyPair: keyPair, GearStore: mustBadgerInMemory(t, nil)}
+	server := &Server{KeyPair: keyPair, PeerStore: mustBadgerInMemory(t, nil)}
 	err = server.Listen()
 	if err == nil || !strings.Contains(err.Error(), "nil depot store") {
 		t.Fatalf("Listen error = %v, want nil depot store", err)
@@ -80,7 +80,7 @@ func TestServerServeReturnsNilAfterClose(t *testing.T) {
 	server := &Server{
 		KeyPair:    keyPair,
 		ListenAddr: "127.0.0.1:0",
-		GearStore:  mustBadgerInMemory(t, nil),
+		PeerStore:  mustBadgerInMemory(t, nil),
 		DepotStore: depotstore.Dir(t.TempDir()),
 	}
 	if err := server.Listen(); err != nil {
@@ -134,7 +134,7 @@ func TestServerSecurityPolicyAllowServiceUsesGearPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair admin error = %v", err)
 	}
-	gearsServer := &gear.Server{Store: mustBadgerInMemory(t, nil)}
+	gearsServer := &peer.Server{Store: mustBadgerInMemory(t, nil)}
 	if _, err := gearsServer.SaveGear(context.Background(), apitypes.Gear{
 		PublicKey:     gearKey.Public.String(),
 		Role:          apitypes.GearRoleGear,
@@ -196,10 +196,10 @@ func TestServerPeerEventHandlerMarksManagerOffline(t *testing.T) {
 	}
 }
 
-func TestResolveGearTarget(t *testing.T) {
+func TestResolvePeerTarget(t *testing.T) {
 	ctx := context.Background()
 	store := mustBadgerInMemory(t, nil)
-	gearsServer := &gear.Server{Store: store}
+	gearsServer := &peer.Server{Store: store}
 
 	saveGear := func(t *testing.T, publicKey giznet.PublicKey, device apitypes.DeviceInfo, config apitypes.Configuration) {
 		t.Helper()
@@ -225,19 +225,19 @@ func TestResolveGearTarget(t *testing.T) {
 			return &ch
 		}()},
 	})
-	if _, _, err := resolveGearTarget(ctx, gearsServer, missingDepotKey); err == nil || !strings.Contains(err.Error(), "missing depot") {
-		t.Fatalf("resolveGearTarget(missing depot) err = %v", err)
+	if _, _, err := resolvePeerTarget(ctx, gearsServer, missingDepotKey); err == nil || !strings.Contains(err.Error(), "missing depot") {
+		t.Fatalf("resolvePeerTarget(missing depot) err = %v", err)
 	}
 
 	saveGear(t, missingChannelKey, apitypes.DeviceInfo{
 		Hardware: &apitypes.HardwareInfo{Depot: func() *string { v := "demo-main"; return &v }()},
 	}, apitypes.Configuration{})
-	if _, _, err := resolveGearTarget(ctx, gearsServer, missingChannelKey); err == nil || !strings.Contains(err.Error(), "missing channel") {
-		t.Fatalf("resolveGearTarget(missing channel) err = %v", err)
+	if _, _, err := resolvePeerTarget(ctx, gearsServer, missingChannelKey); err == nil || !strings.Contains(err.Error(), "missing channel") {
+		t.Fatalf("resolvePeerTarget(missing channel) err = %v", err)
 	}
 
-	if _, _, err := resolveGearTarget(ctx, gearsServer, missingGearKey); !errors.Is(err, gear.ErrGearNotFound) {
-		t.Fatalf("resolveGearTarget(missing gear) err = %v", err)
+	if _, _, err := resolvePeerTarget(ctx, gearsServer, missingGearKey); !errors.Is(err, peer.ErrPeerNotFound) {
+		t.Fatalf("resolvePeerTarget(missing gear) err = %v", err)
 	}
 
 	saveGear(t, validKey, apitypes.DeviceInfo{
@@ -248,11 +248,11 @@ func TestResolveGearTarget(t *testing.T) {
 			return &ch
 		}()},
 	})
-	depot, channel, err := resolveGearTarget(ctx, gearsServer, validKey)
+	depot, channel, err := resolvePeerTarget(ctx, gearsServer, validKey)
 	if err != nil {
-		t.Fatalf("resolveGearTarget(valid) err = %v", err)
+		t.Fatalf("resolvePeerTarget(valid) err = %v", err)
 	}
 	if depot != "demo-main" || channel != "stable" {
-		t.Fatalf("resolveGearTarget(valid) = (%q, %q)", depot, channel)
+		t.Fatalf("resolvePeerTarget(valid) = (%q, %q)", depot, channel)
 	}
 }

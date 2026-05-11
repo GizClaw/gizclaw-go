@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { expectData, toMessage } from "../components/api";
-import { getGearInfo, getGearRuntime, listDepots, listGears } from "@gizclaw/adminservice";
+import { getPeerInfo, getPeerRuntime, listDepots, listPeers } from "@gizclaw/adminservice";
 import { getServerInfo, type ServerInfo } from "@gizclaw/serverpublic";
 
 import type { Depot, DeviceInfo, Registration, Runtime } from "@gizclaw/adminservice";
@@ -21,7 +21,7 @@ export interface PeerListState {
 export interface PeersPageState {
   depots: Depot[];
   error: string;
-  gears: Registration[];
+  peers: Registration[];
   infos: PeerInfoMap;
   loading: boolean;
   runtimes: PeerRuntimeMap;
@@ -33,7 +33,7 @@ export function usePeersPage(): {
   peerList: PeerListState;
   peerPageNumber: number;
   filter: string;
-  filteredGears: Registration[];
+  filteredPeers: Registration[];
   loadDashboard: (cursor: string | null, history: Array<string | null>) => Promise<void>;
   nextPage: () => void;
   prevPage: () => void;
@@ -44,7 +44,7 @@ export function usePeersPage(): {
   const [dashboard, setDashboard] = useState<PeersPageState>({
     depots: [],
     error: "",
-    gears: [],
+    peers: [],
     infos: {},
     loading: true,
     runtimes: {},
@@ -63,7 +63,7 @@ export function usePeersPage(): {
       const [serverInfo, registrations, depots] = await Promise.all([
         expectData(getServerInfo()),
         expectData(
-          listGears({
+          listPeers({
             query: {
               cursor: cursor ?? undefined,
               limit: PEER_PAGE_LIMIT,
@@ -73,16 +73,16 @@ export function usePeersPage(): {
         expectData(listDepots()),
       ]);
 
-      const gears = registrations.items ?? [];
+      const peers = registrations.items ?? [];
       const [infos, runtimes] = await Promise.all([
-        loadPeerInfos(gears),
-        loadPeerRuntimes(gears),
+        loadPeerInfos(peers),
+        loadPeerRuntimes(peers),
       ]);
 
       setDashboard({
         depots: depots.items ?? [],
         error: "",
-        gears,
+        peers,
         infos,
         loading: false,
         runtimes,
@@ -111,12 +111,12 @@ export function usePeersPage(): {
     void loadDashboard(null, []);
   }, [loadDashboard]);
 
-  const filteredGears = useMemo(() => {
+  const filteredPeers = useMemo(() => {
     if (filter.trim() === "") {
-      return dashboard.gears;
+      return dashboard.peers;
     }
     const query = filter.trim().toLowerCase();
-    return dashboard.gears.filter((gear) =>
+    return dashboard.peers.filter((gear) =>
       [
         gear.public_key,
         peerDeviceName(gear, dashboard.infos[gear.public_key]),
@@ -129,7 +129,7 @@ export function usePeersPage(): {
         value.toLowerCase().includes(query),
       ),
     );
-  }, [dashboard.gears, dashboard.infos, dashboard.runtimes, filter]);
+  }, [dashboard.peers, dashboard.infos, dashboard.runtimes, filter]);
 
   const nextPage = useCallback(() => {
     if (peerList.nextCursor === null) {
@@ -153,7 +153,7 @@ export function usePeersPage(): {
     peerList,
     peerPageNumber,
     filter,
-    filteredGears,
+    filteredPeers,
     loadDashboard,
     nextPage,
     prevPage,
@@ -162,14 +162,14 @@ export function usePeersPage(): {
   };
 }
 
-async function loadPeerInfos(gears: Registration[]): Promise<PeerInfoMap> {
+async function loadPeerInfos(peers: Registration[]): Promise<PeerInfoMap> {
   const entries = await Promise.all(
-    gears.map(async (gear): Promise<[string, DeviceInfo | null]> => {
+    peers.map(async (gear): Promise<[string, DeviceInfo | null]> => {
       if (gear.device !== undefined) {
         return [gear.public_key, gear.device];
       }
       try {
-        const info = await expectData(getGearInfo({ path: { publicKey: gear.public_key } }));
+        const info = await expectData(getPeerInfo({ path: { publicKey: gear.public_key } }));
         return [gear.public_key, info];
       } catch {
         return [gear.public_key, null];
@@ -179,11 +179,11 @@ async function loadPeerInfos(gears: Registration[]): Promise<PeerInfoMap> {
   return Object.fromEntries(entries);
 }
 
-async function loadPeerRuntimes(gears: Registration[]): Promise<PeerRuntimeMap> {
+async function loadPeerRuntimes(peers: Registration[]): Promise<PeerRuntimeMap> {
   const entries = await Promise.all(
-    gears.map(async (gear): Promise<[string, Runtime | null]> => {
+    peers.map(async (gear): Promise<[string, Runtime | null]> => {
       try {
-        const runtime = await expectData(getGearRuntime({ path: { publicKey: gear.public_key } }));
+        const runtime = await expectData(getPeerRuntime({ path: { publicKey: gear.public_key } }));
         return [gear.public_key, runtime];
       } catch {
         return [gear.public_key, null];

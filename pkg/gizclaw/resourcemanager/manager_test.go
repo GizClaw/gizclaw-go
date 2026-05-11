@@ -43,7 +43,7 @@ func TestGetReturnsNotFoundByKind(t *testing.T) {
 		wantCode string
 	}{
 		{name: "credential", kind: apitypes.ResourceKindCredential, manager: New(Services{Credentials: newFakeCredentials()}), wantCode: "RESOURCE_NOT_FOUND"},
-		{name: "gear config", kind: apitypes.ResourceKindGearConfig, manager: New(Services{Gears: newFakeGears()}), wantCode: "GEAR_NOT_FOUND"},
+		{name: "peer config", kind: apitypes.ResourceKindPeerConfig, manager: New(Services{Peers: newFakePeers()}), wantCode: "GEAR_NOT_FOUND"},
 		{name: "model", kind: apitypes.ResourceKindModel, manager: newModelManager(), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "minimax tenant", kind: apitypes.ResourceKindMiniMaxTenant, manager: New(Services{MiniMax: newFakeMiniMax()}), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "voice", kind: apitypes.ResourceKindVoice, manager: New(Services{MiniMax: newFakeMiniMax()}), wantCode: "RESOURCE_NOT_FOUND"},
@@ -94,7 +94,7 @@ func TestPutRejectsMissingServicesByKind(t *testing.T) {
 		resource string
 	}{
 		{name: "credential", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
-		{name: "gear config", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"GearConfig","metadata":{"name":"gear"},"spec":{}}`},
+		{name: "peer config", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"PeerConfig","metadata":{"name":"gear"},"spec":{}}`},
 		{name: "model", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`},
 		{name: "minimax tenant", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`},
 		{name: "voice", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
@@ -113,7 +113,7 @@ func TestPutRejectsMissingServicesByKind(t *testing.T) {
 func TestPutRejectsUnsupportedVersionByKind(t *testing.T) {
 	manager := New(Services{
 		Credentials: newFakeCredentials(),
-		Gears:       newFakeGears(),
+		Peers:       newFakePeers(),
 		Models:      newModelManager().services.Models,
 		MiniMax:     newFakeMiniMax(),
 		Workspaces:  newFakeWorkspaces(),
@@ -124,7 +124,7 @@ func TestPutRejectsUnsupportedVersionByKind(t *testing.T) {
 		resource string
 	}{
 		{name: "credential", resource: `{"apiVersion":"unsupported","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
-		{name: "gear config", resource: `{"apiVersion":"unsupported","kind":"GearConfig","metadata":{"name":"gear"},"spec":{}}`},
+		{name: "peer config", resource: `{"apiVersion":"unsupported","kind":"PeerConfig","metadata":{"name":"gear"},"spec":{}}`},
 		{name: "model", resource: `{"apiVersion":"unsupported","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`},
 		{name: "minimax tenant", resource: `{"apiVersion":"unsupported","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`},
 		{name: "resource list", resource: `{"apiVersion":"unsupported","kind":"ResourceList","metadata":{"name":"bundle"},"spec":{"items":[]}}`},
@@ -156,7 +156,7 @@ func TestDeleteRejectsUnsupportedInputs(t *testing.T) {
 	_, err = manager.Delete(context.Background(), apitypes.ResourceKindResourceList, "bundle")
 	assertResourceError(t, err, 400, "UNSUPPORTED_RESOURCE_DELETE")
 
-	_, err = manager.Delete(context.Background(), apitypes.ResourceKindGearConfig, "gear")
+	_, err = manager.Delete(context.Background(), apitypes.ResourceKindPeerConfig, "gear")
 	assertResourceError(t, err, 400, "UNSUPPORTED_RESOURCE_DELETE")
 
 	_, err = manager.Delete(context.Background(), apitypes.ResourceKindCredential, "example")
@@ -279,7 +279,7 @@ func TestApplyRejectsMissingServicesByKind(t *testing.T) {
 		resource string
 	}{
 		{name: "credential", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
-		{name: "gear config", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"GearConfig","metadata":{"name":"gear"},"spec":{}}`},
+		{name: "peer config", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"PeerConfig","metadata":{"name":"gear"},"spec":{}}`},
 		{name: "model", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`},
 		{name: "minimax tenant", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`},
 		{name: "voice", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
@@ -298,7 +298,7 @@ func TestApplyRejectsMissingServicesByKind(t *testing.T) {
 func TestApplyRejectsUnsupportedVersionByKind(t *testing.T) {
 	manager := New(Services{
 		Credentials: newFakeCredentials(),
-		Gears:       newFakeGears(),
+		Peers:       newFakePeers(),
 		Models:      newModelManager().services.Models,
 		MiniMax:     newFakeMiniMax(),
 		Workspaces:  newFakeWorkspaces(),
@@ -309,7 +309,7 @@ func TestApplyRejectsUnsupportedVersionByKind(t *testing.T) {
 		resource string
 	}{
 		{name: "credential", resource: `{"apiVersion":"unsupported","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
-		{name: "gear config", resource: `{"apiVersion":"unsupported","kind":"GearConfig","metadata":{"name":"gear"},"spec":{}}`},
+		{name: "peer config", resource: `{"apiVersion":"unsupported","kind":"PeerConfig","metadata":{"name":"gear"},"spec":{}}`},
 		{name: "model", resource: `{"apiVersion":"unsupported","kind":"Model","metadata":{"name":"model"},"spec":{"kind":"llm","provider":{"kind":"openai-compatible","name":"main"},"source":"manual"}}`},
 		{name: "minimax tenant", resource: `{"apiVersion":"unsupported","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`},
 		{name: "resource list", resource: `{"apiVersion":"unsupported","kind":"ResourceList","metadata":{"name":"bundle"},"spec":{"items":[]}}`},

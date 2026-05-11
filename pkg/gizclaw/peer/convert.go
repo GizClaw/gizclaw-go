@@ -1,4 +1,4 @@
-package gear
+package peer
 
 import (
 	"encoding/json"

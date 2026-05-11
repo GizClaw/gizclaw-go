@@ -157,13 +157,6 @@ export type CredentialResource = {
     spec: CredentialSpec;
 };
 
-export type GearConfigResource = {
-    apiVersion: ResourceApiVersion;
-    kind: 'GearConfig';
-    metadata: ResourceMetadata;
-    spec: Configuration;
-};
-
 export type MiniMaxTenantResource = {
     apiVersion: ResourceApiVersion;
     kind: 'MiniMaxTenant';
@@ -176,6 +169,13 @@ export type ModelResource = {
     kind: 'Model';
     metadata: ResourceMetadata;
     spec: ModelSpec;
+};
+
+export type PeerConfigResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'PeerConfig';
+    metadata: ResourceMetadata;
+    spec: Configuration;
 };
 
 /**
@@ -210,8 +210,8 @@ export type Resource = ({
 } & WorkflowResource) | ({
     kind: 'WorkspaceResource';
 } & WorkspaceResource) | ({
-    kind: 'GearConfigResource';
-} & GearConfigResource) | ({
+    kind: 'PeerConfigResource';
+} & PeerConfigResource) | ({
     kind: 'ResourceListResource';
 } & ResourceListResource);
 
@@ -223,11 +223,11 @@ export type ResourceApiVersion = 'gizclaw.admin/v1alpha1';
 /**
  * Declarative GizClaw resource kind.
  */
-export type ResourceKind = 'Credential' | 'Model' | 'MiniMaxTenant' | 'VolcTenant' | 'Voice' | 'Workflow' | 'Workspace' | 'GearConfig' | 'ResourceList';
+export type ResourceKind = 'Credential' | 'Model' | 'MiniMaxTenant' | 'VolcTenant' | 'Voice' | 'Workflow' | 'Workspace' | 'PeerConfig' | 'ResourceList';
 
 export type ResourceMetadata = {
     /**
-     * Resource name. For GearConfig this is the gear public key.
+     * Resource name. For PeerConfig this is the peer public key.
      */
     name: string;
     annotations?: {
@@ -702,7 +702,7 @@ export type DepotName = string;
 export type Channel2 = Channel;
 
 /**
- * Gear public key
+ * Peer public key
  */
 export type PublicKey = string;
 
@@ -2514,7 +2514,7 @@ export type PutWorkspaceResponses = {
 
 export type PutWorkspaceResponse = PutWorkspaceResponses[keyof PutWorkspaceResponses];
 
-export type ListGearsData = {
+export type ListPeersData = {
     body?: never;
     path?: never;
     query?: {
@@ -2527,83 +2527,83 @@ export type ListGearsData = {
          */
         limit?: number;
     };
-    url: '/gears';
+    url: '/peers';
 };
 
-export type ListGearsErrors = {
+export type ListPeersErrors = {
     /**
      * Internal error
      */
     500: ErrorResponse;
 };
 
-export type ListGearsError = ListGearsErrors[keyof ListGearsErrors];
+export type ListPeersError = ListPeersErrors[keyof ListPeersErrors];
 
-export type ListGearsResponses = {
+export type ListPeersResponses = {
     /**
-     * Gear registration list
+     * Peer registration list
      */
     200: RegistrationList;
 };
 
-export type ListGearsResponse = ListGearsResponses[keyof ListGearsResponses];
+export type ListPeersResponse = ListPeersResponses[keyof ListPeersResponses];
 
-export type ResolveBySnData = {
+export type ResolvePeerBySnData = {
     body?: never;
     path: {
         sn: string;
     };
     query?: never;
-    url: '/gears/sn/{sn}';
+    url: '/peers/sn/{sn}';
 };
 
-export type ResolveBySnErrors = {
+export type ResolvePeerBySnErrors = {
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
 };
 
-export type ResolveBySnError = ResolveBySnErrors[keyof ResolveBySnErrors];
+export type ResolvePeerBySnError = ResolvePeerBySnErrors[keyof ResolvePeerBySnErrors];
 
-export type ResolveBySnResponses = {
+export type ResolvePeerBySnResponses = {
     /**
      * Resolved public key
      */
     200: PublicKeyResponse;
 };
 
-export type ResolveBySnResponse = ResolveBySnResponses[keyof ResolveBySnResponses];
+export type ResolvePeerBySnResponse = ResolvePeerBySnResponses[keyof ResolvePeerBySnResponses];
 
-export type ResolveByImeiData = {
+export type ResolvePeerByImeiData = {
     body?: never;
     path: {
         tac: string;
         serial: string;
     };
     query?: never;
-    url: '/gears/imei/{tac}/{serial}';
+    url: '/peers/imei/{tac}/{serial}';
 };
 
-export type ResolveByImeiErrors = {
+export type ResolvePeerByImeiErrors = {
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
 };
 
-export type ResolveByImeiError = ResolveByImeiErrors[keyof ResolveByImeiErrors];
+export type ResolvePeerByImeiError = ResolvePeerByImeiErrors[keyof ResolvePeerByImeiErrors];
 
-export type ResolveByImeiResponses = {
+export type ResolvePeerByImeiResponses = {
     /**
      * Resolved public key
      */
     200: PublicKeyResponse;
 };
 
-export type ResolveByImeiResponse = ResolveByImeiResponses[keyof ResolveByImeiResponses];
+export type ResolvePeerByImeiResponse = ResolvePeerByImeiResponses[keyof ResolvePeerByImeiResponses];
 
-export type ListByLabelData = {
+export type ListPeersByLabelData = {
     body?: never;
     path: {
         key: string;
@@ -2619,28 +2619,28 @@ export type ListByLabelData = {
          */
         limit?: number;
     };
-    url: '/gears/label/{key}/{value}';
+    url: '/peers/label/{key}/{value}';
 };
 
-export type ListByLabelErrors = {
+export type ListPeersByLabelErrors = {
     /**
      * Internal error
      */
     500: ErrorResponse;
 };
 
-export type ListByLabelError = ListByLabelErrors[keyof ListByLabelErrors];
+export type ListPeersByLabelError = ListPeersByLabelErrors[keyof ListPeersByLabelErrors];
 
-export type ListByLabelResponses = {
+export type ListPeersByLabelResponses = {
     /**
-     * Matched gears
+     * Matched peers
      */
     200: RegistrationList;
 };
 
-export type ListByLabelResponse = ListByLabelResponses[keyof ListByLabelResponses];
+export type ListPeersByLabelResponse = ListPeersByLabelResponses[keyof ListPeersByLabelResponses];
 
-export type ListByCertificationData = {
+export type ListPeersByCertificationData = {
     body?: never;
     path: {
         type: GearCertificationType;
@@ -2657,28 +2657,28 @@ export type ListByCertificationData = {
          */
         limit?: number;
     };
-    url: '/gears/certification/{type}/{authority}/{id}';
+    url: '/peers/certification/{type}/{authority}/{id}';
 };
 
-export type ListByCertificationErrors = {
+export type ListPeersByCertificationErrors = {
     /**
      * Internal error
      */
     500: ErrorResponse;
 };
 
-export type ListByCertificationError = ListByCertificationErrors[keyof ListByCertificationErrors];
+export type ListPeersByCertificationError = ListPeersByCertificationErrors[keyof ListPeersByCertificationErrors];
 
-export type ListByCertificationResponses = {
+export type ListPeersByCertificationResponses = {
     /**
-     * Matched gears
+     * Matched peers
      */
     200: RegistrationList;
 };
 
-export type ListByCertificationResponse = ListByCertificationResponses[keyof ListByCertificationResponses];
+export type ListPeersByCertificationResponse = ListPeersByCertificationResponses[keyof ListPeersByCertificationResponses];
 
-export type ListByFirmwareData = {
+export type ListPeersByFirmwareData = {
     body?: never;
     path: {
         depot: string;
@@ -2694,162 +2694,162 @@ export type ListByFirmwareData = {
          */
         limit?: number;
     };
-    url: '/gears/firmware/{depot}/{channel}';
+    url: '/peers/firmware/{depot}/{channel}';
 };
 
-export type ListByFirmwareErrors = {
+export type ListPeersByFirmwareErrors = {
     /**
      * Internal error
      */
     500: ErrorResponse;
 };
 
-export type ListByFirmwareError = ListByFirmwareErrors[keyof ListByFirmwareErrors];
+export type ListPeersByFirmwareError = ListPeersByFirmwareErrors[keyof ListPeersByFirmwareErrors];
 
-export type ListByFirmwareResponses = {
+export type ListPeersByFirmwareResponses = {
     /**
-     * Matched gears
+     * Matched peers
      */
     200: RegistrationList;
 };
 
-export type ListByFirmwareResponse = ListByFirmwareResponses[keyof ListByFirmwareResponses];
+export type ListPeersByFirmwareResponse = ListPeersByFirmwareResponses[keyof ListPeersByFirmwareResponses];
 
-export type DeleteGearData = {
+export type DeletePeerData = {
     body?: never;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}';
+    url: '/peers/{publicKey}';
 };
 
-export type DeleteGearErrors = {
+export type DeletePeerErrors = {
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
 };
 
-export type DeleteGearError = DeleteGearErrors[keyof DeleteGearErrors];
+export type DeletePeerError = DeletePeerErrors[keyof DeletePeerErrors];
 
-export type DeleteGearResponses = {
+export type DeletePeerResponses = {
     /**
-     * Deleted gear registration
+     * Deleted peer registration
      */
     200: Registration;
 };
 
-export type DeleteGearResponse = DeleteGearResponses[keyof DeleteGearResponses];
+export type DeletePeerResponse = DeletePeerResponses[keyof DeletePeerResponses];
 
-export type GetGearData = {
+export type GetPeerData = {
     body?: never;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}';
+    url: '/peers/{publicKey}';
 };
 
-export type GetGearErrors = {
+export type GetPeerErrors = {
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
 };
 
-export type GetGearError = GetGearErrors[keyof GetGearErrors];
+export type GetPeerError = GetPeerErrors[keyof GetPeerErrors];
 
-export type GetGearResponses = {
+export type GetPeerResponses = {
     /**
-     * Gear registration
+     * Peer registration
      */
     200: Registration;
 };
 
-export type GetGearResponse = GetGearResponses[keyof GetGearResponses];
+export type GetPeerResponse = GetPeerResponses[keyof GetPeerResponses];
 
-export type ApproveGearData = {
+export type ApprovePeerData = {
     body: ApproveRequest;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}/@approve';
+    url: '/peers/{publicKey}/@approve';
 };
 
-export type ApproveGearErrors = {
+export type ApprovePeerErrors = {
     /**
      * Invalid role
      */
     400: ErrorResponse;
 };
 
-export type ApproveGearError = ApproveGearErrors[keyof ApproveGearErrors];
+export type ApprovePeerError = ApprovePeerErrors[keyof ApprovePeerErrors];
 
-export type ApproveGearResponses = {
+export type ApprovePeerResponses = {
     /**
-     * Approved gear registration
+     * Approved peer registration
      */
     200: Registration;
 };
 
-export type ApproveGearResponse = ApproveGearResponses[keyof ApproveGearResponses];
+export type ApprovePeerResponse = ApprovePeerResponses[keyof ApprovePeerResponses];
 
-export type BlockGearData = {
+export type BlockPeerData = {
     body?: never;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}/@block';
+    url: '/peers/{publicKey}/@block';
 };
 
-export type BlockGearErrors = {
+export type BlockPeerErrors = {
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
 };
 
-export type BlockGearError = BlockGearErrors[keyof BlockGearErrors];
+export type BlockPeerError = BlockPeerErrors[keyof BlockPeerErrors];
 
-export type BlockGearResponses = {
+export type BlockPeerResponses = {
     /**
-     * Blocked gear registration
+     * Blocked peer registration
      */
     200: Registration;
 };
 
-export type BlockGearResponse = BlockGearResponses[keyof BlockGearResponses];
+export type BlockPeerResponse = BlockPeerResponses[keyof BlockPeerResponses];
 
-export type RefreshGearData = {
+export type RefreshPeerData = {
     body?: never;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}/@refresh';
+    url: '/peers/{publicKey}/@refresh';
 };
 
-export type RefreshGearErrors = {
+export type RefreshPeerErrors = {
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
     /**
@@ -2862,158 +2862,158 @@ export type RefreshGearErrors = {
     502: ErrorResponse;
 };
 
-export type RefreshGearError = RefreshGearErrors[keyof RefreshGearErrors];
+export type RefreshPeerError = RefreshPeerErrors[keyof RefreshPeerErrors];
 
-export type RefreshGearResponses = {
+export type RefreshPeerResponses = {
     /**
      * Refresh result
      */
     200: RefreshResult;
 };
 
-export type RefreshGearResponse = RefreshGearResponses[keyof RefreshGearResponses];
+export type RefreshPeerResponse = RefreshPeerResponses[keyof RefreshPeerResponses];
 
-export type GetGearInfoData = {
+export type GetPeerInfoData = {
     body?: never;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}/info';
+    url: '/peers/{publicKey}/info';
 };
 
-export type GetGearInfoErrors = {
+export type GetPeerInfoErrors = {
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
 };
 
-export type GetGearInfoError = GetGearInfoErrors[keyof GetGearInfoErrors];
+export type GetPeerInfoError = GetPeerInfoErrors[keyof GetPeerInfoErrors];
 
-export type GetGearInfoResponses = {
+export type GetPeerInfoResponses = {
     /**
      * Device info
      */
     200: DeviceInfo;
 };
 
-export type GetGearInfoResponse = GetGearInfoResponses[keyof GetGearInfoResponses];
+export type GetPeerInfoResponse = GetPeerInfoResponses[keyof GetPeerInfoResponses];
 
-export type GetGearConfigData = {
+export type GetPeerConfigData = {
     body?: never;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}/config';
+    url: '/peers/{publicKey}/config';
 };
 
-export type GetGearConfigErrors = {
+export type GetPeerConfigErrors = {
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
 };
 
-export type GetGearConfigError = GetGearConfigErrors[keyof GetGearConfigErrors];
+export type GetPeerConfigError = GetPeerConfigErrors[keyof GetPeerConfigErrors];
 
-export type GetGearConfigResponses = {
+export type GetPeerConfigResponses = {
     /**
      * Configuration
      */
     200: Configuration;
 };
 
-export type GetGearConfigResponse = GetGearConfigResponses[keyof GetGearConfigResponses];
+export type GetPeerConfigResponse = GetPeerConfigResponses[keyof GetPeerConfigResponses];
 
-export type PutGearConfigData = {
+export type PutPeerConfigData = {
     body: Configuration;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}/config';
+    url: '/peers/{publicKey}/config';
 };
 
-export type PutGearConfigErrors = {
+export type PutPeerConfigErrors = {
     /**
      * Invalid params
      */
     400: ErrorResponse;
     /**
-     * Gear not found
+     * Peer not found
      */
     404: ErrorResponse;
 };
 
-export type PutGearConfigError = PutGearConfigErrors[keyof PutGearConfigErrors];
+export type PutPeerConfigError = PutPeerConfigErrors[keyof PutPeerConfigErrors];
 
-export type PutGearConfigResponses = {
+export type PutPeerConfigResponses = {
     /**
      * Updated configuration
      */
     200: Configuration;
 };
 
-export type PutGearConfigResponse = PutGearConfigResponses[keyof PutGearConfigResponses];
+export type PutPeerConfigResponse = PutPeerConfigResponses[keyof PutPeerConfigResponses];
 
-export type GetGearRuntimeData = {
+export type GetPeerRuntimeData = {
     body?: never;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}/runtime';
+    url: '/peers/{publicKey}/runtime';
 };
 
-export type GetGearRuntimeResponses = {
+export type GetPeerRuntimeResponses = {
     /**
      * Runtime status
      */
     200: Runtime;
 };
 
-export type GetGearRuntimeResponse = GetGearRuntimeResponses[keyof GetGearRuntimeResponses];
+export type GetPeerRuntimeResponse = GetPeerRuntimeResponses[keyof GetPeerRuntimeResponses];
 
-export type GetGearOtaData = {
+export type GetPeerOtaData = {
     body?: never;
     path: {
         /**
-         * Gear public key
+         * Peer public key
          */
         publicKey: string;
     };
     query?: never;
-    url: '/gears/{publicKey}/ota';
+    url: '/peers/{publicKey}/ota';
 };
 
-export type GetGearOtaErrors = {
+export type GetPeerOtaErrors = {
     /**
-     * Gear or firmware not found
+     * Peer or firmware not found
      */
     404: ErrorResponse;
 };
 
-export type GetGearOtaError = GetGearOtaErrors[keyof GetGearOtaErrors];
+export type GetPeerOtaError = GetPeerOtaErrors[keyof GetPeerOtaErrors];
 
-export type GetGearOtaResponses = {
+export type GetPeerOtaResponses = {
     /**
      * OTA summary
      */
     200: OtaSummary;
 };
 
-export type GetGearOtaResponse = GetGearOtaResponses[keyof GetGearOtaResponses];
+export type GetPeerOtaResponse = GetPeerOtaResponses[keyof GetPeerOtaResponses];

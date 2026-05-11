@@ -11,10 +11,10 @@ storage:
     kind: depotstore
     depot-fs: {}
 stores:
-  gears:
+  peers:
     kind: keyvalue
     storage: memory
-    prefix: gears
+    prefix: peers
   credentials:
     kind: keyvalue
     storage: memory
@@ -46,8 +46,8 @@ stores:
       filesystem:
         storage: local-files
         base-dir: firmware
-gears:
-  store: gears
+peers:
+  store: peers
 credentials:
   store: credentials
 minimax:

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { expectData, toMessage } from "../components/api";
-import { listDepots, listGears } from "@gizclaw/adminservice";
+import { listDepots, listPeers } from "@gizclaw/adminservice";
 import { getServerInfo, type ServerInfo } from "@gizclaw/serverpublic";
 
 import type { Depot, Registration } from "@gizclaw/adminservice";
@@ -11,7 +11,7 @@ import { PEER_PAGE_LIMIT } from "./usePeersPage";
 export interface OverviewData {
   depots: Depot[];
   error: string;
-  gears: Registration[];
+  peers: Registration[];
   loading: boolean;
   serverInfo: ServerInfo | null;
 }
@@ -20,7 +20,7 @@ export function useOverviewData(): OverviewData {
   const [data, setData] = useState<OverviewData>({
     depots: [],
     error: "",
-    gears: [],
+    peers: [],
     loading: true,
     serverInfo: null,
   });
@@ -32,7 +32,7 @@ export function useOverviewData(): OverviewData {
         const [serverInfo, registrations, depots] = await Promise.all([
           expectData(getServerInfo()),
           expectData(
-            listGears({
+            listPeers({
               query: { limit: PEER_PAGE_LIMIT },
             }),
           ),
@@ -44,7 +44,7 @@ export function useOverviewData(): OverviewData {
         setData({
           depots: depots.items ?? [],
           error: "",
-          gears: registrations.items ?? [],
+          peers: registrations.items ?? [],
           loading: false,
           serverInfo,
         });

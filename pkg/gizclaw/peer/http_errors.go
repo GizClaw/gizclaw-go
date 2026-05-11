@@ -1,4 +1,4 @@
-package gear
+package peer
 
 import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
@@ -7,7 +7,7 @@ import (
 
 type getGearConfig500JSONResponse apitypes.ErrorResponse
 
-func (response getGearConfig500JSONResponse) VisitGetGearConfigResponse(ctx *fiber.Ctx) error {
+func (response getGearConfig500JSONResponse) VisitGetPeerConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 	return ctx.JSON(&response)
@@ -15,7 +15,7 @@ func (response getGearConfig500JSONResponse) VisitGetGearConfigResponse(ctx *fib
 
 type putGearConfig500JSONResponse apitypes.ErrorResponse
 
-func (response putGearConfig500JSONResponse) VisitPutGearConfigResponse(ctx *fiber.Ctx) error {
+func (response putGearConfig500JSONResponse) VisitPutPeerConfigResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 	return ctx.JSON(&response)
@@ -23,7 +23,7 @@ func (response putGearConfig500JSONResponse) VisitPutGearConfigResponse(ctx *fib
 
 type getGearInfo500JSONResponse apitypes.ErrorResponse
 
-func (response getGearInfo500JSONResponse) VisitGetGearInfoResponse(ctx *fiber.Ctx) error {
+func (response getGearInfo500JSONResponse) VisitGetPeerInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 	return ctx.JSON(&response)
@@ -31,7 +31,7 @@ func (response getGearInfo500JSONResponse) VisitGetGearInfoResponse(ctx *fiber.C
 
 type refreshGear500JSONResponse apitypes.ErrorResponse
 
-func (response refreshGear500JSONResponse) VisitRefreshGearResponse(ctx *fiber.Ctx) error {
+func (response refreshGear500JSONResponse) VisitRefreshPeerResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 	return ctx.JSON(&response)

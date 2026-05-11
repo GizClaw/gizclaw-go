@@ -170,12 +170,12 @@ func ApplyDeviceConfigSeed(ctx context.Context, api *adminservice.ClientWithResp
 	if err != nil {
 		return err
 	}
-	resp, err := api.PutGearConfigWithResponse(ctx, publicKey, config)
+	resp, err := api.PutPeerConfigWithResponse(ctx, publicKey, config)
 	if err != nil {
 		return err
 	}
 	if resp.JSON200 == nil {
-		return seedResponseError("put gear config", resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404)
+		return seedResponseError("put peer config", resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404)
 	}
 	return nil
 }

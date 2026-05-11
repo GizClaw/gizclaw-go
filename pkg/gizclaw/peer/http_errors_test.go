@@ -1,4 +1,4 @@
-package gear
+package peer
 
 import (
 	"testing"
@@ -33,16 +33,16 @@ func TestHTTPErrorHelpersAndVisitors(t *testing.T) {
 	}
 
 	checkStatus("get-gear-config", func(c *fiber.Ctx) error {
-		return getGearConfig500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitGetGearConfigResponse(c)
+		return getGearConfig500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitGetPeerConfigResponse(c)
 	})
 	checkStatus("put-gear-config", func(c *fiber.Ctx) error {
-		return putGearConfig500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitPutGearConfigResponse(c)
+		return putGearConfig500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitPutPeerConfigResponse(c)
 	})
 	checkStatus("get-gear-info", func(c *fiber.Ctx) error {
-		return getGearInfo500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitGetGearInfoResponse(c)
+		return getGearInfo500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitGetPeerInfoResponse(c)
 	})
 	checkStatus("refresh-gear", func(c *fiber.Ctx) error {
-		return refreshGear500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitRefreshGearResponse(c)
+		return refreshGear500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitRefreshPeerResponse(c)
 	})
 	checkStatus("get-config", func(c *fiber.Ctx) error {
 		return getConfig500JSONResponse(apitypes.NewErrorResponse("ERR", "boom")).VisitGetConfigResponse(c)

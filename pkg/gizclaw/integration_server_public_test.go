@@ -104,7 +104,7 @@ func TestIntegrationServerPublicRegisterAndReadBack(t *testing.T) {
 	if _, err := uploadFirmware(context.Background(), admin, "demo-main", adminservice.Channel("stable"), tarData); err != nil {
 		t.Fatalf("UploadFirmware error: %v", err)
 	}
-	if _, err := putGearConfig(context.Background(), admin, result.Gear.PublicKey, apitypes.Configuration{
+	if _, err := putPeerConfig(context.Background(), admin, result.Gear.PublicKey, apitypes.Configuration{
 		Firmware: &apitypes.FirmwareConfig{Channel: func() *apitypes.GearFirmwareChannel {
 			ch := apitypes.GearFirmwareChannel("stable")
 			return &ch

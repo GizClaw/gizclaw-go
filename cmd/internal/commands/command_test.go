@@ -164,7 +164,7 @@ func TestAdminHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	for _, want := range []string{"apply", "delete", "show", "gears", "firmware", "credentials", "minimax-tenants", "volc-tenants", "voices", "workflows", "workspaces"} {
+	for _, want := range []string{"apply", "delete", "show", "peers", "firmware", "credentials", "minimax-tenants", "volc-tenants", "voices", "workflows", "workspaces"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("admin help missing %q: %s", want, out)
 		}
@@ -217,7 +217,7 @@ func TestAdminHelpShowsListen(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "gears") || !strings.Contains(out, "firmware") {
+	if !strings.Contains(out, "peers") || !strings.Contains(out, "firmware") {
 		t.Fatalf("admin help missing subcommands: %s", out)
 	}
 	if !strings.Contains(out, "--listen") {
@@ -244,11 +244,11 @@ func TestPlayHelp(t *testing.T) {
 	}
 }
 
-func TestAdminGearsHelp(t *testing.T) {
+func TestAdminPeersHelp(t *testing.T) {
 	root := New()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
-	root.SetArgs([]string{"admin", "gears", "--help"})
+	root.SetArgs([]string{"admin", "peers", "--help"})
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -267,7 +267,7 @@ func TestAdminGearsHelp(t *testing.T) {
 		"ota",
 	} {
 		if !strings.Contains(out, want) {
-			t.Fatalf("admin gears help missing %q: %s", want, out)
+			t.Fatalf("admin peers help missing %q: %s", want, out)
 		}
 	}
 }

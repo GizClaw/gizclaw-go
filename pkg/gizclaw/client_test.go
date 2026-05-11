@@ -20,7 +20,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -102,7 +102,7 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 	client, serverConn, cleanup := newProxyTestPair(t)
 	defer cleanup()
 
-	gearServer := &gear.Server{
+	gearServer := &peer.Server{
 		Store:           mustBadgerInMemory(t, nil),
 		BuildCommit:     "test-build",
 		ServerPublicKey: giznet.PublicKey{1},
@@ -113,14 +113,14 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 		manager: manager,
 		admin: &adminService{
 			FirmwareAdminService: firmwareServer,
-			GearsAdminService:    gearServer,
+			PeerAdminService:     gearServer,
 		},
 		gear: &gearAPIBundle{
 			FirmwareGearService: firmwareServer,
-			GearsGearService:    gearServer,
+			GearService:         gearServer,
 		},
 		public: &serverPublic{
-			GearsServerPublic: gearServer,
+			ServerPublicService: gearServer,
 		},
 	}
 

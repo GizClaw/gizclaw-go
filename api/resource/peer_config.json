@@ -1,14 +1,14 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Gear Config Resource Schema",
-    "description": "GearConfigResource envelope schema.",
+    "title": "Peer Config Resource Schema",
+    "description": "PeerConfigResource envelope schema.",
     "version": "1.0.0"
   },
   "paths": {},
   "components": {
     "schemas": {
-      "GearConfigResource": {
+      "PeerConfigResource": {
         "type": "object",
         "required": [
           "apiVersion",
@@ -23,7 +23,7 @@
           "kind": {
             "type": "string",
             "enum": [
-              "GearConfig"
+              "PeerConfig"
             ]
           },
           "metadata": {

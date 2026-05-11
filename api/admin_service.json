@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Admin API",
-    "description": "Admin endpoints for managing firmware depots, channels, and gears.",
+    "description": "Admin endpoints for managing firmware depots, channels, and peers.",
     "version": "1.0.0"
   },
   "servers": [
@@ -57,11 +57,11 @@
     },
     {
       "name": "Query",
-      "description": "List and resolve gears"
+      "description": "List and resolve peers"
     },
     {
       "name": "Resource",
-      "description": "Single gear CRUD and actions"
+      "description": "Single peer CRUD and actions"
     }
   ],
   "paths": {
@@ -2573,10 +2573,10 @@
         }
       }
     },
-    "/gears": {
+    "/peers": {
       "get": {
-        "operationId": "listGears",
-        "summary": "List all gears",
+        "operationId": "listPeers",
+        "summary": "List all peers",
         "tags": [
           "Query"
         ],
@@ -2590,7 +2590,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Gear registration list",
+            "description": "Peer registration list",
             "content": {
               "application/json": {
                 "schema": {
@@ -2612,10 +2612,10 @@
         }
       }
     },
-    "/gears/sn/{sn}": {
+    "/peers/sn/{sn}": {
       "get": {
-        "operationId": "resolveBySN",
-        "summary": "Resolve gear public key by serial number",
+        "operationId": "resolvePeerBySN",
+        "summary": "Resolve peer public key by serial number",
         "tags": [
           "Query"
         ],
@@ -2641,7 +2641,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2653,10 +2653,10 @@
         }
       }
     },
-    "/gears/imei/{tac}/{serial}": {
+    "/peers/imei/{tac}/{serial}": {
       "get": {
-        "operationId": "resolveByIMEI",
-        "summary": "Resolve gear public key by IMEI",
+        "operationId": "resolvePeerByIMEI",
+        "summary": "Resolve peer public key by IMEI",
         "tags": [
           "Query"
         ],
@@ -2690,7 +2690,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2702,10 +2702,10 @@
         }
       }
     },
-    "/gears/label/{key}/{value}": {
+    "/peers/label/{key}/{value}": {
       "get": {
-        "operationId": "listByLabel",
-        "summary": "List gears by label",
+        "operationId": "listPeersByLabel",
+        "summary": "List peers by label",
         "tags": [
           "Query"
         ],
@@ -2735,7 +2735,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Matched gears",
+            "description": "Matched peers",
             "content": {
               "application/json": {
                 "schema": {
@@ -2757,10 +2757,10 @@
         }
       }
     },
-    "/gears/certification/{type}/{authority}/{id}": {
+    "/peers/certification/{type}/{authority}/{id}": {
       "get": {
-        "operationId": "listByCertification",
-        "summary": "List gears by certification",
+        "operationId": "listPeersByCertification",
+        "summary": "List peers by certification",
         "tags": [
           "Query"
         ],
@@ -2798,7 +2798,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Matched gears",
+            "description": "Matched peers",
             "content": {
               "application/json": {
                 "schema": {
@@ -2820,10 +2820,10 @@
         }
       }
     },
-    "/gears/firmware/{depot}/{channel}": {
+    "/peers/firmware/{depot}/{channel}": {
       "get": {
-        "operationId": "listByFirmware",
-        "summary": "List gears by firmware depot and channel",
+        "operationId": "listPeersByFirmware",
+        "summary": "List peers by firmware depot and channel",
         "tags": [
           "Query"
         ],
@@ -2853,7 +2853,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Matched gears",
+            "description": "Matched peers",
             "content": {
               "application/json": {
                 "schema": {
@@ -2875,10 +2875,10 @@
         }
       }
     },
-    "/gears/{publicKey}": {
+    "/peers/{publicKey}": {
       "get": {
-        "operationId": "getGear",
-        "summary": "Get gear registration",
+        "operationId": "getPeer",
+        "summary": "Get peer registration",
         "tags": [
           "Resource"
         ],
@@ -2889,7 +2889,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Gear registration",
+            "description": "Peer registration",
             "content": {
               "application/json": {
                 "schema": {
@@ -2899,7 +2899,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2911,8 +2911,8 @@
         }
       },
       "delete": {
-        "operationId": "deleteGear",
-        "summary": "Delete a gear",
+        "operationId": "deletePeer",
+        "summary": "Delete a peer",
         "tags": [
           "Resource"
         ],
@@ -2923,7 +2923,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Deleted gear registration",
+            "description": "Deleted peer registration",
             "content": {
               "application/json": {
                 "schema": {
@@ -2933,7 +2933,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -2945,10 +2945,10 @@
         }
       }
     },
-    "/gears/{publicKey}/@approve": {
+    "/peers/{publicKey}/@approve": {
       "post": {
-        "operationId": "approveGear",
-        "summary": "Approve a gear with a given role",
+        "operationId": "approvePeer",
+        "summary": "Approve a peer with a given role",
         "tags": [
           "Resource"
         ],
@@ -2969,7 +2969,7 @@
         },
         "responses": {
           "200": {
-            "description": "Approved gear registration",
+            "description": "Approved peer registration",
             "content": {
               "application/json": {
                 "schema": {
@@ -2991,10 +2991,10 @@
         }
       }
     },
-    "/gears/{publicKey}/@block": {
+    "/peers/{publicKey}/@block": {
       "post": {
-        "operationId": "blockGear",
-        "summary": "Block a gear",
+        "operationId": "blockPeer",
+        "summary": "Block a peer",
         "tags": [
           "Resource"
         ],
@@ -3005,7 +3005,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Blocked gear registration",
+            "description": "Blocked peer registration",
             "content": {
               "application/json": {
                 "schema": {
@@ -3015,7 +3015,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3027,10 +3027,10 @@
         }
       }
     },
-    "/gears/{publicKey}/@refresh": {
+    "/peers/{publicKey}/@refresh": {
       "post": {
-        "operationId": "refreshGear",
-        "summary": "Refresh gear info from connected device",
+        "operationId": "refreshPeer",
+        "summary": "Refresh peer info from connected device",
         "tags": [
           "Resource"
         ],
@@ -3051,7 +3051,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3083,10 +3083,10 @@
         }
       }
     },
-    "/gears/{publicKey}/info": {
+    "/peers/{publicKey}/info": {
       "get": {
-        "operationId": "getGearInfo",
-        "summary": "Get gear device info",
+        "operationId": "getPeerInfo",
+        "summary": "Get peer device info",
         "tags": [
           "Resource"
         ],
@@ -3107,7 +3107,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3119,10 +3119,10 @@
         }
       }
     },
-    "/gears/{publicKey}/config": {
+    "/peers/{publicKey}/config": {
       "get": {
-        "operationId": "getGearConfig",
-        "summary": "Get gear configuration",
+        "operationId": "getPeerConfig",
+        "summary": "Get peer configuration",
         "tags": [
           "Resource"
         ],
@@ -3143,7 +3143,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3155,8 +3155,8 @@
         }
       },
       "put": {
-        "operationId": "putGearConfig",
-        "summary": "Update gear configuration",
+        "operationId": "putPeerConfig",
+        "summary": "Update peer configuration",
         "tags": [
           "Resource"
         ],
@@ -3197,7 +3197,7 @@
             }
           },
           "404": {
-            "description": "Gear not found",
+            "description": "Peer not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3209,10 +3209,10 @@
         }
       }
     },
-    "/gears/{publicKey}/runtime": {
+    "/peers/{publicKey}/runtime": {
       "get": {
-        "operationId": "getGearRuntime",
-        "summary": "Get gear runtime status",
+        "operationId": "getPeerRuntime",
+        "summary": "Get peer runtime status",
         "tags": [
           "Resource"
         ],
@@ -3235,10 +3235,10 @@
         }
       }
     },
-    "/gears/{publicKey}/ota": {
+    "/peers/{publicKey}/ota": {
       "get": {
-        "operationId": "getGearOTA",
-        "summary": "Get gear OTA firmware summary",
+        "operationId": "getPeerOTA",
+        "summary": "Get peer OTA firmware summary",
         "tags": [
           "Resource"
         ],
@@ -3259,7 +3259,7 @@
             }
           },
           "404": {
-            "description": "Gear or firmware not found",
+            "description": "Peer or firmware not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -3817,7 +3817,7 @@
         "name": "publicKey",
         "in": "path",
         "required": true,
-        "description": "Gear public key",
+        "description": "Peer public key",
         "schema": {
           "type": "string"
         }

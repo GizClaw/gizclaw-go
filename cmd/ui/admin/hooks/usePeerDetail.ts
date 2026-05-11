@@ -2,11 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 
 import { expectData, toMessage } from "../components/api";
 import {
-  getGear,
-  getGearConfig,
-  getGearInfo,
-  getGearOta,
-  getGearRuntime,
+  getPeer,
+  getPeerConfig,
+  getPeerInfo,
+  getPeerOta,
+  getPeerRuntime,
   type Configuration,
   type DeviceInfo,
   type Registration,
@@ -42,12 +42,12 @@ export function usePeerDetail(publicKey: string | undefined): GearDetailState & 
 
     setState({ data: null, error: "", loading: true });
     try {
-      const registration = await expectData(getGear({ path: { publicKey } }));
+      const registration = await expectData(getPeer({ path: { publicKey } }));
       const [info, config, runtime, ota] = await Promise.all([
-        loadOptional(() => expectData(getGearInfo({ path: { publicKey } }))),
-        loadOptional(() => expectData(getGearConfig({ path: { publicKey } }))),
-        loadOptional(() => expectData(getGearRuntime({ path: { publicKey } }))),
-        loadOptional(() => expectData(getGearOta({ path: { publicKey } }))),
+        loadOptional(() => expectData(getPeerInfo({ path: { publicKey } }))),
+        loadOptional(() => expectData(getPeerConfig({ path: { publicKey } }))),
+        loadOptional(() => expectData(getPeerRuntime({ path: { publicKey } }))),
+        loadOptional(() => expectData(getPeerOta({ path: { publicKey } }))),
       ]);
 
       setState({

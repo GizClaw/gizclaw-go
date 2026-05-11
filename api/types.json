@@ -230,8 +230,8 @@
       "WorkspaceResource": {
         "$ref": "./resource/workspace.json#/components/schemas/WorkspaceResource"
       },
-      "GearConfigResource": {
-        "$ref": "./resource/gear_config.json#/components/schemas/GearConfigResource"
+      "PeerConfigResource": {
+        "$ref": "./resource/peer_config.json#/components/schemas/PeerConfigResource"
       },
       "CredentialSpec": {
         "$ref": "./type/credential_spec.json#/components/schemas/CredentialSpec"

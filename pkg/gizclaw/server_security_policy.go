@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	gearpkg "github.com/GizClaw/gizclaw-go/pkg/gizclaw/gear"
+	gearpkg "github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
@@ -34,13 +34,13 @@ func (p *ServerSecurityPolicy) AllowService(publicKey giznet.PublicKey, service 
 	case ServiceRPC, ServiceServerPublic:
 		return true
 	}
-	if manager.Gears == nil {
+	if manager.Peers == nil {
 		return false
 	}
 	switch service {
 	case ServiceGear:
-		gear, err := manager.Gears.LoadGear(context.Background(), publicKey)
-		if errors.Is(err, gearpkg.ErrGearNotFound) {
+		gear, err := manager.Peers.LoadGear(context.Background(), publicKey)
+		if errors.Is(err, gearpkg.ErrPeerNotFound) {
 			return true
 		}
 		if err != nil {
@@ -48,7 +48,7 @@ func (p *ServerSecurityPolicy) AllowService(publicKey giznet.PublicKey, service 
 		}
 		return gear.Status == apitypes.GearStatusActive
 	case ServiceAdmin:
-		gear, err := manager.Gears.LoadGear(context.Background(), publicKey)
+		gear, err := manager.Peers.LoadGear(context.Background(), publicKey)
 		if err != nil {
 			return false
 		}

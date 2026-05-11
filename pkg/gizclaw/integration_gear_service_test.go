@@ -39,27 +39,27 @@ func TestIntegrationGearServiceLifecycle(t *testing.T) {
 		t.Fatalf("device register error: %v", err)
 	}
 
-	items, err := listGears(context.Background(), admin)
+	items, err := listPeers(context.Background(), admin)
 	if err != nil {
-		t.Fatalf("ListGears error: %v", err)
+		t.Fatalf("ListPeers error: %v", err)
 	}
 	if len(items) < 2 {
-		t.Fatalf("ListGears returned %d items", len(items))
+		t.Fatalf("ListPeers returned %d items", len(items))
 	}
 
-	if _, err := approveGear(context.Background(), admin, deviceResult.Gear.PublicKey, apitypes.GearRoleGear); err != nil {
-		t.Fatalf("ApproveGear error: %v", err)
+	if _, err := approvePeer(context.Background(), admin, deviceResult.Gear.PublicKey, apitypes.GearRoleGear); err != nil {
+		t.Fatalf("ApprovePeer error: %v", err)
 	}
-	if _, err := getGear(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
-		t.Fatalf("GetGear error: %v", err)
+	if _, err := getPeer(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+		t.Fatalf("GetPeer error: %v", err)
 	}
-	if publicKey, err := resolveGearBySN(context.Background(), admin, "sn/1"); err != nil || publicKey != deviceResult.Gear.PublicKey {
+	if publicKey, err := resolvePeerBySN(context.Background(), admin, "sn/1"); err != nil || publicKey != deviceResult.Gear.PublicKey {
 		t.Fatalf("ResolveGearBySN = %q, %v", publicKey, err)
 	}
-	if publicKey, err := resolveGearByIMEI(context.Background(), admin, "12345678", "0000001"); err != nil || publicKey != deviceResult.Gear.PublicKey {
+	if publicKey, err := resolvePeerByIMEI(context.Background(), admin, "12345678", "0000001"); err != nil || publicKey != deviceResult.Gear.PublicKey {
 		t.Fatalf("ResolveGearByIMEI = %q, %v", publicKey, err)
 	}
-	if _, err := putGearConfig(context.Background(), admin, deviceResult.Gear.PublicKey, apitypes.Configuration{
+	if _, err := putPeerConfig(context.Background(), admin, deviceResult.Gear.PublicKey, apitypes.Configuration{
 		Certifications: &[]apitypes.GearCertification{{
 			Type:      apitypes.GearCertificationType("certification"),
 			Authority: apitypes.GearCertificationAuthority("ce"),
@@ -72,29 +72,29 @@ func TestIntegrationGearServiceLifecycle(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("PutGearConfig error: %v", err)
 	}
-	if _, err := getGearInfo(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
-		t.Fatalf("GetGearInfo error: %v", err)
+	if _, err := getPeerInfo(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+		t.Fatalf("GetPeerInfo error: %v", err)
 	}
-	if _, err := getGearConfig(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
-		t.Fatalf("GetGearConfig error: %v", err)
+	if _, err := getPeerConfig(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+		t.Fatalf("GetPeerConfig error: %v", err)
 	}
-	if _, err := getGearRuntime(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
-		t.Fatalf("GetGearRuntime error: %v", err)
+	if _, err := getPeerRuntime(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+		t.Fatalf("GetPeerRuntime error: %v", err)
 	}
-	if _, err := listGearsByLabel(context.Background(), admin, "batch", "cn/east"); err != nil {
-		t.Fatalf("ListGearsByLabel error: %v", err)
+	if _, err := listPeersByLabel(context.Background(), admin, "batch", "cn/east"); err != nil {
+		t.Fatalf("ListPeersByLabel error: %v", err)
 	}
-	if _, err := listGearsByCertification(context.Background(), admin, apitypes.GearCertificationType("certification"), apitypes.GearCertificationAuthority("ce"), "ce/001"); err != nil {
-		t.Fatalf("ListGearsByCertification error: %v", err)
+	if _, err := listPeersByCertification(context.Background(), admin, apitypes.GearCertificationType("certification"), apitypes.GearCertificationAuthority("ce"), "ce/001"); err != nil {
+		t.Fatalf("ListPeersByCertification error: %v", err)
 	}
-	if _, err := listGearsByFirmware(context.Background(), admin, "demo-main", apitypes.GearFirmwareChannel("stable")); err != nil {
-		t.Fatalf("ListGearsByFirmware error: %v", err)
+	if _, err := listPeersByFirmware(context.Background(), admin, "demo-main", apitypes.GearFirmwareChannel("stable")); err != nil {
+		t.Fatalf("ListPeersByFirmware error: %v", err)
 	}
-	if _, err := blockGear(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
-		t.Fatalf("BlockGear error: %v", err)
+	if _, err := blockPeer(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+		t.Fatalf("BlockPeer error: %v", err)
 	}
-	if _, err := deleteGear(context.Background(), admin, adminResult.Gear.PublicKey); err != nil {
-		t.Fatalf("DeleteGear error: %v", err)
+	if _, err := deletePeer(context.Background(), admin, adminResult.Gear.PublicKey); err != nil {
+		t.Fatalf("DeletePeer error: %v", err)
 	}
 }
 

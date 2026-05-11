@@ -1,4 +1,4 @@
-package gear
+package peer
 
 import (
 	"context"
@@ -28,10 +28,10 @@ func (s *Server) register(ctx context.Context, publicKey giznet.PublicKey, reque
 		if err == nil {
 			return gear, nil
 		}
-		if !errors.Is(err, ErrGearAlreadyExists) {
+		if !errors.Is(err, ErrPeerAlreadyExists) {
 			return apitypes.Gear{}, err
 		}
-		return apitypes.Gear{}, ErrGearAlreadyExists
+		return apitypes.Gear{}, ErrPeerAlreadyExists
 	}
 
 	autoRegistered := true
@@ -61,7 +61,7 @@ func (s *Server) registerExistingConnectedGear(ctx context.Context, publicKey gi
 		return apitypes.Gear{}, err
 	}
 	if !isAutoConnectedGear(gear) {
-		return apitypes.Gear{}, ErrGearAlreadyExists
+		return apitypes.Gear{}, ErrPeerAlreadyExists
 	}
 	device, err := convertViaJSON[apitypes.DeviceInfo](request.Device)
 	if err != nil {
@@ -81,7 +81,7 @@ func (s *Server) EnsureConnectedGear(ctx context.Context, publicKey giznet.Publi
 	if err == nil {
 		return existing, nil
 	}
-	if !errors.Is(err, ErrGearNotFound) {
+	if !errors.Is(err, ErrPeerNotFound) {
 		return apitypes.Gear{}, err
 	}
 
@@ -94,7 +94,7 @@ func (s *Server) EnsureConnectedGear(ctx context.Context, publicKey giznet.Publi
 		Configuration:  apitypes.Configuration{},
 		AutoRegistered: &autoRegistered,
 	})
-	if errors.Is(err, ErrGearAlreadyExists) {
+	if errors.Is(err, ErrPeerAlreadyExists) {
 		return s.get(ctx, publicKey)
 	}
 	return created, err
@@ -168,10 +168,15 @@ func (s *Server) delete(ctx context.Context, publicKey giznet.PublicKey) (apityp
 	if err != nil {
 		return apitypes.Gear{}, err
 	}
-	gear.Role = apitypes.GearRoleUnspecified
-	gear.Status = apitypes.GearStatusUnspecified
-	gear.ApprovedAt = nil
-	return s.put(ctx, gear)
+	store, err := s.store()
+	if err != nil {
+		return apitypes.Gear{}, err
+	}
+	deletes := append([]kv.Key{gearKey(gear.PublicKey)}, indexKeys(gear)...)
+	if err := store.BatchDelete(ctx, deletes); err != nil {
+		return apitypes.Gear{}, fmt.Errorf("gear: delete %s: %w", gear.PublicKey, err)
+	}
+	return gear, nil
 }
 
 func (s *Server) get(ctx context.Context, publicKey giznet.PublicKey) (apitypes.Gear, error) {
@@ -180,16 +185,55 @@ func (s *Server) get(ctx context.Context, publicKey giznet.PublicKey) (apitypes.
 		return apitypes.Gear{}, err
 	}
 	publicKeyText := publicKey.String()
+	gear, err := s.getByPublicKeyText(ctx, store, publicKeyText)
+	if err != nil {
+		if !errors.Is(err, ErrPeerNotFound) {
+			return apitypes.Gear{}, err
+		}
+		return s.getByParsedPublicKey(ctx, store, publicKey)
+	}
+	return gear, nil
+}
+
+func (s *Server) getByPublicKeyText(ctx context.Context, store kv.Store, publicKeyText string) (apitypes.Gear, error) {
 	data, err := store.Get(ctx, gearKey(publicKeyText))
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return apitypes.Gear{}, ErrGearNotFound
+			return apitypes.Gear{}, ErrPeerNotFound
 		}
 		return apitypes.Gear{}, fmt.Errorf("gear: get %s: %w", publicKeyText, err)
 	}
+	gear, err := decodeGear(data)
+	if err != nil {
+		return apitypes.Gear{}, fmt.Errorf("gear: decode %s: %w", publicKeyText, err)
+	}
+	return gear, nil
+}
+
+func (s *Server) getByParsedPublicKey(ctx context.Context, store kv.Store, publicKey giznet.PublicKey) (apitypes.Gear, error) {
+	for entry, err := range store.List(ctx, gearsPrefix()) {
+		if err != nil {
+			return apitypes.Gear{}, fmt.Errorf("gear: list legacy keys: %w", err)
+		}
+		gear, err := decodeGear(entry.Value)
+		if err != nil {
+			return apitypes.Gear{}, fmt.Errorf("gear: decode legacy %s: %w", entry.Key.String(), err)
+		}
+		storedPublicKey, err := publicKeyFromText(gear.PublicKey)
+		if err != nil {
+			continue
+		}
+		if storedPublicKey == publicKey {
+			return gear, nil
+		}
+	}
+	return apitypes.Gear{}, ErrPeerNotFound
+}
+
+func decodeGear(data []byte) (apitypes.Gear, error) {
 	var gear apitypes.Gear
 	if err := json.Unmarshal(data, &gear); err != nil {
-		return apitypes.Gear{}, fmt.Errorf("gear: decode %s: %w", publicKeyText, err)
+		return apitypes.Gear{}, err
 	}
 	return gear, nil
 }
@@ -199,7 +243,7 @@ func (s *Server) exists(ctx context.Context, publicKey giznet.PublicKey) (bool, 
 	if err == nil {
 		return true, nil
 	}
-	if errors.Is(err, ErrGearNotFound) {
+	if errors.Is(err, ErrPeerNotFound) {
 		return false, nil
 	}
 	return false, err
@@ -219,8 +263,8 @@ func (s *Server) create(ctx context.Context, gear apitypes.Gear) (apitypes.Gear,
 	defer s.mu.Unlock()
 
 	if _, err := s.get(ctx, publicKey); err == nil {
-		return apitypes.Gear{}, ErrGearAlreadyExists
-	} else if !errors.Is(err, ErrGearNotFound) {
+		return apitypes.Gear{}, ErrPeerAlreadyExists
+	} else if !errors.Is(err, ErrPeerNotFound) {
 		return apitypes.Gear{}, err
 	}
 
@@ -247,11 +291,11 @@ func (s *Server) put(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, er
 	defer s.mu.Unlock()
 
 	old, err := s.get(ctx, publicKey)
-	if err != nil && !errors.Is(err, ErrGearNotFound) {
+	if err != nil && !errors.Is(err, ErrPeerNotFound) {
 		return apitypes.Gear{}, err
 	}
 	if gear.CreatedAt.IsZero() {
-		if errors.Is(err, ErrGearNotFound) {
+		if errors.Is(err, ErrPeerNotFound) {
 			gear.CreatedAt = time.Now()
 		} else {
 			gear.CreatedAt = old.CreatedAt
@@ -320,11 +364,11 @@ func (s *Server) listPage(ctx context.Context, cursor string, limit int) ([]apit
 }
 
 func (s *Server) resolveBySN(ctx context.Context, sn string) (string, error) {
-	return s.resolveSingle(ctx, snKey(sn), ErrGearNotFound)
+	return s.resolveSingle(ctx, snKey(sn), ErrPeerNotFound)
 }
 
 func (s *Server) resolveByIMEI(ctx context.Context, tac, serial string) (string, error) {
-	return s.resolveSingle(ctx, imeiKey(tac, serial), ErrGearNotFound)
+	return s.resolveSingle(ctx, imeiKey(tac, serial), ErrPeerNotFound)
 }
 
 func (s *Server) listByLabel(ctx context.Context, key, value, cursor string, limit int) ([]apitypes.Gear, bool, *string, error) {
@@ -405,7 +449,7 @@ func (s *Server) listByReferencePrefixPage(ctx context.Context, prefix kv.Key, c
 		}
 		gear, err := s.get(ctx, publicKey)
 		if err != nil {
-			if errors.Is(err, ErrGearNotFound) {
+			if errors.Is(err, ErrPeerNotFound) {
 				continue
 			}
 			return nil, false, nil, err

@@ -260,6 +260,56 @@
         ],
         "type": "string"
       },
+      "GearRunTestRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/GearTestMode"
+          },
+          "params": {
+            "additionalProperties": true,
+            "description": "Mode-specific test parameters.",
+            "type": "object"
+          },
+          "workflow": {
+            "description": "Optional workflow or agent override for the test mode.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode"
+        ],
+        "type": "object"
+      },
+      "GearRunTestResponse": {
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/GearTestMode"
+          },
+          "status": {
+            "description": "Current test run status.",
+            "enum": [
+              "started"
+            ],
+            "type": "string",
+            "x-enum-varnames": [
+              "Started"
+            ]
+          },
+          "workflow": {
+            "description": "Workflow or agent selected for this test run.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "status"
+        ],
+        "type": "object"
+      },
       "GearStatus": {
         "enum": [
           "unspecified",
@@ -267,6 +317,22 @@
           "blocked"
         ],
         "type": "string"
+      },
+      "GearTestMode": {
+        "description": "Built-in gear test mode.",
+        "enum": [
+          "audio-play",
+          "audio-loopback",
+          "download",
+          "upload"
+        ],
+        "type": "string",
+        "x-enum-varnames": [
+          "AudioPlay",
+          "AudioLoopback",
+          "Download",
+          "Upload"
+        ]
       },
       "HardwareInfo": {
         "properties": {
@@ -397,7 +463,8 @@
           "gear.ota.get",
           "gear.registration.get",
           "gear.registration.register",
-          "gear.runtime.get"
+          "gear.runtime.get",
+          "gear.test.run"
         ],
         "type": "string"
       },
@@ -437,6 +504,9 @@
               },
               {
                 "$ref": "#/components/schemas/GearGetRuntimeRequest"
+              },
+              {
+                "$ref": "#/components/schemas/GearRunTestRequest"
               }
             ]
           },
@@ -487,6 +557,9 @@
               },
               {
                 "$ref": "#/components/schemas/GearGetRuntimeResponse"
+              },
+              {
+                "$ref": "#/components/schemas/GearRunTestResponse"
               }
             ]
           },
@@ -521,6 +594,9 @@
           "created_at": {
             "format": "date-time",
             "type": "string"
+          },
+          "device": {
+            "$ref": "#/components/schemas/DeviceInfo"
           },
           "public_key": {
             "type": "string"

@@ -31,10 +31,10 @@ storage:
     kind: depotstore
     depot-fs: {}
 stores:
-  gears:
+  peers:
     kind: keyvalue
     storage: memory
-    prefix: gears
+    prefix: peers
   credentials:
     kind: keyvalue
     storage: memory
@@ -66,8 +66,8 @@ stores:
       filesystem:
         storage: local-files
         base-dir: firmware
-gears:
-  store: gears
+peers:
+  store: peers
 credentials:
   store: credentials
 minimax:
@@ -117,7 +117,7 @@ stores:
   mem:
     kind: keyvalue
     backend: memory
-gears:
+peers:
   store: mem
 depots:
   store: mem
@@ -167,7 +167,7 @@ stores:
       filesystem:
         storage: fw-files
         base-dir: firmware
-gears:
+peers:
   store: fw
 credentials:
   store: fw
@@ -205,7 +205,7 @@ stores:
   mem:
     kind: keyvalue
     backend: memory
-gears:
+peers:
   store: mem
 depots:
   store: mem
@@ -269,7 +269,7 @@ stores:
   bad:
     kind: keyvalue
     backend: unknown
-gears:
+peers:
   store: bad
 depots:
   store: bad
@@ -299,10 +299,10 @@ storage:
     kind: depotstore
     depot-fs: {}
 stores:
-  gears:
+  peers:
     kind: keyvalue
     storage: main-kv
-    prefix: gears
+    prefix: peers
   credentials:
     kind: keyvalue
     storage: main-kv
@@ -334,8 +334,8 @@ stores:
       filesystem:
         storage: local-files
         base-dir: firmware
-gears:
-  store: gears
+peers:
+  store: peers
 credentials:
   store: credentials
 minimax:

@@ -15,12 +15,12 @@ import (
 	"testing"
 	"time"
 
+	adminui "github.com/GizClaw/gizclaw-go/cmd/ui/admin"
+	playui "github.com/GizClaw/gizclaw-go/cmd/ui/play"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
-	adminui "github.com/GizClaw/gizclaw-go/cmd/ui/admin"
-	playui "github.com/GizClaw/gizclaw-go/cmd/ui/play"
 	"github.com/pion/webrtc/v4"
 	"github.com/playwright-community/playwright-go"
 
@@ -29,15 +29,15 @@ import (
 )
 
 const (
-	SeedDepotName             = itest.SeedDepotName
-	SeedCredentialName        = itest.SeedCredentialName
-	SeedMiniMaxTenantName     = itest.SeedMiniMaxTenantName
-	SeedVoiceID               = itest.SeedVoiceID
-	SeedVolcCredentialName    = itest.SeedVolcCredentialName
-	SeedVolcTenantName        = itest.SeedVolcTenantName
-	SeedVolcVoiceID           = itest.SeedVolcVoiceID
-	SeedWorkflowName = itest.SeedWorkflowName
-	SeedWorkspaceName         = itest.SeedWorkspaceName
+	SeedDepotName          = itest.SeedDepotName
+	SeedCredentialName     = itest.SeedCredentialName
+	SeedMiniMaxTenantName  = itest.SeedMiniMaxTenantName
+	SeedVoiceID            = itest.SeedVoiceID
+	SeedVolcCredentialName = itest.SeedVolcCredentialName
+	SeedVolcTenantName     = itest.SeedVolcTenantName
+	SeedVolcVoiceID        = itest.SeedVolcVoiceID
+	SeedWorkflowName       = itest.SeedWorkflowName
+	SeedWorkspaceName      = itest.SeedWorkspaceName
 )
 
 type Story struct {
@@ -350,7 +350,7 @@ func convertUIAPIType[T any](value any) (T, error) {
 func approveGear(t testing.TB, ctx context.Context, api *adminservice.ClientWithResponses, publicKey string) {
 	t.Helper()
 
-	resp, err := api.ApproveGearWithResponse(ctx, publicKey, adminservice.ApproveRequest{Role: apitypes.GearRoleGear})
+	resp, err := api.ApprovePeerWithResponse(ctx, publicKey, adminservice.ApproveRequest{Role: apitypes.GearRoleGear})
 	if err != nil {
 		t.Fatalf("approve %q: %v", publicKey, err)
 	}

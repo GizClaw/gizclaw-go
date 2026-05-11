@@ -25,8 +25,8 @@ type Server struct {
 	Store         depotstore.Store
 	MetadataStore kv.Store
 
-	// ResolveGearTarget maps a gear public key to the OTA depot/channel it should read from.
-	ResolveGearTarget func(ctx context.Context, publicKey giznet.PublicKey) (depot string, channel Channel, err error)
+	// ResolvePeerTarget maps a peer public key to the OTA depot/channel it should read from.
+	ResolvePeerTarget func(ctx context.Context, publicKey giznet.PublicKey) (depot string, channel Channel, err error)
 
 	mu      sync.Mutex
 	depotMu map[string]*sync.Mutex
@@ -52,7 +52,7 @@ type FirmwareAdminService interface {
 	PutChannel(context.Context, adminservice.PutChannelRequestObject) (adminservice.PutChannelResponseObject, error)
 	ReleaseDepot(context.Context, adminservice.ReleaseDepotRequestObject) (adminservice.ReleaseDepotResponseObject, error)
 	RollbackDepot(context.Context, adminservice.RollbackDepotRequestObject) (adminservice.RollbackDepotResponseObject, error)
-	GetGearOTA(context.Context, adminservice.GetGearOTARequestObject) (adminservice.GetGearOTAResponseObject, error)
+	GetPeerOTA(context.Context, adminservice.GetPeerOTARequestObject) (adminservice.GetPeerOTAResponseObject, error)
 }
 
 type FirmwareGearService interface {
@@ -209,11 +209,11 @@ func (s *Server) RollbackDepot(ctx context.Context, request adminservice.Rollbac
 	return adminservice.RollbackDepot200JSONResponse(depot), nil
 }
 
-// GetGearOTA implements `adminservice.StrictServerInterface.GetGearOTA`.
+// GetPeerOTA implements `adminservice.StrictServerInterface.GetPeerOTA`.
 // OTA is colocated here because firmware storage owns the underlying data.
-func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTARequestObject) (adminservice.GetGearOTAResponseObject, error) {
-	if s.ResolveGearTarget == nil {
-		return adminservice.GetGearOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", "gear target resolver not configured")), nil
+func (s *Server) GetPeerOTA(ctx context.Context, request adminservice.GetPeerOTARequestObject) (adminservice.GetPeerOTAResponseObject, error) {
+	if s.ResolvePeerTarget == nil {
+		return adminservice.GetPeerOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", "gear target resolver not configured")), nil
 	}
 	publicKey, err := url.PathUnescape(string(request.PublicKey))
 	if err != nil {
@@ -223,22 +223,22 @@ func (s *Server) GetGearOTA(ctx context.Context, request adminservice.GetGearOTA
 	if err := key.UnmarshalText([]byte(publicKey)); err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
-	depotName, channel, err := s.ResolveGearTarget(ctx, key)
+	depotName, channel, err := s.ResolvePeerTarget(ctx, key)
 	if err != nil || depotName == "" || channel == "" {
 		if err == nil {
 			err = fmt.Errorf("missing depot or channel")
 		}
-		return adminservice.GetGearOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
+		return adminservice.GetPeerOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
 	}
 	ota, err := s.resolveOTA(ctx, depotName, channel)
 	if err != nil {
-		return adminservice.GetGearOTA404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", err.Error())), nil
+		return adminservice.GetPeerOTA404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", err.Error())), nil
 	}
 	out, err := convertViaJSON[apitypes.OTASummary](ota)
 	if err != nil {
 		return getGearOTA500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	return adminservice.GetGearOTA200JSONResponse(out), nil
+	return adminservice.GetPeerOTA200JSONResponse(out), nil
 }
 
 // GetOTA implements `gearservice.StrictServerInterface.GetOTA`.
@@ -283,14 +283,14 @@ func (s *Server) DownloadFirmware(ctx context.Context, request gearservice.Downl
 }
 
 func (s *Server) resolveCallerTarget(ctx context.Context) (string, Channel, error) {
-	if s.ResolveGearTarget == nil {
+	if s.ResolvePeerTarget == nil {
 		return "", "", fmt.Errorf("gear target resolver not configured")
 	}
 	publicKey := gearservice.CallerPublicKey(ctx)
 	if publicKey.IsZero() {
 		return "", "", fmt.Errorf("caller public key not configured")
 	}
-	depotName, channel, err := s.ResolveGearTarget(ctx, publicKey)
+	depotName, channel, err := s.ResolvePeerTarget(ctx, publicKey)
 	if err != nil {
 		return "", "", err
 	}
@@ -347,7 +347,7 @@ func (s *Server) resolveOTAFile(ctx context.Context, depotName string, channel C
 
 type getGearOTA500JSONResponse apitypes.ErrorResponse
 
-func (response getGearOTA500JSONResponse) VisitGetGearOTAResponse(ctx *fiber.Ctx) error {
+func (response getGearOTA500JSONResponse) VisitGetPeerOTAResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 	return ctx.JSON(&response)

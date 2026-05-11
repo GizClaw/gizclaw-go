@@ -3,7 +3,7 @@
 ## User Story
 
 As a device-side developer, I want to register one client context and then read
-the public gear configuration path without relying on removed `play` CLI
+the public peer configuration path without relying on removed `play` CLI
 subcommands.
 
 ## Scenario

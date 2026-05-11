@@ -259,6 +259,12 @@ func TestRPCServerDispatchErrorPaths(t *testing.T) {
 			code:    400,
 		},
 		{
+			name:    "run test unimplemented",
+			server:  &rpcServer{},
+			request: newRPCRequest("run-test", rpcapi.RPCMethodGearTestRun, mustRPCParams(rpcapi.GearRunTestRequest{Mode: rpcapi.GearTestModeAudioPlay}, (*rpcapi.RPCRequest_Params).FromGearRunTestRequest)),
+			code:    rpcapi.RPCErrorCodeInternalError,
+		},
+		{
 			name:    "unexpected response",
 			server:  &rpcServer{gear: &fakeRPCGearService{unexpectedConfig: true}},
 			request: newRPCRequest("unexpected", rpcapi.RPCMethodGearConfigGet, mustRPCParams(rpcapi.GearGetConfigRequest{}, (*rpcapi.RPCRequest_Params).FromGearGetConfigRequest)),
@@ -281,6 +287,9 @@ func TestRPCServerDispatchErrorPaths(t *testing.T) {
 	}
 	if resp, err := (&rpcServer{gear: &fakeRPCGearService{}}).dispatch(context.Background(), newRPCRequest("register-missing", rpcapi.RPCMethodGearRegistrationRegister, nil)); err != nil || resp.Error == nil || resp.Error.Message != "missing params" {
 		t.Fatalf("dispatch(register missing params) = %+v, %v", resp, err)
+	}
+	if resp, err := (&rpcServer{}).dispatch(context.Background(), newRPCRequest("run-test-missing", rpcapi.RPCMethodGearTestRun, nil)); err != nil || resp.Error == nil || resp.Error.Message != "missing params" {
+		t.Fatalf("dispatch(run test missing params) = %+v, %v", resp, err)
 	}
 
 	var invalidParamsReq rpcapi.RPCRequest

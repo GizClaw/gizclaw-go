@@ -88,6 +88,21 @@ func (e GearRole) Valid() bool {
 	}
 }
 
+// Defines values for GearRunTestResponseStatus.
+const (
+	GearRunTestResponseStatusStarted GearRunTestResponseStatus = "started"
+)
+
+// Valid indicates whether the value is a known member of the GearRunTestResponseStatus enum.
+func (e GearRunTestResponseStatus) Valid() bool {
+	switch e {
+	case GearRunTestResponseStatusStarted:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GearStatus.
 const (
 	GearStatusActive      GearStatus = "active"
@@ -103,6 +118,30 @@ func (e GearStatus) Valid() bool {
 	case GearStatusBlocked:
 		return true
 	case GearStatusUnspecified:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GearTestMode.
+const (
+	GearTestModeAudioLoopback GearTestMode = "audio-loopback"
+	GearTestModeAudioPlay     GearTestMode = "audio-play"
+	GearTestModeDownload      GearTestMode = "download"
+	GearTestModeUpload        GearTestMode = "upload"
+)
+
+// Valid indicates whether the value is a known member of the GearTestMode enum.
+func (e GearTestMode) Valid() bool {
+	switch e {
+	case GearTestModeAudioLoopback:
+		return true
+	case GearTestModeAudioPlay:
+		return true
+	case GearTestModeDownload:
+		return true
+	case GearTestModeUpload:
 		return true
 	default:
 		return false
@@ -151,6 +190,7 @@ const (
 	RPCMethodGearRegistrationGet      RPCMethod = "gear.registration.get"
 	RPCMethodGearRegistrationRegister RPCMethod = "gear.registration.register"
 	RPCMethodGearRuntimeGet           RPCMethod = "gear.runtime.get"
+	RPCMethodGearTestRun              RPCMethod = "gear.test.run"
 	RPCMethodPeerPing                 RPCMethod = "peer.ping"
 	RPCMethodServerInfoGet            RPCMethod = "server.info.get"
 )
@@ -171,6 +211,8 @@ func (e RPCMethod) Valid() bool {
 	case RPCMethodGearRegistrationRegister:
 		return true
 	case RPCMethodGearRuntimeGet:
+		return true
+	case RPCMethodGearTestRun:
 		return true
 	case RPCMethodPeerPing:
 		return true
@@ -314,8 +356,40 @@ type GearRegisterResponse struct {
 // GearRole defines model for GearRole.
 type GearRole string
 
+// GearRunTestRequest defines model for GearRunTestRequest.
+type GearRunTestRequest struct {
+	// Mode Built-in gear test mode.
+	Mode GearTestMode `json:"mode"`
+
+	// Params Mode-specific test parameters.
+	Params *map[string]interface{} `json:"params,omitempty"`
+
+	// Workflow Optional workflow or agent override for the test mode.
+	Workflow *string `json:"workflow,omitempty"`
+}
+
+// GearRunTestResponse defines model for GearRunTestResponse.
+type GearRunTestResponse struct {
+	Message *string `json:"message,omitempty"`
+
+	// Mode Built-in gear test mode.
+	Mode GearTestMode `json:"mode"`
+
+	// Status Current test run status.
+	Status GearRunTestResponseStatus `json:"status"`
+
+	// Workflow Workflow or agent selected for this test run.
+	Workflow *string `json:"workflow,omitempty"`
+}
+
+// GearRunTestResponseStatus Current test run status.
+type GearRunTestResponseStatus string
+
 // GearStatus defines model for GearStatus.
 type GearStatus string
+
+// GearTestMode Built-in gear test mode.
+type GearTestMode string
 
 // HardwareInfo defines model for HardwareInfo.
 type HardwareInfo struct {
@@ -389,13 +463,14 @@ type RPCVersion int
 
 // Registration defines model for Registration.
 type Registration struct {
-	ApprovedAt     *time.Time `json:"approved_at,omitempty"`
-	AutoRegistered *bool      `json:"auto_registered,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
-	PublicKey      string     `json:"public_key"`
-	Role           GearRole   `json:"role"`
-	Status         GearStatus `json:"status"`
-	UpdatedAt      time.Time  `json:"updated_at"`
+	ApprovedAt     *time.Time  `json:"approved_at,omitempty"`
+	AutoRegistered *bool       `json:"auto_registered,omitempty"`
+	CreatedAt      time.Time   `json:"created_at"`
+	Device         *DeviceInfo `json:"device,omitempty"`
+	PublicKey      string      `json:"public_key"`
+	Role           GearRole    `json:"role"`
+	Status         GearStatus  `json:"status"`
+	UpdatedAt      time.Time   `json:"updated_at"`
 }
 
 // Runtime defines model for Runtime.
@@ -654,6 +729,32 @@ func (t *RPCRequest_Params) MergeGearGetRuntimeRequest(v GearGetRuntimeRequest) 
 	return err
 }
 
+// AsGearRunTestRequest returns the union data inside the RPCRequest_Params as a GearRunTestRequest
+func (t RPCRequest_Params) AsGearRunTestRequest() (GearRunTestRequest, error) {
+	var body GearRunTestRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGearRunTestRequest overwrites any union data inside the RPCRequest_Params as the provided GearRunTestRequest
+func (t *RPCRequest_Params) FromGearRunTestRequest(v GearRunTestRequest) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGearRunTestRequest performs a merge with any union data inside the RPCRequest_Params, using the provided GearRunTestRequest
+func (t *RPCRequest_Params) MergeGearRunTestRequest(v GearRunTestRequest) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t RPCRequest_Params) MarshalJSON() ([]byte, error) {
 	b, err := t.union.MarshalJSON()
 	return b, err
@@ -888,6 +989,32 @@ func (t *RPCResponse_Result) FromGearGetRuntimeResponse(v GearGetRuntimeResponse
 
 // MergeGearGetRuntimeResponse performs a merge with any union data inside the RPCResponse_Result, using the provided GearGetRuntimeResponse
 func (t *RPCResponse_Result) MergeGearGetRuntimeResponse(v GearGetRuntimeResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGearRunTestResponse returns the union data inside the RPCResponse_Result as a GearRunTestResponse
+func (t RPCResponse_Result) AsGearRunTestResponse() (GearRunTestResponse, error) {
+	var body GearRunTestResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGearRunTestResponse overwrites any union data inside the RPCResponse_Result as the provided GearRunTestResponse
+func (t *RPCResponse_Result) FromGearRunTestResponse(v GearRunTestResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGearRunTestResponse performs a merge with any union data inside the RPCResponse_Result, using the provided GearRunTestResponse
+func (t *RPCResponse_Result) MergeGearRunTestResponse(v GearRunTestResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
