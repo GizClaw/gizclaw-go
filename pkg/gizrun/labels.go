@@ -2,6 +2,7 @@ package gizrun
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizrun/internal/labelset"
 )
@@ -33,8 +34,28 @@ const (
 	tokenPrompt    = "prompt"
 )
 
+const (
+	GenxProvider  = genxProvider
+	GenxMethod    = genxMethod
+	GenxModel     = genxModel
+	GenxStatus    = genxStatus
+	GenxTokenType = genxTokenType
+)
+
 func tagHTTP(ctx context.Context, kvs ...string) context.Context {
 	return labelset.Tag(ctx, nsHTTP, kvs...)
+}
+
+func TagGenx(ctx context.Context, kvs ...string) context.Context {
+	return tagGenx(ctx, kvs...)
+}
+
+func GenxAttr(ctx context.Context) (slog.Attr, bool) {
+	labels, ok := genxLabels(ctx)
+	if !ok {
+		return slog.Attr{}, false
+	}
+	return labels.Attr(), true
 }
 
 func tagGenx(ctx context.Context, kvs ...string) context.Context {

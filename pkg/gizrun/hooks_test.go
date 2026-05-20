@@ -18,7 +18,7 @@ import (
 
 func TestServeParsesCommandFlagsOnly(t *testing.T) {
 	resetInitHooksForTest(t)
-	resetDefaultCmdHandlerForTest(t)
+	resetDefaultCmdMuxForTest(t)
 	resetFlagSetForTest(t)
 	configFile := filepath.Join(t.TempDir(), "app.yaml")
 	if err := os.WriteFile(configFile, nil, 0o600); err != nil {
@@ -37,9 +37,9 @@ func TestServeParsesCommandFlagsOnly(t *testing.T) {
 		flag.StringVar(&value, "config", "", "config path")
 		return nil
 	})
-	if err := HandleCmd("chat", CmdHandleFunc(func(_ context.Context, args []string, flags []string) error {
-		gotArgs = append([]string(nil), args...)
-		gotFlags = append([]string(nil), flags...)
+	if err := HandleCmd("chat", CmdHandleFunc(func(_ context.Context, commandLine CommandLine) error {
+		gotArgs = append([]string(nil), commandLine.Args...)
+		gotFlags = append([]string(nil), commandLine.Flags...)
 		return nil
 	})); err != nil {
 		t.Fatalf("HandleCmd failed: %v", err)
@@ -63,7 +63,7 @@ func TestServeParsesCommandFlagsOnly(t *testing.T) {
 func TestServePassesFullCommandArgs(t *testing.T) {
 	resetRuntimeForTest(t)
 	resetInitHooksForTest(t)
-	resetDefaultCmdHandlerForTest(t)
+	resetDefaultCmdMuxForTest(t)
 	resetFlagSetForTest(t)
 
 	previousArgs := os.Args
@@ -74,9 +74,9 @@ func TestServePassesFullCommandArgs(t *testing.T) {
 
 	var gotArgs []string
 	var gotFlags []string
-	if err := HandleCmd("chat/hello", CmdHandleFunc(func(_ context.Context, args []string, flags []string) error {
-		gotArgs = append([]string(nil), args...)
-		gotFlags = append([]string(nil), flags...)
+	if err := HandleCmd("chat/hello", CmdHandleFunc(func(_ context.Context, commandLine CommandLine) error {
+		gotArgs = append([]string(nil), commandLine.Args...)
+		gotFlags = append([]string(nil), commandLine.Flags...)
 		return nil
 	})); err != nil {
 		t.Fatalf("HandleCmd failed: %v", err)

@@ -12,7 +12,7 @@ import (
 )
 
 type RunContext struct {
-	cmdHandler      *cmdhandler.CmdHandler
+	cmdMux          *cmdhandler.CmdMux
 	debugApp        *fiber.App
 	debugListening  bool
 	logHandlers     []slog.Handler
@@ -37,7 +37,7 @@ type RunContext struct {
 
 func newRunContext() *RunContext {
 	ctx := &RunContext{
-		cmdHandler:   cmdhandler.New(),
+		cmdMux:       cmdhandler.NewMux(),
 		configParser: configfile.NewYamlParser(),
 		debugApp:     newDebugFiberApp(),
 		publicApp:    newFiberApp(),
