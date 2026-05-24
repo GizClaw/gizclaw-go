@@ -10,6 +10,14 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
+func testServerPublicKeyText(fill byte) string {
+	var key giznet.PublicKey
+	for i := range key {
+		key[i] = fill
+	}
+	return key.String()
+}
+
 func TestDialFromContextNoActiveContext(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 
@@ -29,13 +37,13 @@ func TestDialFromContextInvalidServerPublicKey(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DefaultStore error = %v", err)
 	}
-	if err := store.Create("local", "127.0.0.1:9820", strings.Repeat("ab", giznet.KeySize)); err != nil {
+	if err := store.Create("local", "127.0.0.1:9820", testServerPublicKeyText(0xab)); err != nil {
 		t.Fatalf("Create error = %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(store.Root, "local", "config.yaml"), []byte(`
 server:
   address: 127.0.0.1:9820
-  public-key: not-hex
+  public-key: not-a-key
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}

@@ -43,8 +43,6 @@ type Server struct {
 
 type PeerAdminService interface {
 	ListPeers(context.Context, adminservice.ListPeersRequestObject) (adminservice.ListPeersResponseObject, error)
-	ListPeersByCertification(context.Context, adminservice.ListPeersByCertificationRequestObject) (adminservice.ListPeersByCertificationResponseObject, error)
-	ListPeersByFirmware(context.Context, adminservice.ListPeersByFirmwareRequestObject) (adminservice.ListPeersByFirmwareResponseObject, error)
 	ResolvePeerByIMEI(context.Context, adminservice.ResolvePeerByIMEIRequestObject) (adminservice.ResolvePeerByIMEIResponseObject, error)
 	ListPeersByLabel(context.Context, adminservice.ListPeersByLabelRequestObject) (adminservice.ListPeersByLabelResponseObject, error)
 	ResolvePeerBySN(context.Context, adminservice.ResolvePeerBySNRequestObject) (adminservice.ResolvePeerBySNResponseObject, error)
@@ -53,6 +51,7 @@ type PeerAdminService interface {
 	GetPeerConfig(context.Context, adminservice.GetPeerConfigRequestObject) (adminservice.GetPeerConfigResponseObject, error)
 	PutPeerConfig(context.Context, adminservice.PutPeerConfigRequestObject) (adminservice.PutPeerConfigResponseObject, error)
 	GetPeerInfo(context.Context, adminservice.GetPeerInfoRequestObject) (adminservice.GetPeerInfoResponseObject, error)
+	PutPeerInfo(context.Context, adminservice.PutPeerInfoRequestObject) (adminservice.PutPeerInfoResponseObject, error)
 	GetPeerRuntime(context.Context, adminservice.GetPeerRuntimeRequestObject) (adminservice.GetPeerRuntimeResponseObject, error)
 	ApprovePeer(context.Context, adminservice.ApprovePeerRequestObject) (adminservice.ApprovePeerResponseObject, error)
 	BlockPeer(context.Context, adminservice.BlockPeerRequestObject) (adminservice.BlockPeerResponseObject, error)
@@ -86,34 +85,6 @@ func (s *Server) ListPeers(ctx context.Context, request adminservice.ListPeersRe
 	return adminservice.ListPeers200JSONResponse(toAdminRegistrationList(items, hasNext, nextCursor)), nil
 }
 
-// ListPeersByCertification implements `adminservice.StrictServerInterface.ListPeersByCertification`.
-func (s *Server) ListPeersByCertification(ctx context.Context, request adminservice.ListPeersByCertificationRequestObject) (adminservice.ListPeersByCertificationResponseObject, error) {
-	id, err := pathUnescape(request.Id)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
-	}
-	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
-	items, hasNext, nextCursor, err := s.listByCertification(ctx, apitypes.GearCertificationType(request.Type), apitypes.GearCertificationAuthority(request.Authority), id, cursor, limit)
-	if err != nil {
-		return adminservice.ListPeersByCertification500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
-	}
-	return adminservice.ListPeersByCertification200JSONResponse(toAdminRegistrationList(items, hasNext, nextCursor)), nil
-}
-
-// ListPeersByFirmware implements `adminservice.StrictServerInterface.ListPeersByFirmware`.
-func (s *Server) ListPeersByFirmware(ctx context.Context, request adminservice.ListPeersByFirmwareRequestObject) (adminservice.ListPeersByFirmwareResponseObject, error) {
-	depot, err := pathUnescape(request.Depot)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
-	}
-	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
-	items, hasNext, nextCursor, err := s.listByFirmware(ctx, depot, apitypes.GearFirmwareChannel(request.Channel), cursor, limit)
-	if err != nil {
-		return adminservice.ListPeersByFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
-	}
-	return adminservice.ListPeersByFirmware200JSONResponse(toAdminRegistrationList(items, hasNext, nextCursor)), nil
-}
-
 // ResolvePeerByIMEI implements `adminservice.StrictServerInterface.ResolvePeerByIMEI`.
 func (s *Server) ResolvePeerByIMEI(ctx context.Context, request adminservice.ResolvePeerByIMEIRequestObject) (adminservice.ResolvePeerByIMEIResponseObject, error) {
 	tac, err := pathUnescape(request.Tac)
@@ -128,7 +99,7 @@ func (s *Server) ResolvePeerByIMEI(ctx context.Context, request adminservice.Res
 	if err != nil {
 		return adminservice.ResolvePeerByIMEI404JSONResponse(apitypes.NewErrorResponse("PEER_IMEI_NOT_FOUND", err.Error())), nil
 	}
-	return adminservice.ResolvePeerByIMEI200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey}), nil
+	return adminservice.ResolvePeerByIMEI200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey.String()}), nil
 }
 
 // ListPeersByLabel implements `adminservice.StrictServerInterface.ListPeersByLabel`.
@@ -159,7 +130,7 @@ func (s *Server) ResolvePeerBySN(ctx context.Context, request adminservice.Resol
 	if err != nil {
 		return adminservice.ResolvePeerBySN404JSONResponse(apitypes.NewErrorResponse("PEER_SN_NOT_FOUND", err.Error())), nil
 	}
-	return adminservice.ResolvePeerBySN200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey}), nil
+	return adminservice.ResolvePeerBySN200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey.String()}), nil
 }
 
 // DeletePeer implements `adminservice.StrictServerInterface.DeletePeer`.
@@ -231,6 +202,30 @@ func (s *Server) GetPeerInfo(ctx context.Context, request adminservice.GetPeerIn
 		return adminservice.GetPeerInfo404JSONResponse(apitypes.NewErrorResponse("PEER_NOT_FOUND", err.Error())), nil
 	}
 	return adminservice.GetPeerInfo200JSONResponse(gear.Device), nil
+}
+
+// PutPeerInfo implements `adminservice.StrictServerInterface.PutPeerInfo`.
+func (s *Server) PutPeerInfo(ctx context.Context, request adminservice.PutPeerInfoRequestObject) (adminservice.PutPeerInfoResponseObject, error) {
+	if request.Body == nil {
+		return adminservice.PutPeerInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_DEVICE_INFO", "request body required")), nil
+	}
+	publicKey, err := parsePublicKeyParam(string(request.PublicKey))
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	info, err := toAdminDeviceInfo(*request.Body)
+	if err != nil {
+		return adminservice.PutPeerInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_DEVICE_INFO", err.Error())), nil
+	}
+	gear, err := s.putInfo(ctx, publicKey, info)
+	if err != nil {
+		return adminservice.PutPeerInfo404JSONResponse(apitypes.NewErrorResponse("PEER_NOT_FOUND", err.Error())), nil
+	}
+	out, err := toAdminDeviceInfo(gear.Device)
+	if err != nil {
+		return adminservice.PutPeerInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_DEVICE_INFO", err.Error())), nil
+	}
+	return adminservice.PutPeerInfo200JSONResponse(out), nil
 }
 
 // GetPeerRuntime implements `adminservice.StrictServerInterface.GetPeerRuntime`.
@@ -394,7 +389,7 @@ func parsePublicKeyParam(value string) (giznet.PublicKey, error) {
 	return publicKeyFromText(text)
 }
 
-func normalizeListParams(cursor *adminservice.Cursor, limit *adminservice.Limit) (string, int) {
+func normalizeListParams(cursor *string, limit *int32) (string, int) {
 	nextCursor := ""
 	if cursor != nil {
 		nextCursor = string(*cursor)

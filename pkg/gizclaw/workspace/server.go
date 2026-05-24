@@ -234,9 +234,9 @@ func normalizeWorkspaceUpsert(in adminservice.WorkspaceUpsert, expectedName stri
 		return adminservice.WorkspaceUpsert{}, errors.New("workflow_name is required")
 	}
 	return adminservice.WorkspaceUpsert{
-		Name:         apitypes.WorkspaceName(name),
+		Name:         string(name),
 		Parameters:   cloneParameters(in.Parameters),
-		WorkflowName: apitypes.WorkflowName(workflowName),
+		WorkflowName: string(workflowName),
 	}, nil
 }
 
@@ -263,7 +263,7 @@ func escapeStoreSegment(value string) string {
 	return strings.ReplaceAll(value, ":", "%3A")
 }
 
-func normalizeListParams(cursor *adminservice.Cursor, limit *adminservice.Limit) (string, int) {
+func normalizeListParams(cursor *string, limit *int32) (string, int) {
 	nextCursor := ""
 	if cursor != nil {
 		nextCursor = string(*cursor)

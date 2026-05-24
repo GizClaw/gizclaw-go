@@ -205,8 +205,26 @@
               "additionalProperties": true
             }
           },
+          "temperature": {
+            "type": "number",
+            "format": "float"
+          },
+          "thinking": {
+            "$ref": "#/components/schemas/ThinkingOptions"
+          },
           "stream": {
             "type": "boolean"
+          }
+        }
+      },
+      "ThinkingOptions": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "level": {
+            "type": "string"
           }
         }
       },

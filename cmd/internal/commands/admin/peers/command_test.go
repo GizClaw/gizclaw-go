@@ -3,7 +3,6 @@ package peerscmd
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,51 +10,8 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
-
-func TestSetFirmwareChannelMergesExistingConfig(t *testing.T) {
-	original := openPeerConfigClient
-	fake := &fakePeerConfigClient{
-		getCfg: apitypes.Configuration{
-			Certifications: &[]apitypes.GearCertification{{
-				Type:      apitypes.GearCertificationType("certification"),
-				Authority: apitypes.GearCertificationAuthority("ce"),
-				Id:        "ce-001",
-			}},
-			Firmware: &apitypes.FirmwareConfig{Channel: ptrChannel("beta")},
-		},
-	}
-	openPeerConfigClient = func(string) (peerConfigClient, error) {
-		return fake, nil
-	}
-	defer func() { openPeerConfigClient = original }()
-
-	cmd := NewCmd()
-	var out bytes.Buffer
-	cmd.SetOut(&out)
-	cmd.SetArgs([]string{"set-firmware-channel", "device-pk", "stable"})
-	if err := cmd.Execute(); err != nil {
-		t.Fatalf("Execute error: %v", err)
-	}
-
-	if fake.putCfg.Firmware == nil || fake.putCfg.Firmware.Channel == nil || *fake.putCfg.Firmware.Channel != "stable" {
-		t.Fatalf("channel = %+v", fake.putCfg.Firmware)
-	}
-	if fake.putCfg.Certifications == nil || len(*fake.putCfg.Certifications) != 1 || (*fake.putCfg.Certifications)[0].Id != "ce-001" {
-		t.Fatalf("certifications lost: %+v", fake.putCfg.Certifications)
-	}
-
-	var got apitypes.Configuration
-	if err := json.Unmarshal(out.Bytes(), &got); err != nil {
-		t.Fatalf("decode output: %v", err)
-	}
-	if got.Firmware == nil || got.Firmware.Channel == nil || *got.Firmware.Channel != "stable" {
-		t.Fatalf("output channel = %+v", got.Firmware)
-	}
-	if got.Certifications == nil || len(*got.Certifications) != 1 {
-		t.Fatalf("output certifications = %+v", got.Certifications)
-	}
-}
 
 func TestPutConfigUsesFilePayload(t *testing.T) {
 	original := openPeerConfigClient
@@ -66,7 +22,7 @@ func TestPutConfigUsesFilePayload(t *testing.T) {
 	defer func() { openPeerConfigClient = original }()
 
 	file := filepath.Join(t.TempDir(), "config.json")
-	data := []byte(`{"firmware":{"channel":"beta"}}`)
+	data := []byte(`{"view":"under-12"}`)
 	if err := os.WriteFile(file, data, 0o644); err != nil {
 		t.Fatalf("write config: %v", err)
 	}
@@ -76,7 +32,7 @@ func TestPutConfigUsesFilePayload(t *testing.T) {
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute error: %v", err)
 	}
-	if fake.putCfg.Firmware == nil || fake.putCfg.Firmware.Channel == nil || *fake.putCfg.Firmware.Channel != "beta" {
+	if fake.putCfg.View == nil || *fake.putCfg.View != "under-12" {
 		t.Fatalf("put config = %+v", fake.putCfg)
 	}
 }
@@ -92,10 +48,7 @@ func TestPeerCommandsReturnContextErrors(t *testing.T) {
 		{"info", "device-pk"},
 		{"config", "device-pk"},
 		{"runtime", "device-pk"},
-		{"ota", "device-pk"},
 		{"list-by-label", "batch", "test"},
-		{"list-by-certification", "certification", "ce", "ce-001"},
-		{"list-by-firmware", "demo", "stable"},
 		{"delete", "device-pk"},
 		{"refresh", "device-pk"},
 	}
@@ -124,10 +77,7 @@ func TestPeerCommandsUseClientOperations(t *testing.T) {
 		{"info", "device-pk"},
 		{"config", "device-pk"},
 		{"runtime", "device-pk"},
-		{"ota", "device-pk"},
 		{"list-by-label", "batch", "test"},
-		{"list-by-certification", "certification", "ce", "ce-001"},
-		{"list-by-firmware", "demo", "stable"},
 		{"delete", "device-pk"},
 		{"refresh", "device-pk"},
 	}
@@ -160,15 +110,13 @@ func stubPeerCommandClients(t *testing.T) func() {
 	originalConfig := getPeerConfig
 	originalPutConfig := putPeerConfig
 	originalRuntime := getPeerRuntime
-	originalOTA := getPeerOTA
 	originalListLabel := listPeersByLabel
-	originalListCertification := listPeersByCertification
-	originalListFirmware := listPeersByFirmware
 	originalDelete := deletePeer
 	originalRefresh := refreshPeer
 
+	devicePublicKey := giznet.PublicKey{1}
 	registration := apitypes.Registration{
-		PublicKey: "device-pk",
+		PublicKey: devicePublicKey.String(),
 		Role:      apitypes.GearRoleGear,
 		Status:    apitypes.GearStatusActive,
 	}
@@ -202,23 +150,14 @@ func stubPeerCommandClients(t *testing.T) func() {
 		online := true
 		return apitypes.Runtime{Online: online}, nil
 	}
-	getPeerOTA = func(context.Context, *gizclaw.Client, string) (apitypes.OTASummary, error) {
-		return apitypes.OTASummary{}, nil
-	}
 	listPeersByLabel = func(context.Context, *gizclaw.Client, string, string) ([]apitypes.Registration, error) {
-		return []apitypes.Registration{registration}, nil
-	}
-	listPeersByCertification = func(context.Context, *gizclaw.Client, apitypes.GearCertificationType, apitypes.GearCertificationAuthority, string) ([]apitypes.Registration, error) {
-		return []apitypes.Registration{registration}, nil
-	}
-	listPeersByFirmware = func(context.Context, *gizclaw.Client, string, apitypes.GearFirmwareChannel) ([]apitypes.Registration, error) {
 		return []apitypes.Registration{registration}, nil
 	}
 	deletePeer = func(context.Context, *gizclaw.Client, string) (apitypes.Registration, error) {
 		return registration, nil
 	}
 	refreshPeer = func(context.Context, *gizclaw.Client, string) (adminservice.RefreshResult, error) {
-		return adminservice.RefreshResult{Gear: apitypes.Gear{PublicKey: "device-pk"}}, nil
+		return adminservice.RefreshResult{Gear: apitypes.Gear{PublicKey: devicePublicKey.String()}}, nil
 	}
 
 	return func() {
@@ -233,10 +172,7 @@ func stubPeerCommandClients(t *testing.T) func() {
 		getPeerConfig = originalConfig
 		putPeerConfig = originalPutConfig
 		getPeerRuntime = originalRuntime
-		getPeerOTA = originalOTA
 		listPeersByLabel = originalListLabel
-		listPeersByCertification = originalListCertification
-		listPeersByFirmware = originalListFirmware
 		deletePeer = originalDelete
 		refreshPeer = originalRefresh
 	}
@@ -257,8 +193,3 @@ func (f *fakePeerConfigClient) PutPeerConfig(_ context.Context, _ string, cfg ap
 }
 
 func (f *fakePeerConfigClient) Close() error { return nil }
-
-func ptrChannel(value string) *apitypes.GearFirmwareChannel {
-	channel := apitypes.GearFirmwareChannel(value)
-	return &channel
-}

@@ -18,10 +18,11 @@ type Config struct {
 	Stores         map[string]stores.Config
 	Peers          PeersConfig
 	Credentials    CredentialsConfig
+	Firmwares      FirmwaresConfig
 	MiniMax        MiniMaxConfig
 	Workspaces     WorkspacesConfig
 	Workflows      WorkflowsConfig
-	Depots         DepotsConfig
+	ACL            ACLConfig
 }
 
 type PeersConfig struct {
@@ -29,6 +30,10 @@ type PeersConfig struct {
 }
 
 type CredentialsConfig struct {
+	Store string `yaml:"store"`
+}
+
+type FirmwaresConfig struct {
 	Store string `yaml:"store"`
 }
 
@@ -46,9 +51,8 @@ type WorkflowsConfig struct {
 	Store string `yaml:"store"`
 }
 
-type DepotsConfig struct {
-	Store         string `yaml:"store"`
-	MetadataStore string `yaml:"metadata-store"`
+type ACLConfig struct {
+	Store string `yaml:"store"`
 }
 
 type ConfigFile struct {
@@ -58,10 +62,11 @@ type ConfigFile struct {
 	Stores         map[string]stores.Config  `yaml:"stores"`
 	Peers          PeersConfig               `yaml:"peers"`
 	Credentials    CredentialsConfig         `yaml:"credentials"`
+	Firmwares      FirmwaresConfig           `yaml:"firmwares"`
 	MiniMax        MiniMaxConfig             `yaml:"minimax"`
 	Workspaces     WorkspacesConfig          `yaml:"workspaces"`
 	Workflows      WorkflowsConfig           `yaml:"workflows"`
-	Depots         DepotsConfig              `yaml:"depots"`
+	ACL            ACLConfig                 `yaml:"acl"`
 }
 
 func LoadConfig(path string) (ConfigFile, error) {
@@ -76,10 +81,11 @@ func LoadConfig(path string) (ConfigFile, error) {
 		Stores         map[string]stores.Config  `yaml:"stores"`
 		Peers          PeersConfig               `yaml:"peers"`
 		Credentials    CredentialsConfig         `yaml:"credentials"`
+		Firmwares      FirmwaresConfig           `yaml:"firmwares"`
 		MiniMax        MiniMaxConfig             `yaml:"minimax"`
 		Workspaces     WorkspacesConfig          `yaml:"workspaces"`
 		Workflows      WorkflowsConfig           `yaml:"workflows"`
-		Depots         DepotsConfig              `yaml:"depots"`
+		ACL            ACLConfig                 `yaml:"acl"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return ConfigFile{}, err
@@ -98,10 +104,11 @@ func LoadConfig(path string) (ConfigFile, error) {
 		Stores:         raw.Stores,
 		Peers:          raw.Peers,
 		Credentials:    raw.Credentials,
+		Firmwares:      raw.Firmwares,
 		MiniMax:        raw.MiniMax,
 		Workspaces:     raw.Workspaces,
 		Workflows:      raw.Workflows,
-		Depots:         raw.Depots,
+		ACL:            raw.ACL,
 	}
 	return cfg, nil
 }
@@ -127,10 +134,11 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	}
 	cfg.Peers = mergePeersConfig(cfg.Peers, fileCfg.Peers)
 	cfg.Credentials = mergeCredentialsConfig(cfg.Credentials, fileCfg.Credentials)
+	cfg.Firmwares = mergeFirmwaresConfig(cfg.Firmwares, fileCfg.Firmwares)
 	cfg.MiniMax = mergeMiniMaxConfig(cfg.MiniMax, fileCfg.MiniMax)
 	cfg.Workspaces = mergeWorkspacesConfig(cfg.Workspaces, fileCfg.Workspaces)
 	cfg.Workflows = mergeWorkflowsConfig(cfg.Workflows, fileCfg.Workflows)
-	cfg.Depots = mergeDepotsConfig(cfg.Depots, fileCfg.Depots)
+	cfg.ACL = mergeACLConfig(cfg.ACL, fileCfg.ACL)
 	return cfg, nil
 }
 
@@ -141,17 +149,14 @@ func mergePeersConfig(runtime PeersConfig, file PeersConfig) PeersConfig {
 	return runtime
 }
 
-func mergeDepotsConfig(runtime DepotsConfig, file DepotsConfig) DepotsConfig {
+func mergeCredentialsConfig(runtime CredentialsConfig, file CredentialsConfig) CredentialsConfig {
 	if runtime.Store == "" {
 		runtime.Store = file.Store
-	}
-	if runtime.MetadataStore == "" {
-		runtime.MetadataStore = file.MetadataStore
 	}
 	return runtime
 }
 
-func mergeCredentialsConfig(runtime CredentialsConfig, file CredentialsConfig) CredentialsConfig {
+func mergeFirmwaresConfig(runtime FirmwaresConfig, file FirmwaresConfig) FirmwaresConfig {
 	if runtime.Store == "" {
 		runtime.Store = file.Store
 	}
@@ -185,6 +190,13 @@ func mergeWorkflowsConfig(runtime WorkflowsConfig, file WorkflowsConfig) Workflo
 	return runtime
 }
 
+func mergeACLConfig(runtime ACLConfig, file ACLConfig) ACLConfig {
+	if runtime.Store == "" {
+		runtime.Store = file.Store
+	}
+	return runtime
+}
+
 func prepareConfig(cfg Config) (Config, error) {
 	defaults := DefaultConfig()
 	if cfg.ListenAddr == "" {
@@ -207,14 +219,14 @@ func (cfg Config) validate() error {
 	if cfg.Peers.Store == "" {
 		return fmt.Errorf("server: peers.store is required")
 	}
-	if cfg.Depots.Store == "" {
-		return fmt.Errorf("server: depots.store is required")
-	}
 	if len(cfg.Storage) == 0 {
 		return nil
 	}
 	if cfg.Credentials.Store == "" {
 		return fmt.Errorf("server: credentials.store is required")
+	}
+	if cfg.Firmwares.Store == "" {
+		return fmt.Errorf("server: firmwares.store is required")
 	}
 	if cfg.MiniMax.TenantsStore == "" {
 		return fmt.Errorf("server: minimax.tenants-store is required")
@@ -231,8 +243,8 @@ func (cfg Config) validate() error {
 	if cfg.Workflows.Store == "" {
 		return fmt.Errorf("server: workflows.store is required")
 	}
-	if cfg.Depots.MetadataStore == "" {
-		return fmt.Errorf("server: depots.metadata-store is required")
+	if cfg.ACL.Store == "" {
+		return fmt.Errorf("server: acl.store is required")
 	}
 	return nil
 }

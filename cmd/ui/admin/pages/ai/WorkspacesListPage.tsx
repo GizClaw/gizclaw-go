@@ -10,7 +10,7 @@ import { listWorkspaces, type Workspace } from "@gizclaw/adminservice";
 
 import { ErrorBanner } from "../../components/banners";
 import { EmptyState } from "../../components/empty-state";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { useCursorListPage } from "../../hooks/useCursorListPage";
 import { formatDate } from "../../lib/format";
 
@@ -26,23 +26,30 @@ export function WorkspacesListPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb items={[{ href: "/overview", label: "Overview" }, { label: "Workspaces" }]} />
+      <PageHeader
+        actions={
+          <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refresh()} variant="outline">
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+              <RefreshCw className="size-4" />
+              Refresh
+            </span>
+          </Button>
+        }
+        items={[{ href: "/overview", label: "Overview" }, { label: "Workspaces" }]}
+      />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI</div>
-          <h1 className="text-3xl font-semibold tracking-tight">Workspaces</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">
-            Concrete workspace instances bound to workflow documents with optional instantiation parameters.
-          </p>
-        </div>
-        <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refresh()} variant="outline">
-          <span className="inline-flex items-center gap-2 whitespace-nowrap">
-            <RefreshCw className="size-4" />
-            Refresh
-          </span>
-        </Button>
-      </div>
+      <PageSummaryCard
+        description="Concrete workspace instances bound to workflow documents with optional instantiation parameters."
+        eyebrow="AI"
+        meta={
+          <>
+            <Badge variant="outline">Page {pageNumber}</Badge>
+            <Badge variant="secondary">{items.length} loaded</Badge>
+            {hasNext ? <Badge variant="outline">More Available</Badge> : null}
+          </>
+        }
+        title="Workspaces"
+      />
 
       {error !== "" ? <ErrorBanner message={error} /> : null}
 
@@ -51,11 +58,6 @@ export function WorkspacesListPage(): JSX.Element {
           <div className="space-y-1">
             <CardTitle>Workspace catalog</CardTitle>
             <CardDescription>Instantiated workspaces and the workflows they are bound to.</CardDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">Page {pageNumber}</Badge>
-            <Badge variant="secondary">{items.length} loaded</Badge>
-            {hasNext ? <Badge variant="outline">More Available</Badge> : null}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

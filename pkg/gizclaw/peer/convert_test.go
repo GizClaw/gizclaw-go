@@ -5,22 +5,24 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func TestConvertHelpers(t *testing.T) {
 	now := time.Unix(1_700_600_000, 0).UTC()
 	autoRegistered := true
-	stable := apitypes.GearFirmwareChannel("stable")
+	view := "under-12"
 	deviceName := "convert-device"
+	publicKey := giznet.PublicKey{1}
 	gear := apitypes.Gear{
-		PublicKey:      "peer-convert",
+		PublicKey:      publicKey.String(),
 		Role:           apitypes.GearRoleServer,
 		Status:         apitypes.GearStatusActive,
 		AutoRegistered: &autoRegistered,
 		CreatedAt:      now,
 		UpdatedAt:      now,
 		Configuration: apitypes.Configuration{
-			Firmware: &apitypes.FirmwareConfig{Channel: &stable},
+			View: &view,
 		},
 		Device: apitypes.DeviceInfo{
 			Name: &deviceName,
@@ -41,7 +43,7 @@ func TestConvertHelpers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("toPublicConfiguration error: %v", err)
 	}
-	if cfg.Firmware == nil || cfg.Firmware.Channel == nil || *cfg.Firmware.Channel != apitypes.GearFirmwareChannel(stable) {
+	if cfg.View == nil || *cfg.View != view {
 		t.Fatalf("toPublicConfiguration = %+v", cfg)
 	}
 
@@ -59,23 +61,6 @@ func TestConvertHelpers(t *testing.T) {
 	}
 	if adminRegistrations.Items[0].Device == nil || adminRegistrations.Items[0].Device.Name == nil || *adminRegistrations.Items[0].Device.Name != deviceName {
 		t.Fatalf("toAdminRegistrationList device = %+v", adminRegistrations.Items[0].Device)
-	}
-
-	adminOTA, err := toAdminOTASummary(apitypes.OTASummary{
-		Depot:          "demo",
-		Channel:        "stable",
-		FirmwareSemver: "1.0.0",
-		Files: []apitypes.DepotFile{{
-			Path:   "bundles/fw.bin",
-			Sha256: "sha256",
-			Md5:    "md5",
-		}},
-	})
-	if err != nil {
-		t.Fatalf("toAdminOTASummary error: %v", err)
-	}
-	if adminOTA.Depot != "demo" || len(adminOTA.Files) != 1 {
-		t.Fatalf("toAdminOTASummary = %+v", adminOTA)
 	}
 
 	convertedDevice, err := toGearDeviceInfo(gear.Device)

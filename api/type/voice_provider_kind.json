@@ -10,7 +10,14 @@
     "schemas": {
       "VoiceProviderKind": {
         "type": "string",
-        "description": "Voice provider kind",
+        "description": "Provider resource kind usable by voice runtime.",
+        "enum": [
+          "gemini-tenant",
+          "dashscope-tenant",
+          "openai-tenant",
+          "minimax-tenant",
+          "volc-tenant"
+        ],
         "example": "minimax-tenant"
       }
     }

@@ -1,35 +1,39 @@
 package gizclaw
 
 import (
-	"context"
+	"database/sql"
 	"errors"
-	"fmt"
+	"net/http"
 
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/credential"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/mmx"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/modelcatalog"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/model"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/providertenants"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/voice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
-	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
 // Server holds peer transport configuration. Per-stream protocol handling can be
 // extended later.
 //
-// Set peer/firmware storage config on the struct, then call ListenAndServe.
+// Set peer storage config on the struct, then call ListenAndServe.
 // Internal runtime state is built automatically on first ListenAndServe.
 type Server struct {
-	KeyPair    *giznet.KeyPair
-	ListenAddr string
+	LocalStatic giznet.KeyPair
+	ListenAddr  string
+
+	SecurityPolicy giznet.SecurityPolicy
 
 	PeerStore              kv.Store
 	CredentialStore        kv.Store
+	FirmwareStore          kv.Store
 	MiniMaxCredentialStore kv.Store
 	MiniMaxTenantStore     kv.Store
 	VolcTenantStore        kv.Store
@@ -39,31 +43,37 @@ type Server struct {
 	WorkflowStore          kv.Store
 	PublicLoginStore       kv.Store
 	BuildCommit            string
-	ServerPublicKey        giznet.PublicKey
-	AdminPublicKey         giznet.PublicKey
-	DepotStore             depotstore.Store
-	DepotMetadataStore     kv.Store
+	ACLDB                  *sql.DB
 
 	manager     *Manager
 	peerService *PeerService
 	sessions    *publiclogin.SessionManager
 	listener    *giznet.Listener
+	httpHandler http.Handler
+}
+
+// ServeHTTP exposes server-public and gear APIs over ordinary HTTP.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	s.httpHandler.ServeHTTP(w, r)
 }
 
 // Listen initializes the server runtime and binds the UDP peer listener.
 func (s *Server) Listen() error {
-	if err := s.init(); err != nil {
-		return err
+	if s == nil {
+		return errors.New("gizclaw: nil server")
 	}
 	if s.listener != nil {
 		return nil
+	}
+	if err := s.init(); err != nil {
+		return err
 	}
 	cfg := giznet.ListenConfig{
 		Addr:             s.ListenAddr,
 		SecurityPolicy:   (*ServerSecurityPolicy)(s),
 		PeerEventHandler: (*serverPeerEventHandler)(s),
 	}
-	l, err := (&cfg).Listen(s.KeyPair)
+	l, err := (&cfg).Listen(&s.LocalStatic)
 	if err != nil {
 		return err
 	}
@@ -113,10 +123,7 @@ func (s *Server) PublicKey() giznet.PublicKey {
 	if s == nil {
 		return giznet.PublicKey{}
 	}
-	if s.KeyPair != nil {
-		return s.KeyPair.Public
-	}
-	return giznet.PublicKey{}
+	return s.LocalStatic.Public
 }
 
 // PeerService returns the initialized peer service bundle, or nil before runtime initialization.
@@ -151,27 +158,15 @@ func (s *Server) init() error {
 	if s == nil {
 		return errors.New("gizclaw: nil server")
 	}
-	if s.KeyPair == nil {
-		return errors.New("gizclaw: nil key pair")
-	}
-	if s.manager != nil && s.peerService != nil && s.sessions != nil {
-		return nil
-	}
-	if s.PeerStore == nil {
+	switch {
+	case s.LocalStatic.Private.IsZero():
+		return errors.New("gizclaw: empty local static private key")
+	case s.PeerStore == nil:
 		return errors.New("gizclaw: nil peer store")
-	}
-	if s.DepotStore == nil {
-		return errors.New("gizclaw: nil depot store")
-	}
-	serverPublicKey := s.ServerPublicKey
-	if serverPublicKey.IsZero() && s.KeyPair != nil {
-		serverPublicKey = s.KeyPair.Public
-	}
-	if serverPublicKey.IsZero() {
-		return fmt.Errorf("gizclaw: empty server public key")
 	}
 
 	legacySharedStore := s.CredentialStore == nil &&
+		s.FirmwareStore == nil &&
 		s.MiniMaxTenantStore == nil &&
 		s.VolcTenantStore == nil &&
 		s.ModelStore == nil &&
@@ -179,13 +174,13 @@ func (s *Server) init() error {
 		s.MiniMaxCredentialStore == nil &&
 		s.WorkspaceStore == nil &&
 		s.WorkflowStore == nil &&
-		s.DepotMetadataStore == nil &&
 		s.PublicLoginStore == nil
 	peerStore := s.PeerStore
 	if legacySharedStore {
 		peerStore = kv.Prefixed(s.PeerStore, kv.Key{"peers"})
 	}
 	credentialStore := moduleStore(s.CredentialStore, s.PeerStore, "credentials")
+	firmwareStore := moduleStore(s.FirmwareStore, s.PeerStore, "firmwares")
 	miniMaxCredentialStore := moduleStore(s.MiniMaxCredentialStore, credentialStore, "")
 	miniMaxTenantStore := moduleStore(s.MiniMaxTenantStore, s.PeerStore, "minimax-tenants")
 	volcTenantStore := moduleStore(s.VolcTenantStore, miniMaxTenantStore, "volc-tenants")
@@ -193,68 +188,73 @@ func (s *Server) init() error {
 	voiceStore := moduleStore(s.VoiceStore, s.PeerStore, "voices")
 	workspaceStore := moduleStore(s.WorkspaceStore, s.PeerStore, "workspaces")
 	workflowStore := moduleStore(s.WorkflowStore, s.PeerStore, "workflows")
-	depotMetadataStore := moduleStore(s.DepotMetadataStore, s.PeerStore, "firmware-depots")
 	publicLoginStore := moduleStore(s.PublicLoginStore, s.PeerStore, "public-login")
 
-	publicLoginServer := publiclogin.NewServer(s.KeyPair, publicLoginStore)
+	publicLoginServer := publiclogin.NewServer(&s.LocalStatic, publicLoginStore)
 	sessions := publicLoginServer.SessionManager()
 	peersServer := &peer.Server{
 		Store:           peerStore,
 		BuildCommit:     s.BuildCommit,
-		ServerPublicKey: serverPublicKey,
+		ServerPublicKey: s.LocalStatic.Public,
 	}
 	manager := NewManager(peersServer)
 	peersServer.PeerManager = manager
 
-	firmwareServer := &firmware.Server{
-		Store:         s.DepotStore,
-		MetadataStore: depotMetadataStore,
-		ResolvePeerTarget: func(ctx context.Context, publicKey giznet.PublicKey) (string, firmware.Channel, error) {
-			return resolvePeerTarget(ctx, peersServer, publicKey)
-		},
-	}
 	workflowServer := &workflow.Server{Store: workflowStore}
 	workspaceServer := &workspace.Server{Store: workspaceStore, WorkflowStore: workflowStore}
 	credentialServer := &credential.Server{Store: credentialStore}
-	modelServer := &modelcatalog.Server{Store: modelStore}
-	mmxServer := &mmx.Server{
+	firmwareServer := &firmware.Server{Store: firmwareStore}
+	modelServer := &model.Server{Store: modelStore}
+	voiceServer := &voice.Server{Store: voiceStore}
+	providerTenantsServer := &providertenants.Server{
+		ModelStore:      modelStore,
 		TenantStore:     miniMaxTenantStore,
 		VolcTenantStore: volcTenantStore,
 		VoiceStore:      voiceStore,
 		CredentialStore: miniMaxCredentialStore,
 	}
+	var aclServer *acl.Server
+	if s.ACLDB != nil {
+		aclServer = &acl.Server{DB: s.ACLDB}
+	}
 	resourceManager := resourcemanager.New(resourcemanager.Services{
-		Credentials: credentialServer,
-		Peers:       peersServer,
-		Models:      modelServer,
-		MiniMax:     mmxServer,
-		Workspaces:  workspaceServer,
-		Workflows:   workflowServer,
+		ACL:             aclServer,
+		Credentials:     credentialServer,
+		Firmwares:       firmwareServer,
+		Peers:           peersServer,
+		Models:          modelServer,
+		ProviderTenants: providerTenantsServer,
+		Voices:          voiceServer,
+		Workspaces:      workspaceServer,
+		Workflows:       workflowServer,
 	})
 
 	s.manager = manager
 	s.peerService = &PeerService{
 		manager: manager,
 		admin: &adminService{
-			CredentialAdminService: credentialServer,
-			FirmwareAdminService:   firmwareServer,
-			PeerAdminService:       peersServer,
-			AdminService:           modelServer,
-			MiniMaxAdminService:    mmxServer,
-			WorkspaceAdminService:  workspaceServer,
-			WorkflowAdminService:   workflowServer,
-			ResourceManager:        resourceManager,
+			CredentialAdminService:      credentialServer,
+			FirmwareAdminService:        firmwareServer,
+			PeerAdminService:            peersServer,
+			ModelAdminService:           modelServer,
+			VoiceAdminService:           voiceServer,
+			ProviderTenantsAdminService: providerTenantsServer,
+			WorkspaceAdminService:       workspaceServer,
+			WorkflowAdminService:        workflowServer,
+			ACL:                         aclServer,
+			ResourceManager:             resourceManager,
 		},
-		gear: &gearAPIBundle{
-			FirmwareGearService: firmwareServer,
-			GearService:         peersServer,
-		},
+		gear: peersServer,
 		public: &serverPublic{
 			ServerPublicService: peersServer,
 			ServerPublic:        publicLoginServer,
 		},
 	}
 	s.sessions = sessions
+	mux := http.NewServeMux()
+	mux.Handle("/api/public/", http.StripPrefix("/api/public", s.peerService.publicHTTPHandler(sessions)))
+	mux.HandleFunc("/api/public", redirectProxyPrefix("/api/public/"))
+	s.httpHandler = httpLabelSetHandler(mux)
 	return nil
 }
 
@@ -269,25 +269,4 @@ func moduleStore(configured, fallback kv.Store, defaultPrefix string) kv.Store {
 		return fallback
 	}
 	return kv.Prefixed(fallback, kv.Key{defaultPrefix})
-}
-
-func resolvePeerTarget(ctx context.Context, peersServer *peer.Server, publicKey giznet.PublicKey) (string, firmware.Channel, error) {
-	if peersServer == nil {
-		return "", "", errors.New("gizclaw: peers service not configured")
-	}
-	gear, err := peersServer.LoadGear(ctx, publicKey)
-	if err != nil {
-		return "", "", err
-	}
-	if gear.Device.Hardware == nil || gear.Device.Hardware.Depot == nil {
-		return "", "", errors.New("missing depot")
-	}
-	if gear.Configuration.Firmware == nil || gear.Configuration.Firmware.Channel == nil {
-		return "", "", errors.New("missing channel")
-	}
-	channel := firmware.Channel(*gear.Configuration.Firmware.Channel)
-	if !channel.Valid() {
-		return "", "", fmt.Errorf("invalid firmware channel %q", channel)
-	}
-	return *gear.Device.Hardware.Depot, channel, nil
 }

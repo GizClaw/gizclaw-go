@@ -16,14 +16,12 @@ func adminPeerDetailStories() []Story {
 			page.ExpectText(page.Seed.DevicePublicKey)
 			page.ExpectText("ui-device-sn")
 			page.ExpectText("Configuration")
-			page.ExpectText("ui-cert")
+			page.ExpectText("under-12")
 			page.ExpectText("Last Address")
 			page.ExpectText("Online")
-			page.ExpectText("firmware_semver")
 
 			page.ClickRole("tab", "Edit")
 			page.ExpectText("Peer Actions")
-			page.ExpectText("Firmware Policy")
 
 			page.ClickRole("tab", "CLI")
 			page.ExpectText("PeerConfig Resource Spec")

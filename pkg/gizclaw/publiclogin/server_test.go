@@ -203,7 +203,7 @@ func TestServerLoginHandlerRejectsInvalidRequests(t *testing.T) {
 			name:   "invalid public key",
 			server: NewServer(serverKey, kv.NewMemory(nil)),
 			params: serverpublic.LoginParams{
-				XPublicKey:    "not-hex",
+				XPublicKey:    "not-a-key",
 				Authorization: "Bearer " + assertion,
 			},
 			wantErr: "INVALID_PUBLIC_KEY",

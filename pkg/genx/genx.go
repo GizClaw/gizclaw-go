@@ -33,13 +33,14 @@ type Stream interface {
 }
 
 type ModelParams struct {
-	MaxTokens        int     `json:"max_tokens,omitzero"`
-	FrequencyPenalty float32 `json:"frequency_penalty,omitzero"`
-	N                int     `json:"n,omitzero"`
-	Temperature      float32 `json:"temperature,omitzero"`
-	TopP             float32 `json:"top_p,omitzero"`
-	PresencePenalty  float32 `json:"presence_penalty,omitzero"`
-	TopK             float32 `json:"top_k,omitzero"`
+	MaxTokens        int            `json:"max_tokens,omitzero"`
+	FrequencyPenalty float32        `json:"frequency_penalty,omitzero"`
+	N                int            `json:"n,omitzero"`
+	Temperature      float32        `json:"temperature,omitzero"`
+	TopP             float32        `json:"top_p,omitzero"`
+	PresencePenalty  float32        `json:"presence_penalty,omitzero"`
+	TopK             float32        `json:"top_k,omitzero"`
+	ExtraFields      map[string]any `json:"extra_fields,omitzero"`
 }
 
 type Prompt struct {

@@ -187,10 +187,7 @@ func (s *Server) get(ctx context.Context, publicKey giznet.PublicKey) (apitypes.
 	publicKeyText := publicKey.String()
 	gear, err := s.getByPublicKeyText(ctx, store, publicKeyText)
 	if err != nil {
-		if !errors.Is(err, ErrPeerNotFound) {
-			return apitypes.Gear{}, err
-		}
-		return s.getByParsedPublicKey(ctx, store, publicKey)
+		return apitypes.Gear{}, err
 	}
 	return gear, nil
 }
@@ -208,26 +205,6 @@ func (s *Server) getByPublicKeyText(ctx context.Context, store kv.Store, publicK
 		return apitypes.Gear{}, fmt.Errorf("gear: decode %s: %w", publicKeyText, err)
 	}
 	return gear, nil
-}
-
-func (s *Server) getByParsedPublicKey(ctx context.Context, store kv.Store, publicKey giznet.PublicKey) (apitypes.Gear, error) {
-	for entry, err := range store.List(ctx, gearsPrefix()) {
-		if err != nil {
-			return apitypes.Gear{}, fmt.Errorf("gear: list legacy keys: %w", err)
-		}
-		gear, err := decodeGear(entry.Value)
-		if err != nil {
-			return apitypes.Gear{}, fmt.Errorf("gear: decode legacy %s: %w", entry.Key.String(), err)
-		}
-		storedPublicKey, err := publicKeyFromText(gear.PublicKey)
-		if err != nil {
-			continue
-		}
-		if storedPublicKey == publicKey {
-			return gear, nil
-		}
-	}
-	return apitypes.Gear{}, ErrPeerNotFound
 }
 
 func decodeGear(data []byte) (apitypes.Gear, error) {
@@ -250,7 +227,6 @@ func (s *Server) exists(ctx context.Context, publicKey giznet.PublicKey) (bool, 
 }
 
 func (s *Server) create(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, error) {
-	gear.PublicKey = normalizePublicKey(gear.PublicKey)
 	if err := validateGear(gear); err != nil {
 		return apitypes.Gear{}, err
 	}
@@ -278,7 +254,6 @@ func (s *Server) create(ctx context.Context, gear apitypes.Gear) (apitypes.Gear,
 }
 
 func (s *Server) put(ctx context.Context, gear apitypes.Gear) (apitypes.Gear, error) {
-	gear.PublicKey = normalizePublicKey(gear.PublicKey)
 	if err := validateGear(gear); err != nil {
 		return apitypes.Gear{}, err
 	}
@@ -363,24 +338,16 @@ func (s *Server) listPage(ctx context.Context, cursor string, limit int) ([]apit
 	return page, true, &nextCursor, nil
 }
 
-func (s *Server) resolveBySN(ctx context.Context, sn string) (string, error) {
+func (s *Server) resolveBySN(ctx context.Context, sn string) (giznet.PublicKey, error) {
 	return s.resolveSingle(ctx, snKey(sn), ErrPeerNotFound)
 }
 
-func (s *Server) resolveByIMEI(ctx context.Context, tac, serial string) (string, error) {
+func (s *Server) resolveByIMEI(ctx context.Context, tac, serial string) (giznet.PublicKey, error) {
 	return s.resolveSingle(ctx, imeiKey(tac, serial), ErrPeerNotFound)
 }
 
 func (s *Server) listByLabel(ctx context.Context, key, value, cursor string, limit int) ([]apitypes.Gear, bool, *string, error) {
 	return s.listByReferencePrefixPage(ctx, labelPrefix(key, value), cursor, limit)
-}
-
-func (s *Server) listByCertification(ctx context.Context, certType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id, cursor string, limit int) ([]apitypes.Gear, bool, *string, error) {
-	return s.listByReferencePrefixPage(ctx, certificationPrefix(certType, authority, id), cursor, limit)
-}
-
-func (s *Server) listByFirmware(ctx context.Context, depot string, channel apitypes.GearFirmwareChannel, cursor string, limit int) ([]apitypes.Gear, bool, *string, error) {
-	return s.listByReferencePrefixPage(ctx, firmwarePrefix(depot, channel), cursor, limit)
 }
 
 func (s *Server) writeGearLocked(ctx context.Context, gear apitypes.Gear, previous *apitypes.Gear) error {
@@ -395,6 +362,9 @@ func (s *Server) writeGearLocked(ctx context.Context, gear apitypes.Gear, previo
 
 	var deletes []kv.Key
 	if previous != nil {
+		if previous.PublicKey != gear.PublicKey {
+			deletes = append(deletes, gearKey(previous.PublicKey))
+		}
 		deletes = append(deletes, indexKeys(*previous)...)
 	}
 
@@ -412,19 +382,23 @@ func (s *Server) writeGearLocked(ctx context.Context, gear apitypes.Gear, previo
 	return nil
 }
 
-func (s *Server) resolveSingle(ctx context.Context, key kv.Key, notFound error) (string, error) {
+func (s *Server) resolveSingle(ctx context.Context, key kv.Key, notFound error) (giznet.PublicKey, error) {
 	store, err := s.store()
 	if err != nil {
-		return "", err
+		return giznet.PublicKey{}, err
 	}
 	data, err := store.Get(ctx, key)
 	if err != nil {
 		if errors.Is(err, kv.ErrNotFound) {
-			return "", notFound
+			return giznet.PublicKey{}, notFound
 		}
-		return "", err
+		return giznet.PublicKey{}, err
 	}
-	return string(data), nil
+	publicKey, err := publicKeyFromText(string(data))
+	if err != nil {
+		return giznet.PublicKey{}, err
+	}
+	return publicKey, nil
 }
 
 func (s *Server) listByReferencePrefixPage(ctx context.Context, prefix kv.Key, cursor string, limit int) ([]apitypes.Gear, bool, *string, error) {

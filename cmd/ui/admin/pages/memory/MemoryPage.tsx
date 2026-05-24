@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/card";
 
 import { EmptyState } from "../../components/empty-state";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 
 function FutureModule({
   description,
@@ -32,15 +32,13 @@ function FutureModule({
 export function MemoryPage(): JSX.Element {
   return (
     <div className="space-y-6">
-      <PageBreadcrumb items={[{ href: "/overview", label: "Overview" }, { label: "Memory" }]} />
+      <PageHeader items={[{ href: "/overview", label: "Overview" }, { label: "Memory" }]} />
 
-      <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">System</div>
-        <h1 className="text-3xl font-semibold tracking-tight">Memory</h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">
-          Reserved diagnostics area for future operational surfaces (cache, KV, jobs) without redesigning navigation.
-        </p>
-      </div>
+      <PageSummaryCard
+        description="Reserved diagnostics area for future operational surfaces (cache, KV, jobs) without redesigning navigation."
+        eyebrow="System"
+        title="Memory"
+      />
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
@@ -63,7 +61,7 @@ export function MemoryPage(): JSX.Element {
           <CardContent className="space-y-3">
             <FutureModule description="Active sessions, peer state, and cache inspection." icon={MemoryStick} title="In-memory state" />
             <FutureModule description="Store backends, persistence health, and data debugging." icon={Database} title="KV stores" />
-            <FutureModule description="Background refreshes, OTA activity, and execution traces." icon={Activity} title="Jobs" />
+            <FutureModule description="Background refreshes, resource updates, and execution traces." icon={Activity} title="Jobs" />
           </CardContent>
         </Card>
       </div>

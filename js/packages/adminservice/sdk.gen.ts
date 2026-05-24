@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApplyResourceData, ApplyResourceErrors, ApplyResourceResponses, ApprovePeerData, ApprovePeerErrors, ApprovePeerResponses, BlockPeerData, BlockPeerErrors, BlockPeerResponses, CreateCredentialData, CreateCredentialErrors, CreateCredentialResponses, CreateMiniMaxTenantData, CreateMiniMaxTenantErrors, CreateMiniMaxTenantResponses, CreateModelData, CreateModelErrors, CreateModelResponses, CreateVoiceData, CreateVoiceErrors, CreateVoiceResponses, CreateVolcTenantData, CreateVolcTenantErrors, CreateVolcTenantResponses, CreateWorkflowData, CreateWorkflowErrors, CreateWorkflowResponses, CreateWorkspaceData, CreateWorkspaceErrors, CreateWorkspaceResponses, DeleteCredentialData, DeleteCredentialErrors, DeleteCredentialResponses, DeleteMiniMaxTenantData, DeleteMiniMaxTenantErrors, DeleteMiniMaxTenantResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeletePeerData, DeletePeerErrors, DeletePeerResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, DeleteVoiceData, DeleteVoiceErrors, DeleteVoiceResponses, DeleteVolcTenantData, DeleteVolcTenantErrors, DeleteVolcTenantResponses, DeleteWorkflowData, DeleteWorkflowErrors, DeleteWorkflowResponses, DeleteWorkspaceData, DeleteWorkspaceErrors, DeleteWorkspaceResponses, GetChannelData, GetChannelErrors, GetChannelResponses, GetCredentialData, GetCredentialErrors, GetCredentialResponses, GetDepotData, GetDepotErrors, GetDepotResponses, GetMiniMaxTenantData, GetMiniMaxTenantErrors, GetMiniMaxTenantResponses, GetModelData, GetModelErrors, GetModelResponses, GetPeerConfigData, GetPeerConfigErrors, GetPeerConfigResponses, GetPeerData, GetPeerErrors, GetPeerInfoData, GetPeerInfoErrors, GetPeerInfoResponses, GetPeerOtaData, GetPeerOtaErrors, GetPeerOtaResponses, GetPeerResponses, GetPeerRuntimeData, GetPeerRuntimeResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetVoiceData, GetVoiceErrors, GetVoiceResponses, GetVolcTenantData, GetVolcTenantErrors, GetVolcTenantResponses, GetWorkflowData, GetWorkflowErrors, GetWorkflowResponses, GetWorkspaceData, GetWorkspaceErrors, GetWorkspaceResponses, ListCredentialsData, ListCredentialsErrors, ListCredentialsResponses, ListDepotsData, ListDepotsErrors, ListDepotsResponses, ListMiniMaxTenantsData, ListMiniMaxTenantsErrors, ListMiniMaxTenantsResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListPeersByCertificationData, ListPeersByCertificationErrors, ListPeersByCertificationResponses, ListPeersByFirmwareData, ListPeersByFirmwareErrors, ListPeersByFirmwareResponses, ListPeersByLabelData, ListPeersByLabelErrors, ListPeersByLabelResponses, ListPeersData, ListPeersErrors, ListPeersResponses, ListVoicesData, ListVoicesErrors, ListVoicesResponses, ListVolcTenantsData, ListVolcTenantsErrors, ListVolcTenantsResponses, ListWorkflowsData, ListWorkflowsErrors, ListWorkflowsResponses, ListWorkspacesData, ListWorkspacesErrors, ListWorkspacesResponses, PutChannelData, PutChannelErrors, PutChannelResponses, PutCredentialData, PutCredentialErrors, PutCredentialResponses, PutDepotInfoData, PutDepotInfoErrors, PutDepotInfoResponses, PutMiniMaxTenantData, PutMiniMaxTenantErrors, PutMiniMaxTenantResponses, PutModelData, PutModelErrors, PutModelResponses, PutPeerConfigData, PutPeerConfigErrors, PutPeerConfigResponses, PutResourceData, PutResourceErrors, PutResourceResponses, PutVoiceData, PutVoiceErrors, PutVoiceResponses, PutVolcTenantData, PutVolcTenantErrors, PutVolcTenantResponses, PutWorkflowData, PutWorkflowErrors, PutWorkflowResponses, PutWorkspaceData, PutWorkspaceErrors, PutWorkspaceResponses, RefreshPeerData, RefreshPeerErrors, RefreshPeerResponses, ReleaseDepotData, ReleaseDepotErrors, ReleaseDepotResponses, ResolvePeerByImeiData, ResolvePeerByImeiErrors, ResolvePeerByImeiResponses, ResolvePeerBySnData, ResolvePeerBySnErrors, ResolvePeerBySnResponses, RollbackDepotData, RollbackDepotErrors, RollbackDepotResponses, SyncMiniMaxTenantVoicesData, SyncMiniMaxTenantVoicesErrors, SyncMiniMaxTenantVoicesResponses, SyncVolcTenantVoicesData, SyncVolcTenantVoicesErrors, SyncVolcTenantVoicesResponses } from './types.gen';
+import type { ApplyResourceData, ApplyResourceErrors, ApplyResourceResponses, ApprovePeerData, ApprovePeerErrors, ApprovePeerResponses, BlockPeerData, BlockPeerErrors, BlockPeerResponses, CreateAclPolicyBindingData, CreateAclPolicyBindingErrors, CreateAclPolicyBindingResponses, CreateAclRoleData, CreateAclRoleErrors, CreateAclRoleResponses, CreateAclViewData, CreateAclViewErrors, CreateAclViewResponses, CreateCredentialData, CreateCredentialErrors, CreateCredentialResponses, CreateDashScopeTenantData, CreateDashScopeTenantErrors, CreateDashScopeTenantResponses, CreateFirmwareData, CreateFirmwareErrors, CreateFirmwareResponses, CreateGeminiTenantData, CreateGeminiTenantErrors, CreateGeminiTenantResponses, CreateMiniMaxTenantData, CreateMiniMaxTenantErrors, CreateMiniMaxTenantResponses, CreateModelData, CreateModelErrors, CreateModelResponses, CreateOpenAiTenantData, CreateOpenAiTenantErrors, CreateOpenAiTenantResponses, CreateVoiceData, CreateVoiceErrors, CreateVoiceResponses, CreateVolcTenantData, CreateVolcTenantErrors, CreateVolcTenantResponses, CreateWorkflowData, CreateWorkflowErrors, CreateWorkflowResponses, CreateWorkspaceData, CreateWorkspaceErrors, CreateWorkspaceResponses, DeleteAclPolicyBindingData, DeleteAclPolicyBindingErrors, DeleteAclPolicyBindingResponses, DeleteAclRoleData, DeleteAclRoleErrors, DeleteAclRoleResponses, DeleteAclViewData, DeleteAclViewErrors, DeleteAclViewResponses, DeleteCredentialData, DeleteCredentialErrors, DeleteCredentialResponses, DeleteDashScopeTenantData, DeleteDashScopeTenantErrors, DeleteDashScopeTenantResponses, DeleteFirmwareData, DeleteFirmwareErrors, DeleteFirmwareResponses, DeleteGeminiTenantData, DeleteGeminiTenantErrors, DeleteGeminiTenantResponses, DeleteMiniMaxTenantData, DeleteMiniMaxTenantErrors, DeleteMiniMaxTenantResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteOpenAiTenantData, DeleteOpenAiTenantErrors, DeleteOpenAiTenantResponses, DeletePeerData, DeletePeerErrors, DeletePeerResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, DeleteVoiceData, DeleteVoiceErrors, DeleteVoiceResponses, DeleteVolcTenantData, DeleteVolcTenantErrors, DeleteVolcTenantResponses, DeleteWorkflowData, DeleteWorkflowErrors, DeleteWorkflowResponses, DeleteWorkspaceData, DeleteWorkspaceErrors, DeleteWorkspaceResponses, GetAclPolicyBindingData, GetAclPolicyBindingErrors, GetAclPolicyBindingResponses, GetAclRoleData, GetAclRoleErrors, GetAclRoleResponses, GetAclViewData, GetAclViewErrors, GetAclViewResponses, GetCredentialData, GetCredentialErrors, GetCredentialResponses, GetDashScopeTenantData, GetDashScopeTenantErrors, GetDashScopeTenantResponses, GetFirmwareData, GetFirmwareErrors, GetFirmwareResponses, GetGeminiTenantData, GetGeminiTenantErrors, GetGeminiTenantResponses, GetMiniMaxTenantData, GetMiniMaxTenantErrors, GetMiniMaxTenantResponses, GetModelData, GetModelErrors, GetModelResponses, GetOpenAiTenantData, GetOpenAiTenantErrors, GetOpenAiTenantResponses, GetPeerConfigData, GetPeerConfigErrors, GetPeerConfigResponses, GetPeerData, GetPeerErrors, GetPeerInfoData, GetPeerInfoErrors, GetPeerInfoResponses, GetPeerResponses, GetPeerRuntimeData, GetPeerRuntimeResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetVoiceData, GetVoiceErrors, GetVoiceResponses, GetVolcTenantData, GetVolcTenantErrors, GetVolcTenantResponses, GetWorkflowData, GetWorkflowErrors, GetWorkflowResponses, GetWorkspaceData, GetWorkspaceErrors, GetWorkspaceResponses, ListAclPolicyBindingsData, ListAclPolicyBindingsErrors, ListAclPolicyBindingsResponses, ListAclRolesData, ListAclRolesErrors, ListAclRolesResponses, ListAclViewsData, ListAclViewsErrors, ListAclViewsResponses, ListCredentialsData, ListCredentialsErrors, ListCredentialsResponses, ListDashScopeTenantsData, ListDashScopeTenantsErrors, ListDashScopeTenantsResponses, ListFirmwaresData, ListFirmwaresErrors, ListFirmwaresResponses, ListGeminiTenantsData, ListGeminiTenantsErrors, ListGeminiTenantsResponses, ListMiniMaxTenantsData, ListMiniMaxTenantsErrors, ListMiniMaxTenantsResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListOpenAiTenantsData, ListOpenAiTenantsErrors, ListOpenAiTenantsResponses, ListPeersByLabelData, ListPeersByLabelErrors, ListPeersByLabelResponses, ListPeersData, ListPeersErrors, ListPeersResponses, ListVoicesData, ListVoicesErrors, ListVoicesResponses, ListVolcTenantsData, ListVolcTenantsErrors, ListVolcTenantsResponses, ListWorkflowsData, ListWorkflowsErrors, ListWorkflowsResponses, ListWorkspacesData, ListWorkspacesErrors, ListWorkspacesResponses, PutAclPolicyBindingData, PutAclPolicyBindingErrors, PutAclPolicyBindingResponses, PutAclRoleData, PutAclRoleErrors, PutAclRoleResponses, PutAclViewData, PutAclViewErrors, PutAclViewResponses, PutCredentialData, PutCredentialErrors, PutCredentialResponses, PutDashScopeTenantData, PutDashScopeTenantErrors, PutDashScopeTenantResponses, PutFirmwareData, PutFirmwareErrors, PutFirmwareResponses, PutGeminiTenantData, PutGeminiTenantErrors, PutGeminiTenantResponses, PutMiniMaxTenantData, PutMiniMaxTenantErrors, PutMiniMaxTenantResponses, PutModelData, PutModelErrors, PutModelResponses, PutOpenAiTenantData, PutOpenAiTenantErrors, PutOpenAiTenantResponses, PutPeerConfigData, PutPeerConfigErrors, PutPeerConfigResponses, PutPeerInfoData, PutPeerInfoErrors, PutPeerInfoResponses, PutResourceData, PutResourceErrors, PutResourceResponses, PutVoiceData, PutVoiceErrors, PutVoiceResponses, PutVolcTenantData, PutVolcTenantErrors, PutVolcTenantResponses, PutWorkflowData, PutWorkflowErrors, PutWorkflowResponses, PutWorkspaceData, PutWorkspaceErrors, PutWorkspaceResponses, RefreshPeerData, RefreshPeerErrors, RefreshPeerResponses, ReleaseFirmwareData, ReleaseFirmwareErrors, ReleaseFirmwareResponses, ResolvePeerByImeiData, ResolvePeerByImeiErrors, ResolvePeerByImeiResponses, ResolvePeerBySnData, ResolvePeerBySnErrors, ResolvePeerBySnResponses, RollbackFirmwareData, RollbackFirmwareErrors, RollbackFirmwareResponses, SyncMiniMaxTenantVoicesData, SyncMiniMaxTenantVoicesErrors, SyncMiniMaxTenantVoicesResponses, SyncVolcTenantVoicesData, SyncVolcTenantVoicesErrors, SyncVolcTenantVoicesResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -61,20 +61,15 @@ export const putResource = <ThrowOnError extends boolean = false>(options: Optio
 });
 
 /**
- * List all firmware depots
+ * List ACL views
  */
-export const listDepots = <ThrowOnError extends boolean = false>(options?: Options<ListDepotsData, ThrowOnError>) => (options?.client ?? client).get<ListDepotsResponses, ListDepotsErrors, ThrowOnError>({ url: '/depots', ...options });
+export const listAclViews = <ThrowOnError extends boolean = false>(options?: Options<ListAclViewsData, ThrowOnError>) => (options?.client ?? client).get<ListAclViewsResponses, ListAclViewsErrors, ThrowOnError>({ url: '/acl/views', ...options });
 
 /**
- * Get a firmware depot snapshot
+ * Create an ACL view
  */
-export const getDepot = <ThrowOnError extends boolean = false>(options: Options<GetDepotData, ThrowOnError>) => (options.client ?? client).get<GetDepotResponses, GetDepotErrors, ThrowOnError>({ url: '/depots/{depot}', ...options });
-
-/**
- * Create or update depot info (file manifest)
- */
-export const putDepotInfo = <ThrowOnError extends boolean = false>(options: Options<PutDepotInfoData, ThrowOnError>) => (options.client ?? client).put<PutDepotInfoResponses, PutDepotInfoErrors, ThrowOnError>({
-    url: '/depots/{depot}',
+export const createAclView = <ThrowOnError extends boolean = false>(options: Options<CreateAclViewData, ThrowOnError>) => (options.client ?? client).post<CreateAclViewResponses, CreateAclViewErrors, ThrowOnError>({
+    url: '/acl/views',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -83,29 +78,101 @@ export const putDepotInfo = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
- * Promote testing channel to stable
+ * Delete an ACL view
  */
-export const releaseDepot = <ThrowOnError extends boolean = false>(options: Options<ReleaseDepotData, ThrowOnError>) => (options.client ?? client).put<ReleaseDepotResponses, ReleaseDepotErrors, ThrowOnError>({ url: '/depots/{depot}/@release', ...options });
+export const deleteAclView = <ThrowOnError extends boolean = false>(options: Options<DeleteAclViewData, ThrowOnError>) => (options.client ?? client).delete<DeleteAclViewResponses, DeleteAclViewErrors, ThrowOnError>({ url: '/acl/views/{name}', ...options });
 
 /**
- * Roll back stable channel to the rollback snapshot
+ * Get an ACL view
  */
-export const rollbackDepot = <ThrowOnError extends boolean = false>(options: Options<RollbackDepotData, ThrowOnError>) => (options.client ?? client).put<RollbackDepotResponses, RollbackDepotErrors, ThrowOnError>({ url: '/depots/{depot}/@rollback', ...options });
+export const getAclView = <ThrowOnError extends boolean = false>(options: Options<GetAclViewData, ThrowOnError>) => (options.client ?? client).get<GetAclViewResponses, GetAclViewErrors, ThrowOnError>({ url: '/acl/views/{name}', ...options });
 
 /**
- * Get a specific channel release
+ * Create or update an ACL view
  */
-export const getChannel = <ThrowOnError extends boolean = false>(options: Options<GetChannelData, ThrowOnError>) => (options.client ?? client).get<GetChannelResponses, GetChannelErrors, ThrowOnError>({ url: '/depots/{depot}/channels/{channel}', ...options });
-
-/**
- * Upload a firmware release tarball for a channel
- */
-export const putChannel = <ThrowOnError extends boolean = false>(options: Options<PutChannelData, ThrowOnError>) => (options.client ?? client).put<PutChannelResponses, PutChannelErrors, ThrowOnError>({
-    bodySerializer: null,
-    url: '/depots/{depot}/channels/{channel}',
+export const putAclView = <ThrowOnError extends boolean = false>(options: Options<PutAclViewData, ThrowOnError>) => (options.client ?? client).put<PutAclViewResponses, PutAclViewErrors, ThrowOnError>({
+    url: '/acl/views/{name}',
     ...options,
     headers: {
-        'Content-Type': 'application/octet-stream',
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List ACL roles
+ */
+export const listAclRoles = <ThrowOnError extends boolean = false>(options?: Options<ListAclRolesData, ThrowOnError>) => (options?.client ?? client).get<ListAclRolesResponses, ListAclRolesErrors, ThrowOnError>({ url: '/acl/roles', ...options });
+
+/**
+ * Create an ACL role
+ */
+export const createAclRole = <ThrowOnError extends boolean = false>(options: Options<CreateAclRoleData, ThrowOnError>) => (options.client ?? client).post<CreateAclRoleResponses, CreateAclRoleErrors, ThrowOnError>({
+    url: '/acl/roles',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete an ACL role
+ */
+export const deleteAclRole = <ThrowOnError extends boolean = false>(options: Options<DeleteAclRoleData, ThrowOnError>) => (options.client ?? client).delete<DeleteAclRoleResponses, DeleteAclRoleErrors, ThrowOnError>({ url: '/acl/roles/{name}', ...options });
+
+/**
+ * Get an ACL role
+ */
+export const getAclRole = <ThrowOnError extends boolean = false>(options: Options<GetAclRoleData, ThrowOnError>) => (options.client ?? client).get<GetAclRoleResponses, GetAclRoleErrors, ThrowOnError>({ url: '/acl/roles/{name}', ...options });
+
+/**
+ * Create or update an ACL role
+ */
+export const putAclRole = <ThrowOnError extends boolean = false>(options: Options<PutAclRoleData, ThrowOnError>) => (options.client ?? client).put<PutAclRoleResponses, PutAclRoleErrors, ThrowOnError>({
+    url: '/acl/roles/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List ACL policy bindings
+ */
+export const listAclPolicyBindings = <ThrowOnError extends boolean = false>(options?: Options<ListAclPolicyBindingsData, ThrowOnError>) => (options?.client ?? client).get<ListAclPolicyBindingsResponses, ListAclPolicyBindingsErrors, ThrowOnError>({ url: '/acl/policy-bindings', ...options });
+
+/**
+ * Create an ACL policy binding
+ */
+export const createAclPolicyBinding = <ThrowOnError extends boolean = false>(options: Options<CreateAclPolicyBindingData, ThrowOnError>) => (options.client ?? client).post<CreateAclPolicyBindingResponses, CreateAclPolicyBindingErrors, ThrowOnError>({
+    url: '/acl/policy-bindings',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete an ACL policy binding
+ */
+export const deleteAclPolicyBinding = <ThrowOnError extends boolean = false>(options: Options<DeleteAclPolicyBindingData, ThrowOnError>) => (options.client ?? client).delete<DeleteAclPolicyBindingResponses, DeleteAclPolicyBindingErrors, ThrowOnError>({ url: '/acl/policy-bindings/{id}', ...options });
+
+/**
+ * Get an ACL policy binding
+ */
+export const getAclPolicyBinding = <ThrowOnError extends boolean = false>(options: Options<GetAclPolicyBindingData, ThrowOnError>) => (options.client ?? client).get<GetAclPolicyBindingResponses, GetAclPolicyBindingErrors, ThrowOnError>({ url: '/acl/policy-bindings/{id}', ...options });
+
+/**
+ * Create or update an ACL policy binding
+ */
+export const putAclPolicyBinding = <ThrowOnError extends boolean = false>(options: Options<PutAclPolicyBindingData, ThrowOnError>) => (options.client ?? client).put<PutAclPolicyBindingResponses, PutAclPolicyBindingErrors, ThrowOnError>({
+    url: '/acl/policy-bindings/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
         ...options.headers
     }
 });
@@ -126,6 +193,59 @@ export const createWorkflow = <ThrowOnError extends boolean = false>(options: Op
         ...options.headers
     }
 });
+
+/**
+ * List firmwares
+ */
+export const listFirmwares = <ThrowOnError extends boolean = false>(options?: Options<ListFirmwaresData, ThrowOnError>) => (options?.client ?? client).get<ListFirmwaresResponses, ListFirmwaresErrors, ThrowOnError>({ url: '/firmwares', ...options });
+
+/**
+ * Create a firmware release line
+ */
+export const createFirmware = <ThrowOnError extends boolean = false>(options: Options<CreateFirmwareData, ThrowOnError>) => (options.client ?? client).post<CreateFirmwareResponses, CreateFirmwareErrors, ThrowOnError>({
+    url: '/firmwares',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a firmware release line
+ */
+export const deleteFirmware = <ThrowOnError extends boolean = false>(options: Options<DeleteFirmwareData, ThrowOnError>) => (options.client ?? client).delete<DeleteFirmwareResponses, DeleteFirmwareErrors, ThrowOnError>({ url: '/firmwares/{name}', ...options });
+
+/**
+ * Get a firmware release line
+ */
+export const getFirmware = <ThrowOnError extends boolean = false>(options: Options<GetFirmwareData, ThrowOnError>) => (options.client ?? client).get<GetFirmwareResponses, GetFirmwareErrors, ThrowOnError>({ url: '/firmwares/{name}', ...options });
+
+/**
+ * Create or update a firmware release line
+ */
+export const putFirmware = <ThrowOnError extends boolean = false>(options: Options<PutFirmwareData, ThrowOnError>) => (options.client ?? client).put<PutFirmwareResponses, PutFirmwareErrors, ThrowOnError>({
+    url: '/firmwares/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Promote firmware slots
+ *
+ * Atomically promote slots: stable to rollback, beta to stable, develop to beta, pending to develop, then clear pending. The resulting stable slot must be non-empty.
+ */
+export const releaseFirmware = <ThrowOnError extends boolean = false>(options: Options<ReleaseFirmwareData, ThrowOnError>) => (options.client ?? client).post<ReleaseFirmwareResponses, ReleaseFirmwareErrors, ThrowOnError>({ url: '/firmwares/{name}/@release', ...options });
+
+/**
+ * Rollback firmware stable slot
+ *
+ * Atomically swap stable and rollback slots. The resulting stable slot must be non-empty.
+ */
+export const rollbackFirmware = <ThrowOnError extends boolean = false>(options: Options<RollbackFirmwareData, ThrowOnError>) => (options.client ?? client).post<RollbackFirmwareResponses, RollbackFirmwareErrors, ThrowOnError>({ url: '/firmwares/{name}/@rollback', ...options });
 
 /**
  * List stored credentials
@@ -198,6 +318,123 @@ export const getModel = <ThrowOnError extends boolean = false>(options: Options<
  */
 export const putModel = <ThrowOnError extends boolean = false>(options: Options<PutModelData, ThrowOnError>) => (options.client ?? client).put<PutModelResponses, PutModelErrors, ThrowOnError>({
     url: '/models/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List all DashScope tenants
+ */
+export const listDashScopeTenants = <ThrowOnError extends boolean = false>(options?: Options<ListDashScopeTenantsData, ThrowOnError>) => (options?.client ?? client).get<ListDashScopeTenantsResponses, ListDashScopeTenantsErrors, ThrowOnError>({ url: '/dashscope-tenants', ...options });
+
+/**
+ * Create a DashScope tenant
+ */
+export const createDashScopeTenant = <ThrowOnError extends boolean = false>(options: Options<CreateDashScopeTenantData, ThrowOnError>) => (options.client ?? client).post<CreateDashScopeTenantResponses, CreateDashScopeTenantErrors, ThrowOnError>({
+    url: '/dashscope-tenants',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List all Gemini tenants
+ */
+export const listGeminiTenants = <ThrowOnError extends boolean = false>(options?: Options<ListGeminiTenantsData, ThrowOnError>) => (options?.client ?? client).get<ListGeminiTenantsResponses, ListGeminiTenantsErrors, ThrowOnError>({ url: '/gemini-tenants', ...options });
+
+/**
+ * Create a Gemini tenant
+ */
+export const createGeminiTenant = <ThrowOnError extends boolean = false>(options: Options<CreateGeminiTenantData, ThrowOnError>) => (options.client ?? client).post<CreateGeminiTenantResponses, CreateGeminiTenantErrors, ThrowOnError>({
+    url: '/gemini-tenants',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a Gemini tenant
+ */
+export const deleteGeminiTenant = <ThrowOnError extends boolean = false>(options: Options<DeleteGeminiTenantData, ThrowOnError>) => (options.client ?? client).delete<DeleteGeminiTenantResponses, DeleteGeminiTenantErrors, ThrowOnError>({ url: '/gemini-tenants/{name}', ...options });
+
+/**
+ * Get a Gemini tenant
+ */
+export const getGeminiTenant = <ThrowOnError extends boolean = false>(options: Options<GetGeminiTenantData, ThrowOnError>) => (options.client ?? client).get<GetGeminiTenantResponses, GetGeminiTenantErrors, ThrowOnError>({ url: '/gemini-tenants/{name}', ...options });
+
+/**
+ * Create or update a Gemini tenant
+ */
+export const putGeminiTenant = <ThrowOnError extends boolean = false>(options: Options<PutGeminiTenantData, ThrowOnError>) => (options.client ?? client).put<PutGeminiTenantResponses, PutGeminiTenantErrors, ThrowOnError>({
+    url: '/gemini-tenants/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a DashScope tenant
+ */
+export const deleteDashScopeTenant = <ThrowOnError extends boolean = false>(options: Options<DeleteDashScopeTenantData, ThrowOnError>) => (options.client ?? client).delete<DeleteDashScopeTenantResponses, DeleteDashScopeTenantErrors, ThrowOnError>({ url: '/dashscope-tenants/{name}', ...options });
+
+/**
+ * Get a DashScope tenant
+ */
+export const getDashScopeTenant = <ThrowOnError extends boolean = false>(options: Options<GetDashScopeTenantData, ThrowOnError>) => (options.client ?? client).get<GetDashScopeTenantResponses, GetDashScopeTenantErrors, ThrowOnError>({ url: '/dashscope-tenants/{name}', ...options });
+
+/**
+ * Create or update a DashScope tenant
+ */
+export const putDashScopeTenant = <ThrowOnError extends boolean = false>(options: Options<PutDashScopeTenantData, ThrowOnError>) => (options.client ?? client).put<PutDashScopeTenantResponses, PutDashScopeTenantErrors, ThrowOnError>({
+    url: '/dashscope-tenants/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List all OpenAI-compatible tenants
+ */
+export const listOpenAiTenants = <ThrowOnError extends boolean = false>(options?: Options<ListOpenAiTenantsData, ThrowOnError>) => (options?.client ?? client).get<ListOpenAiTenantsResponses, ListOpenAiTenantsErrors, ThrowOnError>({ url: '/openai-tenants', ...options });
+
+/**
+ * Create an OpenAI-compatible tenant
+ */
+export const createOpenAiTenant = <ThrowOnError extends boolean = false>(options: Options<CreateOpenAiTenantData, ThrowOnError>) => (options.client ?? client).post<CreateOpenAiTenantResponses, CreateOpenAiTenantErrors, ThrowOnError>({
+    url: '/openai-tenants',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete an OpenAI-compatible tenant
+ */
+export const deleteOpenAiTenant = <ThrowOnError extends boolean = false>(options: Options<DeleteOpenAiTenantData, ThrowOnError>) => (options.client ?? client).delete<DeleteOpenAiTenantResponses, DeleteOpenAiTenantErrors, ThrowOnError>({ url: '/openai-tenants/{name}', ...options });
+
+/**
+ * Get an OpenAI-compatible tenant
+ */
+export const getOpenAiTenant = <ThrowOnError extends boolean = false>(options: Options<GetOpenAiTenantData, ThrowOnError>) => (options.client ?? client).get<GetOpenAiTenantResponses, GetOpenAiTenantErrors, ThrowOnError>({ url: '/openai-tenants/{name}', ...options });
+
+/**
+ * Create or update an OpenAI-compatible tenant
+ */
+export const putOpenAiTenant = <ThrowOnError extends boolean = false>(options: Options<PutOpenAiTenantData, ThrowOnError>) => (options.client ?? client).put<PutOpenAiTenantResponses, PutOpenAiTenantErrors, ThrowOnError>({
+    url: '/openai-tenants/{name}',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -414,16 +651,6 @@ export const resolvePeerByImei = <ThrowOnError extends boolean = false>(options:
 export const listPeersByLabel = <ThrowOnError extends boolean = false>(options: Options<ListPeersByLabelData, ThrowOnError>) => (options.client ?? client).get<ListPeersByLabelResponses, ListPeersByLabelErrors, ThrowOnError>({ url: '/peers/label/{key}/{value}', ...options });
 
 /**
- * List peers by certification
- */
-export const listPeersByCertification = <ThrowOnError extends boolean = false>(options: Options<ListPeersByCertificationData, ThrowOnError>) => (options.client ?? client).get<ListPeersByCertificationResponses, ListPeersByCertificationErrors, ThrowOnError>({ url: '/peers/certification/{type}/{authority}/{id}', ...options });
-
-/**
- * List peers by firmware depot and channel
- */
-export const listPeersByFirmware = <ThrowOnError extends boolean = false>(options: Options<ListPeersByFirmwareData, ThrowOnError>) => (options.client ?? client).get<ListPeersByFirmwareResponses, ListPeersByFirmwareErrors, ThrowOnError>({ url: '/peers/firmware/{depot}/{channel}', ...options });
-
-/**
  * Delete a peer
  */
 export const deletePeer = <ThrowOnError extends boolean = false>(options: Options<DeletePeerData, ThrowOnError>) => (options.client ?? client).delete<DeletePeerResponses, DeletePeerErrors, ThrowOnError>({ url: '/peers/{publicKey}', ...options });
@@ -461,6 +688,18 @@ export const refreshPeer = <ThrowOnError extends boolean = false>(options: Optio
 export const getPeerInfo = <ThrowOnError extends boolean = false>(options: Options<GetPeerInfoData, ThrowOnError>) => (options.client ?? client).get<GetPeerInfoResponses, GetPeerInfoErrors, ThrowOnError>({ url: '/peers/{publicKey}/info', ...options });
 
 /**
+ * Update peer device info
+ */
+export const putPeerInfo = <ThrowOnError extends boolean = false>(options: Options<PutPeerInfoData, ThrowOnError>) => (options.client ?? client).put<PutPeerInfoResponses, PutPeerInfoErrors, ThrowOnError>({
+    url: '/peers/{publicKey}/info',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Get peer configuration
  */
 export const getPeerConfig = <ThrowOnError extends boolean = false>(options: Options<GetPeerConfigData, ThrowOnError>) => (options.client ?? client).get<GetPeerConfigResponses, GetPeerConfigErrors, ThrowOnError>({ url: '/peers/{publicKey}/config', ...options });
@@ -481,8 +720,3 @@ export const putPeerConfig = <ThrowOnError extends boolean = false>(options: Opt
  * Get peer runtime status
  */
 export const getPeerRuntime = <ThrowOnError extends boolean = false>(options: Options<GetPeerRuntimeData, ThrowOnError>) => (options.client ?? client).get<GetPeerRuntimeResponses, unknown, ThrowOnError>({ url: '/peers/{publicKey}/runtime', ...options });
-
-/**
- * Get peer OTA firmware summary
- */
-export const getPeerOta = <ThrowOnError extends boolean = false>(options: Options<GetPeerOtaData, ThrowOnError>) => (options.client ?? client).get<GetPeerOtaResponses, GetPeerOtaErrors, ThrowOnError>({ url: '/peers/{publicKey}/ota', ...options });

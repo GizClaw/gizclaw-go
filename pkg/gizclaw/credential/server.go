@@ -39,21 +39,21 @@ type CredentialAdminService interface {
 var _ CredentialAdminService = (*Server)(nil)
 
 type credentialRecord struct {
-	Body        apitypes.CredentialBody     `json:"body"`
-	CreatedAt   time.Time                   `json:"created_at"`
-	Description *string                     `json:"description,omitempty"`
-	Method      apitypes.CredentialMethod   `json:"method"`
-	Name        apitypes.CredentialName     `json:"name"`
-	Provider    apitypes.CredentialProvider `json:"provider"`
-	UpdatedAt   time.Time                   `json:"updated_at"`
+	Body        apitypes.CredentialBody   `json:"body"`
+	CreatedAt   time.Time                 `json:"created_at"`
+	Description *string                   `json:"description,omitempty"`
+	Method      apitypes.CredentialMethod `json:"method"`
+	Name        string                    `json:"name"`
+	Provider    string                    `json:"provider"`
+	UpdatedAt   time.Time                 `json:"updated_at"`
 }
 
 type normalizedCredentialUpsert struct {
 	Body        apitypes.CredentialBody
 	Description *string
 	Method      apitypes.CredentialMethod
-	Name        apitypes.CredentialName
-	Provider    apitypes.CredentialProvider
+	Name        string
+	Provider    string
 }
 
 func (s *Server) ListCredentials(ctx context.Context, request adminservice.ListCredentialsRequestObject) (adminservice.ListCredentialsResponseObject, error) {
@@ -326,8 +326,8 @@ func normalizeCredentialUpsert(in adminservice.CredentialUpsert, expectedName st
 	out := normalizedCredentialUpsert{
 		Body:     cloneBody(in.Body),
 		Method:   method,
-		Name:     apitypes.CredentialName(name),
-		Provider: apitypes.CredentialProvider(provider),
+		Name:     string(name),
+		Provider: string(provider),
 	}
 	if in.Description != nil {
 		text := strings.TrimSpace(*in.Description)
@@ -363,7 +363,7 @@ func unescapeStoreSegment(value string) string {
 	return unescaped
 }
 
-func normalizeListParams(cursor *adminservice.Cursor, limit *adminservice.Limit) (string, int) {
+func normalizeListParams(cursor *string, limit *int32) (string, int) {
 	nextCursor := ""
 	if cursor != nil {
 		nextCursor = string(*cursor)

@@ -1,0 +1,46 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Firmware Artifact Type",
+    "description": "Firmware artifact schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "FirmwareArtifact": {
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "url"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Device-defined artifact name.",
+            "example": "main"
+          },
+          "kind": {
+            "$ref": "./firmware_artifact_kind.json#/components/schemas/FirmwareArtifactKind"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Download URL for this artifact.",
+            "example": "https://cdn.example.com/devkit/1.0.3/app.bin"
+          },
+          "sha256": {
+            "type": "string",
+            "description": "Optional SHA-256 digest for integrity checks."
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Optional artifact size in bytes."
+          }
+        }
+      }
+    }
+  }
+}

@@ -91,7 +91,6 @@ func TestGearRPCUnionTypes(t *testing.T) {
 	assertRequestUnion(t, "GearGetConfig", GearGetConfigRequest{}, (*RPCRequest_Params).FromGearGetConfigRequest, RPCRequest_Params.AsGearGetConfigRequest, (*RPCRequest_Params).MergeGearGetConfigRequest)
 	assertRequestUnion(t, "GearGetInfo", GearGetInfoRequest{}, (*RPCRequest_Params).FromGearGetInfoRequest, RPCRequest_Params.AsGearGetInfoRequest, (*RPCRequest_Params).MergeGearGetInfoRequest)
 	assertRequestUnion(t, "GearPutInfo", GearPutInfoRequest{Name: stringPtr("gear-1")}, (*RPCRequest_Params).FromGearPutInfoRequest, RPCRequest_Params.AsGearPutInfoRequest, (*RPCRequest_Params).MergeGearPutInfoRequest)
-	assertRequestUnion(t, "GearGetOTA", GearGetOTARequest{}, (*RPCRequest_Params).FromGearGetOTARequest, RPCRequest_Params.AsGearGetOTARequest, (*RPCRequest_Params).MergeGearGetOTARequest)
 	assertRequestUnion(t, "GearGetRegistration", GearGetRegistrationRequest{}, (*RPCRequest_Params).FromGearGetRegistrationRequest, RPCRequest_Params.AsGearGetRegistrationRequest, (*RPCRequest_Params).MergeGearGetRegistrationRequest)
 	assertRequestUnion(t, "GearRegister", GearRegisterRequest{Device: DeviceInfo{Name: stringPtr("gear-1")}}, (*RPCRequest_Params).FromGearRegisterRequest, RPCRequest_Params.AsGearRegisterRequest, (*RPCRequest_Params).MergeGearRegisterRequest)
 	assertRequestUnion(t, "GearGetRuntime", GearGetRuntimeRequest{}, (*RPCRequest_Params).FromGearGetRuntimeRequest, RPCRequest_Params.AsGearGetRuntimeRequest, (*RPCRequest_Params).MergeGearGetRuntimeRequest)
@@ -105,15 +104,16 @@ func TestGearRPCUnionTypes(t *testing.T) {
 	}
 
 	now := time.Unix(100, 0).UTC()
+	publicKey := string([]byte{1})
 	registration := Registration{
-		PublicKey: "peer-key",
+		PublicKey: publicKey,
 		Role:      GearRoleGear,
 		Status:    GearStatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
 	gear := Gear{
-		PublicKey:     "peer-key",
+		PublicKey:     publicKey,
 		Role:          GearRoleGear,
 		Status:        GearStatusActive,
 		Device:        DeviceInfo{Name: stringPtr("gear-1")},
@@ -124,7 +124,6 @@ func TestGearRPCUnionTypes(t *testing.T) {
 	assertResponseUnion(t, "GearGetConfig", GearGetConfigResponse{}, (*RPCResponse_Result).FromGearGetConfigResponse, RPCResponse_Result.AsGearGetConfigResponse, (*RPCResponse_Result).MergeGearGetConfigResponse)
 	assertResponseUnion(t, "GearGetInfo", GearGetInfoResponse{Name: stringPtr("gear-1")}, (*RPCResponse_Result).FromGearGetInfoResponse, RPCResponse_Result.AsGearGetInfoResponse, (*RPCResponse_Result).MergeGearGetInfoResponse)
 	assertResponseUnion(t, "GearPutInfo", GearPutInfoResponse{Name: stringPtr("gear-2")}, (*RPCResponse_Result).FromGearPutInfoResponse, RPCResponse_Result.AsGearPutInfoResponse, (*RPCResponse_Result).MergeGearPutInfoResponse)
-	assertResponseUnion(t, "GearGetOTA", GearGetOTAResponse{Depot: "main", Channel: "stable", FirmwareSemver: "1.2.3"}, (*RPCResponse_Result).FromGearGetOTAResponse, RPCResponse_Result.AsGearGetOTAResponse, (*RPCResponse_Result).MergeGearGetOTAResponse)
 	assertResponseUnion(t, "GearGetRegistration", GearGetRegistrationResponse(registration), (*RPCResponse_Result).FromGearGetRegistrationResponse, RPCResponse_Result.AsGearGetRegistrationResponse, (*RPCResponse_Result).MergeGearGetRegistrationResponse)
 	assertResponseUnion(t, "GearRegister", GearRegisterResponse{Gear: gear, Registration: registration}, (*RPCResponse_Result).FromGearRegisterResponse, RPCResponse_Result.AsGearRegisterResponse, (*RPCResponse_Result).MergeGearRegisterResponse)
 	assertResponseUnion(t, "GearGetRuntime", GearGetRuntimeResponse{Online: true, LastSeenAt: now}, (*RPCResponse_Result).FromGearGetRuntimeResponse, RPCResponse_Result.AsGearGetRuntimeResponse, (*RPCResponse_Result).MergeGearGetRuntimeResponse)
@@ -136,7 +135,6 @@ func TestRPCMethodValid(t *testing.T) {
 		RPCMethodGearConfigGet,
 		RPCMethodGearInfoGet,
 		RPCMethodGearInfoPut,
-		RPCMethodGearOtaGet,
 		RPCMethodGearRegistrationGet,
 		RPCMethodGearRegistrationRegister,
 		RPCMethodGearRuntimeGet,
@@ -162,22 +160,6 @@ func TestRPCMethodValid(t *testing.T) {
 	}
 	if RPCErrorCode(418).Valid() {
 		t.Fatal("unknown RPC error code should be invalid")
-	}
-	for _, authority := range []GearCertificationAuthority{GearCertificationAuthorityCcc, GearCertificationAuthorityCe, GearCertificationAuthorityFcc, GearCertificationAuthorityInternal, GearCertificationAuthorityMiit, GearCertificationAuthorityRohs, GearCertificationAuthoritySrrc, GearCertificationAuthorityUnknown} {
-		if !authority.Valid() {
-			t.Fatalf("%s should be valid", authority)
-		}
-	}
-	if GearCertificationAuthority("bad").Valid() {
-		t.Fatal("unknown gear certification authority should be invalid")
-	}
-	for _, certificationType := range []GearCertificationType{GearCertificationTypeCertification, GearCertificationTypeLicense} {
-		if !certificationType.Valid() {
-			t.Fatalf("%s should be valid", certificationType)
-		}
-	}
-	if GearCertificationType("bad").Valid() {
-		t.Fatal("unknown gear certification type should be invalid")
 	}
 	for _, role := range []GearRole{GearRoleAdmin, GearRoleGear, GearRoleServer, GearRoleUnspecified} {
 		if !role.Valid() {

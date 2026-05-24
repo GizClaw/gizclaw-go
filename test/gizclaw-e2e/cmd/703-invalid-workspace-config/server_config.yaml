@@ -7,9 +7,14 @@ storage:
     kind: filesystem
     fs:
       dir: .
-  firmware-depot:
-    kind: depotstore
-    depot-fs: {}
+  acl-db:
+    kind: sql
+    sqlite:
+      dir: data/acl.sqlite
+  history-db:
+    kind: sql
+    sqlite:
+      dir: data/history.sqlite
 stores:
   peers:
     kind: keyvalue
@@ -19,6 +24,10 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: credentials
+  firmwares:
+    kind: keyvalue
+    storage: memory
+    prefix: firmwares
   minimax-tenants:
     kind: keyvalue
     storage: memory
@@ -35,21 +44,18 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: workflows
-  firmware-depots:
-    kind: keyvalue
-    storage: memory
-    prefix: firmware-depots
-  firmware:
-    kind: depotstore
-    storage: firmware-depot
-    depot-fs:
-      filesystem:
-        storage: local-files
-        base-dir: firmware
+  acl:
+    kind: sql
+    storage: acl-db
+  history:
+    kind: sql
+    storage: history-db
 peers:
   store: missing-store
 credentials:
   store: credentials
+firmwares:
+  store: firmwares
 minimax:
   tenants-store: minimax-tenants
   voices-store: voices
@@ -58,6 +64,7 @@ workspaces:
   store: workspaces
 workflows:
   store: workflows
-depots:
-  store: firmware
-  metadata-store: firmware-depots
+acl:
+  store: acl
+history:
+  store: history

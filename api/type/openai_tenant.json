@@ -1,0 +1,73 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OpenAI Tenant Type",
+    "description": "OpenAI-compatible tenant schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "OpenAITenantKind": {
+        "type": "string",
+        "description": "OpenAI-compatible endpoint kind.",
+        "enum": [
+          "compatible",
+          "openai",
+          "azure"
+        ],
+        "example": "compatible"
+      },
+      "OpenAITenantAPIMode": {
+        "type": "string",
+        "description": "OpenAI API mode used by this tenant.",
+        "enum": [
+          "chat_completions"
+        ],
+        "example": "chat_completions"
+      },
+      "OpenAITenant": {
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "credential_name",
+          "api_mode",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/OpenAITenantKind"
+          },
+          "credential_name": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://api.minimax.chat/v1"
+          },
+          "api_mode": {
+            "$ref": "#/components/schemas/OpenAITenantAPIMode"
+          },
+          "description": {
+            "type": "string",
+            "example": "MiniMax OpenAI-compatible tenant"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

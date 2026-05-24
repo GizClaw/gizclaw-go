@@ -80,12 +80,6 @@ const RPC_COMMANDS: RpcCommand[] = [
     params: () => ({}),
   },
   {
-    label: "Get OTA",
-    method: "gear.ota.get",
-    description: "Read the current OTA recommendation.",
-    params: () => ({}),
-  },
-  {
     label: "Get Runtime",
     method: "gear.runtime.get",
     description: "Read online state and transport counters.",

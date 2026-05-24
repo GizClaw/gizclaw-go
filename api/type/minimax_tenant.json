@@ -20,16 +20,16 @@
         ],
         "properties": {
           "name": {
-            "$ref": "./minimax_tenant_name.json#/components/schemas/MiniMaxTenantName"
+            "type": "string"
           },
           "app_id": {
-            "$ref": "./minimax_app_id.json#/components/schemas/MiniMaxAppID"
+            "type": "string"
           },
           "group_id": {
-            "$ref": "./minimax_group_id.json#/components/schemas/MiniMaxGroupID"
+            "type": "string"
           },
           "credential_name": {
-            "$ref": "./credential_name.json#/components/schemas/CredentialName"
+            "type": "string"
           },
           "base_url": {
             "type": "string",

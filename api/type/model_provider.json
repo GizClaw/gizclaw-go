@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Model Provider Type",
-    "description": "ModelProvider schema.",
+    "description": "ModelProvider reference schema.",
     "version": "1.0.0"
   },
   "paths": {},
@@ -19,7 +19,7 @@
             "$ref": "./model_provider_kind.json#/components/schemas/ModelProviderKind"
           },
           "name": {
-            "$ref": "./model_provider_name.json#/components/schemas/ModelProviderName"
+            "type": "string"
           }
         }
       }

@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Admin API",
-    "description": "Admin endpoints for managing firmware depots, channels, and peers.",
+    "description": "Admin endpoints for managing peers and server resources.",
     "version": "1.0.0"
   },
   "servers": [
@@ -20,16 +20,16 @@
       "description": "Declarative admin resource get, put, and delete operations"
     },
     {
-      "name": "Depots",
-      "description": "Firmware depot operations"
-    },
-    {
-      "name": "Channels",
-      "description": "Firmware channel operations"
+      "name": "ACL",
+      "description": "ACL role and policy binding operations"
     },
     {
       "name": "Credentials",
       "description": "Provider credential operations"
+    },
+    {
+      "name": "Firmwares",
+      "description": "Firmware release line operations"
     },
     {
       "name": "Models",
@@ -155,7 +155,13 @@
             "$ref": "#/components/parameters/resourceKind"
           },
           {
-            "$ref": "#/components/parameters/resourceName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Declarative resource metadata.name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -223,7 +229,13 @@
             "$ref": "#/components/parameters/resourceKind"
           },
           {
-            "$ref": "#/components/parameters/resourceName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Declarative resource metadata.name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -316,7 +328,13 @@
             "$ref": "#/components/parameters/resourceKind"
           },
           {
-            "$ref": "#/components/parameters/resourceName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Declarative resource metadata.name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -373,20 +391,101 @@
         }
       }
     },
-    "/depots": {
+    "/acl/views": {
       "get": {
-        "operationId": "listDepots",
-        "summary": "List all firmware depots",
+        "operationId": "listACLViews",
+        "summary": "List ACL views",
         "tags": [
-          "Depots"
+          "ACL"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
         ],
         "responses": {
           "200": {
-            "description": "Depot list",
+            "description": "ACL view list",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DepotList"
+                  "$ref": "#/components/schemas/ACLViewList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createACLView",
+        "summary": "Create an ACL view",
+        "tags": [
+          "ACL"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ACLViewUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created ACL view",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ACLView"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ACL view payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ACL view already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -404,31 +503,47 @@
         }
       }
     },
-    "/depots/{depot}": {
+    "/acl/views/{name}": {
       "get": {
-        "operationId": "getDepot",
-        "summary": "Get a firmware depot snapshot",
+        "operationId": "getACLView",
+        "summary": "Get an ACL view",
         "tags": [
-          "Depots"
+          "ACL"
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/depotName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "ACL view name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Depot snapshot",
+            "description": "ACL view",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/Depot"
+                  "$ref": "./types.json#/components/schemas/ACLView"
                 }
               }
             }
           },
           "404": {
-            "description": "Depot not found",
+            "description": "ACL view not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
             "content": {
               "application/json": {
                 "schema": {
@@ -440,14 +555,20 @@
         }
       },
       "put": {
-        "operationId": "putDepotInfo",
-        "summary": "Create or update depot info (file manifest)",
+        "operationId": "putACLView",
+        "summary": "Create or update an ACL view",
         "tags": [
-          "Depots"
+          "ACL"
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/depotName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "ACL view name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -455,34 +576,24 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "./types.json#/components/schemas/DepotInfo"
+                "$ref": "#/components/schemas/ACLViewUpsert"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Updated depot snapshot",
+            "description": "Stored ACL view",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/Depot"
+                  "$ref": "./types.json#/components/schemas/ACLView"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid JSON",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Info conflicts with existing releases",
+            "description": "Invalid ACL view payload",
             "content": {
               "application/json": {
                 "schema": {
@@ -502,43 +613,37 @@
             }
           }
         }
-      }
-    },
-    "/depots/{depot}/@release": {
-      "put": {
-        "operationId": "releaseDepot",
-        "summary": "Promote testing channel to stable",
+      },
+      "delete": {
+        "operationId": "deleteACLView",
+        "summary": "Delete an ACL view",
         "tags": [
-          "Depots"
+          "ACL"
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/depotName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "ACL view name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Updated depot snapshot after release",
+            "description": "Deleted ACL view",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/Depot"
+                  "$ref": "./types.json#/components/schemas/ACLView"
                 }
               }
             }
           },
           "404": {
-            "description": "Depot not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Release not ready (testing channel missing)",
+            "description": "ACL view not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -560,90 +665,159 @@
         }
       }
     },
-    "/depots/{depot}/@rollback": {
-      "put": {
-        "operationId": "rollbackDepot",
-        "summary": "Roll back stable channel to the rollback snapshot",
-        "tags": [
-          "Depots"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/depotName"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Updated depot snapshot after rollback",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/Depot"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Depot not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Rollback not available",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/depots/{depot}/channels/{channel}": {
+    "/acl/roles": {
       "get": {
-        "operationId": "getChannel",
-        "summary": "Get a specific channel release",
+        "operationId": "listACLRoles",
+        "summary": "List ACL roles",
         "tags": [
-          "Channels"
+          "ACL"
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/depotName"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/channel"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Channel release",
+            "description": "ACL role list",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/DepotRelease"
+                  "$ref": "#/components/schemas/ACLRoleList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createACLRole",
+        "summary": "Create an ACL role",
+        "tags": [
+          "ACL"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ACLRoleUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created ACL role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ACLRole"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ACL role payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ACL role already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acl/roles/{name}": {
+      "get": {
+        "operationId": "getACLRole",
+        "summary": "Get an ACL role",
+        "tags": [
+          "ACL"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "ACL role name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ACL role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ACLRole"
                 }
               }
             }
           },
           "404": {
-            "description": "Depot or channel not found",
+            "description": "ACL role not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
             "content": {
               "application/json": {
                 "schema": {
@@ -655,43 +829,443 @@
         }
       },
       "put": {
-        "operationId": "putChannel",
-        "summary": "Upload a firmware release tarball for a channel",
+        "operationId": "putACLRole",
+        "summary": "Create or update an ACL role",
         "tags": [
-          "Channels"
+          "ACL"
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/depotName"
-          },
-          {
-            "$ref": "#/components/parameters/channel"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "ACL role name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
-            "application/octet-stream": {
+            "application/json": {
               "schema": {
-                "type": "string",
-                "format": "binary"
+                "$ref": "#/components/schemas/ACLRoleUpsert"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Uploaded release",
+            "description": "Stored ACL role",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "./types.json#/components/schemas/DepotRelease"
+                  "$ref": "./types.json#/components/schemas/ACLRole"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ACL role payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteACLRole",
+        "summary": "Delete an ACL role",
+        "tags": [
+          "ACL"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "ACL role name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted ACL role",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ACLRole"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACL role not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acl/policy-bindings": {
+      "get": {
+        "operationId": "listACLPolicyBindings",
+        "summary": "List ACL policy bindings",
+        "tags": [
+          "ACL"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          },
+          {
+            "name": "subject_kind",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ACL subject kind",
+            "schema": {
+              "$ref": "./types.json#/components/schemas/ACLSubjectKind"
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ACL subject identifier",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resource_kind",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ACL resource kind",
+            "schema": {
+              "$ref": "./types.json#/components/schemas/ACLResourceKind"
+            }
+          },
+          {
+            "name": "resource_id",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ACL resource identifier",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "description": "Filter by ACL role name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "permission",
+            "in": "query",
+            "required": false,
+            "description": "Filter by expanded ACL permission",
+            "schema": {
+              "$ref": "./types.json#/components/schemas/ACLPermission"
+            }
+          },
+          {
+            "name": "order_by",
+            "in": "query",
+            "required": false,
+            "description": "Sort ACL policy bindings by id or display order",
+            "schema": {
+              "type": "string",
+              "default": "id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ACL policy binding list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ACLPolicyBindingList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createACLPolicyBinding",
+        "summary": "Create an ACL policy binding",
+        "tags": [
+          "ACL"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ACLPolicyBindingUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created ACL policy binding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ACLPolicyBinding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ACL policy binding payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
           },
           "409": {
-            "description": "Invalid manifest in tarball",
+            "description": "ACL policy binding already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/acl/policy-bindings/{id}": {
+      "get": {
+        "operationId": "getACLPolicyBinding",
+        "summary": "Get an ACL policy binding",
+        "tags": [
+          "ACL"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ACL policy binding id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ACL policy binding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ACLPolicyBinding"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACL policy binding not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putACLPolicyBinding",
+        "summary": "Create or update an ACL policy binding",
+        "tags": [
+          "ACL"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ACL policy binding id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ACLPolicyBindingUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored ACL policy binding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ACLPolicyBinding"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ACL policy binding payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteACLPolicyBinding",
+        "summary": "Delete an ACL policy binding",
+        "tags": [
+          "ACL"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ACL policy binding id",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted ACL policy binding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ACLPolicyBinding"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ACL policy binding not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
             "content": {
               "application/json": {
                 "schema": {
@@ -712,10 +1286,24 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -801,6 +1389,406 @@
         }
       }
     },
+    "/firmwares": {
+      "get": {
+        "operationId": "listFirmwares",
+        "summary": "List firmwares",
+        "tags": [
+          "Firmwares"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Firmware list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FirmwareList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createFirmware",
+        "summary": "Create a firmware release line",
+        "tags": [
+          "Firmwares"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirmwareUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created firmware",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Firmware"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid firmware payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Firmware already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/firmwares/{name}": {
+      "get": {
+        "operationId": "getFirmware",
+        "summary": "Get a firmware release line",
+        "tags": [
+          "Firmwares"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Firmware name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Firmware",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Firmware"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Firmware not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putFirmware",
+        "summary": "Create or update a firmware release line",
+        "tags": [
+          "Firmwares"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Firmware name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FirmwareUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored firmware",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Firmware"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid firmware payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFirmware",
+        "summary": "Delete a firmware release line",
+        "tags": [
+          "Firmwares"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Firmware name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted firmware",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Firmware"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Firmware not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/firmwares/{name}/@release": {
+      "post": {
+        "operationId": "releaseFirmware",
+        "summary": "Promote firmware slots",
+        "description": "Atomically promote slots: stable to rollback, beta to stable, develop to beta, pending to develop, then clear pending. The resulting stable slot must be non-empty.",
+        "tags": [
+          "Firmwares"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Firmware name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Released firmware",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Firmware"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Firmware not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Release would leave stable empty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/firmwares/{name}/@rollback": {
+      "post": {
+        "operationId": "rollbackFirmware",
+        "summary": "Rollback firmware stable slot",
+        "description": "Atomically swap stable and rollback slots. The resulting stable slot must be non-empty.",
+        "tags": [
+          "Firmwares"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Firmware name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rolled back firmware",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/Firmware"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Firmware not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Rollback would leave stable empty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/credentials": {
       "get": {
         "operationId": "listCredentials",
@@ -810,13 +1798,33 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/credentialProvider"
+            "name": "provider",
+            "in": "query",
+            "required": false,
+            "description": "Filter credentials by provider",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -911,7 +1919,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/credentialName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Credential name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -955,7 +1969,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/credentialName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Credential name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1009,7 +2029,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/credentialName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Credential name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1055,22 +2081,39 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/modelKind"
-          },
-          {
             "$ref": "#/components/parameters/modelSource"
           },
           {
             "$ref": "#/components/parameters/modelProviderKind"
           },
           {
-            "$ref": "#/components/parameters/modelProviderName"
+            "name": "providerName",
+            "in": "query",
+            "required": false,
+            "description": "Filter models by provider instance name",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -1165,7 +2208,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/modelID"
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Model identifier",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1209,7 +2258,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/modelID"
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Model identifier",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1273,7 +2328,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/modelID"
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Model identifier",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1310,6 +2371,828 @@
         }
       }
     },
+    "/dashscope-tenants": {
+      "get": {
+        "operationId": "listDashScopeTenants",
+        "summary": "List all DashScope tenants",
+        "tags": [
+          "DashScopeTenants"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DashScope tenant list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashScopeTenantList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createDashScopeTenant",
+        "summary": "Create a DashScope tenant",
+        "tags": [
+          "DashScopeTenants"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashScopeTenantUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created DashScope tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/DashScopeTenant"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid DashScope tenant payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "DashScope tenant already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gemini-tenants": {
+      "get": {
+        "operationId": "listGeminiTenants",
+        "summary": "List all Gemini tenants",
+        "tags": [
+          "GeminiTenants"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gemini tenant list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeminiTenantList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createGeminiTenant",
+        "summary": "Create a Gemini tenant",
+        "tags": [
+          "GeminiTenants"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeminiTenantUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created Gemini tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/GeminiTenant"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Gemini tenant payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Gemini tenant already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gemini-tenants/{name}": {
+      "get": {
+        "operationId": "getGeminiTenant",
+        "summary": "Get a Gemini tenant",
+        "tags": [
+          "GeminiTenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Gemini tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gemini tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/GeminiTenant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Gemini tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putGeminiTenant",
+        "summary": "Create or update a Gemini tenant",
+        "tags": [
+          "GeminiTenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Gemini tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GeminiTenantUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored Gemini tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/GeminiTenant"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid Gemini tenant payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteGeminiTenant",
+        "summary": "Delete a Gemini tenant",
+        "tags": [
+          "GeminiTenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Gemini tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted Gemini tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/GeminiTenant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Gemini tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashscope-tenants/{name}": {
+      "get": {
+        "operationId": "getDashScopeTenant",
+        "summary": "Get a DashScope tenant",
+        "tags": [
+          "DashScopeTenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "DashScope tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DashScope tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/DashScopeTenant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DashScope tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putDashScopeTenant",
+        "summary": "Create or update a DashScope tenant",
+        "tags": [
+          "DashScopeTenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "DashScope tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DashScopeTenantUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored DashScope tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/DashScopeTenant"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid DashScope tenant payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteDashScopeTenant",
+        "summary": "Delete a DashScope tenant",
+        "tags": [
+          "DashScopeTenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "DashScope tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted DashScope tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/DashScopeTenant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "DashScope tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openai-tenants": {
+      "get": {
+        "operationId": "listOpenAITenants",
+        "summary": "List all OpenAI-compatible tenants",
+        "tags": [
+          "OpenAITenants"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAI-compatible tenant list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenAITenantList"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createOpenAITenant",
+        "summary": "Create an OpenAI-compatible tenant",
+        "tags": [
+          "OpenAITenants"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenAITenantUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created OpenAI-compatible tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/OpenAITenant"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid OpenAI-compatible tenant payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "OpenAI-compatible tenant already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openai-tenants/{name}": {
+      "get": {
+        "operationId": "getOpenAITenant",
+        "summary": "Get an OpenAI-compatible tenant",
+        "tags": [
+          "OpenAITenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "OpenAI-compatible tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAI-compatible tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/OpenAITenant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "OpenAI-compatible tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putOpenAITenant",
+        "summary": "Create or update an OpenAI-compatible tenant",
+        "tags": [
+          "OpenAITenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "OpenAI-compatible tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenAITenantUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored OpenAI-compatible tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/OpenAITenant"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid OpenAI-compatible tenant payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteOpenAITenant",
+        "summary": "Delete an OpenAI-compatible tenant",
+        "tags": [
+          "OpenAITenants"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "OpenAI-compatible tenant name",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted OpenAI-compatible tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/OpenAITenant"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "OpenAI-compatible tenant not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/minimax-tenants": {
       "get": {
         "operationId": "listMiniMaxTenants",
@@ -1319,10 +3202,24 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -1417,7 +3314,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/miniMaxTenantName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "MiniMax tenant name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1461,7 +3364,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/miniMaxTenantName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "MiniMax tenant name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1515,7 +3424,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/miniMaxTenantName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "MiniMax tenant name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1561,7 +3476,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/miniMaxTenantName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "MiniMax tenant name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1627,10 +3548,24 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -1725,7 +3660,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/volcTenantName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Volcengine tenant name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1769,7 +3710,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/volcTenantName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Volcengine tenant name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1823,7 +3770,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/volcTenantName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Volcengine tenant name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1869,7 +3822,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/volcTenantName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Volcengine tenant name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1941,13 +3900,33 @@
             "$ref": "#/components/parameters/voiceProviderKind"
           },
           {
-            "$ref": "#/components/parameters/voiceProviderName"
+            "name": "providerName",
+            "in": "query",
+            "required": false,
+            "description": "Filter voices by provider instance name",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -2042,7 +4021,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/voiceID"
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Voice identifier",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2086,7 +4071,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/voiceID"
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Voice identifier",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -2150,7 +4141,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/voiceID"
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Voice identifier",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2196,7 +4193,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workflowName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Workflow name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2240,7 +4243,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workflowName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Workflow name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -2294,7 +4303,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workflowName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Workflow name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2340,10 +4355,24 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -2438,7 +4467,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workspaceName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Workspace name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2482,7 +4517,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workspaceName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Workspace name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -2536,7 +4577,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/workspaceName"
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "description": "Workspace name",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2582,10 +4629,24 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           }
         ],
         "responses": {
@@ -2711,10 +4772,24 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/cursor"
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "Opaque cursor returned by the previous list response",
+            "schema": {
+              "type": "string"
+            }
           },
           {
-            "$ref": "#/components/parameters/limit"
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 50
+            }
           },
           {
             "name": "key",
@@ -2757,124 +4832,6 @@
         }
       }
     },
-    "/peers/certification/{type}/{authority}/{id}": {
-      "get": {
-        "operationId": "listPeersByCertification",
-        "summary": "List peers by certification",
-        "tags": [
-          "Query"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/cursor"
-          },
-          {
-            "$ref": "#/components/parameters/limit"
-          },
-          {
-            "name": "type",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "./types.json#/components/schemas/GearCertificationType"
-            }
-          },
-          {
-            "name": "authority",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "./types.json#/components/schemas/GearCertificationAuthority"
-            }
-          },
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Matched peers",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegistrationList"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/peers/firmware/{depot}/{channel}": {
-      "get": {
-        "operationId": "listPeersByFirmware",
-        "summary": "List peers by firmware depot and channel",
-        "tags": [
-          "Query"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/cursor"
-          },
-          {
-            "$ref": "#/components/parameters/limit"
-          },
-          {
-            "name": "depot",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "channel",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "$ref": "./types.json#/components/schemas/GearFirmwareChannel"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Matched peers",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegistrationList"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/peers/{publicKey}": {
       "get": {
         "operationId": "getPeer",
@@ -2884,7 +4841,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2918,7 +4881,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2954,7 +4923,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -3000,7 +4975,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3036,7 +5017,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3092,7 +5079,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3102,6 +5095,66 @@
               "application/json": {
                 "schema": {
                   "$ref": "./types.json#/components/schemas/DeviceInfo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Peer not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putPeerInfo",
+        "summary": "Update peer device info",
+        "tags": [
+          "Resource"
+        ],
+        "parameters": [
+          {
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./types.json#/components/schemas/DeviceInfo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated device info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/DeviceInfo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid device info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -3128,7 +5181,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3162,7 +5221,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -3218,7 +5283,13 @@
         ],
         "parameters": [
           {
-            "$ref": "#/components/parameters/publicKey"
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "description": "Peer public key",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3234,60 +5305,10 @@
           }
         }
       }
-    },
-    "/peers/{publicKey}/ota": {
-      "get": {
-        "operationId": "getPeerOTA",
-        "summary": "Get peer OTA firmware summary",
-        "tags": [
-          "Resource"
-        ],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/publicKey"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OTA summary",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/OTASummary"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Peer or firmware not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
     "schemas": {
-      "DepotList": {
-        "type": "object",
-        "required": [
-          "items"
-        ],
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "./types.json#/components/schemas/Depot"
-            }
-          }
-        }
-      },
       "RegistrationList": {
         "type": "object",
         "required": [
@@ -3355,6 +5376,159 @@
           }
         }
       },
+      "ACLViewUpsert": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "ACLViewList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/ACLView"
+            }
+          }
+        }
+      },
+      "ACLRoleUpsert": {
+        "type": "object",
+        "required": [
+          "name",
+          "permissions"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "permissions": {
+            "$ref": "./types.json#/components/schemas/ACLPermissionList"
+          }
+        }
+      },
+      "ACLRoleList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/ACLRole"
+            }
+          }
+        }
+      },
+      "ACLPolicyBindingUpsert": {
+        "type": "object",
+        "required": [
+          "policy"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "display_order": {
+            "type": "number",
+            "format": "double"
+          },
+          "policy": {
+            "$ref": "./types.json#/components/schemas/ACLPolicy"
+          }
+        }
+      },
+      "ACLPolicyBindingList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/ACLPolicyBinding"
+            }
+          }
+        }
+      },
+      "FirmwareUpsert": {
+        "type": "object",
+        "required": [
+          "name",
+          "slots"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "slots": {
+            "$ref": "./types.json#/components/schemas/FirmwareSlots"
+          }
+        }
+      },
+      "FirmwareList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/Firmware"
+            }
+          }
+        }
+      },
       "CredentialUpsert": {
         "type": "object",
         "required": [
@@ -3365,10 +5539,10 @@
         ],
         "properties": {
           "name": {
-            "$ref": "./types.json#/components/schemas/CredentialName"
+            "type": "string"
           },
           "provider": {
-            "$ref": "./types.json#/components/schemas/CredentialProvider"
+            "type": "string"
           },
           "method": {
             "$ref": "./types.json#/components/schemas/CredentialMethod"
@@ -3436,7 +5610,7 @@
         ],
         "properties": {
           "id": {
-            "$ref": "./types.json#/components/schemas/ModelID"
+            "type": "string"
           },
           "kind": {
             "$ref": "./types.json#/components/schemas/ModelKind"
@@ -3453,13 +5627,14 @@
           "description": {
             "type": "string"
           },
+          "capabilities": {
+            "$ref": "./types.json#/components/schemas/ModelCapabilities"
+          },
           "provider_data": {
-            "type": "object",
-            "description": "Provider-specific data keyed by provider kind.",
-            "additionalProperties": true,
+            "$ref": "./types.json#/components/schemas/ModelProviderData",
+            "description": "Provider-specific model runtime configuration.",
             "example": {
-              "openai-compatible": {
-                "base_url": "https://api.minimax.chat/v1",
+              "openai-tenant": {
                 "upstream_model": "MiniMax-M2.5"
               }
             }
@@ -3476,16 +5651,16 @@
         ],
         "properties": {
           "name": {
-            "$ref": "./types.json#/components/schemas/MiniMaxTenantName"
+            "type": "string"
           },
           "app_id": {
-            "$ref": "./types.json#/components/schemas/MiniMaxAppID"
+            "type": "string"
           },
           "group_id": {
-            "$ref": "./types.json#/components/schemas/MiniMaxGroupID"
+            "type": "string"
           },
           "credential_name": {
-            "$ref": "./types.json#/components/schemas/CredentialName"
+            "type": "string"
           },
           "base_url": {
             "type": "string",
@@ -3529,13 +5704,13 @@
         ],
         "properties": {
           "name": {
-            "$ref": "./types.json#/components/schemas/VolcTenantName"
+            "type": "string"
           },
           "credential_name": {
-            "$ref": "./types.json#/components/schemas/CredentialName"
+            "type": "string"
           },
           "app_id": {
-            "$ref": "./types.json#/components/schemas/VolcAppID"
+            "type": "string"
           },
           "region": {
             "type": "string",
@@ -3549,7 +5724,7 @@
           "resource_ids": {
             "type": "array",
             "items": {
-              "$ref": "./types.json#/components/schemas/VolcResourceID"
+              "type": "string"
             },
             "example": [
               "seed-tts-2.0"
@@ -3614,7 +5789,7 @@
         ],
         "properties": {
           "id": {
-            "$ref": "./types.json#/components/schemas/VoiceID"
+            "type": "string"
           },
           "source": {
             "$ref": "./types.json#/components/schemas/VoiceSource"
@@ -3629,15 +5804,7 @@
             "type": "string"
           },
           "provider_data": {
-            "type": "object",
-            "description": "Provider-specific debug data keyed by provider kind.",
-            "additionalProperties": true,
-            "example": {
-              "minimax-tenant": {
-                "voice_id": "Arabic_CalmWoman",
-                "voice_type": "system"
-              }
-            }
+            "$ref": "./types.json#/components/schemas/VoiceProviderData"
           }
         }
       },
@@ -3652,7 +5819,7 @@
         ],
         "properties": {
           "tenant_name": {
-            "$ref": "./types.json#/components/schemas/MiniMaxTenantName"
+            "type": "string"
           },
           "synced_at": {
             "type": "string",
@@ -3686,7 +5853,7 @@
         ],
         "properties": {
           "tenant_name": {
-            "$ref": "./types.json#/components/schemas/VolcTenantName"
+            "type": "string"
           },
           "synced_at": {
             "type": "string",
@@ -3717,10 +5884,10 @@
         ],
         "properties": {
           "name": {
-            "$ref": "./types.json#/components/schemas/WorkspaceName"
+            "type": "string"
           },
           "workflow_name": {
-            "$ref": "./types.json#/components/schemas/WorkflowName"
+            "type": "string"
           },
           "parameters": {
             "type": "object",
@@ -3772,92 +5939,161 @@
             }
           }
         }
+      },
+      "GeminiTenantUpsert": {
+        "type": "object",
+        "required": [
+          "name",
+          "credential_name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "credential_name": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string",
+            "example": "my-gemini-project"
+          },
+          "location": {
+            "type": "string",
+            "example": "global"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://generativelanguage.googleapis.com"
+          },
+          "description": {
+            "type": "string",
+            "example": "Gemini tenant"
+          }
+        }
+      },
+      "GeminiTenantList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/GeminiTenant"
+            }
+          }
+        }
+      },
+      "OpenAITenantUpsert": {
+        "type": "object",
+        "required": [
+          "name",
+          "credential_name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "./types.json#/components/schemas/OpenAITenantKind"
+          },
+          "credential_name": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://api.minimax.chat/v1"
+          },
+          "api_mode": {
+            "$ref": "./types.json#/components/schemas/OpenAITenantAPIMode"
+          },
+          "description": {
+            "type": "string",
+            "example": "MiniMax OpenAI-compatible tenant"
+          }
+        }
+      },
+      "OpenAITenantList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/OpenAITenant"
+            }
+          }
+        }
+      },
+      "DashScopeTenantUpsert": {
+        "type": "object",
+        "required": [
+          "name",
+          "credential_name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "credential_name": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://dashscope.aliyuncs.com"
+          },
+          "description": {
+            "type": "string",
+            "example": "DashScope tenant"
+          }
+        }
+      },
+      "DashScopeTenantList": {
+        "type": "object",
+        "required": [
+          "items",
+          "has_next"
+        ],
+        "properties": {
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./types.json#/components/schemas/DashScopeTenant"
+            }
+          }
+        }
       }
     },
     "parameters": {
-      "cursor": {
-        "name": "cursor",
-        "in": "query",
-        "required": false,
-        "description": "Opaque cursor returned by the previous list response",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "limit": {
-        "name": "limit",
-        "in": "query",
-        "required": false,
-        "description": "Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.",
-        "schema": {
-          "type": "integer",
-          "format": "int32",
-          "default": 50
-        }
-      },
-      "depotName": {
-        "name": "depot",
-        "in": "path",
-        "required": true,
-        "description": "Firmware depot name",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "channel": {
-        "name": "channel",
-        "in": "path",
-        "required": true,
-        "description": "Release channel",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/Channel"
-        }
-      },
-      "publicKey": {
-        "name": "publicKey",
-        "in": "path",
-        "required": true,
-        "description": "Peer public key",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "workflowName": {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "Workflow name",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/WorkflowName"
-        }
-      },
-      "workspaceName": {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "Workspace name",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/WorkspaceName"
-        }
-      },
-      "credentialName": {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "Credential name",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/CredentialName"
-        }
-      },
-      "credentialProvider": {
-        "name": "provider",
-        "in": "query",
-        "required": false,
-        "description": "Filter credentials by provider",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/CredentialProvider"
-        }
-      },
       "resourceKind": {
         "name": "kind",
         "in": "path",
@@ -3865,42 +6101,6 @@
         "description": "Declarative resource kind",
         "schema": {
           "$ref": "./types.json#/components/schemas/ResourceKind"
-        }
-      },
-      "resourceName": {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "Declarative resource metadata.name",
-        "schema": {
-          "type": "string"
-        }
-      },
-      "miniMaxTenantName": {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "MiniMax tenant name",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/MiniMaxTenantName"
-        }
-      },
-      "volcTenantName": {
-        "name": "name",
-        "in": "path",
-        "required": true,
-        "description": "Volcengine tenant name",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/VolcTenantName"
-        }
-      },
-      "voiceID": {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Voice identifier",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/VoiceID"
         }
       },
       "voiceSource": {
@@ -3921,33 +6121,6 @@
           "$ref": "./types.json#/components/schemas/VoiceProviderKind"
         }
       },
-      "voiceProviderName": {
-        "name": "providerName",
-        "in": "query",
-        "required": false,
-        "description": "Filter voices by provider instance name",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/VoiceProviderName"
-        }
-      },
-      "modelID": {
-        "name": "id",
-        "in": "path",
-        "required": true,
-        "description": "Model identifier",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/ModelID"
-        }
-      },
-      "modelKind": {
-        "name": "kind",
-        "in": "query",
-        "required": false,
-        "description": "Filter models by kind",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/ModelKind"
-        }
-      },
       "modelSource": {
         "name": "source",
         "in": "query",
@@ -3964,15 +6137,6 @@
         "description": "Filter models by provider kind",
         "schema": {
           "$ref": "./types.json#/components/schemas/ModelProviderKind"
-        }
-      },
-      "modelProviderName": {
-        "name": "providerName",
-        "in": "query",
-        "required": false,
-        "description": "Filter models by provider instance name",
-        "schema": {
-          "$ref": "./types.json#/components/schemas/ModelProviderName"
         }
       }
     }

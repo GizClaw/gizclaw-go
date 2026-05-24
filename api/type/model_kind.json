@@ -10,11 +10,12 @@
     "schemas": {
       "ModelKind": {
         "type": "string",
-        "description": "Model capability kind",
+        "description": "Runtime role of a model.",
         "enum": [
           "llm",
           "tts",
-          "asr"
+          "asr",
+          "embedding"
         ],
         "example": "llm"
       }

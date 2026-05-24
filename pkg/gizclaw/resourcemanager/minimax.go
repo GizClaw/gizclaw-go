@@ -8,8 +8,8 @@ import (
 )
 
 func (m *Manager) applyMiniMaxTenant(ctx context.Context, resource apitypes.Resource) (apitypes.ApplyResult, error) {
-	if m.services.MiniMax == nil {
-		return apitypes.ApplyResult{}, missingService("minimax")
+	if m.services.ProviderTenants == nil {
+		return apitypes.ApplyResult{}, missingService("provider tenants")
 	}
 	item, err := resource.AsMiniMaxTenantResource()
 	if err != nil {
@@ -18,7 +18,7 @@ func (m *Manager) applyMiniMaxTenant(ctx context.Context, resource apitypes.Reso
 	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
-	name := adminservice.MiniMaxTenantName(pathParam(item.Metadata.Name))
+	name := string(pathParam(item.Metadata.Name))
 	existing, exists, err := m.getMiniMaxTenant(ctx, name)
 	if err != nil {
 		return apitypes.ApplyResult{}, err
@@ -42,8 +42,8 @@ func (m *Manager) applyMiniMaxTenant(ctx context.Context, resource apitypes.Reso
 }
 
 func (m *Manager) applyVoice(ctx context.Context, resource apitypes.Resource) (apitypes.ApplyResult, error) {
-	if m.services.MiniMax == nil {
-		return apitypes.ApplyResult{}, missingService("minimax")
+	if m.services.Voices == nil {
+		return apitypes.ApplyResult{}, missingService("voices")
 	}
 	item, err := resource.AsVoiceResource()
 	if err != nil {
@@ -52,7 +52,7 @@ func (m *Manager) applyVoice(ctx context.Context, resource apitypes.Resource) (a
 	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
-	id := adminservice.VoiceID(pathParam(item.Metadata.Name))
+	id := string(pathParam(item.Metadata.Name))
 	existing, exists, err := m.getVoice(ctx, id)
 	if err != nil {
 		return apitypes.ApplyResult{}, err
@@ -76,8 +76,8 @@ func (m *Manager) applyVoice(ctx context.Context, resource apitypes.Resource) (a
 }
 
 func (m *Manager) applyVolcTenant(ctx context.Context, resource apitypes.Resource) (apitypes.ApplyResult, error) {
-	if m.services.MiniMax == nil {
-		return apitypes.ApplyResult{}, missingService("volc")
+	if m.services.ProviderTenants == nil {
+		return apitypes.ApplyResult{}, missingService("provider tenants")
 	}
 	item, err := resource.AsVolcTenantResource()
 	if err != nil {
@@ -86,7 +86,7 @@ func (m *Manager) applyVolcTenant(ctx context.Context, resource apitypes.Resourc
 	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
-	name := adminservice.VolcTenantName(pathParam(item.Metadata.Name))
+	name := string(pathParam(item.Metadata.Name))
 	existing, exists, err := m.getVolcTenant(ctx, name)
 	if err != nil {
 		return apitypes.ApplyResult{}, err
@@ -109,8 +109,8 @@ func (m *Manager) applyVolcTenant(ctx context.Context, resource apitypes.Resourc
 	return applyResult(apitypes.ApplyActionCreated, apitypes.ResourceKindVolcTenant, item.Metadata.Name), nil
 }
 
-func (m *Manager) getMiniMaxTenant(ctx context.Context, name adminservice.MiniMaxTenantName) (apitypes.MiniMaxTenant, bool, error) {
-	response, err := m.services.MiniMax.GetMiniMaxTenant(ctx, adminservice.GetMiniMaxTenantRequestObject{Name: name})
+func (m *Manager) getMiniMaxTenant(ctx context.Context, name string) (apitypes.MiniMaxTenant, bool, error) {
+	response, err := m.services.ProviderTenants.GetMiniMaxTenant(ctx, adminservice.GetMiniMaxTenantRequestObject{Name: name})
 	if err != nil {
 		return apitypes.MiniMaxTenant{}, false, err
 	}
@@ -126,8 +126,8 @@ func (m *Manager) getMiniMaxTenant(ctx context.Context, name adminservice.MiniMa
 	}
 }
 
-func (m *Manager) putMiniMaxTenant(ctx context.Context, name adminservice.MiniMaxTenantName, body adminservice.MiniMaxTenantUpsert) error {
-	response, err := m.services.MiniMax.PutMiniMaxTenant(ctx, adminservice.PutMiniMaxTenantRequestObject{Name: name, Body: &body})
+func (m *Manager) putMiniMaxTenant(ctx context.Context, name string, body adminservice.MiniMaxTenantUpsert) error {
+	response, err := m.services.ProviderTenants.PutMiniMaxTenant(ctx, adminservice.PutMiniMaxTenantRequestObject{Name: name, Body: &body})
 	if err != nil {
 		return err
 	}
@@ -143,8 +143,8 @@ func (m *Manager) putMiniMaxTenant(ctx context.Context, name adminservice.MiniMa
 	}
 }
 
-func (m *Manager) deleteMiniMaxTenant(ctx context.Context, name adminservice.MiniMaxTenantName) (apitypes.MiniMaxTenant, bool, error) {
-	response, err := m.services.MiniMax.DeleteMiniMaxTenant(ctx, adminservice.DeleteMiniMaxTenantRequestObject{Name: name})
+func (m *Manager) deleteMiniMaxTenant(ctx context.Context, name string) (apitypes.MiniMaxTenant, bool, error) {
+	response, err := m.services.ProviderTenants.DeleteMiniMaxTenant(ctx, adminservice.DeleteMiniMaxTenantRequestObject{Name: name})
 	if err != nil {
 		return apitypes.MiniMaxTenant{}, false, err
 	}
@@ -160,8 +160,8 @@ func (m *Manager) deleteMiniMaxTenant(ctx context.Context, name adminservice.Min
 	}
 }
 
-func (m *Manager) getVolcTenant(ctx context.Context, name adminservice.VolcTenantName) (apitypes.VolcTenant, bool, error) {
-	response, err := m.services.MiniMax.GetVolcTenant(ctx, adminservice.GetVolcTenantRequestObject{Name: name})
+func (m *Manager) getVolcTenant(ctx context.Context, name string) (apitypes.VolcTenant, bool, error) {
+	response, err := m.services.ProviderTenants.GetVolcTenant(ctx, adminservice.GetVolcTenantRequestObject{Name: name})
 	if err != nil {
 		return apitypes.VolcTenant{}, false, err
 	}
@@ -177,8 +177,8 @@ func (m *Manager) getVolcTenant(ctx context.Context, name adminservice.VolcTenan
 	}
 }
 
-func (m *Manager) putVolcTenant(ctx context.Context, name adminservice.VolcTenantName, body adminservice.VolcTenantUpsert) error {
-	response, err := m.services.MiniMax.PutVolcTenant(ctx, adminservice.PutVolcTenantRequestObject{Name: name, Body: &body})
+func (m *Manager) putVolcTenant(ctx context.Context, name string, body adminservice.VolcTenantUpsert) error {
+	response, err := m.services.ProviderTenants.PutVolcTenant(ctx, adminservice.PutVolcTenantRequestObject{Name: name, Body: &body})
 	if err != nil {
 		return err
 	}
@@ -194,8 +194,8 @@ func (m *Manager) putVolcTenant(ctx context.Context, name adminservice.VolcTenan
 	}
 }
 
-func (m *Manager) deleteVolcTenant(ctx context.Context, name adminservice.VolcTenantName) (apitypes.VolcTenant, bool, error) {
-	response, err := m.services.MiniMax.DeleteVolcTenant(ctx, adminservice.DeleteVolcTenantRequestObject{Name: name})
+func (m *Manager) deleteVolcTenant(ctx context.Context, name string) (apitypes.VolcTenant, bool, error) {
+	response, err := m.services.ProviderTenants.DeleteVolcTenant(ctx, adminservice.DeleteVolcTenantRequestObject{Name: name})
 	if err != nil {
 		return apitypes.VolcTenant{}, false, err
 	}
@@ -211,8 +211,8 @@ func (m *Manager) deleteVolcTenant(ctx context.Context, name adminservice.VolcTe
 	}
 }
 
-func (m *Manager) getVoice(ctx context.Context, id adminservice.VoiceID) (apitypes.Voice, bool, error) {
-	response, err := m.services.MiniMax.GetVoice(ctx, adminservice.GetVoiceRequestObject{Id: id})
+func (m *Manager) getVoice(ctx context.Context, id string) (apitypes.Voice, bool, error) {
+	response, err := m.services.Voices.GetVoice(ctx, adminservice.GetVoiceRequestObject{Id: id})
 	if err != nil {
 		return apitypes.Voice{}, false, err
 	}
@@ -228,8 +228,8 @@ func (m *Manager) getVoice(ctx context.Context, id adminservice.VoiceID) (apityp
 	}
 }
 
-func (m *Manager) putVoice(ctx context.Context, id adminservice.VoiceID, body adminservice.VoiceUpsert) error {
-	response, err := m.services.MiniMax.PutVoice(ctx, adminservice.PutVoiceRequestObject{Id: id, Body: &body})
+func (m *Manager) putVoice(ctx context.Context, id string, body adminservice.VoiceUpsert) error {
+	response, err := m.services.Voices.PutVoice(ctx, adminservice.PutVoiceRequestObject{Id: id, Body: &body})
 	if err != nil {
 		return err
 	}
@@ -247,8 +247,8 @@ func (m *Manager) putVoice(ctx context.Context, id adminservice.VoiceID, body ad
 	}
 }
 
-func (m *Manager) deleteVoice(ctx context.Context, id adminservice.VoiceID) (apitypes.Voice, bool, error) {
-	response, err := m.services.MiniMax.DeleteVoice(ctx, adminservice.DeleteVoiceRequestObject{Id: id})
+func (m *Manager) deleteVoice(ctx context.Context, id string) (apitypes.Voice, bool, error) {
+	response, err := m.services.Voices.DeleteVoice(ctx, adminservice.DeleteVoiceRequestObject{Id: id})
 	if err != nil {
 		return apitypes.Voice{}, false, err
 	}
@@ -281,7 +281,7 @@ func miniMaxTenantUpsert(resource apitypes.MiniMaxTenantResource) adminservice.M
 		CredentialName: resource.Spec.CredentialName,
 		Description:    resource.Spec.Description,
 		GroupId:        resource.Spec.GroupId,
-		Name:           apitypes.MiniMaxTenantName(resource.Metadata.Name),
+		Name:           string(resource.Metadata.Name),
 	}
 }
 
@@ -302,7 +302,7 @@ func volcTenantUpsert(resource apitypes.VolcTenantResource) adminservice.VolcTen
 		CredentialName: resource.Spec.CredentialName,
 		Description:    resource.Spec.Description,
 		Endpoint:       resource.Spec.Endpoint,
-		Name:           apitypes.VolcTenantName(resource.Metadata.Name),
+		Name:           string(resource.Metadata.Name),
 		Region:         resource.Spec.Region,
 		ResourceIds:    resource.Spec.ResourceIds,
 	}
@@ -321,7 +321,7 @@ func voiceSpec(voice apitypes.Voice) apitypes.VoiceSpec {
 func voiceUpsert(resource apitypes.VoiceResource) adminservice.VoiceUpsert {
 	return adminservice.VoiceUpsert{
 		Description:  resource.Spec.Description,
-		Id:           apitypes.VoiceID(resource.Metadata.Name),
+		Id:           string(resource.Metadata.Name),
 		Name:         resource.Spec.Name,
 		Provider:     resource.Spec.Provider,
 		ProviderData: resource.Spec.ProviderData,

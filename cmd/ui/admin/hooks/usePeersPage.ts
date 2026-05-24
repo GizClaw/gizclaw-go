@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { expectData, toMessage } from "../components/api";
-import { getPeerInfo, getPeerRuntime, listDepots, listPeers } from "@gizclaw/adminservice";
+import { getPeerInfo, getPeerRuntime, listPeers } from "@gizclaw/adminservice";
 import { getServerInfo, type ServerInfo } from "@gizclaw/serverpublic";
 
-import type { Depot, DeviceInfo, Registration, Runtime } from "@gizclaw/adminservice";
+import type { DeviceInfo, Registration, Runtime } from "@gizclaw/adminservice";
 
 export const PEER_PAGE_LIMIT = 50;
 
@@ -19,7 +19,6 @@ export interface PeerListState {
 }
 
 export interface PeersPageState {
-  depots: Depot[];
   error: string;
   peers: Registration[];
   infos: PeerInfoMap;
@@ -42,7 +41,6 @@ export function usePeersPage(): {
 } {
   const [filter, setFilter] = useState("");
   const [dashboard, setDashboard] = useState<PeersPageState>({
-    depots: [],
     error: "",
     peers: [],
     infos: {},
@@ -60,7 +58,7 @@ export function usePeersPage(): {
   const loadDashboard = useCallback(async (cursor: string | null, history: Array<string | null>) => {
     setDashboard((current) => ({ ...current, error: "", loading: true }));
     try {
-      const [serverInfo, registrations, depots] = await Promise.all([
+      const [serverInfo, registrations] = await Promise.all([
         expectData(getServerInfo()),
         expectData(
           listPeers({
@@ -70,7 +68,6 @@ export function usePeersPage(): {
             },
           }),
         ),
-        expectData(listDepots()),
       ]);
 
       const peers = registrations.items ?? [];
@@ -80,7 +77,6 @@ export function usePeersPage(): {
       ]);
 
       setDashboard({
-        depots: depots.items ?? [],
         error: "",
         peers,
         infos,

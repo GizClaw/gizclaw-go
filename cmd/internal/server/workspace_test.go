@@ -11,14 +11,13 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func TestPrepareWorkspaceConfigLoadsWorkspaceConfig(t *testing.T) {
 	workspace := t.TempDir()
-	if err := os.WriteFile(filepath.Join(workspace, workspaceConfigFile), []byte(`
+	if err := os.WriteFile(filepath.Join(workspace, workspaceConfigFile), []byte(fmt.Sprintf(`
 listen: "127.0.0.1:39001"
-admin-public-key: "ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB"
+admin-public-key: %q
 storage:
   memory:
     kind: keyvalue
@@ -27,9 +26,10 @@ storage:
     kind: filesystem
     fs:
       dir: .
-  firmware-depot:
-    kind: depotstore
-    depot-fs: {}
+  acl-db:
+    kind: sql
+    sqlite:
+      dir: data/acl.sqlite
 stores:
   peers:
     kind: keyvalue
@@ -39,6 +39,10 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: credentials
+  firmwares:
+    kind: keyvalue
+    storage: memory
+    prefix: firmwares
   minimax-tenants:
     kind: keyvalue
     storage: memory
@@ -55,21 +59,15 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: workflows
-  firmware-depots:
-    kind: keyvalue
-    storage: memory
-    prefix: firmware-depots
-  firmware:
-    kind: depotstore
-    storage: firmware-depot
-    depot-fs:
-      filesystem:
-        storage: local-files
-        base-dir: firmware
+  acl:
+    kind: sql
+    storage: acl-db
 peers:
   store: peers
 credentials:
   store: credentials
+firmwares:
+  store: firmwares
 minimax:
   tenants-store: minimax-tenants
   voices-store: voices
@@ -78,10 +76,9 @@ workspaces:
   store: workspaces
 workflows:
   store: workflows
-depots:
-  store: firmware
-  metadata-store: firmware-depots
-`), 0o644); err != nil {
+acl:
+  store: acl
+`, testPublicKeyText(0xab))), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
 
@@ -95,10 +92,7 @@ depots:
 	if cfg.ListenAddr != "127.0.0.1:39001" {
 		t.Fatalf("ListenAddr = %q", cfg.ListenAddr)
 	}
-	adminKey, err := giznet.KeyFromHex(strings.Repeat("ab", 32))
-	if err != nil {
-		t.Fatalf("KeyFromHex error = %v", err)
-	}
+	adminKey := testPublicKey(0xab)
 	if cfg.AdminPublicKey != adminKey {
 		t.Fatalf("AdminPublicKey = %v", cfg.AdminPublicKey)
 	}
@@ -107,6 +101,9 @@ depots:
 	}
 	if got := cfg.Storage["local-files"].FS.Dir; got != workspace {
 		t.Fatalf("local-files dir = %q", got)
+	}
+	if got := cfg.Storage["acl-db"].SQLite.Dir; got != filepath.Join(workspace, "data", "acl.sqlite") {
+		t.Fatalf("acl db dir = %q", got)
 	}
 }
 
@@ -118,8 +115,6 @@ stores:
     kind: keyvalue
     backend: memory
 peers:
-  store: mem
-depots:
   store: mem
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
@@ -152,24 +147,27 @@ storage:
     kind: filesystem
     fs:
       dir: .
-  fw:
-    kind: depotstore
-    depot-fs: {}
+  acl-db:
+    kind: sql
+    sqlite:
+      dir: data/acl.sqlite
 stores:
   fw-meta:
     kind: keyvalue
     storage: memory
-    prefix: firmware-depots
+    prefix: files-meta
   fw:
-    kind: depotstore
-    storage: fw
-    depot-fs:
-      filesystem:
-        storage: fw-files
-        base-dir: firmware
+    kind: filesystem
+    backend: filesystem
+    dir: .
+  acl:
+    kind: sql
+    storage: acl-db
 peers:
   store: fw
 credentials:
+  store: fw
+firmwares:
   store: fw
 minimax:
   tenants-store: fw
@@ -179,9 +177,8 @@ workspaces:
   store: fw
 workflows:
   store: fw
-depots:
-  store: fw
-  metadata-store: fw-meta
+acl:
+  store: acl
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
@@ -193,8 +190,8 @@ depots:
 	if got := cfg.Storage["fw-files"].FS.Dir; got != workspace {
 		t.Fatalf("fw dir = %q", got)
 	}
-	if got := cfg.Stores["fw"].DepotFS.Filesystem.BaseDir; got != "firmware" {
-		t.Fatalf("fw base-dir = %q", got)
+	if got := cfg.Stores["fw"].Dir; got != workspace {
+		t.Fatalf("fw store dir = %q", got)
 	}
 }
 
@@ -206,8 +203,6 @@ stores:
     kind: keyvalue
     backend: memory
 peers:
-  store: mem
-depots:
   store: mem
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
@@ -224,7 +219,7 @@ depots:
 
 func TestResolveWorkspaceStoreConfigsPreservesAbsoluteDirs(t *testing.T) {
 	root := t.TempDir()
-	absoluteDir := filepath.Join(t.TempDir(), "firmware")
+	absoluteDir := filepath.Join(t.TempDir(), "files")
 
 	gotStorage := resolveWorkspaceStorageConfigs(root, map[string]storage.Config{
 		"fw": {
@@ -237,14 +232,14 @@ func TestResolveWorkspaceStoreConfigsPreservesAbsoluteDirs(t *testing.T) {
 	}
 
 	gotStores := resolveWorkspaceStoreConfigs(root, map[string]stores.Config{
-		"fw": {
-			Kind:    stores.KindFS,
-			Backend: "filesystem",
+		"kv": {
+			Kind:    stores.KindKeyValue,
+			Backend: "badger",
 			Dir:     absoluteDir,
 		},
 	})
-	if gotStores["fw"].Dir != absoluteDir {
-		t.Fatalf("fw legacy store dir = %q, want %q", gotStores["fw"].Dir, absoluteDir)
+	if gotStores["kv"].Dir != absoluteDir {
+		t.Fatalf("kv store dir = %q, want %q", gotStores["kv"].Dir, absoluteDir)
 	}
 }
 
@@ -271,8 +266,6 @@ stores:
     backend: unknown
 peers:
   store: bad
-depots:
-  store: bad
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
@@ -295,9 +288,10 @@ storage:
     kind: filesystem
     fs:
       dir: .
-  firmware-depot:
-    kind: depotstore
-    depot-fs: {}
+  acl-db:
+    kind: sql
+    sqlite:
+      dir: data/acl.sqlite
 stores:
   peers:
     kind: keyvalue
@@ -307,6 +301,10 @@ stores:
     kind: keyvalue
     storage: main-kv
     prefix: credentials
+  firmwares:
+    kind: keyvalue
+    storage: main-kv
+    prefix: firmwares
   minimax-tenants:
     kind: keyvalue
     storage: main-kv
@@ -323,21 +321,15 @@ stores:
     kind: keyvalue
     storage: main-kv
     prefix: workflows
-  firmware-depots:
-    kind: keyvalue
-    storage: main-kv
-    prefix: firmware-depots
-  firmware:
-    kind: depotstore
-    storage: firmware-depot
-    depot-fs:
-      filesystem:
-        storage: local-files
-        base-dir: firmware
+  acl:
+    kind: sql
+    storage: acl-db
 peers:
   store: peers
 credentials:
   store: credentials
+firmwares:
+  store: firmwares
 minimax:
   tenants-store: minimax-tenants
   voices-store: voices
@@ -346,9 +338,8 @@ workspaces:
   store: workspaces
 workflows:
   store: workflows
-depots:
-  store: firmware
-  metadata-store: firmware-depots
+acl:
+  store: acl
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile config error = %v", err)
 	}

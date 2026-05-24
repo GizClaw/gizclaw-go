@@ -18,7 +18,7 @@ func (m *Manager) applyPeerConfig(ctx context.Context, resource apitypes.Resourc
 	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
-	publicKey := adminservice.PublicKey(pathParam(item.Metadata.Name))
+	publicKey := string(pathParam(item.Metadata.Name))
 	existing, err := m.getPeerConfig(ctx, publicKey)
 	if err != nil {
 		return apitypes.ApplyResult{}, err
@@ -36,7 +36,7 @@ func (m *Manager) applyPeerConfig(ctx context.Context, resource apitypes.Resourc
 	return applyResult(apitypes.ApplyActionUpdated, apitypes.ResourceKindPeerConfig, item.Metadata.Name), nil
 }
 
-func (m *Manager) getPeerConfig(ctx context.Context, publicKey adminservice.PublicKey) (apitypes.Configuration, error) {
+func (m *Manager) getPeerConfig(ctx context.Context, publicKey string) (apitypes.Configuration, error) {
 	response, err := m.services.Peers.GetPeerConfig(ctx, adminservice.GetPeerConfigRequestObject{PublicKey: publicKey})
 	if err != nil {
 		return apitypes.Configuration{}, err
@@ -51,7 +51,7 @@ func (m *Manager) getPeerConfig(ctx context.Context, publicKey adminservice.Publ
 	}
 }
 
-func (m *Manager) putPeerConfig(ctx context.Context, publicKey adminservice.PublicKey, body apitypes.Configuration) error {
+func (m *Manager) putPeerConfig(ctx context.Context, publicKey string, body apitypes.Configuration) error {
 	response, err := m.services.Peers.PutPeerConfig(ctx, adminservice.PutPeerConfigRequestObject{PublicKey: publicKey, Body: &body})
 	if err != nil {
 		return err

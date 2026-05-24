@@ -223,7 +223,7 @@ func escapeStoreSegment(value string) string {
 	return strings.ReplaceAll(value, ":", "%3A")
 }
 
-func normalizeListParams(cursor *adminservice.Cursor, limit *adminservice.Limit) (string, int) {
+func normalizeListParams(cursor *string, limit *int32) (string, int) {
 	nextCursor := ""
 	if cursor != nil {
 		nextCursor = string(*cursor)

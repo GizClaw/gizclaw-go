@@ -4,10 +4,6 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
-export type DepotList = {
-    items: Array<Depot>;
-};
-
 export type RegistrationList = {
     has_next: boolean;
     next_cursor?: string | null;
@@ -28,9 +24,55 @@ export type ApproveRequest = {
     role: GearRole;
 };
 
+export type AclViewUpsert = {
+    name: string;
+    description?: string;
+};
+
+export type AclViewList = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<AclView>;
+};
+
+export type AclRoleUpsert = {
+    name: string;
+    permissions: AclPermissionList;
+};
+
+export type AclRoleList = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<AclRole>;
+};
+
+export type AclPolicyBindingUpsert = {
+    id?: string;
+    display_order?: number;
+    policy: AclPolicy;
+};
+
+export type AclPolicyBindingList = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<AclPolicyBinding>;
+};
+
+export type FirmwareUpsert = {
+    name: string;
+    description?: string;
+    slots: FirmwareSlots;
+};
+
+export type FirmwareList = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<Firmware>;
+};
+
 export type CredentialUpsert = {
-    name: CredentialName;
-    provider: CredentialProvider;
+    name: string;
+    provider: string;
     method: CredentialMethod;
     description?: string;
     body: CredentialBody;
@@ -49,25 +91,21 @@ export type ModelList = {
 };
 
 export type ModelUpsert = {
-    id: ModelId;
+    id: string;
     kind: ModelKind;
     source: ModelSource;
     provider: ModelProvider;
     name?: string;
     description?: string;
-    /**
-     * Provider-specific data keyed by provider kind.
-     */
-    provider_data?: {
-        [key: string]: unknown;
-    };
+    capabilities?: ModelCapabilities;
+    provider_data?: ModelProviderData;
 };
 
 export type MiniMaxTenantUpsert = {
-    name: MiniMaxTenantName;
-    app_id: MiniMaxAppId;
-    group_id: MiniMaxGroupId;
-    credential_name: CredentialName;
+    name: string;
+    app_id: string;
+    group_id: string;
+    credential_name: string;
     base_url?: string;
     description?: string;
 };
@@ -79,12 +117,12 @@ export type MiniMaxTenantList = {
 };
 
 export type VolcTenantUpsert = {
-    name: VolcTenantName;
-    credential_name: CredentialName;
-    app_id: VolcAppId;
+    name: string;
+    credential_name: string;
+    app_id: string;
     region?: string;
     endpoint?: string;
-    resource_ids?: Array<VolcResourceId>;
+    resource_ids?: Array<string>;
     description?: string;
 };
 
@@ -101,21 +139,16 @@ export type VoiceList = {
 };
 
 export type VoiceUpsert = {
-    id: VoiceId;
+    id: string;
     source: VoiceSource;
     provider: VoiceProvider;
     name?: string;
     description?: string;
-    /**
-     * Provider-specific debug data keyed by provider kind.
-     */
-    provider_data?: {
-        [key: string]: unknown;
-    };
+    provider_data?: VoiceProviderData;
 };
 
 export type MiniMaxSyncVoicesResult = {
-    tenant_name: MiniMaxTenantName;
+    tenant_name: string;
     synced_at: string;
     created_count: number;
     updated_count: number;
@@ -123,7 +156,7 @@ export type MiniMaxSyncVoicesResult = {
 };
 
 export type VolcSyncVoicesResult = {
-    tenant_name: VolcTenantName;
+    tenant_name: string;
     synced_at: string;
     created_count: number;
     updated_count: number;
@@ -131,8 +164,8 @@ export type VolcSyncVoicesResult = {
 };
 
 export type WorkspaceUpsert = {
-    name: WorkspaceName;
-    workflow_name: WorkflowName;
+    name: string;
+    workflow_name: string;
     parameters?: {
         [key: string]: unknown;
     };
@@ -150,11 +183,96 @@ export type WorkflowList = {
     items: Array<FlowcraftWorkflow>;
 };
 
+export type GeminiTenantUpsert = {
+    name: string;
+    credential_name: string;
+    project_id?: string;
+    location?: string;
+    base_url?: string;
+    description?: string;
+};
+
+export type GeminiTenantList = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<GeminiTenant>;
+};
+
+export type OpenAiTenantUpsert = {
+    name: string;
+    kind?: OpenAiTenantKind;
+    credential_name: string;
+    base_url?: string;
+    api_mode?: OpenAiTenantApiMode;
+    description?: string;
+};
+
+export type OpenAiTenantList = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<OpenAiTenant>;
+};
+
+export type DashScopeTenantUpsert = {
+    name: string;
+    credential_name: string;
+    base_url?: string;
+    description?: string;
+};
+
+export type DashScopeTenantList = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<DashScopeTenant>;
+};
+
+export type AclPolicyBindingResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'ACLPolicyBinding';
+    metadata: ResourceMetadata;
+    spec: AclPolicy;
+};
+
+export type AclRoleResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'ACLRole';
+    metadata: ResourceMetadata;
+    spec: AclRoleSpec;
+};
+
+export type AclViewResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'ACLView';
+    metadata: ResourceMetadata;
+    spec: AclViewSpec;
+};
+
 export type CredentialResource = {
     apiVersion: ResourceApiVersion;
     kind: 'Credential';
     metadata: ResourceMetadata;
     spec: CredentialSpec;
+};
+
+export type DashScopeTenantResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'DashScopeTenant';
+    metadata: ResourceMetadata;
+    spec: DashScopeTenantSpec;
+};
+
+export type FirmwareResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'Firmware';
+    metadata: ResourceMetadata;
+    spec: FirmwareSpec;
+};
+
+export type GeminiTenantResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'GeminiTenant';
+    metadata: ResourceMetadata;
+    spec: GeminiTenantSpec;
 };
 
 export type MiniMaxTenantResource = {
@@ -169,6 +287,13 @@ export type ModelResource = {
     kind: 'Model';
     metadata: ResourceMetadata;
     spec: ModelSpec;
+};
+
+export type OpenAiTenantResource = {
+    apiVersion: ResourceApiVersion;
+    kind: 'OpenAITenant';
+    metadata: ResourceMetadata;
+    spec: OpenAiTenantSpec;
 };
 
 export type PeerConfigResource = {
@@ -196,12 +321,26 @@ export type ApplyResult = {
 };
 
 export type Resource = ({
+    kind: 'ACLPolicyBindingResource';
+} & AclPolicyBindingResource) | ({
+    kind: 'ACLRoleResource';
+} & AclRoleResource) | ({
+    kind: 'ACLViewResource';
+} & AclViewResource) | ({
     kind: 'CredentialResource';
 } & CredentialResource) | ({
+    kind: 'FirmwareResource';
+} & FirmwareResource) | ({
     kind: 'ModelResource';
 } & ModelResource) | ({
+    kind: 'DashScopeTenantResource';
+} & DashScopeTenantResource) | ({
+    kind: 'GeminiTenantResource';
+} & GeminiTenantResource) | ({
     kind: 'MiniMaxTenantResource';
 } & MiniMaxTenantResource) | ({
+    kind: 'OpenAITenantResource';
+} & OpenAiTenantResource) | ({
     kind: 'VolcTenantResource';
 } & VolcTenantResource) | ({
     kind: 'VoiceResource';
@@ -223,7 +362,7 @@ export type ResourceApiVersion = 'gizclaw.admin/v1alpha1';
 /**
  * Declarative GizClaw resource kind.
  */
-export type ResourceKind = 'Credential' | 'Model' | 'MiniMaxTenant' | 'VolcTenant' | 'Voice' | 'Workflow' | 'Workspace' | 'PeerConfig' | 'ResourceList';
+export type ResourceKind = 'Credential' | 'ACLPolicyBinding' | 'ACLRole' | 'ACLView' | 'Firmware' | 'Model' | 'DashScopeTenant' | 'GeminiTenant' | 'MiniMaxTenant' | 'OpenAITenant' | 'VolcTenant' | 'Voice' | 'Workflow' | 'Workspace' | 'PeerConfig' | 'ResourceList';
 
 export type ResourceMetadata = {
     /**
@@ -273,16 +412,96 @@ export type WorkspaceResource = {
     spec: WorkspaceSpec;
 };
 
-export type Channel = string;
+/**
+ * ACL permission enum.
+ */
+export type AclPermission = 'viewer' | 'editor' | 'owner' | 'workspace.read' | 'workspace.use' | 'workspace.admin' | 'workflow.read' | 'workflow.use' | 'workflow.admin' | 'voice.read' | 'voice.use' | 'voice.admin' | 'credential.read' | 'credential.use' | 'credential.admin' | 'model.read' | 'model.use' | 'model.admin' | 'view.read' | 'view.use' | 'view.admin';
+
+export type AclPermissionList = Array<AclPermission>;
+
+/**
+ * ACL policy describing one subject-resource-role relation and optional validity window.
+ */
+export type AclPolicy = {
+    subject: AclSubject;
+    resource: AclResource;
+    role: string;
+    not_before?: string;
+    expires_at?: string;
+};
+
+export type AclPolicyBinding = {
+    id: string;
+    display_order: number;
+    policy: AclPolicy;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * ACL resource identity. Stored canonically as kind:id.
+ */
+export type AclResource = {
+    kind: AclResourceKind;
+    /**
+     * Resource identifier for the selected kind.
+     */
+    id: string;
+};
+
+/**
+ * ACL resource identity kind.
+ */
+export type AclResourceKind = 'workspace' | 'workflow' | 'voice' | 'credential' | 'model' | 'view';
+
+export type AclRole = {
+    name: string;
+    permissions: AclPermissionList;
+    created_at: string;
+    updated_at: string;
+};
+
+export type AclRoleSpec = {
+    permissions: AclPermissionList;
+};
+
+/**
+ * ACL subject identity. Stored canonically as kind:id.
+ */
+export type AclSubject = {
+    kind: AclSubjectKind;
+    /**
+     * Subject identifier for the selected kind.
+     */
+    id: string;
+};
+
+/**
+ * ACL subject identity kind.
+ */
+export type AclSubjectKind = 'pk' | 'view' | 'all_peers';
+
+export type AclView = {
+    name: string;
+    description?: string;
+    created_at: string;
+    updated_at: string;
+};
+
+export type AclViewSpec = {
+    description?: string;
+};
 
 export type Configuration = {
-    certifications?: Array<GearCertification>;
-    firmware?: FirmwareConfig;
+    /**
+     * Current content view name selected for this gear.
+     */
+    view?: string;
 };
 
 export type Credential = {
-    name: CredentialName;
-    provider: CredentialProvider;
+    name: string;
+    provider: string;
     method: CredentialMethod;
     body: CredentialBody;
     description?: string;
@@ -299,50 +518,26 @@ export type CredentialBody = {
  */
 export type CredentialMethod = 'api_key' | 'token' | 'app_id_token';
 
-/**
- * Credential name
- */
-export type CredentialName = string;
-
-/**
- * Credential provider name
- */
-export type CredentialProvider = string;
-
 export type CredentialSpec = {
-    provider: CredentialProvider;
+    provider: string;
     method: CredentialMethod;
     description?: string;
     body: CredentialBody;
 };
 
-export type Depot = {
+export type DashScopeTenant = {
     name: string;
-    info: DepotInfo;
-    rollback: DepotRelease;
-    stable: DepotRelease;
-    beta: DepotRelease;
-    testing: DepotRelease;
+    credential_name: string;
+    base_url?: string;
+    description?: string;
+    created_at: string;
+    updated_at: string;
 };
 
-export type DepotFile = {
-    path: string;
-    sha256: string;
-    md5: string;
-};
-
-export type DepotInfo = {
-    files?: Array<DepotInfoFile>;
-};
-
-export type DepotInfoFile = {
-    path: string;
-};
-
-export type DepotRelease = {
-    firmware_semver: string;
-    channel?: string;
-    files?: Array<DepotFile>;
+export type DashScopeTenantSpec = {
+    credential_name: string;
+    base_url?: string;
+    description?: string;
 };
 
 export type DeviceInfo = {
@@ -363,8 +558,62 @@ export type ErrorResponse = {
     error: ErrorPayload;
 };
 
-export type FirmwareConfig = {
-    channel?: GearFirmwareChannel;
+export type Firmware = {
+    name: string;
+    description?: string;
+    slots: FirmwareSlots;
+    created_at: string;
+    updated_at: string;
+};
+
+export type FirmwareArtifact = {
+    /**
+     * Device-defined artifact name.
+     */
+    name: string;
+    kind: FirmwareArtifactKind;
+    /**
+     * Download URL for this artifact.
+     */
+    url: string;
+    /**
+     * Optional SHA-256 digest for integrity checks.
+     */
+    sha256?: string;
+    /**
+     * Optional artifact size in bytes.
+     */
+    size?: number;
+};
+
+/**
+ * Kind of payload carried by a firmware artifact.
+ */
+export type FirmwareArtifactKind = 'app' | 'data';
+
+export type FirmwareSlot = {
+    /**
+     * Version carried by this slot.
+     */
+    version?: string;
+    description?: string;
+    /**
+     * Device-defined artifact list for this slot.
+     */
+    artifacts?: Array<FirmwareArtifact>;
+};
+
+export type FirmwareSlots = {
+    rollback: FirmwareSlot;
+    stable: FirmwareSlot;
+    beta: FirmwareSlot;
+    develop: FirmwareSlot;
+    pending: FirmwareSlot;
+};
+
+export type FirmwareSpec = {
+    description?: string;
+    slots: FirmwareSlots;
 };
 
 export type Gear = {
@@ -378,19 +627,6 @@ export type Gear = {
     updated_at: string;
     approved_at?: string;
 };
-
-export type GearCertification = {
-    type: GearCertificationType;
-    authority: GearCertificationAuthority;
-    id: string;
-    authority_name?: string;
-};
-
-export type GearCertificationAuthority = 'unknown' | 'ccc' | 'ce' | 'fcc' | 'miit' | 'srrc' | 'rohs' | 'internal';
-
-export type GearCertificationType = 'license' | 'certification';
-
-export type GearFirmwareChannel = string;
 
 export type GearImei = {
     name?: string;
@@ -407,31 +643,38 @@ export type GearRole = 'unspecified' | 'admin' | 'server' | 'gear';
 
 export type GearStatus = 'unspecified' | 'active' | 'blocked';
 
+export type GeminiTenant = {
+    name: string;
+    credential_name: string;
+    project_id?: string;
+    location?: string;
+    base_url?: string;
+    description?: string;
+    created_at: string;
+    updated_at: string;
+};
+
+export type GeminiTenantSpec = {
+    credential_name: string;
+    project_id?: string;
+    location?: string;
+    base_url?: string;
+    description?: string;
+};
+
 export type HardwareInfo = {
     manufacturer?: string;
     model?: string;
     hardware_revision?: string;
-    depot?: string;
-    firmware_semver?: string;
     imeis?: Array<GearImei>;
     labels?: Array<GearLabel>;
 };
 
-/**
- * MiniMax app identifier
- */
-export type MiniMaxAppId = string;
-
-/**
- * MiniMax group identifier
- */
-export type MiniMaxGroupId = string;
-
 export type MiniMaxTenant = {
-    name: MiniMaxTenantName;
-    app_id: MiniMaxAppId;
-    group_id: MiniMaxGroupId;
-    credential_name: CredentialName;
+    name: string;
+    app_id: string;
+    group_id: string;
+    credential_name: string;
     base_url?: string;
     description?: string;
     last_synced_at?: string;
@@ -439,61 +682,72 @@ export type MiniMaxTenant = {
     updated_at: string;
 };
 
-/**
- * MiniMax tenant name
- */
-export type MiniMaxTenantName = string;
-
 export type MiniMaxTenantSpec = {
-    app_id: MiniMaxAppId;
-    group_id: MiniMaxGroupId;
-    credential_name: CredentialName;
+    app_id: string;
+    group_id: string;
+    credential_name: string;
     base_url?: string;
     description?: string;
 };
 
 export type Model = {
-    id: ModelId;
+    id: string;
     kind: ModelKind;
     source: ModelSource;
     provider: ModelProvider;
     name?: string;
     description?: string;
-    /**
-     * Provider-specific data keyed by provider kind.
-     */
-    provider_data?: {
-        [key: string]: unknown;
-    };
+    capabilities?: ModelCapabilities;
+    provider_data?: ModelProviderData;
     synced_at?: string;
     created_at: string;
     updated_at: string;
 };
 
-/**
- * Global model identifier
- */
-export type ModelId = string;
+export type ModelCapabilities = {
+    json_output?: boolean;
+    tool_calls?: boolean;
+    text_only?: boolean;
+    system_role?: boolean;
+    temperature?: boolean;
+    thinking?: ModelThinkingCapability;
+};
 
-/**
- * Model capability kind
- */
-export type ModelKind = 'llm' | 'tts' | 'asr';
-
-export type ModelProvider = {
-    kind: ModelProviderKind;
-    name: ModelProviderName;
+export type ModelThinkingCapability = {
+    supported: boolean;
+    /**
+     * Provider request parameter mapping, such as reasoning_effort, thinking.type, or enable_thinking.
+     */
+    param?: string;
+    /**
+     * Optional provider request parameter used for the selected thinking level or budget.
+     */
+    level_param?: string;
+    levels?: Array<string>;
+    default_level?: string;
 };
 
 /**
- * Model provider kind
+ * Runtime role of a model.
  */
-export type ModelProviderKind = string;
+export type ModelKind = 'llm' | 'tts' | 'asr' | 'embedding';
+
+export type ModelProvider = {
+    kind: ModelProviderKind;
+    name: string;
+};
 
 /**
- * Model provider instance name
+ * Provider-specific model runtime configuration keyed by provider kind.
  */
-export type ModelProviderName = string;
+export type ModelProviderData = {
+    [key: string]: unknown;
+};
+
+/**
+ * Provider resource kind usable by model runtime.
+ */
+export type ModelProviderKind = 'gemini-tenant' | 'dashscope-tenant' | 'openai-tenant';
 
 /**
  * How the model entered the global catalog
@@ -506,19 +760,37 @@ export type ModelSpec = {
     provider: ModelProvider;
     name?: string;
     description?: string;
-    /**
-     * Provider-specific data keyed by provider kind.
-     */
-    provider_data?: {
-        [key: string]: unknown;
-    };
+    capabilities?: ModelCapabilities;
+    provider_data?: ModelProviderData;
 };
 
-export type OtaSummary = {
-    depot: string;
-    channel: string;
-    firmware_semver: string;
-    files: Array<DepotFile>;
+export type OpenAiTenant = {
+    name: string;
+    kind: OpenAiTenantKind;
+    credential_name: string;
+    base_url?: string;
+    api_mode: OpenAiTenantApiMode;
+    description?: string;
+    created_at: string;
+    updated_at: string;
+};
+
+/**
+ * OpenAI API mode used by this tenant.
+ */
+export type OpenAiTenantApiMode = 'chat_completions';
+
+/**
+ * OpenAI-compatible endpoint kind.
+ */
+export type OpenAiTenantKind = 'compatible' | 'openai' | 'azure';
+
+export type OpenAiTenantSpec = {
+    kind?: OpenAiTenantKind;
+    credential_name: string;
+    base_url?: string;
+    api_mode?: OpenAiTenantApiMode;
+    description?: string;
 };
 
 export type Registration = {
@@ -545,41 +817,33 @@ export type Runtime = {
 };
 
 export type Voice = {
-    id: VoiceId;
+    id: string;
     source: VoiceSource;
     provider: VoiceProvider;
     name?: string;
     description?: string;
-    /**
-     * Provider-specific debug data keyed by provider kind.
-     */
-    provider_data?: {
-        [key: string]: unknown;
-    };
+    provider_data?: VoiceProviderData;
     synced_at?: string;
     created_at: string;
     updated_at: string;
 };
 
-/**
- * Global voice identifier
- */
-export type VoiceId = string;
-
 export type VoiceProvider = {
     kind: VoiceProviderKind;
-    name: VoiceProviderName;
+    name: string;
 };
 
 /**
- * Voice provider kind
+ * Provider-specific voice runtime configuration keyed by provider kind.
  */
-export type VoiceProviderKind = string;
+export type VoiceProviderData = {
+    [key: string]: unknown;
+};
 
 /**
- * Voice provider instance name
+ * Provider resource kind usable by voice runtime.
  */
-export type VoiceProviderName = string;
+export type VoiceProviderKind = 'gemini-tenant' | 'dashscope-tenant' | 'openai-tenant' | 'minimax-tenant' | 'volc-tenant';
 
 /**
  * How the voice entered the global catalog
@@ -591,48 +855,28 @@ export type VoiceSpec = {
     provider: VoiceProvider;
     name?: string;
     description?: string;
-    /**
-     * Provider-specific debug data keyed by provider kind.
-     */
-    provider_data?: {
-        [key: string]: unknown;
-    };
+    provider_data?: VoiceProviderData;
 };
 
-/**
- * Volcengine speech application identifier
- */
-export type VolcAppId = string;
-
-/**
- * Volcengine speech resource identifier.
- */
-export type VolcResourceId = string;
-
 export type VolcTenant = {
-    name: VolcTenantName;
-    credential_name: CredentialName;
-    app_id: VolcAppId;
+    name: string;
+    credential_name: string;
+    app_id: string;
     region?: string;
     endpoint?: string;
-    resource_ids?: Array<VolcResourceId>;
+    resource_ids?: Array<string>;
     description?: string;
     last_synced_at?: string;
     created_at: string;
     updated_at: string;
 };
 
-/**
- * Volcengine tenant name.
- */
-export type VolcTenantName = string;
-
 export type VolcTenantSpec = {
-    credential_name: CredentialName;
-    app_id: VolcAppId;
+    credential_name: string;
+    app_id: string;
     region?: string;
     endpoint?: string;
-    resource_ids?: Array<VolcResourceId>;
+    resource_ids?: Array<string>;
     description?: string;
 };
 
@@ -642,11 +886,6 @@ export type WorkflowMetadata = {
     name: string;
     description?: string;
 };
-
-/**
- * Workflow name
- */
-export type WorkflowName = string;
 
 export type FlowcraftWorkflow = {
     apiVersion: WorkflowApiVersion;
@@ -660,8 +899,8 @@ export type FlowcraftWorkflowSpec = {
 };
 
 export type Workspace = {
-    name: WorkspaceName;
-    workflow_name: WorkflowName;
+    name: string;
+    workflow_name: string;
     parameters?: {
         [key: string]: unknown;
     };
@@ -669,87 +908,17 @@ export type Workspace = {
     updated_at: string;
 };
 
-/**
- * Workspace name
- */
-export type WorkspaceName = string;
-
 export type WorkspaceSpec = {
-    workflow_name: WorkflowName;
+    workflow_name: string;
     parameters?: {
         [key: string]: unknown;
     };
 };
 
 /**
- * Opaque cursor returned by the previous list response
- */
-export type Cursor = string;
-
-/**
- * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
- */
-export type Limit = number;
-
-/**
- * Firmware depot name
- */
-export type DepotName = string;
-
-/**
- * Release channel
- */
-export type Channel2 = Channel;
-
-/**
- * Peer public key
- */
-export type PublicKey = string;
-
-/**
- * Workflow name
- */
-export type WorkflowName2 = WorkflowName;
-
-/**
- * Workspace name
- */
-export type WorkspaceName2 = WorkspaceName;
-
-/**
- * Credential name
- */
-export type CredentialName2 = CredentialName;
-
-/**
- * Filter credentials by provider
- */
-export type CredentialProvider2 = CredentialProvider;
-
-/**
  * Declarative resource kind
  */
 export type ResourceKind2 = ResourceKind;
-
-/**
- * Declarative resource metadata.name
- */
-export type ResourceName = string;
-
-/**
- * MiniMax tenant name
- */
-export type MiniMaxTenantName2 = MiniMaxTenantName;
-
-/**
- * Volcengine tenant name
- */
-export type VolcTenantName2 = VolcTenantName;
-
-/**
- * Voice identifier
- */
-export type VoiceId2 = VoiceId;
 
 /**
  * Filter voices by source
@@ -762,21 +931,6 @@ export type VoiceSource2 = VoiceSource;
 export type VoiceProviderKind2 = VoiceProviderKind;
 
 /**
- * Filter voices by provider instance name
- */
-export type VoiceProviderName2 = VoiceProviderName;
-
-/**
- * Model identifier
- */
-export type ModelId2 = ModelId;
-
-/**
- * Filter models by kind
- */
-export type ModelKind2 = ModelKind;
-
-/**
  * Filter models by source
  */
 export type ModelSource2 = ModelSource;
@@ -785,11 +939,6 @@ export type ModelSource2 = ModelSource;
  * Filter models by provider kind
  */
 export type ModelProviderKind2 = ModelProviderKind;
-
-/**
- * Filter models by provider instance name
- */
-export type ModelProviderName2 = ModelProviderName;
 
 export type ApplyResourceData = {
     body: Resource;
@@ -970,80 +1119,54 @@ export type PutResourceResponses = {
 
 export type PutResourceResponse = PutResourceResponses[keyof PutResourceResponses];
 
-export type ListDepotsData = {
+export type ListAclViewsData = {
     body?: never;
     path?: never;
-    query?: never;
-    url: '/depots';
+    query?: {
+        /**
+         * Opaque cursor returned by the previous list response
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+         */
+        limit?: number;
+    };
+    url: '/acl/views';
 };
 
-export type ListDepotsErrors = {
+export type ListAclViewsErrors = {
     /**
      * Internal error
      */
     500: ErrorResponse;
 };
 
-export type ListDepotsError = ListDepotsErrors[keyof ListDepotsErrors];
+export type ListAclViewsError = ListAclViewsErrors[keyof ListAclViewsErrors];
 
-export type ListDepotsResponses = {
+export type ListAclViewsResponses = {
     /**
-     * Depot list
+     * ACL view list
      */
-    200: DepotList;
+    200: AclViewList;
 };
 
-export type ListDepotsResponse = ListDepotsResponses[keyof ListDepotsResponses];
+export type ListAclViewsResponse = ListAclViewsResponses[keyof ListAclViewsResponses];
 
-export type GetDepotData = {
-    body?: never;
-    path: {
-        /**
-         * Firmware depot name
-         */
-        depot: string;
-    };
+export type CreateAclViewData = {
+    body: AclViewUpsert;
+    path?: never;
     query?: never;
-    url: '/depots/{depot}';
+    url: '/acl/views';
 };
 
-export type GetDepotErrors = {
+export type CreateAclViewErrors = {
     /**
-     * Depot not found
-     */
-    404: ErrorResponse;
-};
-
-export type GetDepotError = GetDepotErrors[keyof GetDepotErrors];
-
-export type GetDepotResponses = {
-    /**
-     * Depot snapshot
-     */
-    200: Depot;
-};
-
-export type GetDepotResponse = GetDepotResponses[keyof GetDepotResponses];
-
-export type PutDepotInfoData = {
-    body: DepotInfo;
-    path: {
-        /**
-         * Firmware depot name
-         */
-        depot: string;
-    };
-    query?: never;
-    url: '/depots/{depot}';
-};
-
-export type PutDepotInfoErrors = {
-    /**
-     * Invalid JSON
+     * Invalid ACL view payload
      */
     400: ErrorResponse;
     /**
-     * Info conflicts with existing releases
+     * ACL view already exists
      */
     409: ErrorResponse;
     /**
@@ -1052,36 +1175,167 @@ export type PutDepotInfoErrors = {
     500: ErrorResponse;
 };
 
-export type PutDepotInfoError = PutDepotInfoErrors[keyof PutDepotInfoErrors];
+export type CreateAclViewError = CreateAclViewErrors[keyof CreateAclViewErrors];
 
-export type PutDepotInfoResponses = {
+export type CreateAclViewResponses = {
     /**
-     * Updated depot snapshot
+     * Created ACL view
      */
-    200: Depot;
+    200: AclView;
 };
 
-export type PutDepotInfoResponse = PutDepotInfoResponses[keyof PutDepotInfoResponses];
+export type CreateAclViewResponse = CreateAclViewResponses[keyof CreateAclViewResponses];
 
-export type ReleaseDepotData = {
+export type DeleteAclViewData = {
     body?: never;
     path: {
         /**
-         * Firmware depot name
+         * ACL view name
          */
-        depot: string;
+        name: string;
     };
     query?: never;
-    url: '/depots/{depot}/@release';
+    url: '/acl/views/{name}';
 };
 
-export type ReleaseDepotErrors = {
+export type DeleteAclViewErrors = {
     /**
-     * Depot not found
+     * ACL view not found
      */
     404: ErrorResponse;
     /**
-     * Release not ready (testing channel missing)
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteAclViewError = DeleteAclViewErrors[keyof DeleteAclViewErrors];
+
+export type DeleteAclViewResponses = {
+    /**
+     * Deleted ACL view
+     */
+    200: AclView;
+};
+
+export type DeleteAclViewResponse = DeleteAclViewResponses[keyof DeleteAclViewResponses];
+
+export type GetAclViewData = {
+    body?: never;
+    path: {
+        /**
+         * ACL view name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/acl/views/{name}';
+};
+
+export type GetAclViewErrors = {
+    /**
+     * ACL view not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetAclViewError = GetAclViewErrors[keyof GetAclViewErrors];
+
+export type GetAclViewResponses = {
+    /**
+     * ACL view
+     */
+    200: AclView;
+};
+
+export type GetAclViewResponse = GetAclViewResponses[keyof GetAclViewResponses];
+
+export type PutAclViewData = {
+    body: AclViewUpsert;
+    path: {
+        /**
+         * ACL view name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/acl/views/{name}';
+};
+
+export type PutAclViewErrors = {
+    /**
+     * Invalid ACL view payload
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutAclViewError = PutAclViewErrors[keyof PutAclViewErrors];
+
+export type PutAclViewResponses = {
+    /**
+     * Stored ACL view
+     */
+    200: AclView;
+};
+
+export type PutAclViewResponse = PutAclViewResponses[keyof PutAclViewResponses];
+
+export type ListAclRolesData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Opaque cursor returned by the previous list response
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+         */
+        limit?: number;
+    };
+    url: '/acl/roles';
+};
+
+export type ListAclRolesErrors = {
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListAclRolesError = ListAclRolesErrors[keyof ListAclRolesErrors];
+
+export type ListAclRolesResponses = {
+    /**
+     * ACL role list
+     */
+    200: AclRoleList;
+};
+
+export type ListAclRolesResponse = ListAclRolesResponses[keyof ListAclRolesResponses];
+
+export type CreateAclRoleData = {
+    body: AclRoleUpsert;
+    path?: never;
+    query?: never;
+    url: '/acl/roles';
+};
+
+export type CreateAclRoleErrors = {
+    /**
+     * Invalid ACL role payload
+     */
+    400: ErrorResponse;
+    /**
+     * ACL role already exists
      */
     409: ErrorResponse;
     /**
@@ -1090,36 +1344,195 @@ export type ReleaseDepotErrors = {
     500: ErrorResponse;
 };
 
-export type ReleaseDepotError = ReleaseDepotErrors[keyof ReleaseDepotErrors];
+export type CreateAclRoleError = CreateAclRoleErrors[keyof CreateAclRoleErrors];
 
-export type ReleaseDepotResponses = {
+export type CreateAclRoleResponses = {
     /**
-     * Updated depot snapshot after release
+     * Created ACL role
      */
-    200: Depot;
+    200: AclRole;
 };
 
-export type ReleaseDepotResponse = ReleaseDepotResponses[keyof ReleaseDepotResponses];
+export type CreateAclRoleResponse = CreateAclRoleResponses[keyof CreateAclRoleResponses];
 
-export type RollbackDepotData = {
+export type DeleteAclRoleData = {
     body?: never;
     path: {
         /**
-         * Firmware depot name
+         * ACL role name
          */
-        depot: string;
+        name: string;
     };
     query?: never;
-    url: '/depots/{depot}/@rollback';
+    url: '/acl/roles/{name}';
 };
 
-export type RollbackDepotErrors = {
+export type DeleteAclRoleErrors = {
     /**
-     * Depot not found
+     * ACL role not found
      */
     404: ErrorResponse;
     /**
-     * Rollback not available
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteAclRoleError = DeleteAclRoleErrors[keyof DeleteAclRoleErrors];
+
+export type DeleteAclRoleResponses = {
+    /**
+     * Deleted ACL role
+     */
+    200: AclRole;
+};
+
+export type DeleteAclRoleResponse = DeleteAclRoleResponses[keyof DeleteAclRoleResponses];
+
+export type GetAclRoleData = {
+    body?: never;
+    path: {
+        /**
+         * ACL role name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/acl/roles/{name}';
+};
+
+export type GetAclRoleErrors = {
+    /**
+     * ACL role not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetAclRoleError = GetAclRoleErrors[keyof GetAclRoleErrors];
+
+export type GetAclRoleResponses = {
+    /**
+     * ACL role
+     */
+    200: AclRole;
+};
+
+export type GetAclRoleResponse = GetAclRoleResponses[keyof GetAclRoleResponses];
+
+export type PutAclRoleData = {
+    body: AclRoleUpsert;
+    path: {
+        /**
+         * ACL role name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/acl/roles/{name}';
+};
+
+export type PutAclRoleErrors = {
+    /**
+     * Invalid ACL role payload
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutAclRoleError = PutAclRoleErrors[keyof PutAclRoleErrors];
+
+export type PutAclRoleResponses = {
+    /**
+     * Stored ACL role
+     */
+    200: AclRole;
+};
+
+export type PutAclRoleResponse = PutAclRoleResponses[keyof PutAclRoleResponses];
+
+export type ListAclPolicyBindingsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Opaque cursor returned by the previous list response
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+         */
+        limit?: number;
+        /**
+         * Filter by ACL subject kind
+         */
+        subject_kind?: AclSubjectKind;
+        /**
+         * Filter by ACL subject identifier
+         */
+        subject_id?: string;
+        /**
+         * Filter by ACL resource kind
+         */
+        resource_kind?: AclResourceKind;
+        /**
+         * Filter by ACL resource identifier
+         */
+        resource_id?: string;
+        /**
+         * Filter by ACL role name
+         */
+        role?: string;
+        /**
+         * Filter by expanded ACL permission
+         */
+        permission?: AclPermission;
+        /**
+         * Sort ACL policy bindings by id or display order
+         */
+        order_by?: string;
+    };
+    url: '/acl/policy-bindings';
+};
+
+export type ListAclPolicyBindingsErrors = {
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListAclPolicyBindingsError = ListAclPolicyBindingsErrors[keyof ListAclPolicyBindingsErrors];
+
+export type ListAclPolicyBindingsResponses = {
+    /**
+     * ACL policy binding list
+     */
+    200: AclPolicyBindingList;
+};
+
+export type ListAclPolicyBindingsResponse = ListAclPolicyBindingsResponses[keyof ListAclPolicyBindingsResponses];
+
+export type CreateAclPolicyBindingData = {
+    body: AclPolicyBindingUpsert;
+    path?: never;
+    query?: never;
+    url: '/acl/policy-bindings';
+};
+
+export type CreateAclPolicyBindingErrors = {
+    /**
+     * Invalid ACL policy binding payload
+     */
+    400: ErrorResponse;
+    /**
+     * ACL policy binding already exists
      */
     409: ErrorResponse;
     /**
@@ -1128,84 +1541,118 @@ export type RollbackDepotErrors = {
     500: ErrorResponse;
 };
 
-export type RollbackDepotError = RollbackDepotErrors[keyof RollbackDepotErrors];
+export type CreateAclPolicyBindingError = CreateAclPolicyBindingErrors[keyof CreateAclPolicyBindingErrors];
 
-export type RollbackDepotResponses = {
+export type CreateAclPolicyBindingResponses = {
     /**
-     * Updated depot snapshot after rollback
+     * Created ACL policy binding
      */
-    200: Depot;
+    200: AclPolicyBinding;
 };
 
-export type RollbackDepotResponse = RollbackDepotResponses[keyof RollbackDepotResponses];
+export type CreateAclPolicyBindingResponse = CreateAclPolicyBindingResponses[keyof CreateAclPolicyBindingResponses];
 
-export type GetChannelData = {
+export type DeleteAclPolicyBindingData = {
     body?: never;
     path: {
         /**
-         * Firmware depot name
+         * ACL policy binding id
          */
-        depot: string;
-        /**
-         * Release channel
-         */
-        channel: Channel;
+        id: string;
     };
     query?: never;
-    url: '/depots/{depot}/channels/{channel}';
+    url: '/acl/policy-bindings/{id}';
 };
 
-export type GetChannelErrors = {
+export type DeleteAclPolicyBindingErrors = {
     /**
-     * Depot or channel not found
+     * ACL policy binding not found
      */
     404: ErrorResponse;
-};
-
-export type GetChannelError = GetChannelErrors[keyof GetChannelErrors];
-
-export type GetChannelResponses = {
     /**
-     * Channel release
+     * Internal error
      */
-    200: DepotRelease;
+    500: ErrorResponse;
 };
 
-export type GetChannelResponse = GetChannelResponses[keyof GetChannelResponses];
+export type DeleteAclPolicyBindingError = DeleteAclPolicyBindingErrors[keyof DeleteAclPolicyBindingErrors];
 
-export type PutChannelData = {
-    body: Blob | File;
+export type DeleteAclPolicyBindingResponses = {
+    /**
+     * Deleted ACL policy binding
+     */
+    200: AclPolicyBinding;
+};
+
+export type DeleteAclPolicyBindingResponse = DeleteAclPolicyBindingResponses[keyof DeleteAclPolicyBindingResponses];
+
+export type GetAclPolicyBindingData = {
+    body?: never;
     path: {
         /**
-         * Firmware depot name
+         * ACL policy binding id
          */
-        depot: string;
-        /**
-         * Release channel
-         */
-        channel: Channel;
+        id: string;
     };
     query?: never;
-    url: '/depots/{depot}/channels/{channel}';
+    url: '/acl/policy-bindings/{id}';
 };
 
-export type PutChannelErrors = {
+export type GetAclPolicyBindingErrors = {
     /**
-     * Invalid manifest in tarball
+     * ACL policy binding not found
      */
-    409: ErrorResponse;
-};
-
-export type PutChannelError = PutChannelErrors[keyof PutChannelErrors];
-
-export type PutChannelResponses = {
+    404: ErrorResponse;
     /**
-     * Uploaded release
+     * Internal error
      */
-    200: DepotRelease;
+    500: ErrorResponse;
 };
 
-export type PutChannelResponse = PutChannelResponses[keyof PutChannelResponses];
+export type GetAclPolicyBindingError = GetAclPolicyBindingErrors[keyof GetAclPolicyBindingErrors];
+
+export type GetAclPolicyBindingResponses = {
+    /**
+     * ACL policy binding
+     */
+    200: AclPolicyBinding;
+};
+
+export type GetAclPolicyBindingResponse = GetAclPolicyBindingResponses[keyof GetAclPolicyBindingResponses];
+
+export type PutAclPolicyBindingData = {
+    body: AclPolicyBindingUpsert;
+    path: {
+        /**
+         * ACL policy binding id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/acl/policy-bindings/{id}';
+};
+
+export type PutAclPolicyBindingErrors = {
+    /**
+     * Invalid ACL policy binding payload
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutAclPolicyBindingError = PutAclPolicyBindingErrors[keyof PutAclPolicyBindingErrors];
+
+export type PutAclPolicyBindingResponses = {
+    /**
+     * Stored ACL policy binding
+     */
+    200: AclPolicyBinding;
+};
+
+export type PutAclPolicyBindingResponse = PutAclPolicyBindingResponses[keyof PutAclPolicyBindingResponses];
 
 export type ListWorkflowsData = {
     body?: never;
@@ -1274,6 +1721,251 @@ export type CreateWorkflowResponses = {
 
 export type CreateWorkflowResponse = CreateWorkflowResponses[keyof CreateWorkflowResponses];
 
+export type ListFirmwaresData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Opaque cursor returned by the previous list response
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+         */
+        limit?: number;
+    };
+    url: '/firmwares';
+};
+
+export type ListFirmwaresErrors = {
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListFirmwaresError = ListFirmwaresErrors[keyof ListFirmwaresErrors];
+
+export type ListFirmwaresResponses = {
+    /**
+     * Firmware list
+     */
+    200: FirmwareList;
+};
+
+export type ListFirmwaresResponse = ListFirmwaresResponses[keyof ListFirmwaresResponses];
+
+export type CreateFirmwareData = {
+    body: FirmwareUpsert;
+    path?: never;
+    query?: never;
+    url: '/firmwares';
+};
+
+export type CreateFirmwareErrors = {
+    /**
+     * Invalid firmware payload
+     */
+    400: ErrorResponse;
+    /**
+     * Firmware already exists
+     */
+    409: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateFirmwareError = CreateFirmwareErrors[keyof CreateFirmwareErrors];
+
+export type CreateFirmwareResponses = {
+    /**
+     * Created firmware
+     */
+    200: Firmware;
+};
+
+export type CreateFirmwareResponse = CreateFirmwareResponses[keyof CreateFirmwareResponses];
+
+export type DeleteFirmwareData = {
+    body?: never;
+    path: {
+        /**
+         * Firmware name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/firmwares/{name}';
+};
+
+export type DeleteFirmwareErrors = {
+    /**
+     * Firmware not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteFirmwareError = DeleteFirmwareErrors[keyof DeleteFirmwareErrors];
+
+export type DeleteFirmwareResponses = {
+    /**
+     * Deleted firmware
+     */
+    200: Firmware;
+};
+
+export type DeleteFirmwareResponse = DeleteFirmwareResponses[keyof DeleteFirmwareResponses];
+
+export type GetFirmwareData = {
+    body?: never;
+    path: {
+        /**
+         * Firmware name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/firmwares/{name}';
+};
+
+export type GetFirmwareErrors = {
+    /**
+     * Firmware not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetFirmwareError = GetFirmwareErrors[keyof GetFirmwareErrors];
+
+export type GetFirmwareResponses = {
+    /**
+     * Firmware
+     */
+    200: Firmware;
+};
+
+export type GetFirmwareResponse = GetFirmwareResponses[keyof GetFirmwareResponses];
+
+export type PutFirmwareData = {
+    body: FirmwareUpsert;
+    path: {
+        /**
+         * Firmware name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/firmwares/{name}';
+};
+
+export type PutFirmwareErrors = {
+    /**
+     * Invalid firmware payload
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutFirmwareError = PutFirmwareErrors[keyof PutFirmwareErrors];
+
+export type PutFirmwareResponses = {
+    /**
+     * Stored firmware
+     */
+    200: Firmware;
+};
+
+export type PutFirmwareResponse = PutFirmwareResponses[keyof PutFirmwareResponses];
+
+export type ReleaseFirmwareData = {
+    body?: never;
+    path: {
+        /**
+         * Firmware name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/firmwares/{name}/@release';
+};
+
+export type ReleaseFirmwareErrors = {
+    /**
+     * Firmware not found
+     */
+    404: ErrorResponse;
+    /**
+     * Release would leave stable empty
+     */
+    409: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ReleaseFirmwareError = ReleaseFirmwareErrors[keyof ReleaseFirmwareErrors];
+
+export type ReleaseFirmwareResponses = {
+    /**
+     * Released firmware
+     */
+    200: Firmware;
+};
+
+export type ReleaseFirmwareResponse = ReleaseFirmwareResponses[keyof ReleaseFirmwareResponses];
+
+export type RollbackFirmwareData = {
+    body?: never;
+    path: {
+        /**
+         * Firmware name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/firmwares/{name}/@rollback';
+};
+
+export type RollbackFirmwareErrors = {
+    /**
+     * Firmware not found
+     */
+    404: ErrorResponse;
+    /**
+     * Rollback would leave stable empty
+     */
+    409: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type RollbackFirmwareError = RollbackFirmwareErrors[keyof RollbackFirmwareErrors];
+
+export type RollbackFirmwareResponses = {
+    /**
+     * Rolled back firmware
+     */
+    200: Firmware;
+};
+
+export type RollbackFirmwareResponse = RollbackFirmwareResponses[keyof RollbackFirmwareResponses];
+
 export type ListCredentialsData = {
     body?: never;
     path?: never;
@@ -1281,7 +1973,7 @@ export type ListCredentialsData = {
         /**
          * Filter credentials by provider
          */
-        provider?: CredentialProvider;
+        provider?: string;
         /**
          * Opaque cursor returned by the previous list response
          */
@@ -1351,7 +2043,7 @@ export type DeleteCredentialData = {
         /**
          * Credential name
          */
-        name: CredentialName;
+        name: string;
     };
     query?: never;
     url: '/credentials/{name}';
@@ -1385,7 +2077,7 @@ export type GetCredentialData = {
         /**
          * Credential name
          */
-        name: CredentialName;
+        name: string;
     };
     query?: never;
     url: '/credentials/{name}';
@@ -1419,7 +2111,7 @@ export type PutCredentialData = {
         /**
          * Credential name
          */
-        name: CredentialName;
+        name: string;
     };
     query?: never;
     url: '/credentials/{name}';
@@ -1452,10 +2144,6 @@ export type ListModelsData = {
     path?: never;
     query?: {
         /**
-         * Filter models by kind
-         */
-        kind?: ModelKind;
-        /**
          * Filter models by source
          */
         source?: ModelSource;
@@ -1466,7 +2154,7 @@ export type ListModelsData = {
         /**
          * Filter models by provider instance name
          */
-        providerName?: ModelProviderName;
+        providerName?: string;
         /**
          * Opaque cursor returned by the previous list response
          */
@@ -1536,7 +2224,7 @@ export type DeleteModelData = {
         /**
          * Model identifier
          */
-        id: ModelId;
+        id: string;
     };
     query?: never;
     url: '/models/{id}';
@@ -1570,7 +2258,7 @@ export type GetModelData = {
         /**
          * Model identifier
          */
-        id: ModelId;
+        id: string;
     };
     query?: never;
     url: '/models/{id}';
@@ -1604,7 +2292,7 @@ export type PutModelData = {
         /**
          * Model identifier
          */
-        id: ModelId;
+        id: string;
     };
     query?: never;
     url: '/models/{id}';
@@ -1635,6 +2323,513 @@ export type PutModelResponses = {
 };
 
 export type PutModelResponse = PutModelResponses[keyof PutModelResponses];
+
+export type ListDashScopeTenantsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Opaque cursor returned by the previous list response
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+         */
+        limit?: number;
+    };
+    url: '/dashscope-tenants';
+};
+
+export type ListDashScopeTenantsErrors = {
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListDashScopeTenantsError = ListDashScopeTenantsErrors[keyof ListDashScopeTenantsErrors];
+
+export type ListDashScopeTenantsResponses = {
+    /**
+     * DashScope tenant list
+     */
+    200: DashScopeTenantList;
+};
+
+export type ListDashScopeTenantsResponse = ListDashScopeTenantsResponses[keyof ListDashScopeTenantsResponses];
+
+export type CreateDashScopeTenantData = {
+    body: DashScopeTenantUpsert;
+    path?: never;
+    query?: never;
+    url: '/dashscope-tenants';
+};
+
+export type CreateDashScopeTenantErrors = {
+    /**
+     * Invalid DashScope tenant payload
+     */
+    400: ErrorResponse;
+    /**
+     * DashScope tenant already exists
+     */
+    409: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateDashScopeTenantError = CreateDashScopeTenantErrors[keyof CreateDashScopeTenantErrors];
+
+export type CreateDashScopeTenantResponses = {
+    /**
+     * Created DashScope tenant
+     */
+    200: DashScopeTenant;
+};
+
+export type CreateDashScopeTenantResponse = CreateDashScopeTenantResponses[keyof CreateDashScopeTenantResponses];
+
+export type ListGeminiTenantsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Opaque cursor returned by the previous list response
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+         */
+        limit?: number;
+    };
+    url: '/gemini-tenants';
+};
+
+export type ListGeminiTenantsErrors = {
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListGeminiTenantsError = ListGeminiTenantsErrors[keyof ListGeminiTenantsErrors];
+
+export type ListGeminiTenantsResponses = {
+    /**
+     * Gemini tenant list
+     */
+    200: GeminiTenantList;
+};
+
+export type ListGeminiTenantsResponse = ListGeminiTenantsResponses[keyof ListGeminiTenantsResponses];
+
+export type CreateGeminiTenantData = {
+    body: GeminiTenantUpsert;
+    path?: never;
+    query?: never;
+    url: '/gemini-tenants';
+};
+
+export type CreateGeminiTenantErrors = {
+    /**
+     * Invalid Gemini tenant payload
+     */
+    400: ErrorResponse;
+    /**
+     * Gemini tenant already exists
+     */
+    409: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateGeminiTenantError = CreateGeminiTenantErrors[keyof CreateGeminiTenantErrors];
+
+export type CreateGeminiTenantResponses = {
+    /**
+     * Created Gemini tenant
+     */
+    200: GeminiTenant;
+};
+
+export type CreateGeminiTenantResponse = CreateGeminiTenantResponses[keyof CreateGeminiTenantResponses];
+
+export type DeleteGeminiTenantData = {
+    body?: never;
+    path: {
+        /**
+         * Gemini tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/gemini-tenants/{name}';
+};
+
+export type DeleteGeminiTenantErrors = {
+    /**
+     * Gemini tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteGeminiTenantError = DeleteGeminiTenantErrors[keyof DeleteGeminiTenantErrors];
+
+export type DeleteGeminiTenantResponses = {
+    /**
+     * Deleted Gemini tenant
+     */
+    200: GeminiTenant;
+};
+
+export type DeleteGeminiTenantResponse = DeleteGeminiTenantResponses[keyof DeleteGeminiTenantResponses];
+
+export type GetGeminiTenantData = {
+    body?: never;
+    path: {
+        /**
+         * Gemini tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/gemini-tenants/{name}';
+};
+
+export type GetGeminiTenantErrors = {
+    /**
+     * Gemini tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetGeminiTenantError = GetGeminiTenantErrors[keyof GetGeminiTenantErrors];
+
+export type GetGeminiTenantResponses = {
+    /**
+     * Gemini tenant
+     */
+    200: GeminiTenant;
+};
+
+export type GetGeminiTenantResponse = GetGeminiTenantResponses[keyof GetGeminiTenantResponses];
+
+export type PutGeminiTenantData = {
+    body: GeminiTenantUpsert;
+    path: {
+        /**
+         * Gemini tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/gemini-tenants/{name}';
+};
+
+export type PutGeminiTenantErrors = {
+    /**
+     * Invalid Gemini tenant payload
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutGeminiTenantError = PutGeminiTenantErrors[keyof PutGeminiTenantErrors];
+
+export type PutGeminiTenantResponses = {
+    /**
+     * Stored Gemini tenant
+     */
+    200: GeminiTenant;
+};
+
+export type PutGeminiTenantResponse = PutGeminiTenantResponses[keyof PutGeminiTenantResponses];
+
+export type DeleteDashScopeTenantData = {
+    body?: never;
+    path: {
+        /**
+         * DashScope tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/dashscope-tenants/{name}';
+};
+
+export type DeleteDashScopeTenantErrors = {
+    /**
+     * DashScope tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteDashScopeTenantError = DeleteDashScopeTenantErrors[keyof DeleteDashScopeTenantErrors];
+
+export type DeleteDashScopeTenantResponses = {
+    /**
+     * Deleted DashScope tenant
+     */
+    200: DashScopeTenant;
+};
+
+export type DeleteDashScopeTenantResponse = DeleteDashScopeTenantResponses[keyof DeleteDashScopeTenantResponses];
+
+export type GetDashScopeTenantData = {
+    body?: never;
+    path: {
+        /**
+         * DashScope tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/dashscope-tenants/{name}';
+};
+
+export type GetDashScopeTenantErrors = {
+    /**
+     * DashScope tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetDashScopeTenantError = GetDashScopeTenantErrors[keyof GetDashScopeTenantErrors];
+
+export type GetDashScopeTenantResponses = {
+    /**
+     * DashScope tenant
+     */
+    200: DashScopeTenant;
+};
+
+export type GetDashScopeTenantResponse = GetDashScopeTenantResponses[keyof GetDashScopeTenantResponses];
+
+export type PutDashScopeTenantData = {
+    body: DashScopeTenantUpsert;
+    path: {
+        /**
+         * DashScope tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/dashscope-tenants/{name}';
+};
+
+export type PutDashScopeTenantErrors = {
+    /**
+     * Invalid DashScope tenant payload
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutDashScopeTenantError = PutDashScopeTenantErrors[keyof PutDashScopeTenantErrors];
+
+export type PutDashScopeTenantResponses = {
+    /**
+     * Stored DashScope tenant
+     */
+    200: DashScopeTenant;
+};
+
+export type PutDashScopeTenantResponse = PutDashScopeTenantResponses[keyof PutDashScopeTenantResponses];
+
+export type ListOpenAiTenantsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Opaque cursor returned by the previous list response
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+         */
+        limit?: number;
+    };
+    url: '/openai-tenants';
+};
+
+export type ListOpenAiTenantsErrors = {
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListOpenAiTenantsError = ListOpenAiTenantsErrors[keyof ListOpenAiTenantsErrors];
+
+export type ListOpenAiTenantsResponses = {
+    /**
+     * OpenAI-compatible tenant list
+     */
+    200: OpenAiTenantList;
+};
+
+export type ListOpenAiTenantsResponse = ListOpenAiTenantsResponses[keyof ListOpenAiTenantsResponses];
+
+export type CreateOpenAiTenantData = {
+    body: OpenAiTenantUpsert;
+    path?: never;
+    query?: never;
+    url: '/openai-tenants';
+};
+
+export type CreateOpenAiTenantErrors = {
+    /**
+     * Invalid OpenAI-compatible tenant payload
+     */
+    400: ErrorResponse;
+    /**
+     * OpenAI-compatible tenant already exists
+     */
+    409: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateOpenAiTenantError = CreateOpenAiTenantErrors[keyof CreateOpenAiTenantErrors];
+
+export type CreateOpenAiTenantResponses = {
+    /**
+     * Created OpenAI-compatible tenant
+     */
+    200: OpenAiTenant;
+};
+
+export type CreateOpenAiTenantResponse = CreateOpenAiTenantResponses[keyof CreateOpenAiTenantResponses];
+
+export type DeleteOpenAiTenantData = {
+    body?: never;
+    path: {
+        /**
+         * OpenAI-compatible tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/openai-tenants/{name}';
+};
+
+export type DeleteOpenAiTenantErrors = {
+    /**
+     * OpenAI-compatible tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteOpenAiTenantError = DeleteOpenAiTenantErrors[keyof DeleteOpenAiTenantErrors];
+
+export type DeleteOpenAiTenantResponses = {
+    /**
+     * Deleted OpenAI-compatible tenant
+     */
+    200: OpenAiTenant;
+};
+
+export type DeleteOpenAiTenantResponse = DeleteOpenAiTenantResponses[keyof DeleteOpenAiTenantResponses];
+
+export type GetOpenAiTenantData = {
+    body?: never;
+    path: {
+        /**
+         * OpenAI-compatible tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/openai-tenants/{name}';
+};
+
+export type GetOpenAiTenantErrors = {
+    /**
+     * OpenAI-compatible tenant not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetOpenAiTenantError = GetOpenAiTenantErrors[keyof GetOpenAiTenantErrors];
+
+export type GetOpenAiTenantResponses = {
+    /**
+     * OpenAI-compatible tenant
+     */
+    200: OpenAiTenant;
+};
+
+export type GetOpenAiTenantResponse = GetOpenAiTenantResponses[keyof GetOpenAiTenantResponses];
+
+export type PutOpenAiTenantData = {
+    body: OpenAiTenantUpsert;
+    path: {
+        /**
+         * OpenAI-compatible tenant name
+         */
+        name: string;
+    };
+    query?: never;
+    url: '/openai-tenants/{name}';
+};
+
+export type PutOpenAiTenantErrors = {
+    /**
+     * Invalid OpenAI-compatible tenant payload
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutOpenAiTenantError = PutOpenAiTenantErrors[keyof PutOpenAiTenantErrors];
+
+export type PutOpenAiTenantResponses = {
+    /**
+     * Stored OpenAI-compatible tenant
+     */
+    200: OpenAiTenant;
+};
+
+export type PutOpenAiTenantResponse = PutOpenAiTenantResponses[keyof PutOpenAiTenantResponses];
 
 export type ListMiniMaxTenantsData = {
     body?: never;
@@ -1709,7 +2904,7 @@ export type DeleteMiniMaxTenantData = {
         /**
          * MiniMax tenant name
          */
-        name: MiniMaxTenantName;
+        name: string;
     };
     query?: never;
     url: '/minimax-tenants/{name}';
@@ -1743,7 +2938,7 @@ export type GetMiniMaxTenantData = {
         /**
          * MiniMax tenant name
          */
-        name: MiniMaxTenantName;
+        name: string;
     };
     query?: never;
     url: '/minimax-tenants/{name}';
@@ -1777,7 +2972,7 @@ export type PutMiniMaxTenantData = {
         /**
          * MiniMax tenant name
          */
-        name: MiniMaxTenantName;
+        name: string;
     };
     query?: never;
     url: '/minimax-tenants/{name}';
@@ -1811,7 +3006,7 @@ export type SyncMiniMaxTenantVoicesData = {
         /**
          * MiniMax tenant name
          */
-        name: MiniMaxTenantName;
+        name: string;
     };
     query?: never;
     url: '/minimax-tenants/{name}/@sync-voices';
@@ -1920,7 +3115,7 @@ export type DeleteVolcTenantData = {
         /**
          * Volcengine tenant name
          */
-        name: VolcTenantName;
+        name: string;
     };
     query?: never;
     url: '/volc-tenants/{name}';
@@ -1954,7 +3149,7 @@ export type GetVolcTenantData = {
         /**
          * Volcengine tenant name
          */
-        name: VolcTenantName;
+        name: string;
     };
     query?: never;
     url: '/volc-tenants/{name}';
@@ -1988,7 +3183,7 @@ export type PutVolcTenantData = {
         /**
          * Volcengine tenant name
          */
-        name: VolcTenantName;
+        name: string;
     };
     query?: never;
     url: '/volc-tenants/{name}';
@@ -2022,7 +3217,7 @@ export type SyncVolcTenantVoicesData = {
         /**
          * Volcengine tenant name
          */
-        name: VolcTenantName;
+        name: string;
     };
     query?: never;
     url: '/volc-tenants/{name}/@sync-voices';
@@ -2073,7 +3268,7 @@ export type ListVoicesData = {
         /**
          * Filter voices by provider instance name
          */
-        providerName?: VoiceProviderName;
+        providerName?: string;
         /**
          * Opaque cursor returned by the previous list response
          */
@@ -2143,7 +3338,7 @@ export type DeleteVoiceData = {
         /**
          * Voice identifier
          */
-        id: VoiceId;
+        id: string;
     };
     query?: never;
     url: '/voices/{id}';
@@ -2177,7 +3372,7 @@ export type GetVoiceData = {
         /**
          * Voice identifier
          */
-        id: VoiceId;
+        id: string;
     };
     query?: never;
     url: '/voices/{id}';
@@ -2211,7 +3406,7 @@ export type PutVoiceData = {
         /**
          * Voice identifier
          */
-        id: VoiceId;
+        id: string;
     };
     query?: never;
     url: '/voices/{id}';
@@ -2249,7 +3444,7 @@ export type DeleteWorkflowData = {
         /**
          * Workflow name
          */
-        name: WorkflowName;
+        name: string;
     };
     query?: never;
     url: '/workflows/{name}';
@@ -2283,7 +3478,7 @@ export type GetWorkflowData = {
         /**
          * Workflow name
          */
-        name: WorkflowName;
+        name: string;
     };
     query?: never;
     url: '/workflows/{name}';
@@ -2317,7 +3512,7 @@ export type PutWorkflowData = {
         /**
          * Workflow name
          */
-        name: WorkflowName;
+        name: string;
     };
     query?: never;
     url: '/workflows/{name}';
@@ -2418,7 +3613,7 @@ export type DeleteWorkspaceData = {
         /**
          * Workspace name
          */
-        name: WorkspaceName;
+        name: string;
     };
     query?: never;
     url: '/workspaces/{name}';
@@ -2452,7 +3647,7 @@ export type GetWorkspaceData = {
         /**
          * Workspace name
          */
-        name: WorkspaceName;
+        name: string;
     };
     query?: never;
     url: '/workspaces/{name}';
@@ -2486,7 +3681,7 @@ export type PutWorkspaceData = {
         /**
          * Workspace name
          */
-        name: WorkspaceName;
+        name: string;
     };
     query?: never;
     url: '/workspaces/{name}';
@@ -2639,81 +3834,6 @@ export type ListPeersByLabelResponses = {
 };
 
 export type ListPeersByLabelResponse = ListPeersByLabelResponses[keyof ListPeersByLabelResponses];
-
-export type ListPeersByCertificationData = {
-    body?: never;
-    path: {
-        type: GearCertificationType;
-        authority: GearCertificationAuthority;
-        id: string;
-    };
-    query?: {
-        /**
-         * Opaque cursor returned by the previous list response
-         */
-        cursor?: string;
-        /**
-         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-         */
-        limit?: number;
-    };
-    url: '/peers/certification/{type}/{authority}/{id}';
-};
-
-export type ListPeersByCertificationErrors = {
-    /**
-     * Internal error
-     */
-    500: ErrorResponse;
-};
-
-export type ListPeersByCertificationError = ListPeersByCertificationErrors[keyof ListPeersByCertificationErrors];
-
-export type ListPeersByCertificationResponses = {
-    /**
-     * Matched peers
-     */
-    200: RegistrationList;
-};
-
-export type ListPeersByCertificationResponse = ListPeersByCertificationResponses[keyof ListPeersByCertificationResponses];
-
-export type ListPeersByFirmwareData = {
-    body?: never;
-    path: {
-        depot: string;
-        channel: GearFirmwareChannel;
-    };
-    query?: {
-        /**
-         * Opaque cursor returned by the previous list response
-         */
-        cursor?: string;
-        /**
-         * Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-         */
-        limit?: number;
-    };
-    url: '/peers/firmware/{depot}/{channel}';
-};
-
-export type ListPeersByFirmwareErrors = {
-    /**
-     * Internal error
-     */
-    500: ErrorResponse;
-};
-
-export type ListPeersByFirmwareError = ListPeersByFirmwareErrors[keyof ListPeersByFirmwareErrors];
-
-export type ListPeersByFirmwareResponses = {
-    /**
-     * Matched peers
-     */
-    200: RegistrationList;
-};
-
-export type ListPeersByFirmwareResponse = ListPeersByFirmwareResponses[keyof ListPeersByFirmwareResponses];
 
 export type DeletePeerData = {
     body?: never;
@@ -2903,6 +4023,40 @@ export type GetPeerInfoResponses = {
 
 export type GetPeerInfoResponse = GetPeerInfoResponses[keyof GetPeerInfoResponses];
 
+export type PutPeerInfoData = {
+    body: DeviceInfo;
+    path: {
+        /**
+         * Peer public key
+         */
+        publicKey: string;
+    };
+    query?: never;
+    url: '/peers/{publicKey}/info';
+};
+
+export type PutPeerInfoErrors = {
+    /**
+     * Invalid device info
+     */
+    400: ErrorResponse;
+    /**
+     * Peer not found
+     */
+    404: ErrorResponse;
+};
+
+export type PutPeerInfoError = PutPeerInfoErrors[keyof PutPeerInfoErrors];
+
+export type PutPeerInfoResponses = {
+    /**
+     * Updated device info
+     */
+    200: DeviceInfo;
+};
+
+export type PutPeerInfoResponse = PutPeerInfoResponses[keyof PutPeerInfoResponses];
+
 export type GetPeerConfigData = {
     body?: never;
     path: {
@@ -2987,33 +4141,3 @@ export type GetPeerRuntimeResponses = {
 };
 
 export type GetPeerRuntimeResponse = GetPeerRuntimeResponses[keyof GetPeerRuntimeResponses];
-
-export type GetPeerOtaData = {
-    body?: never;
-    path: {
-        /**
-         * Peer public key
-         */
-        publicKey: string;
-    };
-    query?: never;
-    url: '/peers/{publicKey}/ota';
-};
-
-export type GetPeerOtaErrors = {
-    /**
-     * Peer or firmware not found
-     */
-    404: ErrorResponse;
-};
-
-export type GetPeerOtaError = GetPeerOtaErrors[keyof GetPeerOtaErrors];
-
-export type GetPeerOtaResponses = {
-    /**
-     * OTA summary
-     */
-    200: OtaSummary;
-};
-
-export type GetPeerOtaResponse = GetPeerOtaResponses[keyof GetPeerOtaResponses];

@@ -37,8 +37,6 @@ func NewCmd() *cobra.Command {
 	var manufacturer string
 	var model string
 	var hardwareRevision string
-	var depot string
-	var firmwareSemver string
 	cmd.PreRun = func(cmd *cobra.Command, args []string) {
 		req.Device = apitypes.DeviceInfo{
 			Name: optionalString(name),
@@ -47,8 +45,6 @@ func NewCmd() *cobra.Command {
 				Manufacturer:     optionalString(manufacturer),
 				Model:            optionalString(model),
 				HardwareRevision: optionalString(hardwareRevision),
-				Depot:            optionalString(depot),
-				FirmwareSemver:   optionalString(firmwareSemver),
 			},
 		}
 	}
@@ -57,8 +53,6 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&manufacturer, "manufacturer", "", "manufacturer")
 	cmd.Flags().StringVar(&model, "model", "", "model")
 	cmd.Flags().StringVar(&hardwareRevision, "hardware-revision", "", "hardware revision")
-	cmd.Flags().StringVar(&depot, "depot", "", "depot")
-	cmd.Flags().StringVar(&firmwareSemver, "firmware-semver", "", "firmware semver")
 	return cmd
 }
 

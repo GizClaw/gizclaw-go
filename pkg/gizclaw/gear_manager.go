@@ -42,6 +42,32 @@ func NewManager(peersService *peer.Server) *Manager {
 	}
 }
 
+func (m *Manager) allowService(ctx context.Context, publicKey giznet.PublicKey, service uint64) bool {
+	switch service {
+	case ServiceRPC, ServiceServerPublic:
+		return true
+	}
+	switch service {
+	case ServiceGear:
+		gear, err := m.Peers.LoadGear(ctx, publicKey)
+		if errors.Is(err, peer.ErrPeerNotFound) {
+			return true
+		}
+		if err != nil {
+			return false
+		}
+		return gear.Status == apitypes.GearStatusActive
+	case ServiceAdmin:
+		gear, err := m.Peers.LoadGear(ctx, publicKey)
+		if err != nil {
+			return false
+		}
+		return gear.Status == apitypes.GearStatusActive && gear.Role == apitypes.GearRoleAdmin
+	default:
+		return false
+	}
+}
+
 func (m *Manager) SetPeerUp(publicKey giznet.PublicKey, conn *giznet.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -211,19 +237,6 @@ func (m *Manager) refreshPeer(ctx context.Context, publicKey giznet.PublicKey, g
 		applyPeerRefreshIdentifiers(&gear, *identifiersResp.JSON200, &updatedFields)
 	}
 
-	versionResp, err := client.GetVersionWithResponse(ctx)
-	if err != nil {
-		if isPeerDisconnectedError(err) {
-			disconnected = true
-		}
-		errs = append(errs, "version: "+err.Error())
-	} else if versionResp.JSON200 == nil {
-		errs = append(errs, fmt.Sprintf("version: unexpected status %d", versionResp.StatusCode()))
-	} else {
-		haveData = true
-		applyPeerRefreshVersion(&gear, *versionResp.JSON200, &updatedFields)
-	}
-
 	if !haveData {
 		if disconnected {
 			return gear, updatedFields, errs, ErrDeviceOffline
@@ -295,26 +308,6 @@ func applyPeerRefreshIdentifiers(gear *apitypes.Gear, identifiers apitypes.Refre
 		if !equalGearLabelSlice(hardware.Labels, items) {
 			hardware.Labels = &items
 			*updatedFields = append(*updatedFields, "device.hardware.labels")
-		}
-	}
-}
-
-func applyPeerRefreshVersion(gear *apitypes.Gear, version apitypes.RefreshVersion, updatedFields *[]string) {
-	if gear == nil {
-		return
-	}
-	if version.Depot != nil && *version.Depot != "" {
-		hardware := ensureGearHardware(&gear.Device)
-		if !equalStringPtr(hardware.Depot, version.Depot) {
-			hardware.Depot = version.Depot
-			*updatedFields = append(*updatedFields, "device.hardware.depot")
-		}
-	}
-	if version.FirmwareSemver != nil && *version.FirmwareSemver != "" {
-		hardware := ensureGearHardware(&gear.Device)
-		if !equalStringPtr(hardware.FirmwareSemver, version.FirmwareSemver) {
-			hardware.FirmwareSemver = version.FirmwareSemver
-			*updatedFields = append(*updatedFields, "device.hardware.firmware_semver")
 		}
 	}
 }

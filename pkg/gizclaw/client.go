@@ -141,10 +141,6 @@ func (c *Client) GetIdentifiers(_ context.Context, _ peerpublic.GetIdentifiersRe
 	return peerpublic.GetIdentifiers200JSONResponse(gearDeviceToPeerRefreshIdentifiers(c.Device)), nil
 }
 
-func (c *Client) GetVersion(_ context.Context, _ peerpublic.GetVersionRequestObject) (peerpublic.GetVersionResponseObject, error) {
-	return peerpublic.GetVersion200JSONResponse(gearDeviceToPeerRefreshVersion(c.Device)), nil
-}
-
 // HTTPClient returns an HTTP client bound to a peer service.
 func (c *Client) HTTPClient(service uint64) *http.Client {
 	return gizhttp.NewClient(c.PeerConn(), service)
@@ -201,12 +197,6 @@ func (c *Client) GetGearInfo(ctx context.Context, id string) (*rpcapi.GearGetInf
 func (c *Client) PutGearInfo(ctx context.Context, id string, request rpcapi.GearPutInfoRequest) (*rpcapi.GearPutInfoResponse, error) {
 	return callClientRPC(c, func(client *rpcClient, conn net.Conn) (*rpcapi.GearPutInfoResponse, error) {
 		return client.PutInfo(ctx, conn, id, request)
-	})
-}
-
-func (c *Client) GetGearOTA(ctx context.Context, id string) (*rpcapi.GearGetOTAResponse, error) {
-	return callClientRPC(c, func(client *rpcClient, conn net.Conn) (*rpcapi.GearGetOTAResponse, error) {
-		return client.GetOTA(ctx, conn, id)
 	})
 }
 
@@ -483,15 +473,6 @@ func gearDeviceToPeerRefreshIdentifiers(in apitypes.DeviceInfo) apitypes.Refresh
 			}
 			out.Labels = &items
 		}
-	}
-	return out
-}
-
-func gearDeviceToPeerRefreshVersion(in apitypes.DeviceInfo) apitypes.RefreshVersion {
-	out := apitypes.RefreshVersion{}
-	if in.Hardware != nil {
-		out.Depot = in.Hardware.Depot
-		out.FirmwareSemver = in.Hardware.FirmwareSemver
 	}
 	return out
 }

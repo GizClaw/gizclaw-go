@@ -1,13 +1,3 @@
 {
-  "firmware": {
-    "channel": "stable"
-  },
-  "certifications": [
-    {
-      "authority": "gizclaw",
-      "authority_name": "GizClaw QA",
-      "id": "ui-cert",
-      "type": "lab"
-    }
-  ]
+  "view": "under-12"
 }

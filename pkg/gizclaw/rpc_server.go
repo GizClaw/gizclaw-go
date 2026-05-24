@@ -46,8 +46,6 @@ func (s *rpcServer) dispatch(ctx context.Context, req *rpcapi.RPCRequest) (*rpca
 		return s.handleGetInfo(ctx, req)
 	case rpcapi.RPCMethodGearInfoPut:
 		return s.handlePutInfo(ctx, req)
-	case rpcapi.RPCMethodGearOtaGet:
-		return s.handleGetOTA(ctx, req)
 	case rpcapi.RPCMethodGearRegistrationGet:
 		return s.handleGetRegistration(ctx, req)
 	case rpcapi.RPCMethodGearRegistrationRegister:
@@ -156,28 +154,6 @@ func (s *rpcServer) handlePutInfo(ctx context.Context, req *rpcapi.RPCRequest) (
 	case gearservice.PutInfo400JSONResponse:
 		return rpcAPIError(req.Id, http.StatusBadRequest, apitypes.ErrorResponse(body)), nil
 	case gearservice.PutInfo404JSONResponse:
-		return rpcAPIError(req.Id, http.StatusNotFound, apitypes.ErrorResponse(body)), nil
-	default:
-		return rpcUnexpectedResponse(req.Id, resp), nil
-	}
-}
-
-func (s *rpcServer) handleGetOTA(ctx context.Context, req *rpcapi.RPCRequest) (*rpcapi.RPCResponse, error) {
-	if err := validateRPCParams(req.Params, rpcapi.RPCRequest_Params.AsGearGetOTARequest); err != nil {
-		return rpcInvalidParams(req.Id), nil
-	}
-	resp, err := s.gear.GetOTA(s.gearContext(ctx), gearservice.GetOTARequestObject{})
-	if err != nil {
-		return nil, err
-	}
-	switch body := resp.(type) {
-	case gearservice.GetOTA200JSONResponse:
-		result, err := convertRPCType[rpcapi.GearGetOTAResponse](body)
-		if err != nil {
-			return nil, err
-		}
-		return newRPCResultResponse(req.Id, result, (*rpcapi.RPCResponse_Result).FromGearGetOTAResponse)
-	case gearservice.GetOTA404JSONResponse:
 		return rpcAPIError(req.Id, http.StatusNotFound, apitypes.ErrorResponse(body)), nil
 	default:
 		return rpcUnexpectedResponse(req.Id, resp), nil

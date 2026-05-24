@@ -1,0 +1,47 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DashScope Tenant Type",
+    "description": "DashScope tenant schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "DashScopeTenant": {
+        "type": "object",
+        "required": [
+          "name",
+          "credential_name",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "credential_name": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://dashscope.aliyuncs.com"
+          },
+          "description": {
+            "type": "string",
+            "example": "DashScope tenant"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

@@ -7,6 +7,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 var BuildCommit = "dev"
@@ -14,7 +15,8 @@ var BuildCommit = "dev"
 // CmdServer owns the command-layer store registry for a gizclaw server.
 type CmdServer struct {
 	*gizclaw.Server
-	stores *stores.Stores
+	AdminPublicKey giznet.PublicKey
+	stores         *stores.Stores
 }
 
 func (s *CmdServer) Close() error {
@@ -55,23 +57,23 @@ func New(cfg Config) (srv *CmdServer, err error) {
 		return nil, fmt.Errorf("server: peers store: %w", err)
 	}
 
-	fwStore, err := ss.DepotStore(cfg.Depots.Store)
-	if err != nil {
-		return nil, fmt.Errorf("server: firmware store: %w", err)
-	}
-
 	gizServer := &gizclaw.Server{
-		KeyPair:         cfg.KeyPair,
-		ListenAddr:      cfg.ListenAddr,
-		PeerStore:       gearsKV,
-		BuildCommit:     BuildCommit,
-		ServerPublicKey: cfg.KeyPair.Public,
-		AdminPublicKey:  cfg.AdminPublicKey,
-		DepotStore:      fwStore,
+		LocalStatic: *cfg.KeyPair,
+		ListenAddr:  cfg.ListenAddr,
+		PeerStore:   gearsKV,
+		BuildCommit: BuildCommit,
+	}
+	if !cfg.AdminPublicKey.IsZero() {
+		gizServer.SecurityPolicy = adminPublicKeySecurityPolicy{
+			PublicKey: cfg.AdminPublicKey,
+		}
 	}
 	if len(cfg.Storage) > 0 {
 		if gizServer.CredentialStore, err = ss.KV(cfg.Credentials.Store); err != nil {
 			return nil, fmt.Errorf("server: credentials store: %w", err)
+		}
+		if gizServer.FirmwareStore, err = ss.KV(cfg.Firmwares.Store); err != nil {
+			return nil, fmt.Errorf("server: firmwares store: %w", err)
 		}
 		if gizServer.MiniMaxCredentialStore, err = ss.KV(cfg.MiniMax.CredentialsStore); err != nil {
 			return nil, fmt.Errorf("server: minimax credentials store: %w", err)
@@ -85,14 +87,26 @@ func New(cfg Config) (srv *CmdServer, err error) {
 		if gizServer.WorkspaceStore, err = ss.KV(cfg.Workspaces.Store); err != nil {
 			return nil, fmt.Errorf("server: workspaces store: %w", err)
 		}
-		if gizServer.DepotMetadataStore, err = ss.KV(cfg.Depots.MetadataStore); err != nil {
-			return nil, fmt.Errorf("server: firmware metadata store: %w", err)
-		}
 		if gizServer.WorkflowStore, err = ss.KV(cfg.Workflows.Store); err != nil {
 			return nil, fmt.Errorf("server: workflows store: %w", err)
 		}
+		if gizServer.ACLDB, err = ss.SQL(cfg.ACL.Store); err != nil {
+			return nil, fmt.Errorf("server: acl store: %w", err)
+		}
 	}
-	return &CmdServer{Server: gizServer, stores: ss}, nil
+	return &CmdServer{Server: gizServer, AdminPublicKey: cfg.AdminPublicKey, stores: ss}, nil
+}
+
+type adminPublicKeySecurityPolicy struct {
+	PublicKey giznet.PublicKey
+}
+
+func (p adminPublicKeySecurityPolicy) AllowPeer(giznet.PublicKey) bool {
+	return true
+}
+
+func (p adminPublicKeySecurityPolicy) AllowService(publicKey giznet.PublicKey, service uint64) bool {
+	return service == gizclaw.ServiceAdmin && publicKey == p.PublicKey
 }
 
 func newStoreRegistry(cfg Config) (*stores.Stores, error) {

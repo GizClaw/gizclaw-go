@@ -42,8 +42,7 @@
             "in": "header",
             "required": true,
             "schema": {
-              "type": "string",
-              "pattern": "^Bearer .+$"
+              "type": "string"
             }
           }
         ],

@@ -35,10 +35,8 @@ func TestIntegrationPeerPublicRefresh(t *testing.T) {
 
 	device.Device = apitypes.DeviceInfo{
 		Hardware: &apitypes.HardwareInfo{
-			Manufacturer:   strPtr("Acme"),
-			Model:          strPtr("M1"),
-			Depot:          strPtr("demo"),
-			FirmwareSemver: strPtr("1.2.3"),
+			Manufacturer: strPtr("Acme"),
+			Model:        strPtr("M1"),
 		},
 		Sn: strPtr("sn-r1"),
 	}

@@ -5,19 +5,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/serverpublic"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
-	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/adaptor"
 )
 
 const (
@@ -40,128 +35,6 @@ func waitUntil(timeout time.Duration, check func() error) error {
 		return lastErr
 	}
 	return fmt.Errorf("condition not satisfied before timeout")
-}
-
-func TestPublicFiberAdapterServerInfo(t *testing.T) {
-	app := fiber.New(fiber.Config{DisableStartupMessage: true})
-	app.Use(func(ctx *fiber.Ctx) error {
-		base := ctx.UserContext()
-		if base == nil {
-			base = context.Background()
-		}
-		ctx.SetUserContext(serverpublic.WithCallerPublicKey(base, giznet.PublicKey{1}))
-		return ctx.Next()
-	})
-	serverpublic.RegisterHandlers(app, serverpublic.NewStrictHandler(&serverPublic{
-		ServerPublicService: &peer.Server{
-			BuildCommit:     "test-build",
-			ServerPublicKey: giznet.PublicKey{1},
-		},
-	}, nil))
-
-	req := httptest.NewRequest(http.MethodGet, "/server-info", nil)
-	rec := httptest.NewRecorder()
-	adaptor.FiberApp(app).ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
-	}
-}
-
-func TestPeerServicePublicRoundTrip(t *testing.T) {
-	serverKey, err := giznet.GenerateKeyPair()
-	if err != nil {
-		t.Fatalf("GenerateKeyPair(server) error = %v", err)
-	}
-	clientKey, err := giznet.GenerateKeyPair()
-	if err != nil {
-		t.Fatalf("GenerateKeyPair(client) error = %v", err)
-	}
-
-	serverListener, err := (&giznet.ListenConfig{
-		Addr: "127.0.0.1:0",
-		SecurityPolicy: testGiznetSecurityPolicy{
-			allowService: func(_ giznet.PublicKey, service uint64) bool {
-				return service == ServiceServerPublic
-			},
-		},
-	}).Listen(serverKey)
-	if err != nil {
-		t.Fatalf("giznet.Listen(server) error = %v", err)
-	}
-	defer serverListener.Close()
-	go drainUDP(serverListener.UDP())
-
-	clientListener, err := (&giznet.ListenConfig{
-		Addr:           "127.0.0.1:0",
-		SecurityPolicy: testGiznetSecurityPolicy{},
-	}).Listen(clientKey)
-	if err != nil {
-		t.Fatalf("giznet.Listen(client) error = %v", err)
-	}
-	defer clientListener.Close()
-	go drainUDP(clientListener.UDP())
-
-	connCh := make(chan *giznet.Conn, 1)
-	errCh := make(chan error, 1)
-	go func() {
-		conn, err := serverListener.Accept()
-		if err != nil {
-			errCh <- err
-			return
-		}
-		connCh <- conn
-	}()
-
-	conn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
-	if err != nil {
-		t.Fatalf("Dial error = %v", err)
-	}
-	defer conn.Close()
-
-	var serverConn *giznet.Conn
-	select {
-	case serverConn = <-connCh:
-	case err := <-errCh:
-		t.Fatalf("Accept error = %v", err)
-	}
-	defer serverConn.Close()
-
-	gearsServer := &peer.Server{
-		BuildCommit:     "test-build",
-		ServerPublicKey: serverKey.Public,
-	}
-	service := &PeerService{
-		manager: NewManager(gearsServer),
-		public: &serverPublic{
-			ServerPublicService: gearsServer,
-		},
-	}
-	serveErrCh := make(chan error, 1)
-	go func() {
-		serveErrCh <- service.servePublic(serverConn)
-	}()
-
-	client := &http.Client{Transport: gizhttp.NewRoundTripper(conn, ServiceServerPublic)}
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "http://gizclaw/server-info", nil)
-	if err != nil {
-		t.Fatalf("http.NewRequest error = %v", err)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		select {
-		case serveErr := <-serveErrCh:
-			t.Fatalf("client.Do error = %v; servePublic error = %v", err, serveErr)
-		default:
-		}
-		t.Fatalf("client.Do error = %v", err)
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("status = %d body=%s", resp.StatusCode, string(body))
-	}
 }
 
 func TestPeerServiceServeConnRequiresHandlers(t *testing.T) {
@@ -198,7 +71,7 @@ func TestPeerServiceValidateServices(t *testing.T) {
 			name: "missing public service",
 			service: &PeerService{
 				admin: &adminService{},
-				gear:  &gearAPIBundle{},
+				gear:  &peer.Server{},
 			},
 			wantErr: "nil public service",
 		},
@@ -206,7 +79,7 @@ func TestPeerServiceValidateServices(t *testing.T) {
 			name: "complete service bundle",
 			service: &PeerService{
 				admin:  &adminService{},
-				gear:   &gearAPIBundle{},
+				gear:   &peer.Server{},
 				public: &serverPublic{},
 			},
 		},
@@ -297,11 +170,9 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 	defer serverConn.Close()
 
 	server := &Server{
-		KeyPair:         serverKey,
-		PeerStore:       mustBadgerInMemory(t, nil),
-		DepotStore:      depotstore.Dir(t.TempDir()),
-		BuildCommit:     "test-build",
-		ServerPublicKey: serverKey.Public,
+		LocalStatic: *serverKey,
+		PeerStore:   mustBadgerInMemory(t, nil),
+		BuildCommit: "test-build",
 	}
 	if err := server.init(); err != nil {
 		t.Fatalf("init error = %v", err)
@@ -381,24 +252,6 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 	}
 	if runtime := server.manager.PeerRuntime(context.Background(), clientKey.Public); runtime.Online || !runtime.LastSeenAt.IsZero() {
 		t.Fatalf("peer runtime after client close = %+v", runtime)
-	}
-}
-
-func TestFiberHTTPHandlerHidesPanicDetail(t *testing.T) {
-	app := fiber.New(fiber.Config{DisableStartupMessage: true})
-	app.Get("/panic", func(*fiber.Ctx) error {
-		panic("secret-panic-detail")
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/panic", nil)
-	rec := httptest.NewRecorder()
-	fiberHTTPHandler(app).ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
-	}
-	if rec.Body.String() != http.StatusText(http.StatusInternalServerError) {
-		t.Fatalf("body = %q", rec.Body.String())
 	}
 }
 

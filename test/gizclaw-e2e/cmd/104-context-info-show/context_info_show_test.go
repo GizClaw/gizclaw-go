@@ -4,13 +4,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	clitest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/cmd"
 )
 
 func TestContextInfoAndShowUserStory(t *testing.T) {
 	h := clitest.NewHarness(t, "104-context-info-show")
 	h.StartServerFromFixture("server_config.yaml")
-	pubkey := strings.Repeat("01", 32)
+	pubkey := giznet.PublicKey{1}.String()
 
 	noCurrent := h.RunCLI("context", "info")
 	if noCurrent.Err == nil {

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 )
 
@@ -32,7 +31,7 @@ func TestProbeServerPublicReadyRequiresConnection(t *testing.T) {
 
 func TestCollectAllPagesAggregatesUntilDone(t *testing.T) {
 	var seen []string
-	items, err := collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[string], error) {
+	items, err := collectAllPages(func(cursor *string, limit *int32) (pagedItems[string], error) {
 		if limit == nil || *limit != 200 {
 			t.Fatalf("limit = %v, want 200", limit)
 		}
@@ -68,7 +67,7 @@ func TestCollectAllPagesAggregatesUntilDone(t *testing.T) {
 
 func TestCollectAllPagesStopsOnMissingNextCursor(t *testing.T) {
 	calls := 0
-	items, err := collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[string], error) {
+	items, err := collectAllPages(func(cursor *string, limit *int32) (pagedItems[string], error) {
 		calls++
 		return pagedItems[string]{HasNext: true, Items: []string{"a"}}, nil
 	})
@@ -85,7 +84,7 @@ func TestCollectAllPagesStopsOnMissingNextCursor(t *testing.T) {
 
 func TestCollectAllPagesPropagatesErrors(t *testing.T) {
 	want := errors.New("boom")
-	_, err := collectAllPages(func(cursor *adminservice.Cursor, limit *adminservice.Limit) (pagedItems[string], error) {
+	_, err := collectAllPages(func(cursor *string, limit *int32) (pagedItems[string], error) {
 		return pagedItems[string]{}, want
 	})
 	if !errors.Is(err, want) {

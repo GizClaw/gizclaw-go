@@ -18,7 +18,7 @@ func (m *Manager) applyWorkflow(ctx context.Context, resource apitypes.Resource)
 	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
-	name := adminservice.WorkflowName(pathParam(item.Metadata.Name))
+	name := string(pathParam(item.Metadata.Name))
 	existing, exists, err := m.getWorkflow(ctx, name)
 	if err != nil {
 		return apitypes.ApplyResult{}, err
@@ -41,7 +41,7 @@ func (m *Manager) applyWorkflow(ctx context.Context, resource apitypes.Resource)
 	return applyResult(apitypes.ApplyActionCreated, apitypes.ResourceKindWorkflow, item.Metadata.Name), nil
 }
 
-func (m *Manager) getWorkflow(ctx context.Context, name adminservice.WorkflowName) (apitypes.WorkflowDocument, bool, error) {
+func (m *Manager) getWorkflow(ctx context.Context, name string) (apitypes.WorkflowDocument, bool, error) {
 	response, err := m.services.Workflows.GetWorkflow(ctx, adminservice.GetWorkflowRequestObject{Name: name})
 	if err != nil {
 		return apitypes.WorkflowDocument{}, false, err
@@ -58,7 +58,7 @@ func (m *Manager) getWorkflow(ctx context.Context, name adminservice.WorkflowNam
 	}
 }
 
-func (m *Manager) putWorkflow(ctx context.Context, name adminservice.WorkflowName, body apitypes.WorkflowDocument) error {
+func (m *Manager) putWorkflow(ctx context.Context, name string, body apitypes.WorkflowDocument) error {
 	response, err := m.services.Workflows.PutWorkflow(ctx, adminservice.PutWorkflowRequestObject{Name: name, Body: &body})
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (m *Manager) putWorkflow(ctx context.Context, name adminservice.WorkflowNam
 	}
 }
 
-func (m *Manager) deleteWorkflow(ctx context.Context, name adminservice.WorkflowName) (apitypes.WorkflowDocument, bool, error) {
+func (m *Manager) deleteWorkflow(ctx context.Context, name string) (apitypes.WorkflowDocument, bool, error) {
 	response, err := m.services.Workflows.DeleteWorkflow(ctx, adminservice.DeleteWorkflowRequestObject{Name: name})
 	if err != nil {
 		return apitypes.WorkflowDocument{}, false, err

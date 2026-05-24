@@ -12,7 +12,6 @@ func realServiceSmokeStories() []Story {
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoAdmin("/")
 			page.ExpectText("Dashboard")
-			page.ExpectText(SeedDepotName)
 
 			page.GotoPlay("/")
 			page.ClickRole("button", "Start Video Call")

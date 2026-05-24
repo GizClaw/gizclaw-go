@@ -18,7 +18,7 @@ func (m *Manager) applyCredential(ctx context.Context, resource apitypes.Resourc
 	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
-	name := adminservice.CredentialName(pathParam(item.Metadata.Name))
+	name := string(pathParam(item.Metadata.Name))
 	existing, exists, err := m.getCredential(ctx, name)
 	if err != nil {
 		return apitypes.ApplyResult{}, err
@@ -41,7 +41,7 @@ func (m *Manager) applyCredential(ctx context.Context, resource apitypes.Resourc
 	return applyResult(apitypes.ApplyActionCreated, apitypes.ResourceKindCredential, item.Metadata.Name), nil
 }
 
-func (m *Manager) getCredential(ctx context.Context, name adminservice.CredentialName) (apitypes.Credential, bool, error) {
+func (m *Manager) getCredential(ctx context.Context, name string) (apitypes.Credential, bool, error) {
 	response, err := m.services.Credentials.GetCredential(ctx, adminservice.GetCredentialRequestObject{Name: name})
 	if err != nil {
 		return apitypes.Credential{}, false, err
@@ -58,7 +58,7 @@ func (m *Manager) getCredential(ctx context.Context, name adminservice.Credentia
 	}
 }
 
-func (m *Manager) putCredential(ctx context.Context, name adminservice.CredentialName, body adminservice.CredentialUpsert) error {
+func (m *Manager) putCredential(ctx context.Context, name string, body adminservice.CredentialUpsert) error {
 	response, err := m.services.Credentials.PutCredential(ctx, adminservice.PutCredentialRequestObject{Name: name, Body: &body})
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (m *Manager) putCredential(ctx context.Context, name adminservice.Credentia
 	}
 }
 
-func (m *Manager) deleteCredential(ctx context.Context, name adminservice.CredentialName) (apitypes.Credential, bool, error) {
+func (m *Manager) deleteCredential(ctx context.Context, name string) (apitypes.Credential, bool, error) {
 	response, err := m.services.Credentials.DeleteCredential(ctx, adminservice.DeleteCredentialRequestObject{Name: name})
 	if err != nil {
 		return apitypes.Credential{}, false, err
@@ -106,7 +106,7 @@ func credentialUpsert(resource apitypes.CredentialResource) adminservice.Credent
 		Body:        resource.Spec.Body,
 		Description: resource.Spec.Description,
 		Method:      resource.Spec.Method,
-		Name:        apitypes.CredentialName(resource.Metadata.Name),
+		Name:        string(resource.Metadata.Name),
 		Provider:    resource.Spec.Provider,
 	}
 }

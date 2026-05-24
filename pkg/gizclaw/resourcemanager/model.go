@@ -18,7 +18,7 @@ func (m *Manager) applyModel(ctx context.Context, resource apitypes.Resource) (a
 	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
-	id := adminservice.ModelID(pathParam(item.Metadata.Name))
+	id := string(pathParam(item.Metadata.Name))
 	existing, exists, err := m.getModel(ctx, id)
 	if err != nil {
 		return apitypes.ApplyResult{}, err
@@ -41,7 +41,7 @@ func (m *Manager) applyModel(ctx context.Context, resource apitypes.Resource) (a
 	return applyResult(apitypes.ApplyActionCreated, apitypes.ResourceKindModel, item.Metadata.Name), nil
 }
 
-func (m *Manager) getModel(ctx context.Context, id adminservice.ModelID) (apitypes.Model, bool, error) {
+func (m *Manager) getModel(ctx context.Context, id string) (apitypes.Model, bool, error) {
 	response, err := m.services.Models.GetModel(ctx, adminservice.GetModelRequestObject{Id: id})
 	if err != nil {
 		return apitypes.Model{}, false, err
@@ -58,7 +58,7 @@ func (m *Manager) getModel(ctx context.Context, id adminservice.ModelID) (apityp
 	}
 }
 
-func (m *Manager) putModel(ctx context.Context, id adminservice.ModelID, body adminservice.ModelUpsert) error {
+func (m *Manager) putModel(ctx context.Context, id string, body adminservice.ModelUpsert) error {
 	response, err := m.services.Models.PutModel(ctx, adminservice.PutModelRequestObject{Id: id, Body: &body})
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func (m *Manager) putModel(ctx context.Context, id adminservice.ModelID, body ad
 	}
 }
 
-func (m *Manager) deleteModel(ctx context.Context, id adminservice.ModelID) (apitypes.Model, bool, error) {
+func (m *Manager) deleteModel(ctx context.Context, id string) (apitypes.Model, bool, error) {
 	response, err := m.services.Models.DeleteModel(ctx, adminservice.DeleteModelRequestObject{Id: id})
 	if err != nil {
 		return apitypes.Model{}, false, err
@@ -96,6 +96,7 @@ func (m *Manager) deleteModel(ctx context.Context, id adminservice.ModelID) (api
 
 func modelSpec(model apitypes.Model) apitypes.ModelSpec {
 	return apitypes.ModelSpec{
+		Capabilities: model.Capabilities,
 		Description:  model.Description,
 		Kind:         model.Kind,
 		Name:         model.Name,
@@ -107,8 +108,9 @@ func modelSpec(model apitypes.Model) apitypes.ModelSpec {
 
 func modelUpsert(resource apitypes.ModelResource) adminservice.ModelUpsert {
 	return adminservice.ModelUpsert{
+		Capabilities: resource.Spec.Capabilities,
 		Description:  resource.Spec.Description,
-		Id:           apitypes.ModelID(resource.Metadata.Name),
+		Id:           string(resource.Metadata.Name),
 		Kind:         resource.Spec.Kind,
 		Name:         resource.Spec.Name,
 		Provider:     resource.Spec.Provider,

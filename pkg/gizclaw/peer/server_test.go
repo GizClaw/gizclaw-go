@@ -37,19 +37,16 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	peerPublicKey := peerKey.String()
 	ctx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
 	sn := "sn-gear"
-	depot := "depot-gear"
 	tac := "12345678"
 	serial := "87654321"
 	labelKey := "region"
 	labelValue := "cn"
-	certID := "cert-gear"
 
 	_, err := server.RegisterGear(ctx, gearservice.RegisterGearRequestObject{
 		Body: &gearservice.RegisterGearJSONRequestBody{
 			Device: apitypes.DeviceInfo{
 				Sn: &sn,
 				Hardware: &apitypes.HardwareInfo{
-					Depot:  &depot,
 					Imeis:  &[]apitypes.GearIMEI{{Tac: tac, Serial: serial}},
 					Labels: &[]apitypes.GearLabel{{Key: labelKey, Value: labelValue}},
 				},
@@ -61,7 +58,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	getResp, err := server.GetPeer(ctx, adminservice.GetPeerRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("GetPeer error: %v", err)
@@ -86,17 +83,11 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("ListPeers items = %+v", listed.Items)
 	}
 
-	stable := apitypes.GearFirmwareChannel("stable")
-	adminStable := apitypes.GearFirmwareChannel(stable)
+	view := "under-12"
 	putConfigResp, err := server.PutPeerConfig(ctx, adminservice.PutPeerConfigRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 		Body: &adminservice.PutPeerConfigJSONRequestBody{
-			Certifications: &[]apitypes.GearCertification{{
-				Type:      apitypes.GearCertificationType("license"),
-				Authority: apitypes.GearCertificationAuthority("ce"),
-				Id:        certID,
-			}},
-			Firmware: &apitypes.FirmwareConfig{Channel: &adminStable},
+			View: &view,
 		},
 	})
 	if err != nil {
@@ -107,7 +98,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	getConfigResp, err := server.GetPeerConfig(ctx, adminservice.GetPeerConfigRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("GetPeerConfig error: %v", err)
@@ -116,12 +107,12 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetPeerConfig response type = %T", getConfigResp)
 	}
-	if cfg.Firmware == nil || cfg.Firmware.Channel == nil || *cfg.Firmware.Channel != stable {
+	if cfg.View == nil || *cfg.View != view {
 		t.Fatalf("GetPeerConfig = %+v", cfg)
 	}
 
 	getInfoResp, err := server.GetPeerInfo(ctx, adminservice.GetPeerInfoRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("GetPeerInfo error: %v", err)
@@ -134,19 +125,27 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("GetPeerInfo = %+v", info)
 	}
 
-	byFirmwareResp, err := server.ListPeersByFirmware(ctx, adminservice.ListPeersByFirmwareRequestObject{
-		Depot:   depot,
-		Channel: apitypes.GearFirmwareChannel(stable),
+	updatedName := "renamed-peer"
+	putInfoResp, err := server.PutPeerInfo(ctx, adminservice.PutPeerInfoRequestObject{
+		PublicKey: string(peerPublicKey),
+		Body: &adminservice.PutPeerInfoJSONRequestBody{
+			Name: &updatedName,
+			Sn:   &sn,
+			Hardware: &apitypes.HardwareInfo{
+				Imeis:  &[]apitypes.GearIMEI{{Tac: tac, Serial: serial}},
+				Labels: &[]apitypes.GearLabel{{Key: labelKey, Value: labelValue}},
+			},
+		},
 	})
 	if err != nil {
-		t.Fatalf("ListPeersByFirmware error: %v", err)
+		t.Fatalf("PutPeerInfo error: %v", err)
 	}
-	byFirmware, ok := byFirmwareResp.(adminservice.ListPeersByFirmware200JSONResponse)
+	updatedInfo, ok := putInfoResp.(adminservice.PutPeerInfo200JSONResponse)
 	if !ok {
-		t.Fatalf("ListPeersByFirmware response type = %T", byFirmwareResp)
+		t.Fatalf("PutPeerInfo response type = %T", putInfoResp)
 	}
-	if len(byFirmware.Items) != 1 || byFirmware.Items[0].PublicKey != peerPublicKey {
-		t.Fatalf("ListPeersByFirmware items = %+v", byFirmware.Items)
+	if updatedInfo.Name == nil || *updatedInfo.Name != updatedName {
+		t.Fatalf("PutPeerInfo = %+v", updatedInfo)
 	}
 
 	resolveSNResp, err := server.ResolvePeerBySN(ctx, adminservice.ResolvePeerBySNRequestObject{Sn: sn})
@@ -188,24 +187,8 @@ func TestServerGearserviceHandlers(t *testing.T) {
 		t.Fatalf("ResolvePeerByIMEI = %+v", resolvedIMEI)
 	}
 
-	byCertificationResp, err := server.ListPeersByCertification(ctx, adminservice.ListPeersByCertificationRequestObject{
-		Type:      apitypes.GearCertificationType("license"),
-		Authority: apitypes.GearCertificationAuthority("ce"),
-		Id:        certID,
-	})
-	if err != nil {
-		t.Fatalf("ListPeersByCertification error: %v", err)
-	}
-	byCertification, ok := byCertificationResp.(adminservice.ListPeersByCertification200JSONResponse)
-	if !ok {
-		t.Fatalf("ListPeersByCertification response type = %T", byCertificationResp)
-	}
-	if len(byCertification.Items) != 1 || byCertification.Items[0].PublicKey != peerPublicKey {
-		t.Fatalf("ListPeersByCertification items = %+v", byCertification.Items)
-	}
-
 	approveResp, err := server.ApprovePeer(ctx, adminservice.ApprovePeerRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 		Body:      &adminservice.ApprovePeerJSONRequestBody{Role: apitypes.GearRoleGear},
 	})
 	if err != nil {
@@ -220,7 +203,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	blockResp, err := server.BlockPeer(ctx, adminservice.BlockPeerRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("BlockPeer error: %v", err)
@@ -234,7 +217,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	}
 
 	deleteResp, err := server.DeletePeer(ctx, adminservice.DeletePeerRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("DeletePeer error: %v", err)
@@ -246,7 +229,7 @@ func TestServerGearserviceHandlers(t *testing.T) {
 	if deleted.Role != apitypes.GearRoleGear || deleted.Status != apitypes.GearStatusBlocked || deleted.ApprovedAt == nil {
 		t.Fatalf("DeletePeer = %+v", deleted)
 	}
-	getDeletedResp, err := server.GetPeer(ctx, adminservice.GetPeerRequestObject{PublicKey: adminservice.PublicKey(peerPublicKey)})
+	getDeletedResp, err := server.GetPeer(ctx, adminservice.GetPeerRequestObject{PublicKey: string(peerPublicKey)})
 	if err != nil {
 		t.Fatalf("GetPeer after DeletePeer error: %v", err)
 	}
@@ -286,7 +269,7 @@ func TestServerListPeersPagination(t *testing.T) {
 	registerGear(gearB, "cn")
 	registerGear(gearC, "us")
 
-	limit := adminservice.Limit(1)
+	limit := int32(1)
 	resp, err := server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
 		Params: adminservice.ListPeersParams{
 			Limit: &limit,
@@ -375,7 +358,7 @@ func TestServerListPeersPaginationPreservesCreationOrder(t *testing.T) {
 	registerGear(gearA)
 	registerGear(gearC)
 
-	limit := adminservice.Limit(2)
+	limit := int32(2)
 	resp, err := server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
 		Params: adminservice.ListPeersParams{Limit: &limit},
 	})
@@ -425,7 +408,7 @@ func TestServerListPeersLimitClampsToConfiguredBounds(t *testing.T) {
 		}
 	}
 
-	zero := adminservice.Limit(0)
+	zero := int32(0)
 	resp, err := server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
 		Params: adminservice.ListPeersParams{Limit: &zero},
 	})
@@ -440,7 +423,7 @@ func TestServerListPeersLimitClampsToConfiguredBounds(t *testing.T) {
 		t.Fatalf("ListPeers zero limit = %+v", defaultPage)
 	}
 
-	tooLarge := adminservice.Limit(999)
+	tooLarge := int32(999)
 	resp, err = server.ListPeers(context.Background(), adminservice.ListPeersRequestObject{
 		Params: adminservice.ListPeersParams{Limit: &tooLarge},
 	})
@@ -471,7 +454,7 @@ func TestServerRuntimeHandlers(t *testing.T) {
 			},
 			refreshResult: adminservice.RefreshResult{
 				Gear: apitypes.Gear{
-					PublicKey: peerPublicKey,
+					PublicKey: peerKey.String(),
 					Role:      apitypes.GearRoleServer,
 					Status:    apitypes.GearStatusActive,
 				},
@@ -491,7 +474,7 @@ func TestServerRuntimeHandlers(t *testing.T) {
 	}
 
 	getGearRuntimeResp, err := server.GetPeerRuntime(context.Background(), adminservice.GetPeerRuntimeRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("GetPeerRuntime error: %v", err)
@@ -517,7 +500,7 @@ func TestServerRuntimeHandlers(t *testing.T) {
 	}
 
 	refreshResp, err := server.RefreshPeer(context.Background(), adminservice.RefreshPeerRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 	})
 	if err != nil {
 		t.Fatalf("RefreshPeer error: %v", err)
@@ -545,7 +528,6 @@ func TestServerPublicHandlers(t *testing.T) {
 	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
 	name := "gear-a"
 	sn := "sn-1"
-	depot := "alpha"
 	labelKey := "region"
 	labelValue := "cn"
 
@@ -555,7 +537,6 @@ func TestServerPublicHandlers(t *testing.T) {
 				Name: &name,
 				Sn:   &sn,
 				Hardware: &apitypes.HardwareInfo{
-					Depot:  &depot,
 					Labels: &[]apitypes.GearLabel{{Key: labelKey, Value: labelValue}},
 				},
 			},
@@ -641,14 +622,10 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	registerCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
 	gearCtx := gearservice.WithCallerPublicKey(context.Background(), peerKey)
 	sn := "sn-old"
-	depot := "depot-public"
 	_, err := server.RegisterGear(registerCtx, gearservice.RegisterGearRequestObject{
 		Body: &gearservice.RegisterGearJSONRequestBody{
 			Device: apitypes.DeviceInfo{
 				Sn: &sn,
-				Hardware: &apitypes.HardwareInfo{
-					Depot: &depot,
-				},
 			},
 		},
 	})
@@ -656,12 +633,11 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 		t.Fatalf("RegisterGear error: %v", err)
 	}
 
-	stable := apitypes.GearFirmwareChannel("stable")
-	adminStable := apitypes.GearFirmwareChannel(stable)
+	view := "under-12"
 	_, err = server.PutPeerConfig(context.Background(), adminservice.PutPeerConfigRequestObject{
-		PublicKey: adminservice.PublicKey(peerPublicKey),
+		PublicKey: string(peerPublicKey),
 		Body: &adminservice.PutPeerConfigJSONRequestBody{
-			Firmware: &apitypes.FirmwareConfig{Channel: &adminStable},
+			View: &view,
 		},
 	})
 	if err != nil {
@@ -676,7 +652,7 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetConfig response type = %T", getConfigResp)
 	}
-	if cfg.Firmware == nil || cfg.Firmware.Channel == nil || *cfg.Firmware.Channel != stable {
+	if cfg.View == nil || *cfg.View != view {
 		t.Fatalf("GetConfig = %+v", cfg)
 	}
 
@@ -684,9 +660,6 @@ func TestServerPublicHandlersPutInfoConfigAndRuntime(t *testing.T) {
 	putInfoResp, err := server.PutInfo(gearCtx, gearservice.PutInfoRequestObject{
 		Body: &gearservice.PutInfoJSONRequestBody{
 			Sn: &newSN,
-			Hardware: &apitypes.HardwareInfo{
-				Depot: &depot,
-			},
 		},
 	})
 	if err != nil {

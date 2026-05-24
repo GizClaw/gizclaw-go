@@ -14,14 +14,10 @@ export type RegistrationResult = {
 };
 
 export type Configuration = {
-    certifications?: Array<GearCertification>;
-    firmware?: FirmwareConfig;
-};
-
-export type DepotFile = {
-    path: string;
-    sha256: string;
-    md5: string;
+    /**
+     * Current content view name selected for this gear.
+     */
+    view?: string;
 };
 
 export type DeviceInfo = {
@@ -42,10 +38,6 @@ export type ErrorResponse = {
     error: ErrorPayload;
 };
 
-export type FirmwareConfig = {
-    channel?: GearFirmwareChannel;
-};
-
 export type Gear = {
     public_key: string;
     role: GearRole;
@@ -57,19 +49,6 @@ export type Gear = {
     updated_at: string;
     approved_at?: string;
 };
-
-export type GearCertification = {
-    type: GearCertificationType;
-    authority: GearCertificationAuthority;
-    id: string;
-    authority_name?: string;
-};
-
-export type GearCertificationAuthority = 'unknown' | 'ccc' | 'ce' | 'fcc' | 'miit' | 'srrc' | 'rohs' | 'internal';
-
-export type GearCertificationType = 'license' | 'certification';
-
-export type GearFirmwareChannel = string;
 
 export type GearImei = {
     name?: string;
@@ -90,17 +69,8 @@ export type HardwareInfo = {
     manufacturer?: string;
     model?: string;
     hardware_revision?: string;
-    depot?: string;
-    firmware_semver?: string;
     imeis?: Array<GearImei>;
     labels?: Array<GearLabel>;
-};
-
-export type OtaSummary = {
-    depot: string;
-    channel: string;
-    firmware_semver: string;
-    files: Array<DepotFile>;
 };
 
 export type Registration = {
@@ -279,62 +249,3 @@ export type GetConfigResponses = {
 };
 
 export type GetConfigResponse = GetConfigResponses[keyof GetConfigResponses];
-
-export type GetOtaData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/ota';
-};
-
-export type GetOtaErrors = {
-    /**
-     * OTA not available
-     */
-    404: ErrorResponse;
-};
-
-export type GetOtaError = GetOtaErrors[keyof GetOtaErrors];
-
-export type GetOtaResponses = {
-    /**
-     * OTA summary
-     */
-    200: OtaSummary;
-};
-
-export type GetOtaResponse = GetOtaResponses[keyof GetOtaResponses];
-
-export type DownloadFirmwareData = {
-    body?: never;
-    path: {
-        /**
-         * Percent-encoded firmware file path
-         */
-        path: string;
-    };
-    query?: never;
-    url: '/download/firmware/{path}';
-};
-
-export type DownloadFirmwareErrors = {
-    /**
-     * Invalid params
-     */
-    400: ErrorResponse;
-    /**
-     * Firmware file not found
-     */
-    404: ErrorResponse;
-};
-
-export type DownloadFirmwareError = DownloadFirmwareErrors[keyof DownloadFirmwareErrors];
-
-export type DownloadFirmwareResponses = {
-    /**
-     * Firmware file
-     */
-    200: Blob | File;
-};
-
-export type DownloadFirmwareResponse = DownloadFirmwareResponses[keyof DownloadFirmwareResponses];

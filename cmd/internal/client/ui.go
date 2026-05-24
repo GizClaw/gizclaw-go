@@ -18,9 +18,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	adminui "github.com/GizClaw/gizclaw-go/cmd/ui/admin"
 	playui "github.com/GizClaw/gizclaw-go/cmd/ui/play"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/pion/webrtc/v4"
 )
 
@@ -293,13 +293,27 @@ func registerPlayUIRoutes(ctxName string) func(*http.ServeMux) {
 }
 
 func registerAdminUIRoutes(mux *http.ServeMux) {
-	redirect := func(w http.ResponseWriter, r *http.Request) {
+	redirectWorkflows := func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/ai/workflows", http.StatusFound)
 	}
-	mux.HandleFunc("/workspace-templates", redirect)
-	mux.HandleFunc("/workspace-templates/", redirect)
-	mux.HandleFunc("/ai/workspace-templates", redirect)
-	mux.HandleFunc("/ai/workspace-templates/", redirect)
+	redirectPeers := func(w http.ResponseWriter, r *http.Request) {
+		target := strings.TrimPrefix(r.URL.EscapedPath(), "/gears")
+		if target == "" {
+			target = "/peers"
+		} else {
+			target = "/peers" + target
+		}
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, target, http.StatusFound)
+	}
+	mux.HandleFunc("/workspace-templates", redirectWorkflows)
+	mux.HandleFunc("/workspace-templates/", redirectWorkflows)
+	mux.HandleFunc("/ai/workspace-templates", redirectWorkflows)
+	mux.HandleFunc("/ai/workspace-templates/", redirectWorkflows)
+	mux.HandleFunc("/gears", redirectPeers)
+	mux.HandleFunc("/gears/", redirectPeers)
 }
 
 func handlePlayWebRTCOffer(w http.ResponseWriter, r *http.Request, ctxName string) {

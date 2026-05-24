@@ -8,11 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
-	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/graph"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 	"github.com/GizClaw/gizclaw-go/pkg/store/vecstore"
@@ -20,14 +18,10 @@ import (
 
 // Kind constants for logical store categories.
 const (
-	KindKeyValue   = storage.KindKeyValue
-	KindVecStore   = storage.KindVecStore
-	KindGraph      = "graph"
-	KindDepotStore = storage.KindDepotStore
-	KindSQL        = storage.KindSQL
-
-	// KindFS is the legacy one-layer firmware store kind.
-	KindFS = storage.KindFS
+	KindKeyValue = storage.KindKeyValue
+	KindVecStore = storage.KindVecStore
+	KindGraph    = "graph"
+	KindSQL      = storage.KindSQL
 )
 
 // Config is the YAML representation of a single logical store entry.
@@ -38,22 +32,15 @@ const (
 //	    storage: main-kv
 //	    prefix: peers
 type Config struct {
-	Kind          string      `yaml:"kind"`
-	Storage       string      `yaml:"storage"`  // reference to a physical storage backend
-	Prefix        string      `yaml:"prefix"`   // slash-separated logical key prefix for KV stores
-	BaseDir       string      `yaml:"base-dir"` // legacy relative directory under a filesystem-backed depot store
-	DepotFS       *DepotFSRef `yaml:"depot-fs"`
-	LegacyDepotFS *DepotFSRef `yaml:"depot-kvfs"`
+	Kind    string `yaml:"kind"`
+	Storage string `yaml:"storage"` // reference to a physical storage backend
+	Prefix  string `yaml:"prefix"`  // slash-separated logical key prefix for KV stores
 
 	Backend string `yaml:"backend"` // legacy backend field; graph backend is still logical
 	Dir     string `yaml:"dir"`     // legacy physical dir field
 	Store   string `yaml:"store"`   // graph backend "kv": reference to a logical keyvalue store
 	Dim     int    `yaml:"dim"`     // legacy vecstore dimension field
 	DSN     string `yaml:"dsn"`     // legacy sql connection string field
-}
-
-type DepotFSRef struct {
-	Filesystem storage.FilesystemRef `yaml:"filesystem"`
 }
 
 // Stores holds named logical store instances created eagerly by NewWithStorage.
@@ -64,7 +51,6 @@ type Stores struct {
 	vecs         map[string]vecstore.Index
 	graphs       map[string]graph.Graph
 	sqls         map[string]*sql.DB
-	depots       map[string]depotstore.Store
 	logicClosers []io.Closer
 }
 
@@ -110,7 +96,6 @@ func NewWithStorage(physical *storage.Storage, configs map[string]Config) (*Stor
 		vecs:    make(map[string]vecstore.Index),
 		graphs:  make(map[string]graph.Graph),
 		sqls:    make(map[string]*sql.DB),
-		depots:  make(map[string]depotstore.Store),
 	}
 	ok := false
 	defer func() {
@@ -143,12 +128,6 @@ func NewWithStorage(physical *storage.Storage, configs map[string]Config) (*Stor
 				return nil, err
 			}
 			s.sqls[name] = st
-		case KindDepotStore, KindFS:
-			st, err := s.newDepotStore(name, cfg)
-			if err != nil {
-				return nil, err
-			}
-			s.depots[name] = st
 		case KindGraph:
 			graphCfgs = append(graphCfgs, struct {
 				name string
@@ -206,20 +185,6 @@ func (r *Stores) SQL(name string) (*sql.DB, error) {
 		return nil, fmt.Errorf("stores: sql %q not found", name)
 	}
 	return s, nil
-}
-
-// DepotStore returns the named depot store.
-func (r *Stores) DepotStore(name string) (depotstore.Store, error) {
-	s, ok := r.depots[name]
-	if !ok {
-		return nil, fmt.Errorf("stores: depotstore %q not found", name)
-	}
-	return s, nil
-}
-
-// FS is the legacy accessor for firmware depot stores.
-func (r *Stores) FS(name string) (depotstore.Store, error) {
-	return r.DepotStore(name)
 }
 
 // Close releases logical stores, then any physical storage owned by this
@@ -295,72 +260,6 @@ func (r *Stores) newGraph(name string, cfg Config) (graph.Graph, error) {
 	}
 }
 
-func (r *Stores) newDepotStore(name string, cfg Config) (depotstore.Store, error) {
-	if cfg.Storage == "" {
-		return nil, fmt.Errorf("stores: depotstore %q requires storage reference", name)
-	}
-	if cfg.Kind == KindFS {
-		return r.newLegacyDepotStore(name, cfg)
-	}
-	driver, err := r.storage.DepotDriver(cfg.Storage)
-	if err != nil {
-		return nil, fmt.Errorf("stores: depotstore %q resolve storage %q: %w", name, cfg.Storage, err)
-	}
-	switch driver {
-	case "depot-fs":
-		return r.newDepotFS(name, cfg)
-	default:
-		return nil, fmt.Errorf("stores: depotstore %q unknown driver %q", name, driver)
-	}
-}
-
-func (r *Stores) newLegacyDepotStore(name string, cfg Config) (depotstore.Store, error) {
-	st, err := r.storage.DepotStore(cfg.Storage)
-	if err != nil {
-		return nil, fmt.Errorf("stores: depotstore %q resolve storage %q: %w", name, cfg.Storage, err)
-	}
-	if cfg.BaseDir == "" {
-		return st, nil
-	}
-	baseDir, err := cleanRelativeBaseDir(cfg.BaseDir)
-	if err != nil {
-		return nil, fmt.Errorf("stores: depotstore %q base-dir: %w", name, err)
-	}
-	if baseDir == "" {
-		return st, nil
-	}
-	if dir, ok := st.(depotstore.Dir); ok {
-		return depotstore.Dir(filepath.Join(string(dir), baseDir)), nil
-	}
-	return nil, fmt.Errorf("stores: depotstore %q base-dir requires filesystem-backed storage", name)
-}
-
-func (r *Stores) newDepotFS(name string, cfg Config) (depotstore.Store, error) {
-	ref := cfg.DepotFS
-	if ref == nil {
-		ref = cfg.LegacyDepotFS
-	}
-	if ref == nil {
-		return nil, fmt.Errorf("stores: depotstore %q requires depot-fs config", name)
-	}
-	fsRef := ref.Filesystem
-	if fsRef.Storage == "" {
-		return nil, fmt.Errorf("stores: depotstore %q depot-fs.filesystem requires storage reference", name)
-	}
-	files, err := r.storage.Filesystem(fsRef.Storage)
-	if err != nil {
-		return nil, fmt.Errorf("stores: depotstore %q resolve filesystem %q: %w", name, fsRef.Storage, err)
-	}
-	baseDir, err := cleanRelativeBaseDir(fsRef.BaseDir)
-	if err != nil {
-		return nil, fmt.Errorf("stores: depotstore %q filesystem base-dir: %w", name, err)
-	}
-	if baseDir != "" {
-		files = depotstore.Dir(filepath.Join(string(files), baseDir))
-	}
-	return files, nil
-}
-
 func (r *Stores) newSQL(name string, cfg Config) (*sql.DB, error) {
 	if cfg.Storage == "" {
 		return nil, fmt.Errorf("stores: sql %q requires storage reference", name)
@@ -434,22 +333,4 @@ func parseKeyPrefix(path string) (kv.Key, error) {
 		key = append(key, part)
 	}
 	return key, nil
-}
-
-func cleanRelativeBaseDir(path string) (string, error) {
-	path = strings.TrimSpace(path)
-	if path == "" {
-		return "", nil
-	}
-	clean := filepath.Clean(path)
-	if clean == "." {
-		return "", nil
-	}
-	if filepath.IsAbs(clean) {
-		return "", fmt.Errorf("%q must be relative", path)
-	}
-	if clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("%q escapes storage root", path)
-	}
-	return clean, nil
 }

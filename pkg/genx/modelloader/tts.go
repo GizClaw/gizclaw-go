@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/GizClaw/doubao-speech-go"
 	"github.com/GizClaw/gizclaw-go/pkg/genx/transformers"
-	"github.com/giztoy/doubao-speech-go"
-	"github.com/giztoy/minimax-go"
+	"github.com/GizClaw/minimax-go"
 )
 
 func registerTTSBySchema(cfg ConfigFile) ([]string, error) {

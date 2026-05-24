@@ -16,10 +16,10 @@
         ],
         "properties": {
           "credential_name": {
-            "$ref": "./credential_name.json#/components/schemas/CredentialName"
+            "type": "string"
           },
           "app_id": {
-            "$ref": "./volc_app_id.json#/components/schemas/VolcAppID"
+            "type": "string"
           },
           "region": {
             "type": "string",
@@ -33,7 +33,7 @@
           "resource_ids": {
             "type": "array",
             "items": {
-              "$ref": "./volc_resource_id.json#/components/schemas/VolcResourceID"
+              "type": "string"
             },
             "example": [
               "seed-tts-2.0"

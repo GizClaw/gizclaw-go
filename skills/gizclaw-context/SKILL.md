@@ -29,7 +29,7 @@ inspect saved contexts, check connectivity, or read public server metadata.
 ## Commands
 
 ```bash
-<gizclaw> context create <name> --server <host:port> --pubkey <server-public-key-hex>
+<gizclaw> context create <name> --server <host:port> --pubkey <server-public-key-base58btc>
 <gizclaw> context use <name>
 <gizclaw> context list
 <gizclaw> context info

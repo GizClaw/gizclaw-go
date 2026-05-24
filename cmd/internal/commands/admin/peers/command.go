@@ -44,23 +44,20 @@ var openPeerConfigClient = func(ctxName string) (peerConfigClient, error) {
 }
 
 var (
-	connectFromContext       = client.ConnectFromContext
-	listPeers                = client.ListPeers
-	getPeer                  = client.GetPeer
-	resolvePeerBySN          = client.ResolvePeerBySN
-	resolvePeerByIMEI        = client.ResolvePeerByIMEI
-	approvePeer              = client.ApprovePeer
-	blockPeer                = client.BlockPeer
-	getPeerInfo              = client.GetPeerInfo
-	getPeerConfig            = client.GetPeerConfig
-	putPeerConfig            = client.PutPeerConfig
-	getPeerRuntime           = client.GetPeerRuntime
-	getPeerOTA               = client.GetPeerOTA
-	listPeersByLabel         = client.ListPeersByLabel
-	listPeersByCertification = client.ListPeersByCertification
-	listPeersByFirmware      = client.ListPeersByFirmware
-	deletePeer               = client.DeletePeer
-	refreshPeer              = client.RefreshPeer
+	connectFromContext = client.ConnectFromContext
+	listPeers          = client.ListPeers
+	getPeer            = client.GetPeer
+	resolvePeerBySN    = client.ResolvePeerBySN
+	resolvePeerByIMEI  = client.ResolvePeerByIMEI
+	approvePeer        = client.ApprovePeer
+	blockPeer          = client.BlockPeer
+	getPeerInfo        = client.GetPeerInfo
+	getPeerConfig      = client.GetPeerConfig
+	putPeerConfig      = client.PutPeerConfig
+	getPeerRuntime     = client.GetPeerRuntime
+	listPeersByLabel   = client.ListPeersByLabel
+	deletePeer         = client.DeletePeer
+	refreshPeer        = client.RefreshPeer
 )
 
 func NewCmd() *cobra.Command {
@@ -215,7 +212,6 @@ func newCmd(use, short string) *cobra.Command {
 			},
 		},
 		newPutConfigCmd(&ctxName),
-		newSetFirmwareChannelCmd(&ctxName),
 		&cobra.Command{
 			Use:   "runtime <pubkey>",
 			Short: "Get peer runtime snapshot",
@@ -234,23 +230,6 @@ func newCmd(use, short string) *cobra.Command {
 			},
 		},
 		&cobra.Command{
-			Use:   "ota <pubkey>",
-			Short: "Get peer OTA summary",
-			Args:  cobra.ExactArgs(1),
-			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := connectFromContext(ctxName)
-				if err != nil {
-					return err
-				}
-				defer c.Close()
-				item, err := getPeerOTA(context.Background(), c, args[0])
-				if err != nil {
-					return err
-				}
-				return json.NewEncoder(cmd.OutOrStdout()).Encode(item)
-			},
-		},
-		&cobra.Command{
 			Use:   "list-by-label <key> <value>",
 			Short: "List peers by label",
 			Args:  cobra.ExactArgs(2),
@@ -261,40 +240,6 @@ func newCmd(use, short string) *cobra.Command {
 				}
 				defer c.Close()
 				items, err := listPeersByLabel(context.Background(), c, args[0], args[1])
-				if err != nil {
-					return err
-				}
-				return json.NewEncoder(cmd.OutOrStdout()).Encode(items)
-			},
-		},
-		&cobra.Command{
-			Use:   "list-by-certification <type> <authority> <id>",
-			Short: "List peers by certification",
-			Args:  cobra.ExactArgs(3),
-			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := connectFromContext(ctxName)
-				if err != nil {
-					return err
-				}
-				defer c.Close()
-				items, err := listPeersByCertification(context.Background(), c, apitypes.GearCertificationType(args[0]), apitypes.GearCertificationAuthority(args[1]), args[2])
-				if err != nil {
-					return err
-				}
-				return json.NewEncoder(cmd.OutOrStdout()).Encode(items)
-			},
-		},
-		&cobra.Command{
-			Use:   "list-by-firmware <depot> <channel>",
-			Short: "List peers by firmware policy",
-			Args:  cobra.ExactArgs(2),
-			RunE: func(cmd *cobra.Command, args []string) error {
-				c, err := connectFromContext(ctxName)
-				if err != nil {
-					return err
-				}
-				defer c.Close()
-				items, err := listPeersByFirmware(context.Background(), c, args[0], apitypes.GearFirmwareChannel(args[1]))
 				if err != nil {
 					return err
 				}
@@ -364,37 +309,5 @@ func newPutConfigCmd(ctxName *string) *cobra.Command {
 	}
 	cmd.Flags().StringVar(&file, "file", "", "path to config JSON")
 	_ = cmd.MarkFlagRequired("file")
-	return cmd
-}
-
-func newSetFirmwareChannelCmd(ctxName *string) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "set-firmware-channel <pubkey> <channel>",
-		Short: "Set peer firmware channel",
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := openPeerConfigClient(*ctxName)
-			if err != nil {
-				return err
-			}
-			defer c.Close()
-
-			cfg, err := c.GetPeerConfig(context.Background(), args[0])
-			if err != nil {
-				return err
-			}
-			if cfg.Firmware == nil {
-				cfg.Firmware = &apitypes.FirmwareConfig{}
-			}
-			channel := apitypes.GearFirmwareChannel(args[1])
-			cfg.Firmware.Channel = &channel
-
-			item, err := c.PutPeerConfig(context.Background(), args[0], cfg)
-			if err != nil {
-				return err
-			}
-			return json.NewEncoder(cmd.OutOrStdout()).Encode(item)
-		},
-	}
 	return cmd
 }

@@ -20,7 +20,7 @@
         ],
         "properties": {
           "id": {
-            "$ref": "./model_id.json#/components/schemas/ModelID"
+            "type": "string"
           },
           "kind": {
             "$ref": "./model_kind.json#/components/schemas/ModelKind"
@@ -39,13 +39,14 @@
             "type": "string",
             "example": "OpenAI-compatible chat model"
           },
+          "capabilities": {
+            "$ref": "./model_capabilities.json#/components/schemas/ModelCapabilities"
+          },
           "provider_data": {
-            "type": "object",
-            "description": "Provider-specific data keyed by provider kind.",
-            "additionalProperties": true,
+            "$ref": "./model_provider_data.json#/components/schemas/ModelProviderData",
+            "description": "Provider-specific model runtime configuration.",
             "example": {
-              "openai-compatible": {
-                "base_url": "https://api.minimax.chat/v1",
+              "openai-tenant": {
                 "upstream_model": "MiniMax-M2.5"
               }
             }

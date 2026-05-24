@@ -77,18 +77,6 @@ func (c *rpcClient) PutInfo(ctx context.Context, conn net.Conn, id string, info 
 	return result, nil
 }
 
-func (c *rpcClient) GetOTA(ctx context.Context, conn net.Conn, id string) (*rpcapi.GearGetOTAResponse, error) {
-	params, err := newRPCRequestParams(rpcapi.GearGetOTARequest{}, (*rpcapi.RPCRequest_Params).FromGearGetOTARequest)
-	if err != nil {
-		return nil, err
-	}
-	result, err := callRPCResult(ctx, conn, newRPCRequest(id, rpcapi.RPCMethodGearOtaGet, params), rpcapi.RPCResponse_Result.AsGearGetOTAResponse)
-	if err != nil {
-		return nil, wrapRPCResultError("gear ota", err)
-	}
-	return result, nil
-}
-
 func (c *rpcClient) GetRegistration(ctx context.Context, conn net.Conn, id string) (*rpcapi.GearGetRegistrationResponse, error) {
 	params, err := newRPCRequestParams(rpcapi.GearGetRegistrationRequest{}, (*rpcapi.RPCRequest_Params).FromGearGetRegistrationRequest)
 	if err != nil {

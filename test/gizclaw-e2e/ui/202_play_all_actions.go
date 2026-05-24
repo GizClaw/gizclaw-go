@@ -26,7 +26,7 @@ func playAllActionsStories() []Story {
 			page.ClickRole("button", "Get Config")
 			page.ClickRole("button", "Logs")
 			page.ExpectText("gear.config.get")
-			page.ExpectText("ui-cert")
+			page.ExpectText("under-12")
 			page.ClickRole("button", "Close RPC logs")
 			page.ClickRole("button", "Get Runtime")
 			page.ClickRole("button", "Logs")

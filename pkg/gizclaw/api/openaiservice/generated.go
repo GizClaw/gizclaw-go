@@ -112,9 +112,11 @@ type ChatCompletionStreamResponseDeltaRole string
 
 // CreateChatCompletionRequest defines model for CreateChatCompletionRequest.
 type CreateChatCompletionRequest struct {
-	Messages []map[string]interface{} `json:"messages"`
-	Model    string                   `json:"model"`
-	Stream   *bool                    `json:"stream,omitempty"`
+	Messages    []map[string]interface{} `json:"messages"`
+	Model       string                   `json:"model"`
+	Stream      *bool                    `json:"stream,omitempty"`
+	Temperature *float32                 `json:"temperature,omitempty"`
+	Thinking    *ThinkingOptions         `json:"thinking,omitempty"`
 }
 
 // CreateChatCompletionResponse defines model for CreateChatCompletionResponse.
@@ -192,6 +194,12 @@ type Model struct {
 
 // ModelObject defines model for Model.Object.
 type ModelObject string
+
+// ThinkingOptions defines model for ThinkingOptions.
+type ThinkingOptions struct {
+	Enabled *bool   `json:"enabled,omitempty"`
+	Level   *string `json:"level,omitempty"`
+}
 
 // CreateSpeechJSONRequestBody defines body for CreateSpeech for application/json ContentType.
 type CreateSpeechJSONRequestBody = CreateSpeechRequest

@@ -10,8 +10,13 @@
     "schemas": {
       "ModelProviderKind": {
         "type": "string",
-        "description": "Model provider kind",
-        "example": "openai-compatible"
+        "description": "Provider resource kind usable by model runtime.",
+        "enum": [
+          "gemini-tenant",
+          "dashscope-tenant",
+          "openai-tenant"
+        ],
+        "example": "openai-tenant"
       }
     }
   }

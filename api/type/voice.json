@@ -19,7 +19,7 @@
         ],
         "properties": {
           "id": {
-            "$ref": "./voice_id.json#/components/schemas/VoiceID"
+            "type": "string"
           },
           "source": {
             "$ref": "./voice_source.json#/components/schemas/VoiceSource"
@@ -36,15 +36,7 @@
             "example": "calm female narrator"
           },
           "provider_data": {
-            "type": "object",
-            "description": "Provider-specific debug data keyed by provider kind.",
-            "additionalProperties": true,
-            "example": {
-              "minimax-tenant": {
-                "voice_id": "Arabic_CalmWoman",
-                "voice_type": "system"
-              }
-            }
+            "$ref": "./voice_provider_data.json#/components/schemas/VoiceProviderData"
           },
           "synced_at": {
             "type": "string",

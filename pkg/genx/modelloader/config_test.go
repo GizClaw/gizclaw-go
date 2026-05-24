@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/GizClaw/gizclaw-go/pkg/genx"
 	"github.com/GizClaw/gizclaw-go/pkg/genx/labelers"
 )
 
@@ -248,8 +249,8 @@ func TestEntry(t *testing.T) {
 		Model:             "gpt-4",
 		SupportJSONOutput: true,
 		SupportToolCalls:  true,
-		SupportTextOnly:   false,
-		UseSystemRole:     true,
+		TextOnly:          false,
+		PromptRole:        genx.PromptRoleSystem,
 	}
 
 	if e.Name != "test/model" {

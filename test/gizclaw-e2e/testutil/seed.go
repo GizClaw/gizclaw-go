@@ -1,13 +1,8 @@
 package testutil
 
 import (
-	"archive/tar"
-	"bytes"
 	"context"
-	"crypto/md5"
-	"crypto/sha256"
 	"embed"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -20,15 +15,20 @@ import (
 )
 
 const (
-	SeedDepotName          = "ui-seed-depot"
-	SeedCredentialName     = "ui-seed-credential"
-	SeedMiniMaxTenantName  = "ui-seed-tenant"
-	SeedVoiceID            = "ui-seed-voice"
-	SeedVolcCredentialName = "ui-seed-volc-credential"
-	SeedVolcTenantName     = "ui-seed-volc-tenant"
-	SeedVolcVoiceID        = "volc-tenant:ui-seed-volc-tenant:ICL_ui_seed_voice"
-	SeedWorkflowName       = "ui-seed-workflow"
-	SeedWorkspaceName      = "ui-seed-workspace"
+	SeedCredentialName      = "ui-seed-credential"
+	SeedOpenAITenantName    = "ui-seed-openai-tenant"
+	SeedGeminiTenantName    = "ui-seed-gemini-tenant"
+	SeedDashScopeTenantName = "ui-seed-dashscope-tenant"
+	SeedModelID             = "ui-seed-openai-chat"
+	SeedFirmwareName        = "ui-seed-devkit"
+	SeedACLViewName         = "under-12"
+	SeedMiniMaxTenantName   = "ui-seed-tenant"
+	SeedVoiceID             = "ui-seed-voice"
+	SeedVolcCredentialName  = "ui-seed-volc-credential"
+	SeedVolcTenantName      = "ui-seed-volc-tenant"
+	SeedVolcVoiceID         = "volc-tenant:ui-seed-volc-tenant:ICL_ui_seed_voice"
+	SeedWorkflowName        = "ui-seed-workflow"
+	SeedWorkspaceName       = "ui-seed-workspace"
 )
 
 //go:embed gizclaw_seed_data/**/*.json
@@ -58,14 +58,6 @@ func LoadDeviceConfigSeed() (apitypes.Configuration, error) {
 		return apitypes.Configuration{}, err
 	}
 	return config, nil
-}
-
-func LoadDepotInfoSeed() (apitypes.DepotInfo, error) {
-	var info apitypes.DepotInfo
-	if err := readSeedJSON("gizclaw_seed_data/firmware/depot_info.json", &info); err != nil {
-		return apitypes.DepotInfo{}, err
-	}
-	return info, nil
 }
 
 func LoadAdminCatalogSeed() (apitypes.Resource, error) {
@@ -130,41 +122,6 @@ func ApplyWorkspaceSeed(ctx context.Context, api *adminservice.ClientWithRespons
 	return nil
 }
 
-func ApplyFirmwareSeed(ctx context.Context, api *adminservice.ClientWithResponses) error {
-	info, err := LoadDepotInfoSeed()
-	if err != nil {
-		return err
-	}
-	infoResp, err := api.PutDepotInfoWithResponse(ctx, SeedDepotName, info)
-	if err != nil {
-		return err
-	}
-	if infoResp.JSON200 == nil {
-		return seedResponseError("put depot info", infoResp.StatusCode(), infoResp.Body, infoResp.JSON400, infoResp.JSON500)
-	}
-
-	for _, release := range []struct {
-		channel string
-		version string
-	}{
-		{channel: "stable", version: "1.0.0"},
-		{channel: "testing", version: "1.0.1"},
-	} {
-		releaseTar, err := FirmwareReleaseTarSeed(release.channel, release.version)
-		if err != nil {
-			return err
-		}
-		channelResp, err := api.PutChannelWithBodyWithResponse(ctx, SeedDepotName, release.channel, "application/octet-stream", bytes.NewReader(releaseTar))
-		if err != nil {
-			return err
-		}
-		if channelResp.JSON200 == nil {
-			return seedResponseError("put channel", channelResp.StatusCode(), channelResp.Body, channelResp.JSON409)
-		}
-	}
-	return nil
-}
-
 func ApplyDeviceConfigSeed(ctx context.Context, api *adminservice.ClientWithResponses, publicKey string) error {
 	config, err := LoadDeviceConfigSeed()
 	if err != nil {
@@ -178,39 +135,6 @@ func ApplyDeviceConfigSeed(ctx context.Context, api *adminservice.ClientWithResp
 		return seedResponseError("put peer config", resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON404)
 	}
 	return nil
-}
-
-func FirmwareReleaseTarSeed(channel, firmwareSemver string) ([]byte, error) {
-	payload := []byte("seeded firmware payload")
-	sum256 := sha256.Sum256(payload)
-	sumMD5 := md5.Sum(payload)
-	release := apitypes.DepotRelease{
-		Channel:        &channel,
-		FirmwareSemver: firmwareSemver,
-		Files: &[]apitypes.DepotFile{{
-			Md5:    hex.EncodeToString(sumMD5[:]),
-			Path:   "firmware.bin",
-			Sha256: hex.EncodeToString(sum256[:]),
-		}},
-	}
-
-	manifest, err := json.Marshal(release)
-	if err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	tw := tar.NewWriter(&buf)
-	if err := writeSeedTarEntry(tw, "manifest.json", manifest); err != nil {
-		return nil, err
-	}
-	if err := writeSeedTarEntry(tw, "firmware.bin", payload); err != nil {
-		return nil, err
-	}
-	if err := tw.Close(); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
 
 func CopyAdminCatalogSeedJSON(w io.Writer) error {
@@ -231,14 +155,6 @@ func readSeedJSON(path string, target interface{}) error {
 		return fmt.Errorf("parse %s: %w", path, err)
 	}
 	return nil
-}
-
-func writeSeedTarEntry(tw *tar.Writer, name string, data []byte) error {
-	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(data))}); err != nil {
-		return err
-	}
-	_, err := tw.Write(data)
-	return err
 }
 
 func seedResponseError(action string, status int, body []byte, payloads ...interface{}) error {

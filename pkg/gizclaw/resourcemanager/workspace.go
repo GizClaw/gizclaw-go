@@ -18,7 +18,7 @@ func (m *Manager) applyWorkspace(ctx context.Context, resource apitypes.Resource
 	if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
-	name := adminservice.WorkspaceName(pathParam(item.Metadata.Name))
+	name := string(pathParam(item.Metadata.Name))
 	existing, exists, err := m.getWorkspace(ctx, name)
 	if err != nil {
 		return apitypes.ApplyResult{}, err
@@ -41,7 +41,7 @@ func (m *Manager) applyWorkspace(ctx context.Context, resource apitypes.Resource
 	return applyResult(apitypes.ApplyActionCreated, apitypes.ResourceKindWorkspace, item.Metadata.Name), nil
 }
 
-func (m *Manager) getWorkspace(ctx context.Context, name adminservice.WorkspaceName) (apitypes.Workspace, bool, error) {
+func (m *Manager) getWorkspace(ctx context.Context, name string) (apitypes.Workspace, bool, error) {
 	response, err := m.services.Workspaces.GetWorkspace(ctx, adminservice.GetWorkspaceRequestObject{Name: name})
 	if err != nil {
 		return apitypes.Workspace{}, false, err
@@ -58,7 +58,7 @@ func (m *Manager) getWorkspace(ctx context.Context, name adminservice.WorkspaceN
 	}
 }
 
-func (m *Manager) putWorkspace(ctx context.Context, name adminservice.WorkspaceName, body adminservice.WorkspaceUpsert) error {
+func (m *Manager) putWorkspace(ctx context.Context, name string, body adminservice.WorkspaceUpsert) error {
 	response, err := m.services.Workspaces.PutWorkspace(ctx, adminservice.PutWorkspaceRequestObject{Name: name, Body: &body})
 	if err != nil {
 		return err
@@ -75,7 +75,7 @@ func (m *Manager) putWorkspace(ctx context.Context, name adminservice.WorkspaceN
 	}
 }
 
-func (m *Manager) deleteWorkspace(ctx context.Context, name adminservice.WorkspaceName) (apitypes.Workspace, bool, error) {
+func (m *Manager) deleteWorkspace(ctx context.Context, name string) (apitypes.Workspace, bool, error) {
 	response, err := m.services.Workspaces.DeleteWorkspace(ctx, adminservice.DeleteWorkspaceRequestObject{Name: name})
 	if err != nil {
 		return apitypes.Workspace{}, false, err
@@ -101,7 +101,7 @@ func workspaceSpec(workspace apitypes.Workspace) apitypes.WorkspaceSpec {
 
 func workspaceUpsert(resource apitypes.WorkspaceResource) adminservice.WorkspaceUpsert {
 	return adminservice.WorkspaceUpsert{
-		Name:         apitypes.WorkspaceName(resource.Metadata.Name),
+		Name:         string(resource.Metadata.Name),
 		Parameters:   resource.Spec.Parameters,
 		WorkflowName: resource.Spec.WorkflowName,
 	}

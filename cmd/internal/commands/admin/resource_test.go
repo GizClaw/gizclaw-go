@@ -419,11 +419,11 @@ func (f *fakeAdminResourceAPI) ApplyResourceWithResponse(context.Context, admins
 	return f.applyResp, f.applyErr
 }
 
-func (f *fakeAdminResourceAPI) DeleteResourceWithResponse(context.Context, adminservice.ResourceKind, adminservice.ResourceName, ...adminservice.RequestEditorFn) (*adminservice.DeleteResourceResponse, error) {
+func (f *fakeAdminResourceAPI) DeleteResourceWithResponse(context.Context, adminservice.ResourceKind, string, ...adminservice.RequestEditorFn) (*adminservice.DeleteResourceResponse, error) {
 	return f.deleteResp, f.deleteErr
 }
 
-func (f *fakeAdminResourceAPI) GetResourceWithResponse(context.Context, adminservice.ResourceKind, adminservice.ResourceName, ...adminservice.RequestEditorFn) (*adminservice.GetResourceResponse, error) {
+func (f *fakeAdminResourceAPI) GetResourceWithResponse(context.Context, adminservice.ResourceKind, string, ...adminservice.RequestEditorFn) (*adminservice.GetResourceResponse, error) {
 	return f.getResp, f.getErr
 }
 

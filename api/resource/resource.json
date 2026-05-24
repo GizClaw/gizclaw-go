@@ -20,8 +20,15 @@
         "description": "Declarative GizClaw resource kind.",
         "enum": [
           "Credential",
+          "ACLPolicyBinding",
+          "ACLRole",
+          "ACLView",
+          "Firmware",
           "Model",
+          "DashScopeTenant",
+          "GeminiTenant",
           "MiniMaxTenant",
+          "OpenAITenant",
           "VolcTenant",
           "Voice",
           "Workflow",
@@ -57,13 +64,34 @@
       "Resource": {
         "oneOf": [
           {
+            "$ref": "./acl_policy_binding.json#/components/schemas/ACLPolicyBindingResource"
+          },
+          {
+            "$ref": "./acl_role.json#/components/schemas/ACLRoleResource"
+          },
+          {
+            "$ref": "./acl_view.json#/components/schemas/ACLViewResource"
+          },
+          {
             "$ref": "./credential.json#/components/schemas/CredentialResource"
+          },
+          {
+            "$ref": "./firmware.json#/components/schemas/FirmwareResource"
           },
           {
             "$ref": "./model.json#/components/schemas/ModelResource"
           },
           {
+            "$ref": "./dashscope_tenant.json#/components/schemas/DashScopeTenantResource"
+          },
+          {
+            "$ref": "./gemini_tenant.json#/components/schemas/GeminiTenantResource"
+          },
+          {
             "$ref": "./minimax_tenant.json#/components/schemas/MiniMaxTenantResource"
+          },
+          {
+            "$ref": "./openai_tenant.json#/components/schemas/OpenAITenantResource"
           },
           {
             "$ref": "./volc_tenant.json#/components/schemas/VolcTenantResource"
@@ -87,9 +115,16 @@
         "discriminator": {
           "propertyName": "kind",
           "mapping": {
+            "ACLPolicyBinding": "./acl_policy_binding.json#/components/schemas/ACLPolicyBindingResource",
+            "ACLRole": "./acl_role.json#/components/schemas/ACLRoleResource",
+            "ACLView": "./acl_view.json#/components/schemas/ACLViewResource",
             "Credential": "./credential.json#/components/schemas/CredentialResource",
+            "Firmware": "./firmware.json#/components/schemas/FirmwareResource",
+            "DashScopeTenant": "./dashscope_tenant.json#/components/schemas/DashScopeTenantResource",
+            "GeminiTenant": "./gemini_tenant.json#/components/schemas/GeminiTenantResource",
             "Model": "./model.json#/components/schemas/ModelResource",
             "MiniMaxTenant": "./minimax_tenant.json#/components/schemas/MiniMaxTenantResource",
+            "OpenAITenant": "./openai_tenant.json#/components/schemas/OpenAITenantResource",
             "VolcTenant": "./volc_tenant.json#/components/schemas/VolcTenantResource",
             "Voice": "./voice.json#/components/schemas/VoiceResource",
             "Workflow": "./workflow.json#/components/schemas/WorkflowResource",

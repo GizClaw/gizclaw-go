@@ -11,8 +11,8 @@ removed from the CLI.
 
 1. Start a real GizClaw server with registration enabled.
 2. Create and provision an admin context.
-3. Create and register a device context with name, serial number, hardware
-   metadata, depot, and firmware semver.
+3. Create and register a device context with name, serial number, and hardware
+   metadata.
 4. Resolve the device public key from the saved device context.
 5. Run `gizclaw admin peers info <pubkey> --context admin-a`.
 6. Verify the CLI output contains the device serial number, manufacturer, and

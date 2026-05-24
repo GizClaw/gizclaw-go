@@ -1,0 +1,43 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Firmware Type",
+    "description": "Firmware release line schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "Firmware": {
+        "type": "object",
+        "required": [
+          "name",
+          "slots",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "devkit"
+          },
+          "description": {
+            "type": "string",
+            "example": "Devkit firmware line"
+          },
+          "slots": {
+            "$ref": "./firmware_slots.json#/components/schemas/FirmwareSlots"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

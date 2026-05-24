@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { DownloadFirmwareData, DownloadFirmwareErrors, DownloadFirmwareResponses, GetConfigData, GetConfigErrors, GetConfigResponses, GetInfoData, GetInfoErrors, GetInfoResponses, GetOtaData, GetOtaErrors, GetOtaResponses, GetRegistrationData, GetRegistrationErrors, GetRegistrationResponses, GetRuntimeData, GetRuntimeErrors, GetRuntimeResponses, PutInfoData, PutInfoErrors, PutInfoResponses, RegisterGearData, RegisterGearErrors, RegisterGearResponses } from './types.gen';
+import type { GetConfigData, GetConfigErrors, GetConfigResponses, GetInfoData, GetInfoErrors, GetInfoResponses, GetRegistrationData, GetRegistrationErrors, GetRegistrationResponses, GetRuntimeData, GetRuntimeErrors, GetRuntimeResponses, PutInfoData, PutInfoErrors, PutInfoResponses, RegisterGearData, RegisterGearErrors, RegisterGearResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -61,13 +61,3 @@ export const getRuntime = <ThrowOnError extends boolean = false>(options?: Optio
  * Get configuration
  */
 export const getConfig = <ThrowOnError extends boolean = false>(options?: Options<GetConfigData, ThrowOnError>) => (options?.client ?? client).get<GetConfigResponses, GetConfigErrors, ThrowOnError>({ url: '/config', ...options });
-
-/**
- * Get OTA summary
- */
-export const getOta = <ThrowOnError extends boolean = false>(options?: Options<GetOtaData, ThrowOnError>) => (options?.client ?? client).get<GetOtaResponses, GetOtaErrors, ThrowOnError>({ url: '/ota', ...options });
-
-/**
- * Download a firmware file
- */
-export const downloadFirmware = <ThrowOnError extends boolean = false>(options: Options<DownloadFirmwareData, ThrowOnError>) => (options.client ?? client).get<DownloadFirmwareResponses, DownloadFirmwareErrors, ThrowOnError>({ url: '/download/firmware/{path}', ...options });

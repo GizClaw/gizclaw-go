@@ -78,7 +78,7 @@ func TestServerCredentialsCRUD(t *testing.T) {
 		t.Fatalf("PutCredential() body = %#v", updated.Body)
 	}
 
-	oldProvider := apitypes.CredentialProvider("openai")
+	oldProvider := string("openai")
 	oldListResp, err := srv.ListCredentials(ctx, adminservice.ListCredentialsRequestObject{
 		Params: adminservice.ListCredentialsParams{Provider: &oldProvider},
 	})
@@ -93,7 +93,7 @@ func TestServerCredentialsCRUD(t *testing.T) {
 		t.Fatalf("ListCredentials(old provider) = %#v", oldList)
 	}
 
-	newProvider := apitypes.CredentialProvider("minimax")
+	newProvider := string("minimax")
 	newListResp, err := srv.ListCredentials(ctx, adminservice.ListCredentialsRequestObject{
 		Params: adminservice.ListCredentialsParams{Provider: &newProvider},
 	})
@@ -145,8 +145,8 @@ func TestServerListCredentialsPaginationAndFilter(t *testing.T) {
 		}
 	}
 
-	limit := adminservice.Limit(1)
-	provider := apitypes.CredentialProvider("openai")
+	limit := int32(1)
+	provider := string("openai")
 	firstResp, err := srv.ListCredentials(ctx, adminservice.ListCredentialsRequestObject{
 		Params: adminservice.ListCredentialsParams{
 			Provider: &provider,
@@ -164,7 +164,7 @@ func TestServerListCredentialsPaginationAndFilter(t *testing.T) {
 		t.Fatalf("ListCredentials(first page) = %#v", first)
 	}
 
-	cursor := adminservice.Cursor(*first.NextCursor)
+	cursor := string(*first.NextCursor)
 	secondResp, err := srv.ListCredentials(ctx, adminservice.ListCredentialsRequestObject{
 		Params: adminservice.ListCredentialsParams{
 			Provider: &provider,

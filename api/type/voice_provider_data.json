@@ -1,0 +1,99 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Voice Provider Data Type",
+    "description": "Provider-specific voice runtime configuration.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "VoiceProviderData": {
+        "type": "object",
+        "description": "Provider-specific voice runtime configuration keyed by provider kind.",
+        "additionalProperties": true,
+        "example": {
+          "minimax-tenant": {
+            "voice_id": "Arabic_CalmWoman",
+            "voice_type": "system"
+          }
+        }
+      },
+      "DashScopeTenantVoiceProviderData": {
+        "type": "object",
+        "properties": {
+          "voice_id": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "GeminiTenantVoiceProviderData": {
+        "type": "object",
+        "properties": {
+          "voice_id": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "OpenAITenantVoiceProviderData": {
+        "type": "object",
+        "properties": {
+          "voice_id": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "MiniMaxTenantVoiceProviderData": {
+        "type": "object",
+        "properties": {
+          "voice_id": {
+            "type": "string"
+          },
+          "voice_type": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "VolcTenantVoiceProviderData": {
+        "type": "object",
+        "properties": {
+          "app_id": {
+            "type": "string"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "voice_id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "raw": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  }
+}

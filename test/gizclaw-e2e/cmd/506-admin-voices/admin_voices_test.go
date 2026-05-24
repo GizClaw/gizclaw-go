@@ -106,7 +106,7 @@ func seedVoices(t *testing.T, h *clitest.Harness) {
 			},
 			Name:        ptr("Volc CLI Seed Voice"),
 			Description: ptr("seeded Volc voice for CLI examples"),
-			ProviderData: &map[string]interface{}{
+			ProviderData: &apitypes.VoiceProviderData{
 				"volc-tenant": map[string]interface{}{
 					"app_id":      "app-cli",
 					"resource_id": "seed-tts-2.0",
@@ -137,7 +137,7 @@ func seedVoices(t *testing.T, h *clitest.Harness) {
 	if credentialResp.JSON200 == nil {
 		t.Fatalf("seed volc credential got status %d: %s", credentialResp.StatusCode(), strings.TrimSpace(string(credentialResp.Body)))
 	}
-	resourceIDs := []apitypes.VolcResourceID{"seed-tts-2.0"}
+	resourceIDs := []string{"seed-tts-2.0"}
 	tenantResp, err := api.CreateVolcTenantWithResponse(ctx, adminservice.VolcTenantUpsert{
 		Name:           "gizclaw-dev",
 		AppId:          "app-cli",

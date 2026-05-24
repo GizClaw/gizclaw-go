@@ -167,6 +167,30 @@ func TestAdminUIRedirectsLegacyWorkspaceTemplateRoutes(t *testing.T) {
 	}
 }
 
+func TestAdminUIRedirectsLegacyGearRoutes(t *testing.T) {
+	mux := http.NewServeMux()
+	registerAdminUIRoutes(mux)
+
+	tests := []struct {
+		path string
+		want string
+	}{
+		{path: "/gears", want: "/peers"},
+		{path: "/gears/", want: "/peers/"},
+		{path: "/gears/pub%2Fkey?tab=runtime", want: "/peers/pub%2Fkey?tab=runtime"},
+	}
+	for _, tt := range tests {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tt.path, nil))
+		if rec.Code != http.StatusFound {
+			t.Fatalf("GET %s status = %d, want %d", tt.path, rec.Code, http.StatusFound)
+		}
+		if got := rec.Header().Get("Location"); got != tt.want {
+			t.Fatalf("GET %s Location = %q, want %s", tt.path, got, tt.want)
+		}
+	}
+}
+
 type fakeUIAPIProxyClient struct {
 	handler http.Handler
 	closed  atomic.Bool

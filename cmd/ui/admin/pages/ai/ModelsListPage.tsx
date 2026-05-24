@@ -1,6 +1,7 @@
 import { Copy, RefreshCw } from "lucide-react";
 import type { MouseEvent } from "react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { Badge } from "../../components/badge";
 import { Button } from "../../components/button";
@@ -12,11 +13,12 @@ import { listModels, type Model } from "@gizclaw/adminservice";
 
 import { ErrorBanner } from "../../components/banners";
 import { EmptyState } from "../../components/empty-state";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { useCursorListPage } from "../../hooks/useCursorListPage";
 import { formatDate } from "../../lib/format";
 
 export function ModelsListPage(): JSX.Element {
+  const navigate = useNavigate();
   const [copiedID, setCopiedID] = useState("");
   const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh } = useCursorListPage<Model>(async (query) => {
     const result = await expectData(listModels({ query }));
@@ -38,23 +40,30 @@ export function ModelsListPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb items={[{ href: "/overview", label: "Overview" }, { label: "Models" }]} />
+      <PageHeader
+        actions={
+          <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refresh()} variant="outline">
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+              <RefreshCw className="size-4" />
+              Refresh
+            </span>
+          </Button>
+        }
+        items={[{ href: "/overview", label: "Overview" }, { label: "Models" }]}
+      />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI</div>
-          <h1 className="text-3xl font-semibold tracking-tight">Models</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">
-            Global model catalog across providers, including manually managed entries and synced upstream models.
-          </p>
-        </div>
-        <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refresh()} variant="outline">
-          <span className="inline-flex items-center gap-2 whitespace-nowrap">
-            <RefreshCw className="size-4" />
-            Refresh
-          </span>
-        </Button>
-      </div>
+      <PageSummaryCard
+        description="Global model catalog across providers, including manually managed entries and synced upstream models."
+        eyebrow="AI"
+        meta={
+          <>
+            <Badge variant="outline">Page {pageNumber}</Badge>
+            <Badge variant="secondary">{items.length} loaded</Badge>
+            {hasNext ? <Badge variant="outline">More Available</Badge> : null}
+          </>
+        }
+        title="Models"
+      />
 
       {error !== "" ? <ErrorBanner message={error} /> : null}
 
@@ -63,11 +72,6 @@ export function ModelsListPage(): JSX.Element {
           <div className="space-y-1">
             <CardTitle>Model catalog</CardTitle>
             <CardDescription>Provider models stored in the shared catalog and ready for workflow use.</CardDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">Page {pageNumber}</Badge>
-            <Badge variant="secondary">{items.length} loaded</Badge>
-            {hasNext ? <Badge variant="outline">More Available</Badge> : null}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -135,9 +139,14 @@ export function ModelsListPage(): JSX.Element {
                         <ProviderLabel kind={model.provider.kind} name={model.provider.name} />
                       </TableCell>
                       <TableCell className="max-w-[24rem]">
-                        <div className="block truncate font-medium" title={model.name?.trim() || model.id}>
+                        <button
+                          className="block max-w-full truncate text-left font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => navigate(`/ai/models/${encodeURIComponent(model.id)}`)}
+                          title={model.name?.trim() || model.id}
+                          type="button"
+                        >
                           {model.name?.trim() || "Unnamed model"}
-                        </div>
+                        </button>
                         <div className="block truncate text-xs text-muted-foreground" title={model.description?.trim() || undefined}>
                           {model.description?.trim() || "No description"}
                         </div>

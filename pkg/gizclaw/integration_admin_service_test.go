@@ -2,9 +2,6 @@ package gizclaw_test
 
 import (
 	"context"
-	"crypto/md5"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"testing"
 
@@ -13,86 +10,6 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 )
-
-func TestIntegrationAdminServiceFirmwareLifecycle(t *testing.T) {
-	ts := startTestServer(t)
-
-	admin := newTestClient(t, ts)
-	if _, err := register(context.Background(), admin, gearservice.RegistrationRequest{
-		Device: apitypes.DeviceInfo{Name: strPtr("admin")},
-	}); err != nil {
-		t.Fatalf("admin register error: %v", err)
-	}
-
-	if _, err := putFirmwareInfo(context.Background(), admin, "demo-main", apitypes.DepotInfo{
-		Files: &[]apitypes.DepotInfoFile{{Path: "firmware.bin"}},
-	}); err != nil {
-		t.Fatalf("PutFirmwareInfo error: %v", err)
-	}
-
-	payload := []byte("firmware-v1")
-	sum256 := sha256.Sum256(payload)
-	sumMD5 := md5.Sum(payload)
-	tarData := buildReleaseTar(t, apitypes.DepotRelease{
-		FirmwareSemver: "1.0.0",
-		Channel:        strPtr("stable"),
-		Files: &[]apitypes.DepotFile{{
-			Path:   "firmware.bin",
-			Sha256: hex.EncodeToString(sum256[:]),
-			Md5:    hex.EncodeToString(sumMD5[:]),
-		}},
-	}, map[string][]byte{"firmware.bin": payload})
-
-	if _, err := uploadFirmware(context.Background(), admin, "demo-main", adminservice.Channel("stable"), tarData); err != nil {
-		t.Fatalf("UploadFirmware error: %v", err)
-	}
-	if _, err := uploadFirmware(context.Background(), admin, "demo-main", adminservice.Channel("beta"), buildReleaseTar(t, apitypes.DepotRelease{
-		FirmwareSemver: "1.1.0",
-		Channel:        strPtr("beta"),
-		Files: &[]apitypes.DepotFile{{
-			Path:   "firmware.bin",
-			Sha256: hex.EncodeToString(sum256[:]),
-			Md5:    hex.EncodeToString(sumMD5[:]),
-		}},
-	}, map[string][]byte{"firmware.bin": payload})); err != nil {
-		t.Fatalf("UploadFirmware beta error: %v", err)
-	}
-	if _, err := uploadFirmware(context.Background(), admin, "demo-main", adminservice.Channel("testing"), buildReleaseTar(t, apitypes.DepotRelease{
-		FirmwareSemver: "1.2.0",
-		Channel:        strPtr("testing"),
-		Files: &[]apitypes.DepotFile{{
-			Path:   "firmware.bin",
-			Sha256: hex.EncodeToString(sum256[:]),
-			Md5:    hex.EncodeToString(sumMD5[:]),
-		}},
-	}, map[string][]byte{"firmware.bin": payload})); err != nil {
-		t.Fatalf("UploadFirmware testing error: %v", err)
-	}
-
-	depot, err := getFirmwareDepot(context.Background(), admin, "demo-main")
-	if err != nil {
-		t.Fatalf("GetFirmwareDepot error: %v", err)
-	}
-	if depot.Stable.FirmwareSemver != "1.0.0" {
-		t.Fatalf("stable semver = %q", depot.Stable.FirmwareSemver)
-	}
-	items, err := listFirmwares(context.Background(), admin)
-	if err != nil {
-		t.Fatalf("ListFirmwares error: %v", err)
-	}
-	if len(items) != 1 || items[0].Name != "demo-main" {
-		t.Fatalf("ListFirmwares = %+v", items)
-	}
-	if release, err := getFirmwareChannel(context.Background(), admin, "demo-main", adminservice.Channel("stable")); err != nil || release.FirmwareSemver != "1.0.0" {
-		t.Fatalf("GetFirmwareChannel = %+v, %v", release, err)
-	}
-	if _, err := releaseFirmware(context.Background(), admin, "demo-main"); err != nil {
-		t.Fatalf("ReleaseFirmware error: %v", err)
-	}
-	if _, err := rollbackFirmware(context.Background(), admin, "demo-main"); err != nil {
-		t.Fatalf("RollbackFirmware error: %v", err)
-	}
-}
 
 func TestIntegrationAdminServiceWorkflowLifecycle(t *testing.T) {
 	ts := startTestServer(t)
@@ -301,7 +218,7 @@ func TestIntegrationAdminServiceCredentialLifecycle(t *testing.T) {
 		t.Fatalf("PutCredential body = %#v", updated.Body)
 	}
 
-	provider := apitypes.CredentialProvider("minimax")
+	provider := string("minimax")
 	filtered, err := listCredentials(context.Background(), admin, &provider)
 	if err != nil {
 		t.Fatalf("ListCredentials(provider) error: %v", err)

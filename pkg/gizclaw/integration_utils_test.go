@@ -1,17 +1,10 @@
 package gizclaw_test
 
 import (
-	"archive/tar"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net"
-	"net/http"
-	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +16,6 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
-	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -80,22 +72,15 @@ func mustBadgerInMemory(t testing.TB, opts *kv.Options) kv.Store {
 func startTestServer(t *testing.T) *testServer {
 	t.Helper()
 
-	root := t.TempDir()
-	firmwareRoot := filepath.Join(root, "firmware")
-	if err := os.MkdirAll(firmwareRoot, 0o755); err != nil {
-		t.Fatalf("mkdir firmware root: %v", err)
-	}
-
 	keyPair, err := giznet.GenerateKeyPair()
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(server) error: %v", err)
 	}
 
 	srv := &gizclaw.Server{
-		KeyPair:    keyPair,
-		ListenAddr: allocateUDPAddr(t),
-		PeerStore:  mustBadgerInMemory(t, nil),
-		DepotStore: depotstore.Dir(firmwareRoot),
+		LocalStatic: *keyPair,
+		ListenAddr:  allocateUDPAddr(t),
+		PeerStore:   mustBadgerInMemory(t, nil),
 	}
 
 	ts := &testServer{
@@ -288,39 +273,7 @@ func getConfig(ctx context.Context, c *gizclaw.Client) (apitypes.Configuration, 
 	if err != nil {
 		return apitypes.Configuration{}, err
 	}
-	if cfg.Firmware == nil {
-		cfg.Firmware = &apitypes.FirmwareConfig{}
-	}
 	return cfg, nil
-}
-
-func getOTA(ctx context.Context, c *gizclaw.Client) (apitypes.OTASummary, error) {
-	resp, err := c.GetGearOTA(ctx, "gear.ota.get")
-	if err != nil {
-		return apitypes.OTASummary{}, err
-	}
-	return convertIntegrationAPIType[apitypes.OTASummary](*resp)
-}
-
-func downloadFirmware(ctx context.Context, c *gizclaw.Client, path string) ([]byte, http.Header, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://gizclaw/download/firmware/"+url.PathEscape(path), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	resp, err := c.HTTPClient(gizclaw.ServiceGear).Do(req)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusOK {
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, nil, err
-		}
-		return data, resp.Header.Clone(), nil
-	}
-	body, _ := io.ReadAll(resp.Body)
-	return nil, nil, responseError(resp.StatusCode, body)
 }
 
 func convertIntegrationAPIType[T any](value any) (T, error) {
@@ -335,136 +288,13 @@ func convertIntegrationAPIType[T any](value any) (T, error) {
 	return out, nil
 }
 
-func listFirmwares(ctx context.Context, c *gizclaw.Client) ([]apitypes.Depot, error) {
-	api, err := c.ServerAdminClient()
-	if err != nil {
-		return nil, err
-	}
-	resp, err := api.ListDepotsWithResponse(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if resp.JSON200 == nil {
-		return nil, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
-	}
-	return resp.JSON200.Items, nil
-}
-
-func getFirmwareDepot(ctx context.Context, c *gizclaw.Client, depot string) (apitypes.Depot, error) {
-	api, err := c.ServerAdminClient()
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	resp, err := api.GetDepotWithResponse(ctx, depot)
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	if resp.JSON200 != nil {
-		return *resp.JSON200, nil
-	}
-	return apitypes.Depot{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
-}
-
-func getFirmwareChannel(ctx context.Context, c *gizclaw.Client, depot string, channel adminservice.Channel) (apitypes.DepotRelease, error) {
-	api, err := c.ServerAdminClient()
-	if err != nil {
-		return apitypes.DepotRelease{}, err
-	}
-	resp, err := api.GetChannelWithResponse(ctx, depot, channel)
-	if err != nil {
-		return apitypes.DepotRelease{}, err
-	}
-	if resp.JSON200 != nil {
-		return *resp.JSON200, nil
-	}
-	return apitypes.DepotRelease{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
-}
-
-func putFirmwareInfo(ctx context.Context, c *gizclaw.Client, depot string, info apitypes.DepotInfo) (apitypes.Depot, error) {
-	api, err := c.ServerAdminClient()
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	resp, err := api.PutDepotInfoWithResponse(ctx, depot, info)
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	if resp.JSON200 != nil {
-		return *resp.JSON200, nil
-	}
-	return apitypes.Depot{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400, resp.JSON409, resp.JSON500)
-}
-
-func uploadFirmware(ctx context.Context, c *gizclaw.Client, depot string, channel adminservice.Channel, data []byte) (apitypes.DepotRelease, error) {
-	api, err := c.ServerAdminClient()
-	if err != nil {
-		return apitypes.DepotRelease{}, err
-	}
-	resp, err := api.PutChannelWithBodyWithResponse(ctx, depot, channel, "application/octet-stream", bytes.NewReader(data))
-	if err != nil {
-		return apitypes.DepotRelease{}, err
-	}
-	if resp.JSON200 != nil {
-		return *resp.JSON200, nil
-	}
-	return apitypes.DepotRelease{}, responseError(resp.StatusCode(), resp.Body, resp.JSON409)
-}
-
-func releaseFirmware(ctx context.Context, c *gizclaw.Client, depot string) (apitypes.Depot, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, "http://gizclaw/depots/"+url.PathEscape(depot)+"/@release", nil)
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	resp, err := c.HTTPClient(gizclaw.ServiceAdmin).Do(req)
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	if resp.StatusCode == http.StatusOK {
-		var out apitypes.Depot
-		if err := json.Unmarshal(body, &out); err != nil {
-			return apitypes.Depot{}, err
-		}
-		return out, nil
-	}
-	return apitypes.Depot{}, responseError(resp.StatusCode, body)
-}
-
-func rollbackFirmware(ctx context.Context, c *gizclaw.Client, depot string) (apitypes.Depot, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, "http://gizclaw/depots/"+url.PathEscape(depot)+"/@rollback", nil)
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	resp, err := c.HTTPClient(gizclaw.ServiceAdmin).Do(req)
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return apitypes.Depot{}, err
-	}
-	if resp.StatusCode == http.StatusOK {
-		var out apitypes.Depot
-		if err := json.Unmarshal(body, &out); err != nil {
-			return apitypes.Depot{}, err
-		}
-		return out, nil
-	}
-	return apitypes.Depot{}, responseError(resp.StatusCode, body)
-}
-
 func listWorkflows(ctx context.Context, c *gizclaw.Client) ([]apitypes.WorkflowDocument, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return nil, err
 	}
-	limit := adminservice.Limit(200)
-	var cursor *adminservice.Cursor
+	limit := int32(200)
+	var cursor *string
 	items := make([]apitypes.WorkflowDocument, 0)
 	for {
 		resp, err := api.ListWorkflowsWithResponse(ctx, &adminservice.ListWorkflowsParams{
@@ -481,7 +311,7 @@ func listWorkflows(ctx context.Context, c *gizclaw.Client) ([]apitypes.WorkflowD
 		if !resp.JSON200.HasNext || resp.JSON200.NextCursor == nil || *resp.JSON200.NextCursor == "" {
 			return items, nil
 		}
-		next := adminservice.Cursor(*resp.JSON200.NextCursor)
+		next := string(*resp.JSON200.NextCursor)
 		cursor = &next
 	}
 }
@@ -551,8 +381,8 @@ func listWorkspaces(ctx context.Context, c *gizclaw.Client) ([]apitypes.Workspac
 	if err != nil {
 		return nil, err
 	}
-	limit := adminservice.Limit(200)
-	var cursor *adminservice.Cursor
+	limit := int32(200)
+	var cursor *string
 	items := make([]apitypes.Workspace, 0)
 	for {
 		resp, err := api.ListWorkspacesWithResponse(ctx, &adminservice.ListWorkspacesParams{
@@ -569,7 +399,7 @@ func listWorkspaces(ctx context.Context, c *gizclaw.Client) ([]apitypes.Workspac
 		if !resp.JSON200.HasNext || resp.JSON200.NextCursor == nil || *resp.JSON200.NextCursor == "" {
 			return items, nil
 		}
-		next := adminservice.Cursor(*resp.JSON200.NextCursor)
+		next := string(*resp.JSON200.NextCursor)
 		cursor = &next
 	}
 }
@@ -634,13 +464,13 @@ func deleteWorkspace(ctx context.Context, c *gizclaw.Client, name string) (apity
 	return apitypes.Workspace{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON500)
 }
 
-func listCredentials(ctx context.Context, c *gizclaw.Client, provider *apitypes.CredentialProvider) ([]apitypes.Credential, error) {
+func listCredentials(ctx context.Context, c *gizclaw.Client, provider *string) ([]apitypes.Credential, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return nil, err
 	}
-	limit := adminservice.Limit(200)
-	var cursor *adminservice.Cursor
+	limit := int32(200)
+	var cursor *string
 	items := make([]apitypes.Credential, 0)
 	for {
 		resp, err := api.ListCredentialsWithResponse(ctx, &adminservice.ListCredentialsParams{
@@ -658,7 +488,7 @@ func listCredentials(ctx context.Context, c *gizclaw.Client, provider *apitypes.
 		if !resp.JSON200.HasNext || resp.JSON200.NextCursor == nil || *resp.JSON200.NextCursor == "" {
 			return items, nil
 		}
-		next := adminservice.Cursor(*resp.JSON200.NextCursor)
+		next := string(*resp.JSON200.NextCursor)
 		cursor = &next
 	}
 }
@@ -728,8 +558,8 @@ func listPeers(ctx context.Context, c *gizclaw.Client) ([]apitypes.Registration,
 	if err != nil {
 		return nil, err
 	}
-	limit := adminservice.Limit(200)
-	var cursor *adminservice.Cursor
+	limit := int32(200)
+	var cursor *string
 	items := make([]apitypes.Registration, 0)
 	for {
 		resp, err := api.ListPeersWithResponse(ctx, &adminservice.ListPeersParams{
@@ -746,7 +576,7 @@ func listPeers(ctx context.Context, c *gizclaw.Client) ([]apitypes.Registration,
 		if !resp.JSON200.HasNext || resp.JSON200.NextCursor == nil || *resp.JSON200.NextCursor == "" {
 			return items, nil
 		}
-		next := adminservice.Cursor(*resp.JSON200.NextCursor)
+		next := string(*resp.JSON200.NextCursor)
 		cursor = &next
 	}
 }
@@ -891,8 +721,8 @@ func listPeersByLabel(ctx context.Context, c *gizclaw.Client, key, value string)
 	if err != nil {
 		return nil, err
 	}
-	limit := adminservice.Limit(200)
-	var cursor *adminservice.Cursor
+	limit := int32(200)
+	var cursor *string
 	items := make([]apitypes.Registration, 0)
 	for {
 		resp, err := api.ListPeersByLabelWithResponse(ctx, key, value, &adminservice.ListPeersByLabelParams{
@@ -909,63 +739,7 @@ func listPeersByLabel(ctx context.Context, c *gizclaw.Client, key, value string)
 		if !resp.JSON200.HasNext || resp.JSON200.NextCursor == nil || *resp.JSON200.NextCursor == "" {
 			return items, nil
 		}
-		next := adminservice.Cursor(*resp.JSON200.NextCursor)
-		cursor = &next
-	}
-}
-
-func listPeersByCertification(ctx context.Context, c *gizclaw.Client, pType apitypes.GearCertificationType, authority apitypes.GearCertificationAuthority, id string) ([]apitypes.Registration, error) {
-	api, err := c.ServerAdminClient()
-	if err != nil {
-		return nil, err
-	}
-	limit := adminservice.Limit(200)
-	var cursor *adminservice.Cursor
-	items := make([]apitypes.Registration, 0)
-	for {
-		resp, err := api.ListPeersByCertificationWithResponse(ctx, pType, authority, id, &adminservice.ListPeersByCertificationParams{
-			Cursor: cursor,
-			Limit:  &limit,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if resp.JSON200 == nil {
-			return nil, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
-		}
-		items = append(items, resp.JSON200.Items...)
-		if !resp.JSON200.HasNext || resp.JSON200.NextCursor == nil || *resp.JSON200.NextCursor == "" {
-			return items, nil
-		}
-		next := adminservice.Cursor(*resp.JSON200.NextCursor)
-		cursor = &next
-	}
-}
-
-func listPeersByFirmware(ctx context.Context, c *gizclaw.Client, depot string, channel apitypes.GearFirmwareChannel) ([]apitypes.Registration, error) {
-	api, err := c.ServerAdminClient()
-	if err != nil {
-		return nil, err
-	}
-	limit := adminservice.Limit(200)
-	var cursor *adminservice.Cursor
-	items := make([]apitypes.Registration, 0)
-	for {
-		resp, err := api.ListPeersByFirmwareWithResponse(ctx, depot, channel, &adminservice.ListPeersByFirmwareParams{
-			Cursor: cursor,
-			Limit:  &limit,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if resp.JSON200 == nil {
-			return nil, responseError(resp.StatusCode(), resp.Body, resp.JSON500)
-		}
-		items = append(items, resp.JSON200.Items...)
-		if !resp.JSON200.HasNext || resp.JSON200.NextCursor == nil || *resp.JSON200.NextCursor == "" {
-			return items, nil
-		}
-		next := adminservice.Cursor(*resp.JSON200.NextCursor)
+		next := string(*resp.JSON200.NextCursor)
 		cursor = &next
 	}
 }
@@ -998,37 +772,6 @@ func refreshPeer(ctx context.Context, c *gizclaw.Client, publicKey string) (admi
 		return *resp.JSON200, nil
 	}
 	return adminservice.RefreshResult{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404, resp.JSON409, resp.JSON502)
-}
-
-func buildReleaseTar(t *testing.T, release apitypes.DepotRelease, files map[string][]byte) []byte {
-	t.Helper()
-
-	var buf bytes.Buffer
-	tw := tar.NewWriter(&buf)
-	manifest, err := json.Marshal(release)
-	if err != nil {
-		t.Fatalf("marshal release: %v", err)
-	}
-
-	writeTarFile(t, tw, "manifest.json", manifest)
-	for name, data := range files {
-		writeTarFile(t, tw, name, data)
-	}
-	if err := tw.Close(); err != nil {
-		t.Fatalf("tar close: %v", err)
-	}
-	return buf.Bytes()
-}
-
-func writeTarFile(t *testing.T, tw *tar.Writer, name string, data []byte) {
-	t.Helper()
-
-	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(data))}); err != nil {
-		t.Fatalf("tar header: %v", err)
-	}
-	if _, err := tw.Write(data); err != nil {
-		t.Fatalf("tar write: %v", err)
-	}
 }
 
 func responseError(status int, body []byte, errs ...interface{}) error {

@@ -18,10 +18,10 @@
         ],
         "properties": {
           "name": {
-            "$ref": "./workspace_name.json#/components/schemas/WorkspaceName"
+            "type": "string"
           },
           "workflow_name": {
-            "$ref": "./workflow_name.json#/components/schemas/WorkflowName"
+            "type": "string"
           },
           "parameters": {
             "type": "object",

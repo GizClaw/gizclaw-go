@@ -66,7 +66,7 @@ func newCreateCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&serverAddr, "server", "", "server address (host:port)")
-	cmd.Flags().StringVar(&pubkey, "pubkey", "", "server public key (hex)")
+	cmd.Flags().StringVar(&pubkey, "pubkey", "", "server public key (base58btc)")
 	_ = cmd.MarkFlagRequired("server")
 	_ = cmd.MarkFlagRequired("pubkey")
 

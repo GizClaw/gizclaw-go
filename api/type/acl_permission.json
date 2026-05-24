@@ -1,0 +1,47 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ACL Permission Type",
+    "description": "ACL permission string schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ACLPermission": {
+        "type": "string",
+        "description": "ACL permission enum.",
+        "enum": [
+          "viewer",
+          "editor",
+          "owner",
+          "workspace.read",
+          "workspace.use",
+          "workspace.admin",
+          "workflow.read",
+          "workflow.use",
+          "workflow.admin",
+          "voice.read",
+          "voice.use",
+          "voice.admin",
+          "credential.read",
+          "credential.use",
+          "credential.admin",
+          "model.read",
+          "model.use",
+          "model.admin",
+          "view.read",
+          "view.use",
+          "view.admin"
+        ],
+        "example": "workspace.use"
+      },
+      "ACLPermissionList": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/ACLPermission"
+        }
+      }
+    }
+  }
+}

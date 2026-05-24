@@ -28,11 +28,6 @@ export type RefreshInfo = {
     hardware_revision?: string;
 };
 
-export type RefreshVersion = {
-    depot?: string;
-    firmware_semver?: string;
-};
-
 export type GetInfoData = {
     body?: never;
     path?: never;
@@ -78,26 +73,3 @@ export type GetIdentifiersResponses = {
 };
 
 export type GetIdentifiersResponse = GetIdentifiersResponses[keyof GetIdentifiersResponses];
-
-export type GetVersionData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/version';
-};
-
-export type GetVersionErrors = {
-    /**
-     * Unexpected error
-     */
-    default: unknown;
-};
-
-export type GetVersionResponses = {
-    /**
-     * Firmware version metadata
-     */
-    200: RefreshVersion;
-};
-
-export type GetVersionResponse = GetVersionResponses[keyof GetVersionResponses];

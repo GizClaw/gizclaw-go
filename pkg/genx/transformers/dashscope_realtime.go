@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/GizClaw/dashscope-realtime-go"
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
-	"github.com/giztoy/dashscope-realtime-go"
 )
 
 // DashScopeRealtime is a realtime transformer using DashScope Qwen-Omni-Realtime.

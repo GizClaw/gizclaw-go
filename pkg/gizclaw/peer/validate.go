@@ -2,20 +2,16 @@ package peer
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func validateGear(gear apitypes.Gear) error {
-	gear.PublicKey = normalizePublicKey(gear.PublicKey)
-	if gear.PublicKey == "" {
+	if key, err := publicKeyFromText(gear.PublicKey); err != nil {
+		return err
+	} else if key.IsZero() {
 		return fmt.Errorf("gear: empty public key")
-	}
-	var key giznet.PublicKey
-	if err := key.UnmarshalText([]byte(gear.PublicKey)); err != nil {
-		return fmt.Errorf("gear: invalid public key: %w", err)
 	}
 	if !gear.Role.Valid() {
 		return fmt.Errorf("gear: invalid role %q", gear.Role)
@@ -26,26 +22,8 @@ func validateGear(gear apitypes.Gear) error {
 	return validateConfiguration(gear.Configuration)
 }
 
-func validateConfiguration(cfg apitypes.Configuration) error {
-	channel := firmwareChannel(cfg)
-	if channel == "" {
-		return nil
-	}
-	switch channel {
-	case "rollback", "stable", "beta", "testing":
-		return nil
-	default:
-		return fmt.Errorf("gear: invalid firmware channel %q", channel)
-	}
-}
-
-func normalizePublicKey(publicKey string) string {
-	publicKey = strings.TrimSpace(publicKey)
-	var key giznet.PublicKey
-	if err := key.UnmarshalText([]byte(publicKey)); err == nil {
-		return key.String()
-	}
-	return publicKey
+func validateConfiguration(apitypes.Configuration) error {
+	return nil
 }
 
 func publicKeyFromText(publicKey string) (giznet.PublicKey, error) {

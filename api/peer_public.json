@@ -64,30 +64,6 @@
           }
         }
       }
-    },
-    "/version": {
-      "get": {
-        "operationId": "getVersion",
-        "summary": "Get current firmware version metadata",
-        "tags": [
-          "Peripheral"
-        ],
-        "responses": {
-          "200": {
-            "description": "Firmware version metadata",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "./types.json#/components/schemas/RefreshVersion"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Unexpected error"
-          }
-        }
-      }
     }
   }
 }

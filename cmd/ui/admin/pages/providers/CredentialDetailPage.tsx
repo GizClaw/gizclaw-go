@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../..
 import { DetailBlock } from "../../components/detail-block";
 import { EmptyState } from "../../components/empty-state";
 import { ErrorBanner } from "../../components/banners";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { Skeleton } from "../../components/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/tabs";
@@ -57,7 +57,21 @@ export function CredentialDetailPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb
+      <PageHeader
+        actions={
+          <>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/providers/credentials">
+                <ChevronLeft className="size-4" />
+                Back to list
+              </Link>
+            </Button>
+            <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void load()} size="sm" variant="outline">
+              <RefreshCw className="size-4" />
+              Reload
+            </Button>
+          </>
+        }
         items={[
           { href: "/overview", label: "Overview" },
           { href: "/providers/credentials", label: "Credentials" },
@@ -65,26 +79,12 @@ export function CredentialDetailPage(): JSX.Element {
         ]}
       />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Providers</div>
-          <h1 className="text-3xl font-semibold tracking-tight">{credential?.name ?? credentialName}</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">Provider credential details and declarative resource access.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link to="/providers/credentials">
-              <ChevronLeft className="size-4" />
-              Back to list
-            </Link>
-          </Button>
-          <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void load()} size="sm" variant="outline">
-            <RefreshCw className="size-4" />
-            Reload
-          </Button>
-          {credential ? <Badge variant="secondary">{credential.provider}</Badge> : null}
-        </div>
-      </div>
+      <PageSummaryCard
+        description="Provider credential details and declarative resource access."
+        eyebrow="Providers"
+        meta={credential ? <Badge variant="secondary">{credential.provider}</Badge> : null}
+        title={credential?.name ?? credentialName}
+      />
 
       {loading ? (
         <div className="space-y-4">

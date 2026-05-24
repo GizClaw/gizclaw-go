@@ -12,7 +12,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	externalRef0 "github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -94,9 +94,6 @@ type ClientInterface interface {
 
 	// GetInfo request
 	GetInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// GetVersion request
-	GetVersion(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) GetIdentifiers(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -113,18 +110,6 @@ func (c *Client) GetIdentifiers(ctx context.Context, reqEditors ...RequestEditor
 
 func (c *Client) GetInfo(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetInfoRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GetVersion(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetVersionRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -172,33 +157,6 @@ func NewGetInfoRequest(server string) (*http.Request, error) {
 	}
 
 	operationPath := fmt.Sprintf("/info")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewGetVersionRequest generates requests for GetVersion
-func NewGetVersionRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/version")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -264,15 +222,12 @@ type ClientWithResponsesInterface interface {
 
 	// GetInfoWithResponse request
 	GetInfoWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetInfoResponse, error)
-
-	// GetVersionWithResponse request
-	GetVersionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetVersionResponse, error)
 }
 
 type GetIdentifiersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.RefreshIdentifiers
+	JSON200      *externalRef0.RefreshIdentifiers
 }
 
 // Status returns HTTPResponse.Status
@@ -294,7 +249,7 @@ func (r GetIdentifiersResponse) StatusCode() int {
 type GetInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *apitypes.RefreshInfo
+	JSON200      *externalRef0.RefreshInfo
 }
 
 // Status returns HTTPResponse.Status
@@ -307,28 +262,6 @@ func (r GetInfoResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetInfoResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GetVersionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *apitypes.RefreshVersion
-}
-
-// Status returns HTTPResponse.Status
-func (r GetVersionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetVersionResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -353,15 +286,6 @@ func (c *ClientWithResponses) GetInfoWithResponse(ctx context.Context, reqEditor
 	return ParseGetInfoResponse(rsp)
 }
 
-// GetVersionWithResponse request returning *GetVersionResponse
-func (c *ClientWithResponses) GetVersionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetVersionResponse, error) {
-	rsp, err := c.GetVersion(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGetVersionResponse(rsp)
-}
-
 // ParseGetIdentifiersResponse parses an HTTP response from a GetIdentifiersWithResponse call
 func ParseGetIdentifiersResponse(rsp *http.Response) (*GetIdentifiersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -377,7 +301,7 @@ func ParseGetIdentifiersResponse(rsp *http.Response) (*GetIdentifiersResponse, e
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.RefreshIdentifiers
+		var dest externalRef0.RefreshIdentifiers
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -403,33 +327,7 @@ func ParseGetInfoResponse(rsp *http.Response) (*GetInfoResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.RefreshInfo
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseGetVersionResponse parses an HTTP response from a GetVersionWithResponse call
-func ParseGetVersionResponse(rsp *http.Response) (*GetVersionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GetVersionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest apitypes.RefreshVersion
+		var dest externalRef0.RefreshInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -448,9 +346,6 @@ type ServerInterface interface {
 	// Get basic device information
 	// (GET /info)
 	GetInfo(c *fiber.Ctx) error
-	// Get current firmware version metadata
-	// (GET /version)
-	GetVersion(c *fiber.Ctx) error
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -470,12 +365,6 @@ func (siw *ServerInterfaceWrapper) GetIdentifiers(c *fiber.Ctx) error {
 func (siw *ServerInterfaceWrapper) GetInfo(c *fiber.Ctx) error {
 
 	return siw.Handler.GetInfo(c)
-}
-
-// GetVersion operation middleware
-func (siw *ServerInterfaceWrapper) GetVersion(c *fiber.Ctx) error {
-
-	return siw.Handler.GetVersion(c)
 }
 
 // FiberServerOptions provides options for the Fiber server.
@@ -503,8 +392,6 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Get(options.BaseURL+"/info", wrapper.GetInfo)
 
-	router.Get(options.BaseURL+"/version", wrapper.GetVersion)
-
 }
 
 type GetIdentifiersRequestObject struct {
@@ -514,7 +401,7 @@ type GetIdentifiersResponseObject interface {
 	VisitGetIdentifiersResponse(ctx *fiber.Ctx) error
 }
 
-type GetIdentifiers200JSONResponse apitypes.RefreshIdentifiers
+type GetIdentifiers200JSONResponse externalRef0.RefreshIdentifiers
 
 func (response GetIdentifiers200JSONResponse) VisitGetIdentifiersResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -539,7 +426,7 @@ type GetInfoResponseObject interface {
 	VisitGetInfoResponse(ctx *fiber.Ctx) error
 }
 
-type GetInfo200JSONResponse apitypes.RefreshInfo
+type GetInfo200JSONResponse externalRef0.RefreshInfo
 
 func (response GetInfo200JSONResponse) VisitGetInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
@@ -557,31 +444,6 @@ func (response GetInfodefaultResponse) VisitGetInfoResponse(ctx *fiber.Ctx) erro
 	return nil
 }
 
-type GetVersionRequestObject struct {
-}
-
-type GetVersionResponseObject interface {
-	VisitGetVersionResponse(ctx *fiber.Ctx) error
-}
-
-type GetVersion200JSONResponse apitypes.RefreshVersion
-
-func (response GetVersion200JSONResponse) VisitGetVersionResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type GetVersiondefaultResponse struct {
-	StatusCode int
-}
-
-func (response GetVersiondefaultResponse) VisitGetVersionResponse(ctx *fiber.Ctx) error {
-	ctx.Status(response.StatusCode)
-	return nil
-}
-
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// Get device identifiers
@@ -590,9 +452,6 @@ type StrictServerInterface interface {
 	// Get basic device information
 	// (GET /info)
 	GetInfo(ctx context.Context, request GetInfoRequestObject) (GetInfoResponseObject, error)
-	// Get current firmware version metadata
-	// (GET /version)
-	GetVersion(ctx context.Context, request GetVersionRequestObject) (GetVersionResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx *fiber.Ctx, args interface{}) (interface{}, error)
@@ -650,31 +509,6 @@ func (sh *strictHandler) GetInfo(ctx *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(GetInfoResponseObject); ok {
 		if err := validResponse.VisitGetInfoResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// GetVersion operation middleware
-func (sh *strictHandler) GetVersion(ctx *fiber.Ctx) error {
-	var request GetVersionRequestObject
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.GetVersion(ctx.UserContext(), request.(GetVersionRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetVersion")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(GetVersionResponseObject); ok {
-		if err := validResponse.VisitGetVersionResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

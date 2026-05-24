@@ -19,8 +19,6 @@ func TestClientPublicReadSequenceUserStory(t *testing.T) {
 		"--sn", "device-a-sn",
 		"--manufacturer", "Acme",
 		"--model", "Model-A",
-		"--depot", "demo",
-		"--firmware-semver", "1.0.0",
 	).MustSucceed(t)
 
 	c := h.ConnectClientFromContext("device-a")

@@ -4,9 +4,14 @@ import (
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	aclcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/acl"
 	credentialscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/credentials"
-	firmwarecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/firmware"
+	dashscopetenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/dashscopetenants"
+	firmwarescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/firmwares"
+	geminitenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/geminitenants"
 	minimaxtenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/minimaxtenants"
+	modelscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/models"
+	openaitenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/openaitenants"
 	peerscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/peers"
 	voicescmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/voices"
 	volctenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/volctenants"
@@ -36,11 +41,16 @@ func NewCmd() *cobra.Command {
 		newApplyCmd(&ctxName),
 		newDeleteCmd(&ctxName),
 		newShowCmd(&ctxName),
+		aclcmd.NewCmd(),
 		peerscmd.NewCmd(),
-		firmwarecmd.NewCmd(),
 		credentialscmd.NewCmd(),
+		firmwarescmd.NewCmd(),
+		openaitenantscmd.NewCmd(),
+		geminitenantscmd.NewCmd(),
+		dashscopetenantscmd.NewCmd(),
 		minimaxtenantscmd.NewCmd(),
 		volctenantscmd.NewCmd(),
+		modelscmd.NewCmd(),
 		voicescmd.NewCmd(),
 		workflowscmd.NewCmd(),
 		workspacescmd.NewCmd(),

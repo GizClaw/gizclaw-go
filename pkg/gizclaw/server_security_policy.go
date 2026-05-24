@@ -2,10 +2,7 @@ package gizclaw
 
 import (
 	"context"
-	"errors"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	gearpkg "github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
@@ -21,39 +18,9 @@ func (p *ServerSecurityPolicy) AllowService(publicKey giznet.PublicKey, service 
 	if p == nil {
 		return false
 	}
-	server := (*Server)(p)
-	manager := server.manager
-	adminPublicKey := server.AdminPublicKey
-	if service == ServiceAdmin && !adminPublicKey.IsZero() && adminPublicKey == publicKey {
+	s := (*Server)(p)
+	if m := s.manager; m != nil && m.allowService(context.Background(), publicKey, service) {
 		return true
 	}
-	if manager == nil {
-		return false
-	}
-	switch service {
-	case ServiceRPC, ServiceServerPublic:
-		return true
-	}
-	if manager.Peers == nil {
-		return false
-	}
-	switch service {
-	case ServiceGear:
-		gear, err := manager.Peers.LoadGear(context.Background(), publicKey)
-		if errors.Is(err, gearpkg.ErrPeerNotFound) {
-			return true
-		}
-		if err != nil {
-			return false
-		}
-		return gear.Status == apitypes.GearStatusActive
-	case ServiceAdmin:
-		gear, err := manager.Peers.LoadGear(context.Background(), publicKey)
-		if err != nil {
-			return false
-		}
-		return gear.Status == apitypes.GearStatusActive && gear.Role == apitypes.GearRoleAdmin
-	default:
-		return false
-	}
+	return s.SecurityPolicy != nil && s.SecurityPolicy.AllowService(publicKey, service)
 }

@@ -26,7 +26,6 @@ func TestIntegrationGearServiceLifecycle(t *testing.T) {
 			Name: strPtr("gear"),
 			Sn:   strPtr("sn/1"),
 			Hardware: &apitypes.HardwareInfo{
-				Depot: strPtr("demo-main"),
 				Imeis: &[]apitypes.GearIMEI{{Name: strPtr("main"), Tac: "12345678", Serial: "0000001"}},
 				Labels: &[]apitypes.GearLabel{{
 					Key:   "batch",
@@ -47,53 +46,40 @@ func TestIntegrationGearServiceLifecycle(t *testing.T) {
 		t.Fatalf("ListPeers returned %d items", len(items))
 	}
 
-	if _, err := approvePeer(context.Background(), admin, deviceResult.Gear.PublicKey, apitypes.GearRoleGear); err != nil {
+	devicePublicKey := deviceResult.Gear.PublicKey
+	adminPublicKey := adminResult.Gear.PublicKey
+	if _, err := approvePeer(context.Background(), admin, devicePublicKey, apitypes.GearRoleGear); err != nil {
 		t.Fatalf("ApprovePeer error: %v", err)
 	}
-	if _, err := getPeer(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+	if _, err := getPeer(context.Background(), admin, devicePublicKey); err != nil {
 		t.Fatalf("GetPeer error: %v", err)
 	}
-	if publicKey, err := resolvePeerBySN(context.Background(), admin, "sn/1"); err != nil || publicKey != deviceResult.Gear.PublicKey {
+	if publicKey, err := resolvePeerBySN(context.Background(), admin, "sn/1"); err != nil || publicKey != devicePublicKey {
 		t.Fatalf("ResolveGearBySN = %q, %v", publicKey, err)
 	}
-	if publicKey, err := resolvePeerByIMEI(context.Background(), admin, "12345678", "0000001"); err != nil || publicKey != deviceResult.Gear.PublicKey {
+	if publicKey, err := resolvePeerByIMEI(context.Background(), admin, "12345678", "0000001"); err != nil || publicKey != devicePublicKey {
 		t.Fatalf("ResolveGearByIMEI = %q, %v", publicKey, err)
 	}
-	if _, err := putPeerConfig(context.Background(), admin, deviceResult.Gear.PublicKey, apitypes.Configuration{
-		Certifications: &[]apitypes.GearCertification{{
-			Type:      apitypes.GearCertificationType("certification"),
-			Authority: apitypes.GearCertificationAuthority("ce"),
-			Id:        "ce/001",
-		}},
-		Firmware: &apitypes.FirmwareConfig{Channel: func() *apitypes.GearFirmwareChannel {
-			ch := apitypes.GearFirmwareChannel("stable")
-			return &ch
-		}()},
-	}); err != nil {
+	view := "under-12"
+	if _, err := putPeerConfig(context.Background(), admin, devicePublicKey, apitypes.Configuration{View: &view}); err != nil {
 		t.Fatalf("PutGearConfig error: %v", err)
 	}
-	if _, err := getPeerInfo(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+	if _, err := getPeerInfo(context.Background(), admin, devicePublicKey); err != nil {
 		t.Fatalf("GetPeerInfo error: %v", err)
 	}
-	if _, err := getPeerConfig(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+	if _, err := getPeerConfig(context.Background(), admin, devicePublicKey); err != nil {
 		t.Fatalf("GetPeerConfig error: %v", err)
 	}
-	if _, err := getPeerRuntime(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+	if _, err := getPeerRuntime(context.Background(), admin, devicePublicKey); err != nil {
 		t.Fatalf("GetPeerRuntime error: %v", err)
 	}
 	if _, err := listPeersByLabel(context.Background(), admin, "batch", "cn/east"); err != nil {
 		t.Fatalf("ListPeersByLabel error: %v", err)
 	}
-	if _, err := listPeersByCertification(context.Background(), admin, apitypes.GearCertificationType("certification"), apitypes.GearCertificationAuthority("ce"), "ce/001"); err != nil {
-		t.Fatalf("ListPeersByCertification error: %v", err)
-	}
-	if _, err := listPeersByFirmware(context.Background(), admin, "demo-main", apitypes.GearFirmwareChannel("stable")); err != nil {
-		t.Fatalf("ListPeersByFirmware error: %v", err)
-	}
-	if _, err := blockPeer(context.Background(), admin, deviceResult.Gear.PublicKey); err != nil {
+	if _, err := blockPeer(context.Background(), admin, devicePublicKey); err != nil {
 		t.Fatalf("BlockPeer error: %v", err)
 	}
-	if _, err := deletePeer(context.Background(), admin, adminResult.Gear.PublicKey); err != nil {
+	if _, err := deletePeer(context.Background(), admin, adminPublicKey); err != nil {
 		t.Fatalf("DeletePeer error: %v", err)
 	}
 }

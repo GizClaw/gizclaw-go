@@ -1,0 +1,28 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Firmware Spec Type",
+    "description": "Firmware spec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "FirmwareSpec": {
+        "type": "object",
+        "required": [
+          "slots"
+        ],
+        "properties": {
+          "description": {
+            "type": "string",
+            "example": "Devkit firmware line"
+          },
+          "slots": {
+            "$ref": "./firmware_slots.json#/components/schemas/FirmwareSlots"
+          }
+        }
+      }
+    }
+  }
+}

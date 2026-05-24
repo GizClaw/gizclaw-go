@@ -6,6 +6,8 @@ import (
 
 	admincmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin"
 	contextcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/context"
+	genkeycmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/genkey"
+	migratecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/migrate"
 	pingcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/ping"
 	playcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/play"
 	servecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/serve"
@@ -26,6 +28,8 @@ func New() *cobra.Command {
 		servecmd.NewCmd(),
 		servicecmd.NewCmd(),
 		contextcmd.NewCmd(),
+		genkeycmd.NewCmd(),
+		migratecmd.NewCmd(),
 		pingcmd.NewCmd(),
 		setnamecmd.NewCmd(),
 		admincmd.NewCmd(),

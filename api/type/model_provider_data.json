@@ -1,0 +1,91 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Model Provider Data Type",
+    "description": "Provider-specific model runtime configuration.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ModelProviderData": {
+        "type": "object",
+        "description": "Provider-specific model runtime configuration keyed by provider kind.",
+        "additionalProperties": true,
+        "example": {
+          "openai-tenant": {
+            "upstream_model": "MiniMax-M2.5"
+          },
+          "gemini-tenant": {
+            "upstream_model": "gemini-2.5-flash"
+          },
+          "dashscope-tenant": {
+            "upstream_model": "qwen-omni-turbo-realtime",
+            "api_mode": "realtime"
+          }
+        }
+      },
+      "DashScopeTenantModelProviderData": {
+        "type": "object",
+        "properties": {
+          "upstream_model": {
+            "type": "string"
+          },
+          "api_mode": {
+            "type": "string",
+            "enum": [
+              "chat_completions",
+              "realtime"
+            ]
+          }
+        }
+      },
+      "GeminiTenantModelProviderData": {
+        "type": "object",
+        "properties": {
+          "upstream_model": {
+            "type": "string"
+          }
+        }
+      },
+      "OpenAITenantModelProviderData": {
+        "type": "object",
+        "properties": {
+          "upstream_model": {
+            "type": "string"
+          },
+          "support_json_output": {
+            "type": "boolean"
+          },
+          "support_tool_calls": {
+            "type": "boolean"
+          },
+          "support_text_only": {
+            "type": "boolean"
+          },
+          "use_system_role": {
+            "type": "boolean"
+          },
+          "support_thinking": {
+            "type": "boolean"
+          },
+          "thinking_param": {
+            "type": "string"
+          },
+          "thinking_level_param": {
+            "type": "string"
+          },
+          "thinking_levels": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "default_thinking_level": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

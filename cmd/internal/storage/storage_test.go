@@ -165,11 +165,6 @@ func TestNewRejectsWrongDriverBlockForKind(t *testing.T) {
 		t.Fatal("expected error for filesystem with badger driver")
 	}
 	if _, err := New(map[string]Config{
-		"bad": {Kind: KindDepotStore, FS: &FSConfig{Dir: t.TempDir()}},
-	}); err == nil {
-		t.Fatal("expected error for depotstore with fs driver")
-	}
-	if _, err := New(map[string]Config{
 		"bad": {Kind: KindSQL, FS: &FSConfig{Dir: t.TempDir()}},
 	}); err == nil {
 		t.Fatal("expected error for sql with fs driver")
@@ -184,7 +179,6 @@ func TestNewRejectsMissingDriverBlock(t *testing.T) {
 		{name: "keyvalue", cfg: Config{Kind: KindKeyValue}},
 		{name: "vecstore", cfg: Config{Kind: KindVecStore}},
 		{name: "filesystem", cfg: Config{Kind: KindFilesystem}},
-		{name: "depotstore", cfg: Config{Kind: KindDepotStore}},
 		{name: "sql", cfg: Config{Kind: KindSQL}},
 	}
 	for _, tc := range tests {
@@ -198,7 +192,7 @@ func TestNewRejectsMissingDriverBlock(t *testing.T) {
 
 func TestKVNotFound(t *testing.T) {
 	reg, err := New(map[string]Config{
-		"fs": {Kind: KindFS, Backend: "filesystem", Dir: t.TempDir()},
+		"fs": {Kind: KindFilesystem, FS: &FSConfig{Dir: t.TempDir()}},
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -276,18 +270,18 @@ func TestNewVecStoreUnknownBackend(t *testing.T) {
 }
 
 func TestFS(t *testing.T) {
-	dir := filepath.Join(t.TempDir(), "firmware")
+	dir := filepath.Join(t.TempDir(), "files")
 	reg, err := New(map[string]Config{
-		"fw": {Kind: KindFS, Backend: "filesystem", Dir: dir},
+		"files": {Kind: KindFilesystem, FS: &FSConfig{Dir: dir}},
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
 	defer reg.Close()
 
-	s, err := reg.FS("fw")
+	s, err := reg.FS("files")
 	if err != nil {
-		t.Fatalf("FS(fw): %v", err)
+		t.Fatalf("FS(files): %v", err)
 	}
 	if string(s) != dir {
 		t.Fatalf("Root = %q, want %q", string(s), dir)
@@ -313,37 +307,6 @@ func TestFilesystemDriverBlock(t *testing.T) {
 	}
 }
 
-func TestDepotStoreDepotFS(t *testing.T) {
-	reg, err := New(map[string]Config{
-		"firmware-depot": {
-			Kind:    KindDepotStore,
-			DepotFS: &DepotFSConfig{},
-		},
-	})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	defer reg.Close()
-
-	driver, err := reg.DepotDriver("firmware-depot")
-	if err != nil {
-		t.Fatalf("DepotDriver(firmware-depot): %v", err)
-	}
-	if driver != "depot-fs" {
-		t.Fatalf("driver = %q", driver)
-	}
-}
-
-func TestDepotStoreDepotFSRejectsBadRefs(t *testing.T) {
-	if _, err := New(map[string]Config{
-		"depot": {
-			Kind: KindDepotStore,
-		},
-	}); err == nil {
-		t.Fatal("expected error for invalid depotstore config")
-	}
-}
-
 func TestFSNotFound(t *testing.T) {
 	reg, err := New(map[string]Config{
 		"kv": {Kind: KindKeyValue, Backend: "memory"},
@@ -358,22 +321,6 @@ func TestFSNotFound(t *testing.T) {
 	}
 	if _, err := reg.FS("kv"); err == nil {
 		t.Fatal("expected error for wrong kind lookup")
-	}
-}
-
-func TestNewFSNoDir(t *testing.T) {
-	if _, err := New(map[string]Config{
-		"x": {Kind: KindFS, Backend: "filesystem"},
-	}); err == nil {
-		t.Fatal("expected error for filesystem without dir")
-	}
-}
-
-func TestNewFSUnknownBackend(t *testing.T) {
-	if _, err := New(map[string]Config{
-		"x": {Kind: KindFS, Backend: "s3"},
-	}); err == nil {
-		t.Fatal("expected error for unknown fs backend")
 	}
 }
 
@@ -398,6 +345,23 @@ func TestSQL(t *testing.T) {
 func TestSQLSQLiteUsesDirAsDSN(t *testing.T) {
 	reg, err := New(map[string]Config{
 		"db": {Kind: KindSQL, Backend: "sqlite", Dir: filepath.Join(t.TempDir(), "db.sqlite")},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer reg.Close()
+
+	if _, err := reg.SQL("db"); err != nil {
+		t.Fatalf("SQL(db): %v", err)
+	}
+}
+
+func TestSQLSQLiteCreatesParentDir(t *testing.T) {
+	reg, err := New(map[string]Config{
+		"db": {
+			Kind:   KindSQL,
+			SQLite: &SQLConfig{Dir: filepath.Join(t.TempDir(), "data", "db.sqlite")},
+		},
 	})
 	if err != nil {
 		t.Fatalf("New: %v", err)

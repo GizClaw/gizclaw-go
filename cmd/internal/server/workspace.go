@@ -64,6 +64,27 @@ func prepareWorkspaceConfig(workspace string) (Config, error) {
 	return prepareConfig(cfg)
 }
 
+func prepareWorkspaceMigrationConfig(workspace string) (Config, error) {
+	root, err := resolveWorkspaceRoot(workspace)
+	if err != nil {
+		return Config{}, err
+	}
+	fileCfg, err := LoadConfig(filepath.Join(root, workspaceConfigFile))
+	if err != nil {
+		return Config{}, fmt.Errorf("server: load config: %w", err)
+	}
+	cfg, err := mergeFileConfig(Config{}, fileCfg)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.Storage = resolveWorkspaceStorageConfigs(root, cfg.Storage)
+	cfg.Stores = resolveWorkspaceStoreConfigs(root, cfg.Stores)
+	if cfg.ACL.Store == "" {
+		return Config{}, fmt.Errorf("server: acl.store is required")
+	}
+	return cfg, nil
+}
+
 func resolveWorkspaceStorageConfigs(root string, cfgs map[string]storage.Config) map[string]storage.Config {
 	if len(cfgs) == 0 {
 		return nil
@@ -124,21 +145,31 @@ func ServeContext(ctx context.Context, workspace string, opts ServeOptions) erro
 	if err != nil {
 		return err
 	}
+	if cfg.ACL.Store != "" {
+		migrator, err := NewMigrator(cfg)
+		if err != nil {
+			return err
+		}
+		if err := migrator.Migrate(ctx); err != nil {
+			_ = migrator.Close()
+			return err
+		}
+		if err := migrator.Close(); err != nil {
+			return err
+		}
+	}
+
 	srv, err := New(cfg)
 	if err != nil {
 		return err
 	}
 	defer srv.Close()
-	publicHandler, err := srv.PublicHTTPHandler()
-	if err != nil {
-		return err
-	}
 	publicListener, err := net.Listen("tcp", cfg.ListenAddr)
 	if err != nil {
 		return fmt.Errorf("server: listen public http: %w", err)
 	}
 	defer publicListener.Close()
-	publicHTTP := &http.Server{Handler: publicHandler}
+	publicHTTP := &http.Server{Handler: srv}
 	releasePID, err := acquireWorkspacePID(root, opts.Force)
 	if err != nil {
 		return err

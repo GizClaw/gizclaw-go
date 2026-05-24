@@ -1,0 +1,39 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OpenAI Tenant Spec Type",
+    "description": "OpenAITenantSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "OpenAITenantSpec": {
+        "type": "object",
+        "required": [
+          "credential_name"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "./openai_tenant.json#/components/schemas/OpenAITenantKind"
+          },
+          "credential_name": {
+            "type": "string"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://api.minimax.chat/v1"
+          },
+          "api_mode": {
+            "$ref": "./openai_tenant.json#/components/schemas/OpenAITenantAPIMode"
+          },
+          "description": {
+            "type": "string",
+            "example": "MiniMax OpenAI-compatible tenant"
+          }
+        }
+      }
+    }
+  }
+}

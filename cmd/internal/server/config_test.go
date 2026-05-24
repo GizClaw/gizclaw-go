@@ -8,13 +8,45 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
+
+func testPublicKey(fill byte) giznet.PublicKey {
+	var key giznet.PublicKey
+	for i := range key {
+		key[i] = fill
+	}
+	return key
+}
+
+func testPublicKeyText(fill byte) string {
+	return testPublicKey(fill).String()
+}
 
 func TestDefaultConfig(t *testing.T) {
 	cfg := DefaultConfig()
 	if cfg.ListenAddr != ":9820" {
 		t.Fatalf("ListenAddr = %q", cfg.ListenAddr)
+	}
+}
+
+func TestAdminPublicKeySecurityPolicy(t *testing.T) {
+	allowed := testPublicKey(1)
+	other := testPublicKey(2)
+	policy := adminPublicKeySecurityPolicy{PublicKey: allowed}
+
+	if !policy.AllowPeer(other) {
+		t.Fatal("AllowPeer should allow peer transport before service selection")
+	}
+	if !policy.AllowService(allowed, gizclaw.ServiceAdmin) {
+		t.Fatal("AllowService should allow configured admin public key for admin service")
+	}
+	if policy.AllowService(other, gizclaw.ServiceAdmin) {
+		t.Fatal("AllowService allowed a different public key")
+	}
+	if policy.AllowService(allowed, gizclaw.ServiceGear) {
+		t.Fatal("AllowService allowed a non-admin service")
 	}
 }
 
@@ -26,11 +58,11 @@ func TestNewWithLayeredStorageConfig(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = srv.Close() })
 
-	if srv.PeerStore == nil || srv.CredentialStore == nil || srv.MiniMaxTenantStore == nil || srv.VoiceStore == nil || srv.WorkspaceStore == nil || srv.WorkflowStore == nil || srv.DepotMetadataStore == nil {
+	if srv.PeerStore == nil || srv.CredentialStore == nil || srv.FirmwareStore == nil || srv.MiniMaxTenantStore == nil || srv.VoiceStore == nil || srv.WorkspaceStore == nil || srv.WorkflowStore == nil {
 		t.Fatalf("module stores not wired: %+v", srv)
 	}
-	if srv.DepotStore == nil {
-		t.Fatal("DepotStore is nil")
+	if srv.ACLDB == nil {
+		t.Fatalf("acl store not wired: %v", srv.ACLDB)
 	}
 }
 
@@ -53,6 +85,12 @@ func TestNewWithLayeredStorageReportsStoreErrors(t *testing.T) {
 	delete(missingCredentialCfg.Stores, "credentials")
 	if _, err := New(missingCredentialCfg); err == nil || !strings.Contains(err.Error(), "server: credentials store:") {
 		t.Fatalf("New(missing credentials store) = %v", err)
+	}
+
+	missingFirmwareCfg := validLayeredConfig(dir)
+	missingFirmwareCfg.Firmwares.Store = "missing"
+	if _, err := New(missingFirmwareCfg); err == nil || !strings.Contains(err.Error(), "server: firmwares store:") {
+		t.Fatalf("New(missing firmwares store) = %v", err)
 	}
 
 	missingMiniMaxCredentialCfg := validLayeredConfig(dir)
@@ -85,15 +123,15 @@ func TestNewWithLayeredStorageReportsStoreErrors(t *testing.T) {
 		t.Fatalf("New(missing workflows store) = %v", err)
 	}
 
-	missingFirmwareMetadataCfg := validLayeredConfig(dir)
-	missingFirmwareMetadataCfg.Depots.MetadataStore = "missing"
-	if _, err := New(missingFirmwareMetadataCfg); err == nil || !strings.Contains(err.Error(), "server: firmware metadata store:") {
-		t.Fatalf("New(missing firmware metadata store) = %v", err)
+	missingACLCfg := validLayeredConfig(dir)
+	missingACLCfg.ACL.Store = "missing"
+	if _, err := New(missingACLCfg); err == nil || !strings.Contains(err.Error(), "server: acl store:") {
+		t.Fatalf("New(missing acl store) = %v", err)
 	}
+
 }
 
 func TestNewWithPreparedConfig(t *testing.T) {
-	dir := t.TempDir()
 	adminPublicKey := strings.Repeat("ab", giznet.KeySize)
 	adminKey, err := giznet.KeyFromHex(adminPublicKey)
 	if err != nil {
@@ -104,12 +142,10 @@ func TestNewWithPreparedConfig(t *testing.T) {
 		AdminPublicKey: adminKey,
 		Stores: map[string]stores.Config{
 			"mem": {Kind: stores.KindKeyValue, Backend: "memory"},
-			"fw":  {Kind: stores.KindFS, Backend: "filesystem", Dir: filepath.Join(dir, "firmware")},
 		},
 		Peers: PeersConfig{
 			Store: "mem",
 		},
-		Depots: DepotsConfig{Store: "fw"},
 	})
 	if err != nil {
 		t.Fatalf("New error = %v", err)
@@ -118,9 +154,6 @@ func TestNewWithPreparedConfig(t *testing.T) {
 
 	if srv.PeerStore == nil {
 		t.Fatal("PeerStore is nil")
-	}
-	if srv.DepotStore == nil {
-		t.Fatal("DepotStore is nil")
 	}
 	if srv.PublicKey().String() == "" {
 		t.Fatal("PublicKey should not be empty")
@@ -139,14 +172,14 @@ func TestConfigValidateRequiresStores(t *testing.T) {
 
 func TestLoadConfigRejectsInvalidAdminPublicKey(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.yaml")
-	if err := os.WriteFile(path, []byte("admin-public-key: \"not-hex\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("admin-public-key: \"not-a-key\"\n"), 0o644); err != nil {
 		t.Fatalf("WriteFile invalid error = %v", err)
 	}
 	if _, err := LoadConfig(path); err == nil {
 		t.Fatal("LoadConfig should fail for invalid admin public key")
 	}
 
-	if err := os.WriteFile(path, []byte("admin-public-key: \""+strings.Repeat("00", giznet.KeySize)+"\"\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("admin-public-key: \""+testPublicKey(0).String()+"\"\n"), 0o644); err != nil {
 		t.Fatalf("WriteFile zero error = %v", err)
 	}
 	if _, err := LoadConfig(path); err == nil || !strings.Contains(err.Error(), "zero key") {
@@ -214,6 +247,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 			Store: "runtime-peers",
 		},
 		Credentials: CredentialsConfig{Store: "runtime-credentials"},
+		Firmwares:   FirmwaresConfig{Store: "runtime-firmwares"},
 		MiniMax: MiniMaxConfig{
 			TenantsStore:     "runtime-tenants",
 			VoicesStore:      "runtime-voices",
@@ -221,7 +255,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		},
 		Workspaces: WorkspacesConfig{Store: "runtime-workspaces"},
 		Workflows:  WorkflowsConfig{Store: "runtime-workflows"},
-		Depots:     DepotsConfig{Store: "runtime-depots"},
+		ACL:        ACLConfig{Store: "runtime-acl"},
 	}
 	fileCfg := ConfigFile{
 		ListenAddr:     ":1234",
@@ -236,6 +270,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 			Store: "file-peers",
 		},
 		Credentials: CredentialsConfig{Store: "file-credentials"},
+		Firmwares:   FirmwaresConfig{Store: "file-firmwares"},
 		MiniMax: MiniMaxConfig{
 			TenantsStore:     "file-tenants",
 			VoicesStore:      "file-voices",
@@ -243,7 +278,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		},
 		Workspaces: WorkspacesConfig{Store: "file-workspaces"},
 		Workflows:  WorkflowsConfig{Store: "file-workflows"},
-		Depots:     DepotsConfig{Store: "file-depots"},
+		ACL:        ACLConfig{Store: "file-acl"},
 	}
 
 	merged, err := mergeFileConfig(runtimeCfg, fileCfg)
@@ -265,11 +300,11 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	if merged.Peers.Store != "runtime-peers" {
 		t.Fatalf("Peers.Store = %q", merged.Peers.Store)
 	}
-	if merged.Depots.Store != "runtime-depots" {
-		t.Fatalf("Depots.Store = %q", merged.Depots.Store)
-	}
 	if merged.Credentials.Store != "runtime-credentials" {
 		t.Fatalf("Credentials.Store = %q", merged.Credentials.Store)
+	}
+	if merged.Firmwares.Store != "runtime-firmwares" {
+		t.Fatalf("Firmwares.Store = %q", merged.Firmwares.Store)
 	}
 	if merged.MiniMax.TenantsStore != "runtime-tenants" || merged.MiniMax.VoicesStore != "runtime-voices" || merged.MiniMax.CredentialsStore != "runtime-credentials" {
 		t.Fatalf("MiniMax = %+v", merged.MiniMax)
@@ -279,6 +314,9 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	}
 	if merged.Workflows.Store != "runtime-workflows" {
 		t.Fatalf("Workflows.Store = %q", merged.Workflows.Store)
+	}
+	if merged.ACL.Store != "runtime-acl" {
+		t.Fatalf("ACL.Store = %q", merged.ACL.Store)
 	}
 }
 
@@ -290,13 +328,8 @@ func TestValidateReportsSpecificMissingFields(t *testing.T) {
 	}{
 		{
 			name: "missing peers store",
-			cfg:  Config{Depots: DepotsConfig{Store: "d"}},
+			cfg:  Config{},
 			want: "server: peers.store is required",
-		},
-		{
-			name: "missing depots store",
-			cfg:  Config{Peers: PeersConfig{Store: "g"}},
-			want: "server: depots.store is required",
 		},
 	}
 
@@ -315,10 +348,11 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 		Storage:     map[string]storage.Config{"memory": {Kind: storage.KindKeyValue, Memory: &storage.MemoryConfig{}}},
 		Peers:       PeersConfig{Store: "peers"},
 		Credentials: CredentialsConfig{Store: "credentials"},
+		Firmwares:   FirmwaresConfig{Store: "firmwares"},
 		MiniMax:     MiniMaxConfig{TenantsStore: "minimax-tenants", VoicesStore: "voices", CredentialsStore: "credentials"},
 		Workspaces:  WorkspacesConfig{Store: "workspaces"},
 		Workflows:   WorkflowsConfig{Store: "workflows"},
-		Depots:      DepotsConfig{Store: "firmware", MetadataStore: "firmware-depots"},
+		ACL:         ACLConfig{Store: "acl"},
 	}
 	tests := []struct {
 		name string
@@ -326,12 +360,13 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 		want string
 	}{
 		{"missing credentials", func(c *Config) { c.Credentials.Store = "" }, "server: credentials.store is required"},
+		{"missing firmwares", func(c *Config) { c.Firmwares.Store = "" }, "server: firmwares.store is required"},
 		{"missing minimax tenants", func(c *Config) { c.MiniMax.TenantsStore = "" }, "server: minimax.tenants-store is required"},
 		{"missing minimax voices", func(c *Config) { c.MiniMax.VoicesStore = "" }, "server: minimax.voices-store is required"},
 		{"missing minimax credentials", func(c *Config) { c.MiniMax.CredentialsStore = "" }, "server: minimax.credentials-store is required"},
 		{"missing workspaces", func(c *Config) { c.Workspaces.Store = "" }, "server: workspaces.store is required"},
 		{"missing workflows", func(c *Config) { c.Workflows.Store = "" }, "server: workflows.store is required"},
-		{"missing depot metadata", func(c *Config) { c.Depots.MetadataStore = "" }, "server: depots.metadata-store is required"},
+		{"missing acl", func(c *Config) { c.ACL.Store = "" }, "server: acl.store is required"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -347,8 +382,7 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 
 func TestPrepareConfigGeneratesKeyPairAndDefaultListenAddr(t *testing.T) {
 	cfg, err := prepareConfig(Config{
-		Peers:  PeersConfig{Store: "g"},
-		Depots: DepotsConfig{Store: "d"},
+		Peers: PeersConfig{Store: "g"},
 	})
 	if err != nil {
 		t.Fatalf("prepareConfig error = %v", err)
@@ -366,8 +400,7 @@ func TestNewRejectsUnknownStores(t *testing.T) {
 		Stores: map[string]stores.Config{
 			"bad": {Kind: "keyvalue", Backend: "unknown"},
 		},
-		Peers:  PeersConfig{Store: "bad"},
-		Depots: DepotsConfig{Store: "bad"},
+		Peers: PeersConfig{Store: "bad"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "server: stores:") {
 		t.Fatalf("New error = %v", err)
@@ -375,29 +408,16 @@ func TestNewRejectsUnknownStores(t *testing.T) {
 }
 
 func TestNewRejectsMissingNamedStores(t *testing.T) {
-	dir := t.TempDir()
-
 	_, err := New(Config{
 		Stores: map[string]stores.Config{
-			"fw": {Kind: "filestore", Backend: "filesystem", Dir: filepath.Join(dir, "firmware")},
+			"mem": {Kind: "keyvalue", Backend: "memory"},
 		},
-		Peers:  PeersConfig{Store: "missing"},
-		Depots: DepotsConfig{Store: "fw"},
+		Peers: PeersConfig{Store: "missing"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "server: peers store:") {
 		t.Fatalf("New error = %v", err)
 	}
 
-	_, err = New(Config{
-		Stores: map[string]stores.Config{
-			"mem": {Kind: "keyvalue", Backend: "memory"},
-		},
-		Peers:  PeersConfig{Store: "mem"},
-		Depots: DepotsConfig{Store: "missing"},
-	})
-	if err == nil || !strings.Contains(err.Error(), "server: firmware store:") {
-		t.Fatalf("New error = %v", err)
-	}
 }
 
 func validLayeredConfig(dir string) Config {
@@ -406,29 +426,21 @@ func validLayeredConfig(dir string) Config {
 		Storage: map[string]storage.Config{
 			"memory":      {Kind: storage.KindKeyValue, Memory: &storage.MemoryConfig{}},
 			"local-files": {Kind: storage.KindFilesystem, FS: &storage.FSConfig{Dir: dir}},
-			"firmware-depot": {
-				Kind:    storage.KindDepotStore,
-				DepotFS: &storage.DepotFSConfig{},
-			},
+			"acl-db":      {Kind: storage.KindSQL, SQLite: &storage.SQLConfig{Dir: filepath.Join(dir, "acl.sqlite")}},
 		},
 		Stores: map[string]stores.Config{
 			"peers":           {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "peers"},
 			"credentials":     {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "credentials"},
+			"firmwares":       {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "firmwares"},
 			"minimax-tenants": {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "minimax-tenants"},
 			"voices":          {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "voices"},
 			"workspaces":      {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workspaces"},
 			"workflows":       {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workflows"},
-			"firmware-depots": {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "firmware-depots"},
-			"firmware": {
-				Kind:    stores.KindDepotStore,
-				Storage: "firmware-depot",
-				DepotFS: &stores.DepotFSRef{
-					Filesystem: storage.FilesystemRef{Storage: "local-files", BaseDir: "firmware"},
-				},
-			},
+			"acl":             {Kind: stores.KindSQL, Storage: "acl-db"},
 		},
 		Peers:       PeersConfig{Store: "peers"},
 		Credentials: CredentialsConfig{Store: "credentials"},
+		Firmwares:   FirmwaresConfig{Store: "firmwares"},
 		MiniMax: MiniMaxConfig{
 			TenantsStore:     "minimax-tenants",
 			VoicesStore:      "voices",
@@ -436,6 +448,6 @@ func validLayeredConfig(dir string) Config {
 		},
 		Workspaces: WorkspacesConfig{Store: "workspaces"},
 		Workflows:  WorkflowsConfig{Store: "workflows"},
-		Depots:     DepotsConfig{Store: "firmware", MetadataStore: "firmware-depots"},
+		ACL:        ACLConfig{Store: "acl"},
 	}
 }

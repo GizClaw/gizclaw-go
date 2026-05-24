@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Voice Provider Type",
-    "description": "VoiceProvider schema.",
+    "description": "VoiceProvider reference schema.",
     "version": "1.0.0"
   },
   "paths": {},
@@ -19,7 +19,7 @@
             "$ref": "./voice_provider_kind.json#/components/schemas/VoiceProviderKind"
           },
           "name": {
-            "$ref": "./voice_provider_name.json#/components/schemas/VoiceProviderName"
+            "type": "string"
           }
         }
       }

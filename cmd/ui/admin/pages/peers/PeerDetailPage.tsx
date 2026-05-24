@@ -6,6 +6,7 @@ import { expectData, toMessage } from "../../components/api";
 import { Badge } from "../../components/badge";
 import { Button } from "../../components/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/card";
+import { Input } from "../../components/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/select";
 import { Skeleton } from "../../components/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/tabs";
@@ -15,9 +16,9 @@ import {
   blockPeer,
   deletePeer,
   getResource,
-  putPeerConfig,
+  putPeerInfo,
   refreshPeer,
-  type Configuration,
+  type DeviceInfo,
   type GearRole,
   type Resource,
 } from "@gizclaw/adminservice";
@@ -27,12 +28,10 @@ import { DetailBlock } from "../../components/detail-block";
 import { ErrorBanner, NoticeBanner } from "../../components/banners";
 import { EmptyState } from "../../components/empty-state";
 import { FormField } from "../../components/form-field";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { StatusBadge } from "../../components/status-badge";
 import { usePeerDetail } from "../../hooks/usePeerDetail";
 import { formatDate, formatShortKey, peerTitle } from "../../lib/format";
-
-const FIRMWARE_CHANNEL_OPTIONS = ["stable", "beta", "testing"] as const;
 
 export function PeerDetailPage(): JSX.Element {
   const params = useParams();
@@ -50,7 +49,7 @@ export function PeerDetailPage(): JSX.Element {
   const [peerNotice, setPeerNotice] = useState<{ message: string; tone: "error" | "success" } | null>(null);
   const [peerActionBusy, setPeerActionBusy] = useState<string | null>(null);
   const [approveRole, setApproveRole] = useState<GearRole>("gear");
-  const [configChannel, setConfigChannel] = useState("stable");
+  const [deviceName, setDeviceName] = useState("");
   const [peerConfigResource, setPeerConfigResource] = useState<Resource | null>(null);
 
   const registration = detail.data?.registration ?? null;
@@ -59,12 +58,11 @@ export function PeerDetailPage(): JSX.Element {
   const isApproved = isActive && registration?.role !== "unspecified";
 
   useEffect(() => {
-    const nextChannel = detail.data?.config?.firmware?.channel ?? "stable";
-    setConfigChannel(FIRMWARE_CHANNEL_OPTIONS.includes(nextChannel as (typeof FIRMWARE_CHANNEL_OPTIONS)[number]) ? nextChannel : "stable");
     if (detail.data?.registration?.role && detail.data.registration.role !== "unspecified") {
       setApproveRole(detail.data.registration.role);
     }
-  }, [detail.data?.config?.firmware?.channel, detail.data?.registration?.role]);
+    setDeviceName(detail.data?.info?.name ?? "");
+  }, [detail.data?.info?.name, detail.data?.registration?.role]);
 
   const loadPeerConfigResource = useCallback(async () => {
     if (publicKey === "") {
@@ -178,32 +176,29 @@ export function PeerDetailPage(): JSX.Element {
     );
   }, [navigate, publicKey, runPeerAction]);
 
-  const handleSaveChannel = useCallback(async () => {
+  const handleSaveInfo = useCallback(async () => {
     if (publicKey === "") {
       return;
     }
     await runPeerAction(
-      "config",
+      "info",
       async () => {
-        const nextConfig: Configuration = {
-          ...(detail.data?.config ?? {}),
-          firmware: {
-            ...(detail.data?.config?.firmware ?? {}),
-            channel: configChannel,
-          },
+        const trimmedName = deviceName.trim();
+        const nextInfo: DeviceInfo = {
+          ...(detail.data?.info ?? {}),
+          name: trimmedName === "" ? undefined : trimmedName,
         };
         await expectData(
-          putPeerConfig({
-            body: nextConfig,
+          putPeerInfo({
+            body: nextInfo,
             path: { publicKey },
           }),
         );
         await detail.reload();
-        await loadPeerConfigResource();
       },
-      `Desired channel updated to ${configChannel}.`,
+      deviceName.trim() === "" ? "Peer name cleared." : `Peer renamed to ${deviceName.trim()}.`,
     );
-  }, [configChannel, detail.data?.config, detail, loadPeerConfigResource, publicKey, runPeerAction]);
+  }, [detail, deviceName, publicKey, runPeerAction]);
 
   if (publicKey === "") {
     return <EmptyState description="Missing peer public key in the URL." title="Invalid route" />;
@@ -211,7 +206,23 @@ export function PeerDetailPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb
+      <PageHeader
+        actions={
+          <>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/peers">
+                <ChevronLeft className="size-4" />
+                Back to list
+              </Link>
+            </Button>
+            <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void detail.reload()} size="sm" variant="outline">
+              <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                <RefreshCw className="size-4" />
+                Reload
+              </span>
+            </Button>
+          </>
+        }
         items={[
           { href: "/overview", label: "Overview" },
           { href: "/peers", label: "Peers" },
@@ -219,28 +230,29 @@ export function PeerDetailPage(): JSX.Element {
         ]}
       />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Peers</div>
-          <h1 className="text-3xl font-semibold tracking-tight">{registration ? peerTitle(detail.data?.info, registration.public_key) : "Peer"}</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base break-all">{publicKey}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link to="/peers">
-              <ChevronLeft className="size-4" />
-              Back to list
-            </Link>
-          </Button>
-          <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void detail.reload()} size="sm" variant="outline">
-            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <PageSummaryCard
+        actions={
+          registration ? (
+            <Button disabled={peerActionBusy !== null} onClick={() => void handleRefreshPeer()} size="sm" type="button" variant="outline">
               <RefreshCw className="size-4" />
-              Reload
-            </span>
-          </Button>
-          {registration ? <StatusBadge status={registration.status} /> : null}
-        </div>
-      </div>
+              Refresh Peer
+            </Button>
+          ) : null
+        }
+        description={<span className="break-all font-mono text-xs">{publicKey}</span>}
+        eyebrow="Peers"
+        meta={
+          registration ? (
+            <>
+              <StatusBadge status={registration.status} />
+              <Badge variant="outline">{registration.role}</Badge>
+              {registration.auto_registered ? <Badge variant="secondary">Auto Registered</Badge> : null}
+              {detail.data?.runtime?.online ? <Badge variant="success">Online</Badge> : <Badge variant="outline">Offline</Badge>}
+            </>
+          ) : null
+        }
+        title={registration ? peerTitle(detail.data?.info, registration.public_key) : "Peer"}
+      />
 
       {detail.loading ? (
         <div className="space-y-4">
@@ -254,22 +266,6 @@ export function PeerDetailPage(): JSX.Element {
       ) : (
         <div className="space-y-4">
           {peerNotice !== null ? <NoticeBanner message={peerNotice.message} tone={peerNotice.tone} /> : null}
-
-          <div className="flex min-w-0 flex-col gap-3 rounded-xl border bg-muted/30 p-4 lg:flex-row lg:items-center lg:justify-between">
-            <div className="min-w-0 space-y-1">
-              <div className="text-base font-semibold">{peerTitle(detail.data?.info, registration.public_key)}</div>
-              <div className="text-sm text-muted-foreground break-all">{registration.public_key}</div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button disabled={peerActionBusy !== null} onClick={() => void handleRefreshPeer()} size="sm" type="button" variant="outline">
-                <RefreshCw className="size-4" />
-                Refresh Peer
-              </Button>
-              <Badge variant="outline">{registration.role}</Badge>
-              {registration.auto_registered ? <Badge variant="secondary">Auto Registered</Badge> : null}
-              {detail.data?.runtime?.online ? <Badge variant="success">Online</Badge> : <Badge variant="outline">Offline</Badge>}
-            </div>
-          </div>
 
           <Tabs className="space-y-4" defaultValue="info">
             <TabsList className="grid h-auto w-full grid-cols-3 lg:w-[26rem]">
@@ -287,8 +283,6 @@ export function PeerDetailPage(): JSX.Element {
                     ["Manufacturer", detail.data?.info?.hardware?.manufacturer],
                     ["Model", detail.data?.info?.hardware?.model],
                     ["Revision", detail.data?.info?.hardware?.hardware_revision],
-                    ["Depot", detail.data?.info?.hardware?.depot],
-                    ["Firmware", detail.data?.info?.hardware?.firmware_semver],
                   ]}
                   title="Peer Info"
                 />
@@ -306,10 +300,9 @@ export function PeerDetailPage(): JSX.Element {
                 />
                 <DetailBlock
                   items={[
-                    ["Channel", detail.data?.config?.firmware?.channel],
+                    ["View", detail.data?.config?.view],
                     ["Resource kind", "PeerConfig"],
                     ["Resource name", registration.public_key],
-                    ["Certifications", String(detail.data?.config?.certifications?.length ?? 0)],
                   ]}
                   title="Configuration"
                 />
@@ -325,45 +318,10 @@ export function PeerDetailPage(): JSX.Element {
                 />
               </div>
 
-              <div className="grid gap-4 xl:grid-cols-2">
-                <Card className="min-w-0">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Certifications</CardTitle>
-                    <CardDescription>Attached compliance metadata.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {detail.data?.config?.certifications?.length ? (
-                      detail.data.config.certifications.map((certification, index) => (
-                        <div className="rounded-lg border bg-background px-3 py-2 text-sm" key={`${certification.id ?? "cert"}-${index}`}>
-                          <div className="font-medium">{certification.id ?? "Unknown ID"}</div>
-                          <div className="text-muted-foreground">
-                            {certification.type ?? "type"} • {certification.authority_name ?? certification.authority ?? "authority"}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <EmptyState description="No certifications are attached to this peer yet." title="No certifications" />
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="min-w-0">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">OTA Summary</CardTitle>
-                    <CardDescription>Latest OTA state reported for this peer.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <pre className="max-h-80 min-w-0 overflow-x-auto rounded-lg border bg-muted/50 p-4 text-xs leading-6 text-foreground">
-                      {JSON.stringify(detail.data?.ota ?? null, null, 2)}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-
               <Card className="min-w-0">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Raw Detail</CardTitle>
-                  <CardDescription>Combined registration, info, config, runtime, and OTA payloads.</CardDescription>
+                  <CardDescription>Combined registration, info, config, and runtime payloads.</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-6">
                   <pre className="max-h-[32rem] min-w-0 overflow-x-auto rounded-lg border bg-muted/50 p-4 text-xs leading-6 text-foreground">
@@ -375,6 +333,28 @@ export function PeerDetailPage(): JSX.Element {
 
             <TabsContent className="space-y-4" value="edit">
               <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Device Info</CardTitle>
+                    <CardDescription>Set the operator-facing name shown in peer lists and detail headers.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField description="Leave blank to clear the stored device name." label="Name">
+                      <Input
+                        onChange={(event) => setDeviceName(event.target.value)}
+                        placeholder="Living room display"
+                        value={deviceName}
+                      />
+                    </FormField>
+                    <div className="flex justify-end border-t pt-4">
+                      <Button disabled={peerActionBusy !== null} onClick={() => void handleSaveInfo()} type="button">
+                        <Save className="size-4" />
+                        Save Info
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 <Card>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base">Peer Actions</CardTitle>
@@ -443,38 +423,12 @@ export function PeerDetailPage(): JSX.Element {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Firmware Policy</CardTitle>
-                    <CardDescription>Set the desired firmware channel for this peer.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <FormField description="This controls which release stream the peer should follow." label="Desired channel">
-                      <Select onValueChange={setConfigChannel} value={configChannel}>
-                        <SelectTrigger id="peer-channel">
-                          <SelectValue placeholder="Select channel" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="stable">stable</SelectItem>
-                          <SelectItem value="beta">beta</SelectItem>
-                          <SelectItem value="testing">testing</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </FormField>
-                    <div className="flex justify-end border-t pt-4">
-                      <Button disabled={peerActionBusy !== null} onClick={() => void handleSaveChannel()} type="button">
-                        <Save className="size-4" />
-                        Save Channel
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
             </TabsContent>
 
             <TabsContent className="space-y-4" value="cli">
               <ResourceCliPanel
-                commands={peerCliCommands(registration.public_key, registration.role, configChannel)}
+                commands={peerCliCommands(registration.public_key, registration.role)}
                 resource={peerConfigResource}
                 resourceDescription="JSON returned by the resource API and accepted by admin apply. PeerConfig manages desired peer configuration."
                 resourceTitle="PeerConfig Resource Spec"
@@ -505,10 +459,9 @@ function formatBytes(value: number | undefined): string {
   return `${size.toFixed(precision)} ${units[unitIndex]}`;
 }
 
-function peerCliCommands(publicKey: string, role: GearRole, channel: string): string {
+function peerCliCommands(publicKey: string, role: GearRole): string {
   const key = shellQuote(publicKey);
   const nextRole = shellQuote(role === "unspecified" ? "gear" : role);
-  const nextChannel = shellQuote(channel);
   return [
     `# Read this peer registration`,
     `gizclaw admin peers --context <admin-cli-context> get ${key}`,
@@ -517,7 +470,6 @@ function peerCliCommands(publicKey: string, role: GearRole, channel: string): st
     `gizclaw admin peers --context <admin-cli-context> info ${key}`,
     `gizclaw admin peers --context <admin-cli-context> config ${key}`,
     `gizclaw admin peers --context <admin-cli-context> runtime ${key}`,
-    `gizclaw admin peers --context <admin-cli-context> ota ${key}`,
     ``,
     `# Refresh state from the device-side API`,
     `gizclaw admin peers --context <admin-cli-context> refresh ${key}`,
@@ -527,7 +479,6 @@ function peerCliCommands(publicKey: string, role: GearRole, channel: string): st
     `gizclaw admin peers --context <admin-cli-context> block ${key}`,
     ``,
     `# Update desired configuration`,
-    `gizclaw admin peers --context <admin-cli-context> set-firmware-channel ${key} ${nextChannel}`,
     `gizclaw admin peers --context <admin-cli-context> put-config ${key} --file config.json`,
     ``,
     `# Show/apply the declarative PeerConfig resource`,

@@ -18,12 +18,18 @@ func adminSidebarNavigationStories() []Story {
 			}{
 				{label: "Overview", heading: "Dashboard", path: "/overview"},
 				{label: "Peers", heading: "Peers", path: "/peers"},
-				{label: "Firmware", heading: "Depots", path: "/firmware"},
+				{label: "Firmwares", heading: "Firmwares", path: "/firmwares"},
 				{label: "Credentials", heading: "Credentials", path: "/providers/credentials"},
+				{label: "OpenAI Tenants", heading: "OpenAI Tenants", path: "/providers/openai-tenants"},
+				{label: "Gemini Tenants", heading: "Gemini Tenants", path: "/providers/gemini-tenants"},
+				{label: "DashScope Tenants", heading: "DashScope Tenants", path: "/providers/dashscope-tenants"},
 				{label: "MiniMax Tenants", heading: "MiniMax Tenants", path: "/providers/minimax-tenants"},
+				{label: "Volcengine Tenants", heading: "Volcengine Tenants", path: "/providers/volc-tenants"},
 				{label: "Voices", heading: "Voices", path: "/ai/voices"},
+				{label: "Models", heading: "Models", path: "/ai/models"},
 				{label: "Workflows", heading: "Workflows", path: "/ai/workflows"},
 				{label: "Workspaces", heading: "Workspaces", path: "/ai/workspaces"},
+				{label: "Access Control", heading: "Access Control", path: "/settings/acl"},
 			} {
 				page.ClickNavigationLink(destination.label)
 				page.ExpectURLSuffix(destination.path)

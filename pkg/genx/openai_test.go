@@ -113,7 +113,7 @@ func TestOpenAIConversionHelpers(t *testing.T) {
 		t.Fatalf("unexpected prompt conversion: %#v", prompts)
 	}
 
-	g.UseSystemRole = true
+	g.PromptRole = PromptRoleSystem
 	prompts = g.convPrompt(&Prompt{Name: "n", Text: "sys"})
 	if len(prompts) != 1 || prompts[0].OfSystem == nil {
 		t.Fatalf("expected system role prompt, got: %#v", prompts)
@@ -129,7 +129,7 @@ func TestOpenAIConversionHelpers(t *testing.T) {
 		t.Fatalf("convModelMessage text failed: %v", err)
 	}
 
-	g.SupportTextOnly = true
+	g.TextOnly = true
 	if _, err := g.convUserMessage(&Message{Role: RoleUser, Payload: Contents{&Blob{MIMEType: "audio/mp3", Data: []byte{1}}}}); err == nil {
 		t.Fatal("expected text-only model error for audio")
 	}
@@ -137,7 +137,7 @@ func TestOpenAIConversionHelpers(t *testing.T) {
 		t.Fatalf("convUserMessage text failed: %v", err)
 	}
 
-	g.SupportTextOnly = false
+	g.TextOnly = false
 	if _, err := g.convUserMessage(&Message{Role: RoleUser, Payload: Contents{&Blob{MIMEType: "application/octet-stream", Data: []byte{1}}}}); err == nil {
 		t.Fatal("expected unsupported mime error")
 	}
@@ -176,6 +176,15 @@ func TestOpenAIConversionHelpers(t *testing.T) {
 	}
 	if params.Model != "gpt-test" || len(params.Messages) == 0 {
 		t.Fatalf("unexpected chatCompletion params: %#v", params)
+	}
+	mcb := &ModelContextBuilder{Params: &ModelParams{ExtraFields: map[string]any{"reasoning_effort": "high"}}}
+	params, err = g2.chatCompletion(mcb.Build(), &ModelParams{ExtraFields: map[string]any{"foo": "base"}})
+	if err != nil {
+		t.Fatalf("chatCompletion with context params failed: %v", err)
+	}
+	extra := params.ExtraFields()
+	if extra["foo"] != "base" || extra["reasoning_effort"] != "high" {
+		t.Fatalf("extra fields = %#v", extra)
 	}
 
 	if _, err := (&OpenAIGenerator{SupportToolCalls: true}).chatCompletion(ModelContexts((&ModelContextBuilder{Tools: []Tool{&SearchWebTool{}}}).Build()), nil); err == nil {

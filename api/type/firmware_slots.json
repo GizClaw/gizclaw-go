@@ -1,0 +1,40 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Firmware Slots Type",
+    "description": "Firmware release slot set schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "FirmwareSlots": {
+        "type": "object",
+        "required": [
+          "rollback",
+          "stable",
+          "beta",
+          "develop",
+          "pending"
+        ],
+        "properties": {
+          "rollback": {
+            "$ref": "./firmware_slot.json#/components/schemas/FirmwareSlot"
+          },
+          "stable": {
+            "$ref": "./firmware_slot.json#/components/schemas/FirmwareSlot"
+          },
+          "beta": {
+            "$ref": "./firmware_slot.json#/components/schemas/FirmwareSlot"
+          },
+          "develop": {
+            "$ref": "./firmware_slot.json#/components/schemas/FirmwareSlot"
+          },
+          "pending": {
+            "$ref": "./firmware_slot.json#/components/schemas/FirmwareSlot"
+          }
+        }
+      }
+    }
+  }
+}

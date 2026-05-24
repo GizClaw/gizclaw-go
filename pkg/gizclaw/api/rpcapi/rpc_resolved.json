@@ -3,35 +3,12 @@
     "schemas": {
       "Configuration": {
         "properties": {
-          "certifications": {
-            "items": {
-              "$ref": "#/components/schemas/GearCertification"
-            },
-            "type": "array"
-          },
-          "firmware": {
-            "$ref": "#/components/schemas/FirmwareConfig"
-          }
-        },
-        "type": "object"
-      },
-      "DepotFile": {
-        "properties": {
-          "md5": {
-            "type": "string"
-          },
-          "path": {
-            "type": "string"
-          },
-          "sha256": {
+          "view": {
+            "description": "Current content view name selected for this gear.",
+            "example": "under-12",
             "type": "string"
           }
         },
-        "required": [
-          "path",
-          "sha256",
-          "md5"
-        ],
         "type": "object"
       },
       "DeviceInfo": {
@@ -44,14 +21,6 @@
           },
           "sn": {
             "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "FirmwareConfig": {
-        "properties": {
-          "channel": {
-            "$ref": "#/components/schemas/GearFirmwareChannel"
           }
         },
         "type": "object"
@@ -100,51 +69,6 @@
         ],
         "type": "object"
       },
-      "GearCertification": {
-        "properties": {
-          "authority": {
-            "$ref": "#/components/schemas/GearCertificationAuthority"
-          },
-          "authority_name": {
-            "type": "string"
-          },
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "$ref": "#/components/schemas/GearCertificationType"
-          }
-        },
-        "required": [
-          "type",
-          "authority",
-          "id"
-        ],
-        "type": "object"
-      },
-      "GearCertificationAuthority": {
-        "enum": [
-          "unknown",
-          "ccc",
-          "ce",
-          "fcc",
-          "miit",
-          "srrc",
-          "rohs",
-          "internal"
-        ],
-        "type": "string"
-      },
-      "GearCertificationType": {
-        "enum": [
-          "license",
-          "certification"
-        ],
-        "type": "string"
-      },
-      "GearFirmwareChannel": {
-        "type": "string"
-      },
       "GearGetConfigRequest": {
         "additionalProperties": false,
         "properties": {},
@@ -160,14 +84,6 @@
       },
       "GearGetInfoResponse": {
         "$ref": "#/components/schemas/DeviceInfo"
-      },
-      "GearGetOTARequest": {
-        "additionalProperties": false,
-        "properties": {},
-        "type": "object"
-      },
-      "GearGetOTAResponse": {
-        "$ref": "#/components/schemas/OTASummary"
       },
       "GearGetRegistrationRequest": {
         "additionalProperties": false,
@@ -336,12 +252,6 @@
       },
       "HardwareInfo": {
         "properties": {
-          "depot": {
-            "type": "string"
-          },
-          "firmware_semver": {
-            "type": "string"
-          },
           "hardware_revision": {
             "type": "string"
           },
@@ -364,32 +274,6 @@
             "type": "string"
           }
         },
-        "type": "object"
-      },
-      "OTASummary": {
-        "properties": {
-          "channel": {
-            "type": "string"
-          },
-          "depot": {
-            "type": "string"
-          },
-          "files": {
-            "items": {
-              "$ref": "#/components/schemas/DepotFile"
-            },
-            "type": "array"
-          },
-          "firmware_semver": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "depot",
-          "channel",
-          "firmware_semver",
-          "files"
-        ],
         "type": "object"
       },
       "PingRequest": {
@@ -460,7 +344,6 @@
           "gear.config.get",
           "gear.info.get",
           "gear.info.put",
-          "gear.ota.get",
           "gear.registration.get",
           "gear.registration.register",
           "gear.runtime.get",
@@ -492,9 +375,6 @@
               },
               {
                 "$ref": "#/components/schemas/GearPutInfoRequest"
-              },
-              {
-                "$ref": "#/components/schemas/GearGetOTARequest"
               },
               {
                 "$ref": "#/components/schemas/GearGetRegistrationRequest"
@@ -545,9 +425,6 @@
               },
               {
                 "$ref": "#/components/schemas/GearPutInfoResponse"
-              },
-              {
-                "$ref": "#/components/schemas/GearGetOTAResponse"
               },
               {
                 "$ref": "#/components/schemas/GearGetRegistrationResponse"

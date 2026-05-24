@@ -1,7 +1,6 @@
 package ui_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -29,15 +28,20 @@ import (
 )
 
 const (
-	SeedDepotName          = itest.SeedDepotName
-	SeedCredentialName     = itest.SeedCredentialName
-	SeedMiniMaxTenantName  = itest.SeedMiniMaxTenantName
-	SeedVoiceID            = itest.SeedVoiceID
-	SeedVolcCredentialName = itest.SeedVolcCredentialName
-	SeedVolcTenantName     = itest.SeedVolcTenantName
-	SeedVolcVoiceID        = itest.SeedVolcVoiceID
-	SeedWorkflowName       = itest.SeedWorkflowName
-	SeedWorkspaceName      = itest.SeedWorkspaceName
+	SeedCredentialName      = itest.SeedCredentialName
+	SeedOpenAITenantName    = itest.SeedOpenAITenantName
+	SeedGeminiTenantName    = itest.SeedGeminiTenantName
+	SeedDashScopeTenantName = itest.SeedDashScopeTenantName
+	SeedModelID             = itest.SeedModelID
+	SeedFirmwareName        = itest.SeedFirmwareName
+	SeedACLViewName         = itest.SeedACLViewName
+	SeedMiniMaxTenantName   = itest.SeedMiniMaxTenantName
+	SeedVoiceID             = itest.SeedVoiceID
+	SeedVolcCredentialName  = itest.SeedVolcCredentialName
+	SeedVolcTenantName      = itest.SeedVolcTenantName
+	SeedVolcVoiceID         = itest.SeedVolcVoiceID
+	SeedWorkflowName        = itest.SeedWorkflowName
+	SeedWorkspaceName       = itest.SeedWorkspaceName
 )
 
 type Story struct {
@@ -207,30 +211,6 @@ func (p *Page) SetInputFiles(index int, name, mimeType string, data []byte) {
 	}
 }
 
-func FirmwareReleaseTar(t testing.TB, channel, firmwareSemver string) []byte {
-	t.Helper()
-
-	releaseTar, err := itest.FirmwareReleaseTarSeed(channel, firmwareSemver)
-	if err != nil {
-		t.Fatalf("build firmware tar seed: %v", err)
-	}
-	return releaseTar
-}
-
-func DepotInfoJSON(t testing.TB) []byte {
-	t.Helper()
-
-	info, err := itest.LoadDepotInfoSeed()
-	if err != nil {
-		t.Fatalf("load depot info seed: %v", err)
-	}
-	data, err := json.Marshal(info)
-	if err != nil {
-		t.Fatalf("marshal depot info seed: %v", err)
-	}
-	return data
-}
-
 func (p *Page) gotoURL(baseURL, routePath string) {
 	p.t.Helper()
 	target := joinURL(p.t, baseURL, routePath)
@@ -286,10 +266,6 @@ func startSeededUI(t testing.TB) Seed {
 	if err := itest.ApplyWorkspaceSeed(seedCtx, adminAPI); err != nil {
 		t.Fatalf("apply workspace seed: %v", err)
 	}
-	if err := itest.ApplyFirmwareSeed(seedCtx, adminAPI); err != nil {
-		t.Fatalf("apply firmware seed: %v", err)
-	}
-	applyFirmwareReleaseSeed(t, seedCtx, adminAPI, "beta", "1.0.1")
 	for _, publicKey := range []string{
 		h.ContextPublicKey("device-a"),
 		h.ContextPublicKey("device-delete-a"),
@@ -358,22 +334,6 @@ func approveGear(t testing.TB, ctx context.Context, api *adminservice.ClientWith
 		return
 	}
 	t.Fatalf("approve %q got status %d: %s", publicKey, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
-}
-
-func applyFirmwareReleaseSeed(t testing.TB, ctx context.Context, api *adminservice.ClientWithResponses, channel, firmwareSemver string) {
-	t.Helper()
-
-	releaseTar, err := itest.FirmwareReleaseTarSeed(channel, firmwareSemver)
-	if err != nil {
-		t.Fatalf("build %s firmware seed: %v", channel, err)
-	}
-	resp, err := api.PutChannelWithBodyWithResponse(ctx, SeedDepotName, channel, "application/octet-stream", bytes.NewReader(releaseTar))
-	if err != nil {
-		t.Fatalf("put %s firmware seed: %v", channel, err)
-	}
-	if resp.JSON200 == nil {
-		t.Fatalf("put %s firmware seed got status %d: %s", channel, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
-	}
 }
 
 func startTestUI(t testing.TB, name string, client *gizclaw.Client, uiFS fs.FS) string {

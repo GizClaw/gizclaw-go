@@ -5,358 +5,457 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
-	"io/fs"
 	"net/url"
-	"path"
-	"sync"
-
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"strings"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
-	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
-	"github.com/gofiber/fiber/v2"
+)
+
+var firmwaresRoot = kv.Key{"by-name"}
+
+const (
+	defaultListLimit = 50
+	maxListLimit     = 200
 )
 
 type Server struct {
-	Store         depotstore.Store
-	MetadataStore kv.Store
-
-	// ResolvePeerTarget maps a peer public key to the OTA depot/channel it should read from.
-	ResolvePeerTarget func(ctx context.Context, publicKey giznet.PublicKey) (depot string, channel Channel, err error)
-
-	mu      sync.Mutex
-	depotMu map[string]*sync.Mutex
+	Store kv.Store
+	Now   func() time.Time
 }
 
-func convertViaJSON[T any](in any) (T, error) {
-	var out T
-	data, err := json.Marshal(in)
+type FirmwareAdminService interface {
+	ListFirmwares(context.Context, adminservice.ListFirmwaresRequestObject) (adminservice.ListFirmwaresResponseObject, error)
+	CreateFirmware(context.Context, adminservice.CreateFirmwareRequestObject) (adminservice.CreateFirmwareResponseObject, error)
+	DeleteFirmware(context.Context, adminservice.DeleteFirmwareRequestObject) (adminservice.DeleteFirmwareResponseObject, error)
+	GetFirmware(context.Context, adminservice.GetFirmwareRequestObject) (adminservice.GetFirmwareResponseObject, error)
+	PutFirmware(context.Context, adminservice.PutFirmwareRequestObject) (adminservice.PutFirmwareResponseObject, error)
+	ReleaseFirmware(context.Context, adminservice.ReleaseFirmwareRequestObject) (adminservice.ReleaseFirmwareResponseObject, error)
+	RollbackFirmware(context.Context, adminservice.RollbackFirmwareRequestObject) (adminservice.RollbackFirmwareResponseObject, error)
+}
+
+var _ FirmwareAdminService = (*Server)(nil)
+
+func (s *Server) ListFirmwares(ctx context.Context, request adminservice.ListFirmwaresRequestObject) (adminservice.ListFirmwaresResponseObject, error) {
+	store, err := s.store()
 	if err != nil {
-		return out, err
+		return adminservice.ListFirmwares500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	if err := json.Unmarshal(data, &out); err != nil {
-		return out, err
+	cursor, limit := normalizeListParams(request.Params.Cursor, request.Params.Limit)
+	items, hasNext, nextCursor, err := listFirmwarePage(ctx, store, cursor, limit)
+	if err != nil {
+		return adminservice.ListFirmwares500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.ListFirmwares200JSONResponse(adminservice.FirmwareList{
+		HasNext:    hasNext,
+		Items:      items,
+		NextCursor: nextCursor,
+	}), nil
+}
+
+func (s *Server) CreateFirmware(ctx context.Context, request adminservice.CreateFirmwareRequestObject) (adminservice.CreateFirmwareResponseObject, error) {
+	store, err := s.store()
+	if err != nil {
+		return adminservice.CreateFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if request.Body == nil {
+		return adminservice.CreateFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_FIRMWARE", "request body required")), nil
+	}
+	item, err := normalizeFirmwareUpsert(*request.Body, "")
+	if err != nil {
+		return adminservice.CreateFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_FIRMWARE", err.Error())), nil
+	}
+	if _, err := Get(ctx, store, item.Name); err == nil {
+		return adminservice.CreateFirmware409JSONResponse(apitypes.NewErrorResponse("FIRMWARE_ALREADY_EXISTS", fmt.Sprintf("firmware %q already exists", item.Name))), nil
+	} else if !errors.Is(err, kv.ErrNotFound) {
+		return adminservice.CreateFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	now := s.now()
+	item.CreatedAt = now
+	item.UpdatedAt = now
+	if err := Write(ctx, store, item); err != nil {
+		return adminservice.CreateFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.CreateFirmware200JSONResponse(item), nil
+}
+
+func (s *Server) DeleteFirmware(ctx context.Context, request adminservice.DeleteFirmwareRequestObject) (adminservice.DeleteFirmwareResponseObject, error) {
+	store, err := s.store()
+	if err != nil {
+		return adminservice.DeleteFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	name, err := url.PathUnescape(string(request.Name))
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	item, err := Get(ctx, store, name)
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return adminservice.DeleteFirmware404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", fmt.Sprintf("firmware %q not found", name))), nil
+		}
+		return adminservice.DeleteFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if err := store.Delete(ctx, firmwareKey(name)); err != nil {
+		return adminservice.DeleteFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.DeleteFirmware200JSONResponse(item), nil
+}
+
+func (s *Server) GetFirmware(ctx context.Context, request adminservice.GetFirmwareRequestObject) (adminservice.GetFirmwareResponseObject, error) {
+	store, err := s.store()
+	if err != nil {
+		return adminservice.GetFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	name, err := url.PathUnescape(string(request.Name))
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	item, err := Get(ctx, store, name)
+	if err != nil {
+		if errors.Is(err, kv.ErrNotFound) {
+			return adminservice.GetFirmware404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", fmt.Sprintf("firmware %q not found", name))), nil
+		}
+		return adminservice.GetFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.GetFirmware200JSONResponse(item), nil
+}
+
+func (s *Server) PutFirmware(ctx context.Context, request adminservice.PutFirmwareRequestObject) (adminservice.PutFirmwareResponseObject, error) {
+	store, err := s.store()
+	if err != nil {
+		return adminservice.PutFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	if request.Body == nil {
+		return adminservice.PutFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_FIRMWARE", "request body required")), nil
+	}
+	name, err := url.PathUnescape(string(request.Name))
+	if err != nil {
+		return nil, fmt.Errorf("invalid params: %w", err)
+	}
+	item, err := normalizeFirmwareUpsert(*request.Body, name)
+	if err != nil {
+		return adminservice.PutFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_FIRMWARE", err.Error())), nil
+	}
+	previous, err := Get(ctx, store, name)
+	if err != nil && !errors.Is(err, kv.ErrNotFound) {
+		return adminservice.PutFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	now := s.now()
+	item.CreatedAt = now
+	item.UpdatedAt = now
+	if err == nil {
+		item.CreatedAt = previous.CreatedAt
+	}
+	if err := Write(ctx, store, item); err != nil {
+		return adminservice.PutFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	}
+	return adminservice.PutFirmware200JSONResponse(item), nil
+}
+
+func (s *Server) ReleaseFirmware(ctx context.Context, request adminservice.ReleaseFirmwareRequestObject) (adminservice.ReleaseFirmwareResponseObject, error) {
+	item, err := s.updateSlots(ctx, request.Name, releaseSlots)
+	if err != nil {
+		return releaseError(request.Name, err), nil
+	}
+	return adminservice.ReleaseFirmware200JSONResponse(item), nil
+}
+
+func (s *Server) RollbackFirmware(ctx context.Context, request adminservice.RollbackFirmwareRequestObject) (adminservice.RollbackFirmwareResponseObject, error) {
+	item, err := s.updateSlots(ctx, request.Name, rollbackSlots)
+	if err != nil {
+		return rollbackError(request.Name, err), nil
+	}
+	return adminservice.RollbackFirmware200JSONResponse(item), nil
+}
+
+func (s *Server) updateSlots(ctx context.Context, rawName string, mutate func(apitypes.FirmwareSlots) apitypes.FirmwareSlots) (apitypes.Firmware, error) {
+	store, err := s.store()
+	if err != nil {
+		return apitypes.Firmware{}, err
+	}
+	name, err := url.PathUnescape(string(rawName))
+	if err != nil {
+		return apitypes.Firmware{}, fmt.Errorf("invalid params: %w", err)
+	}
+	item, err := Get(ctx, store, name)
+	if err != nil {
+		return apitypes.Firmware{}, err
+	}
+	item.Slots = mutate(item.Slots)
+	if !slotHasPayload(item.Slots.Stable) {
+		return apitypes.Firmware{}, errStableEmpty
+	}
+	item.UpdatedAt = s.now()
+	if err := Write(ctx, store, item); err != nil {
+		return apitypes.Firmware{}, err
+	}
+	return item, nil
+}
+
+func releaseSlots(slots apitypes.FirmwareSlots) apitypes.FirmwareSlots {
+	return apitypes.FirmwareSlots{
+		Rollback: slots.Stable,
+		Stable:   slots.Beta,
+		Beta:     slots.Develop,
+		Develop:  slots.Pending,
+		Pending:  apitypes.FirmwareSlot{},
+	}
+}
+
+func rollbackSlots(slots apitypes.FirmwareSlots) apitypes.FirmwareSlots {
+	return apitypes.FirmwareSlots{
+		Rollback: slots.Stable,
+		Stable:   slots.Rollback,
+		Beta:     slots.Beta,
+		Develop:  slots.Develop,
+		Pending:  slots.Pending,
+	}
+}
+
+var errStableEmpty = errors.New("stable slot must not be empty after operation")
+
+func releaseError(name string, err error) adminservice.ReleaseFirmwareResponseObject {
+	if errors.Is(err, kv.ErrNotFound) {
+		return adminservice.ReleaseFirmware404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", fmt.Sprintf("firmware %q not found", name)))
+	}
+	if errors.Is(err, errStableEmpty) {
+		return adminservice.ReleaseFirmware409JSONResponse(apitypes.NewErrorResponse("FIRMWARE_STABLE_EMPTY", err.Error()))
+	}
+	return adminservice.ReleaseFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error()))
+}
+
+func rollbackError(name string, err error) adminservice.RollbackFirmwareResponseObject {
+	if errors.Is(err, kv.ErrNotFound) {
+		return adminservice.RollbackFirmware404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", fmt.Sprintf("firmware %q not found", name)))
+	}
+	if errors.Is(err, errStableEmpty) {
+		return adminservice.RollbackFirmware409JSONResponse(apitypes.NewErrorResponse("FIRMWARE_STABLE_EMPTY", err.Error()))
+	}
+	return adminservice.RollbackFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error()))
+}
+
+func Get(ctx context.Context, store kv.Store, name string) (apitypes.Firmware, error) {
+	data, err := store.Get(ctx, firmwareKey(name))
+	if err != nil {
+		return apitypes.Firmware{}, err
+	}
+	var item apitypes.Firmware
+	if err := json.Unmarshal(data, &item); err != nil {
+		return apitypes.Firmware{}, err
+	}
+	return item, nil
+}
+
+func Write(ctx context.Context, store kv.Store, item apitypes.Firmware) error {
+	data, err := json.Marshal(item)
+	if err != nil {
+		return fmt.Errorf("firmware: encode %s: %w", item.Name, err)
+	}
+	if err := store.Set(ctx, firmwareKey(item.Name), data); err != nil {
+		return fmt.Errorf("firmware: write %s: %w", item.Name, err)
+	}
+	return nil
+}
+
+func listFirmwarePage(ctx context.Context, store kv.Store, cursor string, limit int) ([]apitypes.Firmware, bool, *string, error) {
+	entries, err := kv.ListAfter(ctx, store, firmwaresRoot, cursorAfterKey(firmwaresRoot, cursor), limit+1)
+	if err != nil {
+		return nil, false, nil, err
+	}
+	pageEntries, hasNext, nextCursor := paginateEntries(entries, limit)
+	items := make([]apitypes.Firmware, 0, len(pageEntries))
+	for _, entry := range pageEntries {
+		var item apitypes.Firmware
+		if err := json.Unmarshal(entry.Value, &item); err != nil {
+			return nil, false, nil, fmt.Errorf("firmware: decode list %s: %w", entry.Key.String(), err)
+		}
+		items = append(items, item)
+	}
+	return items, hasNext, nextCursor, nil
+}
+
+func normalizeFirmwareUpsert(in adminservice.FirmwareUpsert, expectedName string) (apitypes.Firmware, error) {
+	name := strings.TrimSpace(in.Name)
+	if name == "" {
+		return apitypes.Firmware{}, errors.New("name is required")
+	}
+	if expectedName != "" && name != expectedName {
+		return apitypes.Firmware{}, fmt.Errorf("name %q must match path name %q", name, expectedName)
+	}
+	slots, err := normalizeSlots(in.Slots)
+	if err != nil {
+		return apitypes.Firmware{}, err
+	}
+	item := apitypes.Firmware{
+		Name:  name,
+		Slots: slots,
+	}
+	if in.Description != nil {
+		description := strings.TrimSpace(*in.Description)
+		if description != "" {
+			item.Description = &description
+		}
+	}
+	return item, nil
+}
+
+func normalizeSlots(in apitypes.FirmwareSlots) (apitypes.FirmwareSlots, error) {
+	var err error
+	out := apitypes.FirmwareSlots{}
+	if out.Rollback, err = normalizeSlot(in.Rollback); err != nil {
+		return out, fmt.Errorf("rollback: %w", err)
+	}
+	if out.Stable, err = normalizeSlot(in.Stable); err != nil {
+		return out, fmt.Errorf("stable: %w", err)
+	}
+	if out.Beta, err = normalizeSlot(in.Beta); err != nil {
+		return out, fmt.Errorf("beta: %w", err)
+	}
+	if out.Develop, err = normalizeSlot(in.Develop); err != nil {
+		return out, fmt.Errorf("develop: %w", err)
+	}
+	if out.Pending, err = normalizeSlot(in.Pending); err != nil {
+		return out, fmt.Errorf("pending: %w", err)
 	}
 	return out, nil
 }
 
-type FirmwareAdminService interface {
-	ListDepots(context.Context, adminservice.ListDepotsRequestObject) (adminservice.ListDepotsResponseObject, error)
-	GetDepot(context.Context, adminservice.GetDepotRequestObject) (adminservice.GetDepotResponseObject, error)
-	PutDepotInfo(context.Context, adminservice.PutDepotInfoRequestObject) (adminservice.PutDepotInfoResponseObject, error)
-	GetChannel(context.Context, adminservice.GetChannelRequestObject) (adminservice.GetChannelResponseObject, error)
-	PutChannel(context.Context, adminservice.PutChannelRequestObject) (adminservice.PutChannelResponseObject, error)
-	ReleaseDepot(context.Context, adminservice.ReleaseDepotRequestObject) (adminservice.ReleaseDepotResponseObject, error)
-	RollbackDepot(context.Context, adminservice.RollbackDepotRequestObject) (adminservice.RollbackDepotResponseObject, error)
-	GetPeerOTA(context.Context, adminservice.GetPeerOTARequestObject) (adminservice.GetPeerOTAResponseObject, error)
-}
-
-type FirmwareGearService interface {
-	GetOTA(context.Context, gearservice.GetOTARequestObject) (gearservice.GetOTAResponseObject, error)
-	DownloadFirmware(context.Context, gearservice.DownloadFirmwareRequestObject) (gearservice.DownloadFirmwareResponseObject, error)
-}
-
-type FirmwareServerPublic interface{}
-
-var _ FirmwareAdminService = (*Server)(nil)
-var _ FirmwareGearService = (*Server)(nil)
-var _ FirmwareServerPublic = (*Server)(nil)
-
-// ListDepots implements `adminservice.StrictServerInterface.ListDepots`.
-func (s *Server) ListDepots(ctx context.Context, _ adminservice.ListDepotsRequestObject) (adminservice.ListDepotsResponseObject, error) {
-	names, err := s.scanDepotNames(ctx)
-	if err != nil {
-		return adminservice.ListDepots500JSONResponse(apitypes.NewErrorResponse("DEPOT_METADATA_FAILED", err.Error())), nil
-	}
-	items := make([]apitypes.Depot, 0, len(names))
-	for _, name := range names {
-		depot, err := s.getDepotMetadata(ctx, name)
-		if err != nil {
-			return adminservice.ListDepots500JSONResponse(apitypes.NewErrorResponse("DEPOT_METADATA_FAILED", err.Error())), nil
+func normalizeSlot(in apitypes.FirmwareSlot) (apitypes.FirmwareSlot, error) {
+	out := apitypes.FirmwareSlot{}
+	if in.Version != nil {
+		version := strings.TrimSpace(*in.Version)
+		if version != "" {
+			out.Version = &version
 		}
-		items = append(items, depot)
 	}
-	return adminservice.ListDepots200JSONResponse(adminservice.DepotList{Items: items}), nil
-}
-
-// GetDepot implements `adminservice.StrictServerInterface.GetDepot`.
-func (s *Server) GetDepot(ctx context.Context, request adminservice.GetDepotRequestObject) (adminservice.GetDepotResponseObject, error) {
-	depotName, err := url.PathUnescape(request.Depot)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
+	if in.Description != nil {
+		description := strings.TrimSpace(*in.Description)
+		if description != "" {
+			out.Description = &description
+		}
 	}
-	depot, err := s.scanDepot(ctx, depotName)
-	if err != nil {
-		return adminservice.GetDepot404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
-	}
-	return adminservice.GetDepot200JSONResponse(depot), nil
-}
-
-// PutDepotInfo implements `adminservice.StrictServerInterface.PutDepotInfo`.
-func (s *Server) PutDepotInfo(ctx context.Context, request adminservice.PutDepotInfoRequestObject) (adminservice.PutDepotInfoResponseObject, error) {
-	if request.Body == nil {
-		return adminservice.PutDepotInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_JSON", "request body required")), nil
-	}
-	depotName, err := url.PathUnescape(request.Depot)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
-	}
-	info := normalizeDepotInfo(*request.Body)
-	unlock := s.lockDepot(depotName)
-	defer unlock()
-	if err := s.ensureDepot(depotName); err != nil {
-		return nil, err
-	}
-	if err := validateDepotInfo(info); err != nil {
-		return adminservice.PutDepotInfo400JSONResponse(apitypes.NewErrorResponse("INVALID_JSON", err.Error())), nil
-	}
-	if current, err := s.scanDepot(ctx, depotName); err == nil {
-		for _, channel := range allChannels() {
-			release, ok := depotRelease(current, channel)
-			if !ok {
-				continue
+	if in.Artifacts != nil {
+		artifacts := make([]apitypes.FirmwareArtifact, 0, len(*in.Artifacts))
+		for i, artifact := range *in.Artifacts {
+			next, err := normalizeArtifact(artifact)
+			if err != nil {
+				return out, fmt.Errorf("artifact[%d]: %w", i, err)
 			}
-			if !sameInfoFiles(info, release) {
-				return adminservice.PutDepotInfo409JSONResponse(apitypes.NewErrorResponse("INFO_FILES_MISMATCH", "firmware files mismatch")), nil
-			}
+			artifacts = append(artifacts, next)
+		}
+		if len(artifacts) > 0 {
+			out.Artifacts = &artifacts
 		}
 	}
-	depot, err := s.scanDepot(ctx, depotName)
-	if err != nil {
-		if !errors.Is(err, errDepotNotFound) {
-			return adminservice.PutDepotInfo500JSONResponse(apitypes.NewErrorResponse("DEPOT_METADATA_FAILED", err.Error())), nil
-		}
-		depot = apitypes.Depot{Name: depotName}
-	}
-	depot.Info = info
-	if err := s.writeDepotMetadata(ctx, depot); err != nil {
-		return adminservice.PutDepotInfo500JSONResponse(apitypes.NewErrorResponse("DEPOT_METADATA_FAILED", err.Error())), nil
-	}
-	return adminservice.PutDepotInfo200JSONResponse(depot), nil
+	return out, nil
 }
 
-// GetChannel implements `adminservice.StrictServerInterface.GetChannel`.
-func (s *Server) GetChannel(ctx context.Context, request adminservice.GetChannelRequestObject) (adminservice.GetChannelResponseObject, error) {
-	depotName, err := url.PathUnescape(request.Depot)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
+func normalizeArtifact(in apitypes.FirmwareArtifact) (apitypes.FirmwareArtifact, error) {
+	name := strings.TrimSpace(in.Name)
+	if name == "" {
+		return apitypes.FirmwareArtifact{}, errors.New("name is required")
 	}
-	depot, err := s.scanDepot(ctx, depotName)
-	if err != nil {
-		return adminservice.GetChannel404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
+	kind := apitypes.FirmwareArtifactKind(strings.TrimSpace(string(in.Kind)))
+	if kind == "" {
+		return apitypes.FirmwareArtifact{}, errors.New("kind is required")
 	}
-	release, ok := depotRelease(depot, Channel(request.Channel))
-	if !ok {
-		return adminservice.GetChannel404JSONResponse(apitypes.NewErrorResponse("CHANNEL_NOT_FOUND", "channel not found")), nil
+	if !kind.Valid() {
+		return apitypes.FirmwareArtifact{}, fmt.Errorf("unsupported kind %q", kind)
 	}
-	return adminservice.GetChannel200JSONResponse(release), nil
-}
-
-// PutChannel implements `adminservice.StrictServerInterface.PutChannel`.
-func (s *Server) PutChannel(ctx context.Context, request adminservice.PutChannelRequestObject) (adminservice.PutChannelResponseObject, error) {
-	depotName, err := url.PathUnescape(request.Depot)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
+	artifactURL := strings.TrimSpace(in.Url)
+	if artifactURL == "" {
+		return apitypes.FirmwareArtifact{}, errors.New("url is required")
 	}
-	release, err := s.uploadTar(ctx, depotName, Channel(request.Channel), request.Body)
-	if err != nil {
-		return adminservice.PutChannel409JSONResponse(apitypes.NewErrorResponse("MANIFEST_INVALID", err.Error())), nil
-	}
-	return adminservice.PutChannel200JSONResponse(release), nil
-}
-
-// ReleaseDepot implements `adminservice.StrictServerInterface.ReleaseDepot`.
-func (s *Server) ReleaseDepot(ctx context.Context, request adminservice.ReleaseDepotRequestObject) (adminservice.ReleaseDepotResponseObject, error) {
-	depotName, err := url.PathUnescape(request.Depot)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
-	}
-	depot, err := s.releaseDepot(ctx, depotName)
-	if err != nil {
-		switch {
-		case errors.Is(err, errDepotNotFound):
-			return adminservice.ReleaseDepot404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
-		case errors.Is(err, errChannelNotFound):
-			return adminservice.ReleaseDepot409JSONResponse(apitypes.NewErrorResponse("RELEASE_NOT_READY", err.Error())), nil
-		default:
-			return adminservice.ReleaseDepot500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	out := apitypes.FirmwareArtifact{Name: name, Kind: kind, Url: artifactURL}
+	if in.Sha256 != nil {
+		sha256 := strings.TrimSpace(*in.Sha256)
+		if sha256 != "" {
+			out.Sha256 = &sha256
 		}
 	}
-	return adminservice.ReleaseDepot200JSONResponse(depot), nil
-}
-
-// RollbackDepot implements `adminservice.StrictServerInterface.RollbackDepot`.
-func (s *Server) RollbackDepot(ctx context.Context, request adminservice.RollbackDepotRequestObject) (adminservice.RollbackDepotResponseObject, error) {
-	depotName, err := url.PathUnescape(request.Depot)
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
-	}
-	depot, err := s.rollbackDepot(ctx, depotName)
-	if err != nil {
-		switch {
-		case errors.Is(err, errDepotNotFound):
-			return adminservice.RollbackDepot404JSONResponse(apitypes.NewErrorResponse("DEPOT_NOT_FOUND", err.Error())), nil
-		case errors.Is(err, errChannelNotFound):
-			return adminservice.RollbackDepot409JSONResponse(apitypes.NewErrorResponse("ROLLBACK_NOT_AVAILABLE", err.Error())), nil
-		default:
-			return adminservice.RollbackDepot500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
+	if in.Size != nil {
+		if *in.Size < 0 {
+			return apitypes.FirmwareArtifact{}, errors.New("size must be non-negative")
 		}
+		size := *in.Size
+		out.Size = &size
 	}
-	return adminservice.RollbackDepot200JSONResponse(depot), nil
+	return out, nil
 }
 
-// GetPeerOTA implements `adminservice.StrictServerInterface.GetPeerOTA`.
-// OTA is colocated here because firmware storage owns the underlying data.
-func (s *Server) GetPeerOTA(ctx context.Context, request adminservice.GetPeerOTARequestObject) (adminservice.GetPeerOTAResponseObject, error) {
-	if s.ResolvePeerTarget == nil {
-		return adminservice.GetPeerOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", "gear target resolver not configured")), nil
+func slotHasPayload(slot apitypes.FirmwareSlot) bool {
+	if slot.Version != nil && strings.TrimSpace(*slot.Version) != "" {
+		return true
 	}
-	publicKey, err := url.PathUnescape(string(request.PublicKey))
-	if err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
+	if slot.Artifacts != nil && len(*slot.Artifacts) > 0 {
+		return true
 	}
-	var key giznet.PublicKey
-	if err := key.UnmarshalText([]byte(publicKey)); err != nil {
-		return nil, fmt.Errorf("invalid params: %w", err)
-	}
-	depotName, channel, err := s.ResolvePeerTarget(ctx, key)
-	if err != nil || depotName == "" || channel == "" {
-		if err == nil {
-			err = fmt.Errorf("missing depot or channel")
-		}
-		return adminservice.GetPeerOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
-	}
-	ota, err := s.resolveOTA(ctx, depotName, channel)
-	if err != nil {
-		return adminservice.GetPeerOTA404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", err.Error())), nil
-	}
-	out, err := convertViaJSON[apitypes.OTASummary](ota)
-	if err != nil {
-		return getGearOTA500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
-	}
-	return adminservice.GetPeerOTA200JSONResponse(out), nil
+	return false
 }
 
-// GetOTA implements `gearservice.StrictServerInterface.GetOTA`.
-func (s *Server) GetOTA(ctx context.Context, _ gearservice.GetOTARequestObject) (gearservice.GetOTAResponseObject, error) {
-	depotName, channel, err := s.resolveCallerTarget(ctx)
-	if err != nil {
-		return gearservice.GetOTA404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
-	}
-	ota, err := s.resolveOTA(ctx, depotName, channel)
-	if err != nil {
-		return gearservice.GetOTA404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_NOT_FOUND", err.Error())), nil
-	}
-	return gearservice.GetOTA200JSONResponse(ota), nil
+func firmwareKey(name string) kv.Key {
+	return append(append(kv.Key{}, firmwaresRoot...), escapeStoreSegment(name))
 }
 
-// DownloadFirmware implements `gearservice.StrictServerInterface.DownloadFirmware`.
-func (s *Server) DownloadFirmware(ctx context.Context, request gearservice.DownloadFirmwareRequestObject) (gearservice.DownloadFirmwareResponseObject, error) {
-	depotName, channel, err := s.resolveCallerTarget(ctx)
-	if err != nil {
-		return gearservice.DownloadFirmware404JSONResponse(apitypes.NewErrorResponse("OTA_NOT_AVAILABLE", err.Error())), nil
-	}
-	filePath, err := url.PathUnescape(request.Path)
-	if err != nil {
-		return gearservice.DownloadFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
-	}
-	body, contentLength, headers, err := s.resolveOTAFile(ctx, depotName, channel, filePath)
-	if err != nil {
-		switch {
-		case errors.Is(err, errInvalidPath):
-			return gearservice.DownloadFirmware400JSONResponse(apitypes.NewErrorResponse("INVALID_PARAMS", err.Error())), nil
-		case errors.Is(err, errFirmwareNotFound), errors.Is(err, errDepotNotFound), errors.Is(err, errChannelNotFound):
-			return gearservice.DownloadFirmware404JSONResponse(apitypes.NewErrorResponse("FIRMWARE_FILE_NOT_FOUND", err.Error())), nil
-		default:
-			return downloadFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
-		}
-	}
-	return gearservice.DownloadFirmware200ApplicationoctetStreamResponse{
-		Body:          body,
-		Headers:       headers,
-		ContentLength: contentLength,
-	}, nil
+func escapeStoreSegment(value string) string {
+	value = strings.ReplaceAll(value, "%", "%25")
+	return strings.ReplaceAll(value, ":", "%3A")
 }
 
-func (s *Server) resolveCallerTarget(ctx context.Context) (string, Channel, error) {
-	if s.ResolvePeerTarget == nil {
-		return "", "", fmt.Errorf("gear target resolver not configured")
+func normalizeListParams(cursor *string, limit *int32) (string, int) {
+	nextCursor := ""
+	if cursor != nil {
+		nextCursor = *cursor
 	}
-	publicKey := gearservice.CallerPublicKey(ctx)
-	if publicKey.IsZero() {
-		return "", "", fmt.Errorf("caller public key not configured")
+	nextLimit := defaultListLimit
+	if limit != nil {
+		nextLimit = int(*limit)
 	}
-	depotName, channel, err := s.ResolvePeerTarget(ctx, publicKey)
-	if err != nil {
-		return "", "", err
+	if nextLimit <= 0 {
+		nextLimit = defaultListLimit
 	}
-	if depotName == "" || channel == "" {
-		return "", "", fmt.Errorf("missing depot or channel")
+	if nextLimit > maxListLimit {
+		nextLimit = maxListLimit
 	}
-	return depotName, channel, nil
+	return nextCursor, nextLimit
 }
 
-func (s *Server) resolveOTAFile(ctx context.Context, depotName string, channel Channel, relativePath string) (io.Reader, int64, gearservice.DownloadFirmware200ResponseHeaders, error) {
-	if err := validateRelativePath(relativePath); err != nil {
-		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, err
+func cursorAfterKey(prefix kv.Key, cursor string) kv.Key {
+	if cursor == "" {
+		return nil
 	}
-	depot, err := s.scanDepot(ctx, depotName)
-	if err != nil {
-		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
-	}
-	release, ok := depotRelease(depot, channel)
-	if !ok {
-		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
-	}
-	var headers gearservice.DownloadFirmware200ResponseHeaders
-	found := false
-	for _, file := range releaseFiles(release) {
-		if file.Path != relativePath {
-			continue
-		}
-		headers = gearservice.DownloadFirmware200ResponseHeaders{
-			XChecksumMD5:    file.Md5,
-			XChecksumSHA256: file.Sha256,
-		}
-		found = true
-		break
-	}
-	if !found {
-		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, fmt.Errorf("%w: %s", errFirmwareNotFound, relativePath)
-	}
-
-	fullPath := path.Join(s.channelPath(depotName, string(channel)), relativePath)
-	file, err := s.store().Open(fullPath)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, errFirmwareNotFound
-		}
-		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, err
-	}
-	info, err := file.Stat()
-	if err != nil {
-		_ = file.Close()
-		return nil, 0, gearservice.DownloadFirmware200ResponseHeaders{}, err
-	}
-	return file, info.Size(), headers, nil
+	after := append(kv.Key{}, prefix...)
+	return append(after, cursor)
 }
 
-type getGearOTA500JSONResponse apitypes.ErrorResponse
-
-func (response getGearOTA500JSONResponse) VisitGetPeerOTAResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(500)
-	return ctx.JSON(&response)
+func paginateEntries(entries []kv.Entry, limit int) ([]kv.Entry, bool, *string) {
+	if len(entries) == 0 {
+		return nil, false, nil
+	}
+	hasNext := len(entries) > limit
+	if !hasNext {
+		return entries, false, nil
+	}
+	page := entries[:limit]
+	if len(page) == 0 || len(page[len(page)-1].Key) == 0 {
+		return page, true, nil
+	}
+	nextCursor := page[len(page)-1].Key[len(page[len(page)-1].Key)-1]
+	return page, true, &nextCursor
 }
 
-type downloadFirmware500JSONResponse apitypes.ErrorResponse
+func (s *Server) store() (kv.Store, error) {
+	if s == nil || s.Store == nil {
+		return nil, errors.New("firmware store not configured")
+	}
+	return s.Store, nil
+}
 
-func (response downloadFirmware500JSONResponse) VisitDownloadFirmwareResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(500)
-	return ctx.JSON(&response)
+func (s *Server) now() time.Time {
+	if s != nil && s.Now != nil {
+		return s.Now().UTC()
+	}
+	return time.Now().UTC()
 }

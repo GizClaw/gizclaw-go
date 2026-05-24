@@ -619,7 +619,7 @@ func newRealModelCompressor(runtime realModelRuntime) memory.Compressor {
 		Client:           &client,
 		Model:            runtime.Model,
 		SupportToolCalls: true,
-		UseSystemRole:    true,
+		PromptRole:       genx.PromptRoleSystem,
 		InvokeParams:     &genx.ModelParams{MaxTokens: 4096},
 	}
 

@@ -146,6 +146,7 @@ func (h *Harness) StartServerFromFixture(fixtureName string) {
 	}
 	h.lastFixtureName = fixtureName
 	h.PrepareServerWorkspaceFromFixture(fixtureName)
+	h.MigrateServerWorkspace()
 	h.startServerProcess()
 }
 
@@ -163,6 +164,13 @@ func (h *Harness) RestartServer() {
 
 	h.StopServer()
 	h.startServerProcess()
+}
+
+func (h *Harness) MigrateServerWorkspace() {
+	h.t.Helper()
+
+	result := h.RunCLI("migrate", "--workspace", h.ServerWorkspace)
+	result.MustSucceed(h.t)
 }
 
 func (h *Harness) StopServer() {
@@ -313,10 +321,6 @@ func (h *Harness) registrationRequest(_ string, extraArgs ...string) (gearservic
 			device.Hardware.Model = &value
 		case "--hardware-revision":
 			device.Hardware.HardwareRevision = &value
-		case "--depot":
-			device.Hardware.Depot = &value
-		case "--firmware-semver":
-			device.Hardware.FirmwareSemver = &value
 		default:
 			return gearservice.RegistrationRequest{}, fmt.Errorf("unsupported register arg %q", flag)
 		}

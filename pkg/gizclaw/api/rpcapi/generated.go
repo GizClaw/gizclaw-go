@@ -10,60 +10,6 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
-// Defines values for GearCertificationAuthority.
-const (
-	GearCertificationAuthorityCcc      GearCertificationAuthority = "ccc"
-	GearCertificationAuthorityCe       GearCertificationAuthority = "ce"
-	GearCertificationAuthorityFcc      GearCertificationAuthority = "fcc"
-	GearCertificationAuthorityInternal GearCertificationAuthority = "internal"
-	GearCertificationAuthorityMiit     GearCertificationAuthority = "miit"
-	GearCertificationAuthorityRohs     GearCertificationAuthority = "rohs"
-	GearCertificationAuthoritySrrc     GearCertificationAuthority = "srrc"
-	GearCertificationAuthorityUnknown  GearCertificationAuthority = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the GearCertificationAuthority enum.
-func (e GearCertificationAuthority) Valid() bool {
-	switch e {
-	case GearCertificationAuthorityCcc:
-		return true
-	case GearCertificationAuthorityCe:
-		return true
-	case GearCertificationAuthorityFcc:
-		return true
-	case GearCertificationAuthorityInternal:
-		return true
-	case GearCertificationAuthorityMiit:
-		return true
-	case GearCertificationAuthorityRohs:
-		return true
-	case GearCertificationAuthoritySrrc:
-		return true
-	case GearCertificationAuthorityUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearCertificationType.
-const (
-	GearCertificationTypeCertification GearCertificationType = "certification"
-	GearCertificationTypeLicense       GearCertificationType = "license"
-)
-
-// Valid indicates whether the value is a known member of the GearCertificationType enum.
-func (e GearCertificationType) Valid() bool {
-	switch e {
-	case GearCertificationTypeCertification:
-		return true
-	case GearCertificationTypeLicense:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for GearRole.
 const (
 	GearRoleAdmin       GearRole = "admin"
@@ -186,7 +132,6 @@ const (
 	RPCMethodGearConfigGet            RPCMethod = "gear.config.get"
 	RPCMethodGearInfoGet              RPCMethod = "gear.info.get"
 	RPCMethodGearInfoPut              RPCMethod = "gear.info.put"
-	RPCMethodGearOtaGet               RPCMethod = "gear.ota.get"
 	RPCMethodGearRegistrationGet      RPCMethod = "gear.registration.get"
 	RPCMethodGearRegistrationRegister RPCMethod = "gear.registration.register"
 	RPCMethodGearRuntimeGet           RPCMethod = "gear.runtime.get"
@@ -203,8 +148,6 @@ func (e RPCMethod) Valid() bool {
 	case RPCMethodGearInfoGet:
 		return true
 	case RPCMethodGearInfoPut:
-		return true
-	case RPCMethodGearOtaGet:
 		return true
 	case RPCMethodGearRegistrationGet:
 		return true
@@ -240,15 +183,8 @@ func (e RPCVersion) Valid() bool {
 
 // Configuration defines model for Configuration.
 type Configuration struct {
-	Certifications *[]GearCertification `json:"certifications,omitempty"`
-	Firmware       *FirmwareConfig      `json:"firmware,omitempty"`
-}
-
-// DepotFile defines model for DepotFile.
-type DepotFile struct {
-	Md5    string `json:"md5"`
-	Path   string `json:"path"`
-	Sha256 string `json:"sha256"`
+	// View Current content view name selected for this gear.
+	View *string `json:"view,omitempty"`
 }
 
 // DeviceInfo defines model for DeviceInfo.
@@ -256,11 +192,6 @@ type DeviceInfo struct {
 	Hardware *HardwareInfo `json:"hardware,omitempty"`
 	Name     *string       `json:"name,omitempty"`
 	Sn       *string       `json:"sn,omitempty"`
-}
-
-// FirmwareConfig defines model for FirmwareConfig.
-type FirmwareConfig struct {
-	Channel *GearFirmwareChannel `json:"channel,omitempty"`
 }
 
 // Gear defines model for Gear.
@@ -276,23 +207,6 @@ type Gear struct {
 	UpdatedAt      time.Time     `json:"updated_at"`
 }
 
-// GearCertification defines model for GearCertification.
-type GearCertification struct {
-	Authority     GearCertificationAuthority `json:"authority"`
-	AuthorityName *string                    `json:"authority_name,omitempty"`
-	Id            string                     `json:"id"`
-	Type          GearCertificationType      `json:"type"`
-}
-
-// GearCertificationAuthority defines model for GearCertificationAuthority.
-type GearCertificationAuthority string
-
-// GearCertificationType defines model for GearCertificationType.
-type GearCertificationType string
-
-// GearFirmwareChannel defines model for GearFirmwareChannel.
-type GearFirmwareChannel = string
-
 // GearGetConfigRequest defines model for GearGetConfigRequest.
 type GearGetConfigRequest = map[string]interface{}
 
@@ -304,12 +218,6 @@ type GearGetInfoRequest = map[string]interface{}
 
 // GearGetInfoResponse defines model for GearGetInfoResponse.
 type GearGetInfoResponse = DeviceInfo
-
-// GearGetOTARequest defines model for GearGetOTARequest.
-type GearGetOTARequest = map[string]interface{}
-
-// GearGetOTAResponse defines model for GearGetOTAResponse.
-type GearGetOTAResponse = OTASummary
 
 // GearGetRegistrationRequest defines model for GearGetRegistrationRequest.
 type GearGetRegistrationRequest = map[string]interface{}
@@ -393,21 +301,11 @@ type GearTestMode string
 
 // HardwareInfo defines model for HardwareInfo.
 type HardwareInfo struct {
-	Depot            *string      `json:"depot,omitempty"`
-	FirmwareSemver   *string      `json:"firmware_semver,omitempty"`
 	HardwareRevision *string      `json:"hardware_revision,omitempty"`
 	Imeis            *[]GearIMEI  `json:"imeis,omitempty"`
 	Labels           *[]GearLabel `json:"labels,omitempty"`
 	Manufacturer     *string      `json:"manufacturer,omitempty"`
 	Model            *string      `json:"model,omitempty"`
-}
-
-// OTASummary defines model for OTASummary.
-type OTASummary struct {
-	Channel        string      `json:"channel"`
-	Depot          string      `json:"depot"`
-	Files          []DepotFile `json:"files"`
-	FirmwareSemver string      `json:"firmware_semver"`
 }
 
 // PingRequest defines model for PingRequest.
@@ -615,32 +513,6 @@ func (t *RPCRequest_Params) FromGearPutInfoRequest(v GearPutInfoRequest) error {
 
 // MergeGearPutInfoRequest performs a merge with any union data inside the RPCRequest_Params, using the provided GearPutInfoRequest
 func (t *RPCRequest_Params) MergeGearPutInfoRequest(v GearPutInfoRequest) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsGearGetOTARequest returns the union data inside the RPCRequest_Params as a GearGetOTARequest
-func (t RPCRequest_Params) AsGearGetOTARequest() (GearGetOTARequest, error) {
-	var body GearGetOTARequest
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromGearGetOTARequest overwrites any union data inside the RPCRequest_Params as the provided GearGetOTARequest
-func (t *RPCRequest_Params) FromGearGetOTARequest(v GearGetOTARequest) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeGearGetOTARequest performs a merge with any union data inside the RPCRequest_Params, using the provided GearGetOTARequest
-func (t *RPCRequest_Params) MergeGearGetOTARequest(v GearGetOTARequest) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -885,32 +757,6 @@ func (t *RPCResponse_Result) FromGearPutInfoResponse(v GearPutInfoResponse) erro
 
 // MergeGearPutInfoResponse performs a merge with any union data inside the RPCResponse_Result, using the provided GearPutInfoResponse
 func (t *RPCResponse_Result) MergeGearPutInfoResponse(v GearPutInfoResponse) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsGearGetOTAResponse returns the union data inside the RPCResponse_Result as a GearGetOTAResponse
-func (t RPCResponse_Result) AsGearGetOTAResponse() (GearGetOTAResponse, error) {
-	var body GearGetOTAResponse
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromGearGetOTAResponse overwrites any union data inside the RPCResponse_Result as the provided GearGetOTAResponse
-func (t *RPCResponse_Result) FromGearGetOTAResponse(v GearGetOTAResponse) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeGearGetOTAResponse performs a merge with any union data inside the RPCResponse_Result, using the provided GearGetOTAResponse
-func (t *RPCResponse_Result) MergeGearGetOTAResponse(v GearGetOTAResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

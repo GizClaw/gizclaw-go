@@ -28,6 +28,13 @@ const (
 	oaiMaxTextContentLength = 1048576
 )
 
+type PromptRole string
+
+const (
+	PromptRoleDeveloper PromptRole = "developer"
+	PromptRoleSystem    PromptRole = "system"
+)
+
 // OpenAISchemaFormatter formats a JSON schema for OpenAI structured outputs.
 type OpenAISchemaFormatter func(m *jsonschema.Schema) *jsonschema.Schema
 
@@ -40,11 +47,11 @@ type OpenAIGenerator struct {
 	GenerateParams *ModelParams `json:"generate_params,omitzero"`
 	InvokeParams   *ModelParams `json:"invoke_params,omitzero"`
 
-	SupportJSONOutput  bool `json:"support_json_output,omitzero"`
-	SupportToolCalls   bool `json:"support_tool_calls,omitzero"`
-	SupportTextOnly    bool `json:"support_text_only,omitzero"`
-	UseSystemRole      bool `json:"use_system_role,omitzero"`
-	InvokeWithToolName bool `json:"invoke_with_tool_name,omitzero"`
+	SupportJSONOutput  bool       `json:"support_json_output,omitzero"`
+	SupportToolCalls   bool       `json:"support_tool_calls,omitzero"`
+	TextOnly           bool       `json:"text_only,omitzero"`
+	PromptRole         PromptRole `json:"prompt_role,omitzero"`
+	InvokeWithToolName bool       `json:"invoke_with_tool_name,omitzero"`
 
 	ExtraFields map[string]any `json:"extra_fields,omitzero"`
 
@@ -178,6 +185,7 @@ func (g *OpenAIGenerator) chatCompletion(mctx ModelContext, mp *ModelParams) (op
 	if err != nil {
 		return openai.ChatCompletionNewParams{}, err
 	}
+	mp = mergeModelParams(mp, mctx.Params())
 	params := openai.ChatCompletionNewParams{
 		Messages: msgs,
 		Model:    g.Model,
@@ -218,10 +226,59 @@ func (g *OpenAIGenerator) chatCompletion(mctx ModelContext, mp *ModelParams) (op
 			}
 		}
 	}
-	if len(g.ExtraFields) > 0 {
-		params.SetExtraFields(g.ExtraFields)
+	extraFields := map[string]any{}
+	maps.Copy(extraFields, g.ExtraFields)
+	if mp != nil {
+		maps.Copy(extraFields, mp.ExtraFields)
+	}
+	if len(extraFields) > 0 {
+		params.SetExtraFields(extraFields)
 	}
 	return params, nil
+}
+
+func mergeModelParams(base, override *ModelParams) *ModelParams {
+	switch {
+	case base == nil:
+		return override
+	case override == nil:
+		return base
+	}
+	out := *base
+	if override.MaxTokens > 0 {
+		out.MaxTokens = override.MaxTokens
+	}
+	if override.FrequencyPenalty > 0 {
+		out.FrequencyPenalty = override.FrequencyPenalty
+	}
+	if override.N > 0 {
+		out.N = override.N
+	}
+	if override.Temperature > 0 {
+		out.Temperature = override.Temperature
+	}
+	if override.TopP > 0 {
+		out.TopP = override.TopP
+	}
+	if override.PresencePenalty > 0 {
+		out.PresencePenalty = override.PresencePenalty
+	}
+	if override.TopK > 0 {
+		out.TopK = override.TopK
+	}
+	if len(base.ExtraFields) > 0 || len(override.ExtraFields) > 0 {
+		out.ExtraFields = map[string]any{}
+		maps.Copy(out.ExtraFields, base.ExtraFields)
+		maps.Copy(out.ExtraFields, override.ExtraFields)
+	}
+	return &out
+}
+
+func (g *OpenAIGenerator) promptRole() PromptRole {
+	if g.PromptRole == PromptRoleSystem {
+		return PromptRoleSystem
+	}
+	return PromptRoleDeveloper
 }
 
 type oaiPuller struct {
@@ -342,7 +399,7 @@ func (g *OpenAIGenerator) convPrompt(p *Prompt) []openai.ChatCompletionMessagePa
 		} else {
 			t = ""
 		}
-		if g.UseSystemRole {
+		if g.promptRole() == PromptRoleSystem {
 			mp := openai.ChatCompletionMessageParamUnion{
 				OfSystem: &openai.ChatCompletionSystemMessageParam{
 					Content: openai.ChatCompletionSystemMessageParamContentUnion{
@@ -450,7 +507,7 @@ func (g *OpenAIGenerator) convUserMessage(msg *Message) (openai.ChatCompletionMe
 		case Text:
 			text.WriteString(string(v))
 		case *Blob:
-			if g.SupportTextOnly {
+			if g.TextOnly {
 				return openai.ChatCompletionMessageParamUnion{}, fmt.Errorf("model %v support text message only", g.Model)
 			}
 			switch v.MIMEType {
@@ -466,7 +523,7 @@ func (g *OpenAIGenerator) convUserMessage(msg *Message) (openai.ChatCompletionMe
 
 	var contents []openai.ChatCompletionContentPartUnionParam
 	switch {
-	case g.SupportTextOnly, mp3.Len() == 0 && wav.Len() == 0:
+	case g.TextOnly, mp3.Len() == 0 && wav.Len() == 0:
 		if text.Len() == 0 {
 			return openai.ChatCompletionMessageParamUnion{}, errors.New("user message must contain text")
 		}

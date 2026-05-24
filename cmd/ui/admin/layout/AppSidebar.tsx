@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { AudioLines, Boxes, Cpu, FolderKanban, HardDrive, KeyRound, LayoutDashboard, Mic2, Workflow } from "lucide-react";
+import { AudioLines, Boxes, Cpu, FolderKanban, KeyRound, LayoutDashboard, Mic2, PackageCheck, ServerCog, ShieldCheck, Workflow } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { buttonVariants } from "../components/button";
@@ -36,13 +36,16 @@ const sections: NavSection[] = [
     label: "Peers",
     items: [
       { href: "/peers", icon: Boxes, label: "Peers" },
-      { href: "/firmware", icon: HardDrive, label: "Firmware" },
+      { href: "/firmwares", icon: PackageCheck, label: "Firmwares" },
     ],
   },
   {
     label: "Providers",
     items: [
       { href: "/providers/credentials", icon: KeyRound, label: "Credentials" },
+      { href: "/providers/openai-tenants", icon: ServerCog, label: "OpenAI Tenants" },
+      { href: "/providers/gemini-tenants", icon: ServerCog, label: "Gemini Tenants" },
+      { href: "/providers/dashscope-tenants", icon: ServerCog, label: "DashScope Tenants" },
       { href: "/providers/minimax-tenants", icon: AudioLines, label: "MiniMax Tenants" },
       { href: "/providers/volc-tenants", icon: AudioLines, label: "Volcengine Tenants" },
     ],
@@ -55,6 +58,10 @@ const sections: NavSection[] = [
       { href: "/ai/workflows", icon: Workflow, label: "Workflows" },
       { href: "/ai/workspaces", icon: FolderKanban, label: "Workspaces" },
     ],
+  },
+  {
+    label: "Settings",
+    items: [{ href: "/settings/acl", icon: ShieldCheck, label: "Access Control" }],
   },
 ];
 

@@ -83,11 +83,7 @@ Each case file should describe:
 
 ### `120-*` Admin Firmware Workflows
 
-- `120-admin-firmware-list`
-- `121-admin-firmware-upload`
-- `122-admin-depot-detail`
-- `123-admin-depot-actions`
-- `124-admin-channel-detail`
+- `120-admin-firmwares-list`
 
 ### `130-*` Admin Provider Catalogs
 
@@ -124,7 +120,7 @@ Cases:
 
 - `900_real_service_smoke.go`
   - require the already running `gizclaw service`
-  - seed admin/device registrations, firmware, provider resources, voices, workflows, and workspaces
+  - seed admin/device registrations, provider resources, voices, workflows, and workspaces
   - start embedded Admin and Play UI test servers without `gizclaw * --listen`
   - verify Admin pages and Play actions without Playwright route mocks or TypeScript specs
   - status: implemented

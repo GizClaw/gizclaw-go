@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import type { KeyboardEvent } from "react";
-import { AudioLines, Boxes, ChevronRight, Cpu, FolderKanban, HardDrive, KeyRound, Mic2, Server, ShieldCheck, Workflow } from "lucide-react";
+import { AudioLines, Boxes, ChevronRight, Cpu, FolderKanban, KeyRound, Mic2, Server, ShieldCheck, Workflow } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Button } from "../../components/button";
@@ -9,15 +9,15 @@ import { Skeleton } from "../../components/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/table";
 
 import { EmptyState } from "../../components/empty-state";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { StatusBadge } from "../../components/status-badge";
 import { useOverviewData } from "../../hooks/useOverviewData";
-import { formatRelease, formatServerTime, formatShortKey } from "../../lib/format";
+import { formatShortKey } from "../../lib/format";
 
 export function OverviewPage(): JSX.Element {
   const navigate = useNavigate();
   const dashboard = useOverviewData();
   const latestPeers = dashboard.peers.slice(0, 5);
-  const latestDepots = dashboard.depots.slice(0, 4);
   const autoCount = dashboard.peers.filter((gear) => gear.auto_registered).length;
   const openPath = (path: string) => {
     navigate(path);
@@ -32,19 +32,19 @@ export function OverviewPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Overview</div>
-        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">
-          Server health, a snapshot of peers on the first page, and firmware depots.
-        </p>
-      </div>
+      <PageHeader items={[{ label: "Overview" }]} />
+
+      <PageSummaryCard
+        description="Server health and a snapshot of peers on the first page."
+        eyebrow="Overview"
+        title="Dashboard"
+      />
 
       {dashboard.error !== "" ? (
         <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{dashboard.error}</div>
       ) : null}
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 md:grid-cols-3">
         <MetricCard
           description={formatShortKey(dashboard.serverInfo?.public_key)}
           icon={Server}
@@ -63,15 +63,9 @@ export function OverviewPage(): JSX.Element {
           label="Auto Registered"
           value={String(autoCount)}
         />
-        <MetricCard
-          description={formatServerTime(dashboard.serverInfo?.server_time)}
-          icon={HardDrive}
-          label="Firmware Depots"
-          value={String(dashboard.depots.length)}
-        />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <section>
         <Card className="border-border/60 bg-background/90 shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
             <div className="space-y-1">
@@ -133,68 +127,6 @@ export function OverviewPage(): JSX.Element {
             )}
           </CardContent>
         </Card>
-
-        <Card className="border-border/60 bg-background/90 shadow-sm">
-          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
-            <div className="space-y-1">
-              <CardTitle>Firmware Snapshot</CardTitle>
-              <CardDescription>A quick summary before opening depot details.</CardDescription>
-            </div>
-            <Button asChild size="sm" variant="outline">
-              <Link to="/firmware">
-                Open Firmware
-                <ChevronRight className="size-4" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {dashboard.loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 4 }).map((_, index) => (
-                  <Skeleton className="h-14 w-full" key={index} />
-                ))}
-              </div>
-            ) : latestDepots.length === 0 ? (
-              <EmptyState
-                description="Once depot data exists, stable and testing versions will show here."
-                title="No depots yet"
-              />
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Depot</TableHead>
-                      <TableHead>Stable</TableHead>
-                      <TableHead>Testing</TableHead>
-                      <TableHead className="text-right">Files</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {latestDepots.map((depot) => {
-                      const path = `/firmware/${encodeURIComponent(depot.name)}`;
-                      return (
-                        <TableRow
-                          className="cursor-pointer hover:bg-muted/40"
-                          key={depot.name}
-                          onClick={() => openPath(path)}
-                          onKeyDown={(event) => handleRowKeyDown(event, path)}
-                          role="link"
-                          tabIndex={0}
-                        >
-                          <TableCell className="font-medium">{depot.name}</TableCell>
-                          <TableCell>{formatRelease(depot.stable)}</TableCell>
-                          <TableCell>{formatRelease(depot.testing)}</TableCell>
-                          <TableCell className="text-right">{depot.info?.files?.length ?? 0}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </section>
 
       <Card className="border-border/60 bg-background/90 shadow-sm">
@@ -207,12 +139,6 @@ export function OverviewPage(): JSX.Element {
             <Link to="/peers">
               <Boxes className="size-4" />
               Peers
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/firmware">
-              <HardDrive className="size-4" />
-              Firmware
             </Link>
           </Button>
           <Button asChild variant="outline">

@@ -1,4 +1,3 @@
-import type { DepotRelease } from "@gizclaw/adminservice";
 import type { DeviceInfo } from "@gizclaw/adminservice";
 
 export function formatServerTime(value: number | undefined): string {
@@ -6,14 +5,6 @@ export function formatServerTime(value: number | undefined): string {
     return "Server time unavailable";
   }
   return new Date(value).toLocaleString();
-}
-
-export function formatRelease(release: DepotRelease | undefined): string {
-  return release?.firmware_semver && release.firmware_semver !== "" ? release.firmware_semver : "—";
-}
-
-export function hasRelease(release: DepotRelease | undefined): boolean {
-  return Boolean(release?.firmware_semver && release.firmware_semver !== "");
 }
 
 export function formatShortKey(value: string | undefined): string {

@@ -1,0 +1,368 @@
+import { Edit, Plus, Save, Trash2, X } from "lucide-react";
+import { useState } from "react";
+
+import type { Firmware, FirmwareArtifact, FirmwareSlot, FirmwareUpsert } from "@gizclaw/adminservice";
+import { Badge } from "../../components/badge";
+import { Button } from "../../components/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/card";
+import { FormField } from "../../components/form-field";
+import { Input } from "../../components/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/table";
+
+const slotKeys = ["rollback", "stable", "beta", "develop", "pending"] as const;
+
+type SlotKey = (typeof slotKeys)[number];
+type ArtifactForm = {
+  kind: "app" | "data";
+  name: string;
+  sha256: string;
+  size: string;
+  url: string;
+};
+
+export type FirmwareFormState = {
+  description: string;
+  name: string;
+  slots: Record<SlotKey, FirmwareSlot>;
+};
+
+type FirmwareEditorProps = {
+  autoSaveSlots?: boolean;
+  form: FirmwareFormState;
+  infoSaveLabel?: string;
+  showName?: boolean;
+  onChange: (form: FirmwareFormState) => void;
+  onSave: (form: FirmwareFormState) => void;
+  saveLabel: string;
+  saving: boolean;
+};
+
+export function FirmwareEditor({
+  autoSaveSlots = false,
+  form,
+  infoSaveLabel,
+  showName = true,
+  onChange,
+  onSave,
+  saveLabel,
+  saving,
+}: FirmwareEditorProps): JSX.Element {
+  const [editingSlot, setEditingSlot] = useState<SlotKey | null>(null);
+
+  const updateSlot = (slotName: SlotKey, slot: FirmwareSlot): void => {
+    const nextForm = {
+      ...form,
+      slots: {
+        ...form.slots,
+        [slotName]: slot,
+      },
+    };
+    onChange(nextForm);
+    if (autoSaveSlots) {
+      onSave(nextForm);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Firmware Info</CardTitle>
+            <CardDescription>Name and operator-facing description.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {showName ? (
+              <FormField label="Name">
+                <Input onChange={(event) => onChange({ ...form, name: event.target.value })} value={form.name} />
+              </FormField>
+            ) : null}
+            <FormField label="Description">
+              <textarea
+                className="min-h-28 w-full rounded-md border bg-background px-3 py-2 text-sm"
+                onChange={(event) => onChange({ ...form, description: event.target.value })}
+                value={form.description}
+              />
+            </FormField>
+            {infoSaveLabel ? (
+              <div className="flex justify-end border-t pt-4">
+                <Button disabled={saving} onClick={() => onSave(form)} type="button">
+                  <Save className="size-4" />
+                  {saving ? "Saving..." : infoSaveLabel}
+                </Button>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Firmware Slots</CardTitle>
+            <CardDescription>Release channels are edited per slot and saved together.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SlotsEditTable form={form} onEdit={setEditingSlot} />
+          </CardContent>
+        </Card>
+      </div>
+
+      {editingSlot !== null ? (
+        <SlotEditDialog
+          onClose={() => setEditingSlot(null)}
+          onSubmit={(slot) => {
+            updateSlot(editingSlot, slot);
+            setEditingSlot(null);
+          }}
+          submitLabel={autoSaveSlots ? "Save Slot" : "Apply Slot"}
+          slot={form.slots[editingSlot]}
+          title={editingSlot}
+        />
+      ) : null}
+
+      {!infoSaveLabel ? (
+        <div className="flex justify-end border-t pt-4">
+          <Button disabled={saving} onClick={() => onSave(form)} type="button">
+            <Save className="size-4" />
+            {saving ? "Saving..." : saveLabel}
+          </Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SlotsEditTable({ form, onEdit }: { form: FirmwareFormState; onEdit: (slot: SlotKey) => void }): JSX.Element {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-32">Slot</TableHead>
+            <TableHead className="w-40">Version</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead className="w-32 text-right">Artifacts</TableHead>
+            <TableHead className="w-24 text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {slotKeys.map((slotName) => {
+            const slot = form.slots[slotName];
+            return (
+              <TableRow key={slotName}>
+                <TableCell className="font-medium">{slotName}</TableCell>
+                <TableCell className="font-mono text-xs">{slot.version?.trim() || "-"}</TableCell>
+                <TableCell className="max-w-[26rem] text-sm text-muted-foreground">{slot.description?.trim() || "-"}</TableCell>
+                <TableCell className="text-right">
+                  <Badge variant="outline">{slot.artifacts?.length ?? 0}</Badge>
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button aria-label={`Edit ${slotName} slot`} className="h-8 min-w-fit px-2 text-xs" onClick={() => onEdit(slotName)} type="button" variant="outline">
+                    <Edit className="size-3.5" />
+                    Edit
+                  </Button>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function SlotEditDialog({
+  onClose,
+  onSubmit,
+  submitLabel,
+  slot,
+  title,
+}: {
+  onClose: () => void;
+  onSubmit: (slot: FirmwareSlot) => void;
+  submitLabel: string;
+  slot: FirmwareSlot;
+  title: string;
+}): JSX.Element {
+  const [version, setVersion] = useState(slot.version ?? "");
+  const [description, setDescription] = useState(slot.description ?? "");
+  const [artifacts, setArtifacts] = useState<ArtifactForm[]>(() => (slot.artifacts ?? []).map(artifactToForm));
+
+  const updateArtifact = (index: number, patch: Partial<ArtifactForm>): void => {
+    setArtifacts((current) => current.map((artifact, itemIndex) => (itemIndex === index ? { ...artifact, ...patch } : artifact)));
+  };
+
+  const submit = (): void => {
+    onSubmit({
+      artifacts: artifacts.map(formToArtifact).filter((artifact) => artifact.name.trim() !== "" || artifact.url.trim() !== ""),
+      description: optionalString(description),
+      version: optionalString(version),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" role="presentation">
+      <div aria-modal="true" className="w-full max-w-5xl rounded-xl border bg-background shadow-xl" role="dialog">
+        <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
+          <div className="space-y-1">
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Firmware slot</div>
+            <h2 className="text-lg font-semibold capitalize">{title}</h2>
+          </div>
+          <Button aria-label="Close slot editor" className="h-8 w-8 p-0" onClick={onClose} type="button" variant="ghost">
+            <X className="size-4" />
+          </Button>
+        </div>
+
+        <div className="max-h-[72vh] space-y-4 overflow-auto p-5">
+          <div className="grid gap-3 md:grid-cols-2">
+            <FormField label="Version">
+              <Input onChange={(event) => setVersion(event.target.value)} value={version} />
+            </FormField>
+            <FormField label="Description">
+              <Input onChange={(event) => setDescription(event.target.value)} value={description} />
+            </FormField>
+          </div>
+
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+              <div className="space-y-1">
+                <CardTitle className="text-base">Artifacts</CardTitle>
+                <CardDescription>Device-managed artifact entries for this slot.</CardDescription>
+              </div>
+              <Button
+                className="min-w-fit shrink-0"
+                onClick={() => setArtifacts((current) => [...current, emptyArtifactForm()])}
+                size="sm"
+                type="button"
+                variant="outline"
+              >
+                <Plus className="size-4" />
+                Add
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {artifacts.length === 0 ? <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No artifacts.</div> : null}
+              {artifacts.map((artifact, index) => (
+                <div className="grid gap-3 rounded-md border p-3 lg:grid-cols-[1fr_8rem_2fr_8rem_1.5fr_auto]" key={index}>
+                  <Input aria-label={`Artifact ${index + 1} name`} onChange={(event) => updateArtifact(index, { name: event.target.value })} placeholder="name" value={artifact.name} />
+                  <Select onValueChange={(value) => updateArtifact(index, { kind: value as ArtifactForm["kind"] })} value={artifact.kind}>
+                    <SelectTrigger aria-label={`Artifact ${index + 1} kind`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="app">app</SelectItem>
+                      <SelectItem value="data">data</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input aria-label={`Artifact ${index + 1} url`} onChange={(event) => updateArtifact(index, { url: event.target.value })} placeholder="https://..." value={artifact.url} />
+                  <Input aria-label={`Artifact ${index + 1} size`} onChange={(event) => updateArtifact(index, { size: event.target.value })} placeholder="size" type="number" value={artifact.size} />
+                  <Input aria-label={`Artifact ${index + 1} sha256`} onChange={(event) => updateArtifact(index, { sha256: event.target.value })} placeholder="sha256" value={artifact.sha256} />
+                  <Button
+                    aria-label={`Remove artifact ${index + 1}`}
+                    className="h-9 w-9 p-0"
+                    onClick={() => setArtifacts((current) => current.filter((_, itemIndex) => itemIndex !== index))}
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex justify-end gap-2 border-t px-5 py-4">
+          <Button onClick={onClose} type="button" variant="outline">
+            Cancel
+          </Button>
+          <Button onClick={submit} type="button">
+            {submitLabel}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function emptyFirmwareForm(): FirmwareFormState {
+  return {
+    description: "Firmware release line",
+    name: "new-firmware",
+    slots: emptySlots(),
+  };
+}
+
+export function firmwareToForm(firmware: Firmware): FirmwareFormState {
+  return {
+    description: firmware.description ?? "",
+    name: firmware.name,
+    slots: normalizeSlots(firmware.slots),
+  };
+}
+
+export function formToUpsert(form: FirmwareFormState): FirmwareUpsert {
+  return {
+    description: optionalString(form.description),
+    name: form.name,
+    slots: normalizeSlots(form.slots),
+  };
+}
+
+function emptySlots(): FirmwareFormState["slots"] {
+  return {
+    beta: {},
+    develop: {},
+    pending: {},
+    rollback: {},
+    stable: {
+      version: "1.0.0",
+    },
+  };
+}
+
+function normalizeSlots(slots: FirmwareUpsert["slots"]): FirmwareFormState["slots"] {
+  return {
+    beta: slots.beta ?? {},
+    develop: slots.develop ?? {},
+    pending: slots.pending ?? {},
+    rollback: slots.rollback ?? {},
+    stable: slots.stable ?? {},
+  };
+}
+
+function artifactToForm(artifact: FirmwareArtifact): ArtifactForm {
+  return {
+    kind: artifact.kind === "data" ? "data" : "app",
+    name: artifact.name,
+    sha256: artifact.sha256 ?? "",
+    size: artifact.size == null ? "" : String(artifact.size),
+    url: artifact.url,
+  };
+}
+
+function formToArtifact(form: ArtifactForm): FirmwareArtifact {
+  const size = Number.parseInt(form.size, 10);
+  return {
+    kind: form.kind,
+    name: form.name,
+    sha256: optionalString(form.sha256),
+    size: Number.isFinite(size) ? size : undefined,
+    url: form.url,
+  };
+}
+
+function emptyArtifactForm(): ArtifactForm {
+  return {
+    kind: "app",
+    name: "",
+    sha256: "",
+    size: "",
+    url: "",
+  };
+}
+
+function optionalString(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed === "" ? undefined : trimmed;
+}

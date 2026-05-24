@@ -3,21 +3,20 @@ package clicontext
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 var (
-	testServerPublicKeyHex = strings.Repeat("ab", giznet.KeySize)
-	testServerPublicKey    = mustKeyText(testServerPublicKeyHex)
+	testServerPublicKey  = testKeyText(0xab)
+	testServerPublicKey2 = testKeyText(0xcd)
 )
 
-func mustKeyText(hexValue string) string {
-	key, err := giznet.KeyFromHex(hexValue)
-	if err != nil {
-		panic(err)
+func testKeyText(fill byte) string {
+	var key giznet.PublicKey
+	for i := range key {
+		key[i] = fill
 	}
 	return key.String()
 }
@@ -25,15 +24,8 @@ func mustKeyText(hexValue string) string {
 func TestStoreCreateAndLoad(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
 
-	if err := s.Create("local", "127.0.0.1:9820", testServerPublicKeyHex); err != nil {
+	if err := s.Create("local", "127.0.0.1:9820", testServerPublicKey); err != nil {
 		t.Fatalf("Create err=%v", err)
-	}
-	configData, err := os.ReadFile(filepath.Join(s.Root, "local", "config.yaml"))
-	if err != nil {
-		t.Fatalf("ReadFile config err=%v", err)
-	}
-	if strings.Contains(string(configData), testServerPublicKeyHex) {
-		t.Fatalf("config.yaml should not store public key as hex:\n%s", string(configData))
 	}
 
 	cliCtx, err := Load(filepath.Join(s.Root, "local"))
@@ -107,7 +99,7 @@ func TestStoreUse(t *testing.T) {
 	if err := s.Create("a", "addr-a", testServerPublicKey); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Create("b", "addr-b", strings.Repeat("cd", giznet.KeySize)); err != nil {
+	if err := s.Create("b", "addr-b", testServerPublicKey2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -242,7 +234,7 @@ func TestServerPublicKey(t *testing.T) {
 
 func TestServerPublicKeyInvalid(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
-	if err := s.Create("badpk", "addr", "not-hex"); err == nil {
+	if err := s.Create("badpk", "addr", "not-a-key"); err == nil {
 		t.Fatal("Create(invalid public key) should fail")
 	}
 }

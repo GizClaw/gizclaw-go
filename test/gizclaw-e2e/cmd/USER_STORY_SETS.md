@@ -213,8 +213,8 @@ Cases:
   - exercise lookup commands by public key / serial-like identifiers when supported
   - verify a clean not-found path and a successful path
   - status: implemented
-- `503-admin-config-or-firmware-flow`
-  - run the smallest end-to-end config or firmware workflow exposed by CLI
+- `503-admin-config-flow`
+  - run the smallest end-to-end peer config workflow exposed by CLI
   - verify both happy-path and user-visible failure messages
   - status: implemented
 - `504-admin-credentials`
@@ -234,6 +234,12 @@ Cases:
   - status: implemented
 - `509-admin-resources`
   - verify declarative resource apply create/update, show missing/existing, and delete through the generic admin API
+  - status: implemented
+- `510-admin-ai-provider-catalog`
+  - verify provider tenant, model, and ACL view resources through admin CLI
+  - status: implemented
+- `511-admin-firmwares`
+  - verify firmware CRUD, release, rollback, and resource show through admin CLI
   - status: implemented
 
 ### `600-*` Idempotency And Repeatability

@@ -18,7 +18,7 @@ func TestApplyPeerConfigUpdatesResource(t *testing.T) {
 		"kind": "PeerConfig",
 		"metadata": {"name": "gear-key"},
 		"spec": {
-			"firmware": {"channel": "stable"}
+			"view": "under-12"
 		}
 	}`))
 	if err != nil {
@@ -30,16 +30,16 @@ func TestApplyPeerConfigUpdatesResource(t *testing.T) {
 	if peers.putCount != 1 {
 		t.Fatalf("putCount = %d, want 1", peers.putCount)
 	}
-	if peers.configs["gear-key"].Firmware == nil || peers.configs["gear-key"].Firmware.Channel == nil {
-		t.Fatal("stored firmware channel is nil, want stable")
+	if peers.configs["gear-key"].View == nil || *peers.configs["gear-key"].View != "under-12" {
+		t.Fatalf("stored view = %+v, want under-12", peers.configs["gear-key"].View)
 	}
 }
 
 func TestGetPeerConfigReturnsResource(t *testing.T) {
-	channel := apitypes.GearFirmwareChannel("stable")
+	view := "under-12"
 	peers := newFakePeers()
 	peers.configs["gear-key"] = apitypes.Configuration{
-		Firmware: &apitypes.FirmwareConfig{Channel: &channel},
+		View: &view,
 	}
 	manager := New(Services{Peers: peers})
 
@@ -54,8 +54,8 @@ func TestGetPeerConfigReturnsResource(t *testing.T) {
 	if config.Metadata.Name != "gear-key" {
 		t.Fatalf("metadata.name = %q, want gear-key", config.Metadata.Name)
 	}
-	if config.Spec.Firmware == nil || config.Spec.Firmware.Channel == nil || *config.Spec.Firmware.Channel != "stable" {
-		t.Fatalf("firmware channel = %#v, want stable", config.Spec.Firmware)
+	if config.Spec.View == nil || *config.Spec.View != "under-12" {
+		t.Fatalf("view = %#v, want under-12", config.Spec.View)
 	}
 }
 
@@ -69,7 +69,7 @@ func TestPutPeerConfigWritesResource(t *testing.T) {
 		"kind": "PeerConfig",
 		"metadata": {"name": "gear-key"},
 		"spec": {
-			"firmware": {"channel": "testing"}
+			"view": "under-18"
 		}
 	}`))
 	if err != nil {
@@ -81,10 +81,10 @@ func TestPutPeerConfigWritesResource(t *testing.T) {
 }
 
 func TestApplyPeerConfigUnchangedSkipsPut(t *testing.T) {
-	channel := apitypes.GearFirmwareChannel("stable")
+	view := "under-12"
 	peers := newFakePeers()
 	peers.configs["gear-key"] = apitypes.Configuration{
-		Firmware: &apitypes.FirmwareConfig{Channel: &channel},
+		View: &view,
 	}
 	manager := New(Services{Peers: peers})
 
@@ -93,7 +93,7 @@ func TestApplyPeerConfigUnchangedSkipsPut(t *testing.T) {
 		"kind": "PeerConfig",
 		"metadata": {"name": "gear-key"},
 		"spec": {
-			"firmware": {"channel": "stable"}
+			"view": "under-12"
 		}
 	}`))
 	if err != nil {
@@ -138,14 +138,6 @@ func (f *fakePeers) ListPeers(context.Context, adminservice.ListPeersRequestObje
 	return nil, nil
 }
 
-func (f *fakePeers) ListPeersByCertification(context.Context, adminservice.ListPeersByCertificationRequestObject) (adminservice.ListPeersByCertificationResponseObject, error) {
-	return nil, nil
-}
-
-func (f *fakePeers) ListPeersByFirmware(context.Context, adminservice.ListPeersByFirmwareRequestObject) (adminservice.ListPeersByFirmwareResponseObject, error) {
-	return nil, nil
-}
-
 func (f *fakePeers) ResolvePeerByIMEI(context.Context, adminservice.ResolvePeerByIMEIRequestObject) (adminservice.ResolvePeerByIMEIResponseObject, error) {
 	return nil, nil
 }
@@ -187,6 +179,10 @@ func (f *fakePeers) PutPeerConfig(_ context.Context, request adminservice.PutPee
 }
 
 func (f *fakePeers) GetPeerInfo(context.Context, adminservice.GetPeerInfoRequestObject) (adminservice.GetPeerInfoResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakePeers) PutPeerInfo(context.Context, adminservice.PutPeerInfoRequestObject) (adminservice.PutPeerInfoResponseObject, error) {
 	return nil, nil
 }
 

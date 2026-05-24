@@ -82,3 +82,118 @@ func TestAdminResourcesUserStory(t *testing.T) {
 		t.Fatalf("admin show ResourceList stderr = %s", resourceList.Stderr)
 	}
 }
+
+func TestAdminResourceListAppliesModelAndVoice(t *testing.T) {
+	h := clitest.NewHarness(t, "509-admin-resources")
+	h.StartServerFromFixture("server_config.yaml")
+	h.CreateContext("admin-a").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
+
+	resourcePath := filepath.Join(h.SandboxDir, "model-voice-resources.json")
+	if err := os.WriteFile(resourcePath, []byte(`{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "ResourceList",
+		"metadata": {"name": "model-voice-bundle"},
+		"spec": {
+			"items": [
+				{
+					"apiVersion": "gizclaw.admin/v1alpha1",
+					"kind": "Model",
+					"metadata": {"name": "openai-main-chat"},
+					"spec": {
+						"kind": "llm",
+						"source": "manual",
+						"provider": {
+							"kind": "openai-tenant",
+							"name": "openai-main"
+						},
+						"name": "OpenAI main chat",
+						"description": "OpenAI-compatible chat model from resource apply",
+						"provider_data": {
+							"openai-tenant": {
+								"upstream_model": "gpt-4o-mini",
+								"support_json_output": true,
+								"support_tool_calls": true
+							}
+						}
+					}
+				},
+				{
+					"apiVersion": "gizclaw.admin/v1alpha1",
+					"kind": "Voice",
+					"metadata": {"name": "openai-main-alloy"},
+					"spec": {
+						"source": "manual",
+						"provider": {
+							"kind": "openai-tenant",
+							"name": "openai-main"
+						},
+						"name": "OpenAI Alloy",
+						"description": "OpenAI-compatible voice from resource apply",
+						"provider_data": {
+							"openai-tenant": {
+								"voice_id": "alloy"
+							}
+						}
+					}
+				}
+			]
+		}
+	}`), 0o644); err != nil {
+		t.Fatalf("write resource list file: %v", err)
+	}
+
+	apply := h.RunCLI("admin", "apply", "-f", resourcePath, "--context", "admin-a")
+	apply.MustSucceed(t)
+	for _, want := range []string{
+		`"kind":"ResourceList"`,
+		`"name":"model-voice-bundle"`,
+		`"action":"applied"`,
+		`"kind":"Model"`,
+		`"name":"openai-main-chat"`,
+		`"kind":"Voice"`,
+		`"name":"openai-main-alloy"`,
+	} {
+		if !strings.Contains(apply.Stdout, want) {
+			t.Fatalf("admin apply resource list missing %s:\n%s", want, apply.Stdout)
+		}
+	}
+
+	showModel := h.RunCLI("admin", "show", "Model", "openai-main-chat", "--context", "admin-a")
+	showModel.MustSucceed(t)
+	for _, want := range []string{
+		`"kind":"Model"`,
+		`"name":"openai-main-chat"`,
+		`"kind":"openai-tenant"`,
+		`"upstream_model":"gpt-4o-mini"`,
+	} {
+		if !strings.Contains(showModel.Stdout, want) {
+			t.Fatalf("admin show Model missing %s:\n%s", want, showModel.Stdout)
+		}
+	}
+
+	showVoice := h.RunCLI("admin", "show", "Voice", "openai-main-alloy", "--context", "admin-a")
+	showVoice.MustSucceed(t)
+	for _, want := range []string{
+		`"kind":"Voice"`,
+		`"name":"openai-main-alloy"`,
+		`"kind":"openai-tenant"`,
+		`"voice_id":"alloy"`,
+	} {
+		if !strings.Contains(showVoice.Stdout, want) {
+			t.Fatalf("admin show Voice missing %s:\n%s", want, showVoice.Stdout)
+		}
+	}
+
+	deleteModel := h.RunCLI("admin", "delete", "Model", "openai-main-chat", "--context", "admin-a")
+	deleteModel.MustSucceed(t)
+	if !strings.Contains(deleteModel.Stdout, `"kind":"Model"`) || !strings.Contains(deleteModel.Stdout, `"name":"openai-main-chat"`) {
+		t.Fatalf("admin delete Model output unexpected:\n%s", deleteModel.Stdout)
+	}
+
+	deleteVoice := h.RunCLI("admin", "delete", "Voice", "openai-main-alloy", "--context", "admin-a")
+	deleteVoice.MustSucceed(t)
+	if !strings.Contains(deleteVoice.Stdout, `"kind":"Voice"`) || !strings.Contains(deleteVoice.Stdout, `"name":"openai-main-alloy"`) {
+		t.Fatalf("admin delete Voice output unexpected:\n%s", deleteVoice.Stdout)
+	}
+}

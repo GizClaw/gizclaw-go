@@ -3,11 +3,7 @@ package noise
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/base64"
-	"strings"
 	"testing"
-
-	"github.com/GizClaw/gizclaw-go/pkg/encoding/base32"
 )
 
 func TestKeyIsZero(t *testing.T) {
@@ -98,63 +94,11 @@ func TestKeyTextEncoding(t *testing.T) {
 	}
 }
 
-func TestKeyTextUnmarshalAcceptsLegacyBase64(t *testing.T) {
-	var want Key
-	for i := range want {
-		want[i] = byte(i + 1)
-	}
-
-	var got Key
-	input := base64.RawURLEncoding.EncodeToString(want[:])
-	if err := got.UnmarshalText([]byte(input)); err != nil {
-		t.Fatalf("UnmarshalText(base64url) error = %v", err)
-	}
-	if got != want {
-		t.Fatalf("UnmarshalText(base64url) = %v, want %v", got, want)
-	}
-}
-
-func TestKeyTextUnmarshalAcceptsLegacyHex(t *testing.T) {
-	input := "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
-	want, err := KeyFromHex(input)
-	if err != nil {
-		t.Fatalf("KeyFromHex error = %v", err)
-	}
-
-	var got Key
-	if err := got.UnmarshalText([]byte(input)); err != nil {
-		t.Fatalf("UnmarshalText(hex) error = %v", err)
-	}
-	if got != want {
-		t.Fatalf("UnmarshalText(hex) = %v, want %v", got, want)
-	}
-}
-
-func TestKeyTextUnmarshalAcceptsLegacyCrockfordAliases(t *testing.T) {
-	var want Key
-	for i := range want {
-		want[i] = byte(i + 1)
-	}
-	canonical := base32.EncodeToString(want[:])
-	input := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(canonical, "0", "O"), "1", "L"))
-	input = input[:13] + "-" + input[13:26] + "-" + input[26:39] + "-" + input[39:]
-
-	var got Key
-	if err := got.UnmarshalText([]byte(input)); err != nil {
-		t.Fatalf("UnmarshalText(crockford aliases) error = %v", err)
-	}
-	if got != want {
-		t.Fatalf("UnmarshalText(crockford aliases) = %v, want %v", got, want)
-	}
-}
-
 func TestKeyTextUnmarshalRejectsInvalid(t *testing.T) {
 	var key Key
 	for _, input := range []string{
 		"",
 		"not-a-key",
-		base64.RawURLEncoding.EncodeToString([]byte("short")),
-		"041061050R3GG28A1C60T3GF208H44RM2MB1E60S38DHR78Y3WG1",
 	} {
 		if err := key.UnmarshalText([]byte(input)); err == nil {
 			t.Fatalf("UnmarshalText(%q) should fail", input)

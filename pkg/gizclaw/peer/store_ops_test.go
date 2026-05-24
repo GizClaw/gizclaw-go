@@ -19,7 +19,7 @@ func TestStoreOpsHelpers(t *testing.T) {
 	if (&Server{}).peerRuntime(context.Background(), giznet.PublicKey{1}).Online {
 		t.Fatal("zero peerRuntime should be offline")
 	}
-	if optionalGear(apitypes.Gear{PublicKey: "x"}, nil) == nil {
+	if optionalGear(apitypes.Gear{PublicKey: giznet.PublicKey{1}.String()}, nil) == nil {
 		t.Fatal("optionalGear should keep value")
 	}
 	if optionalGear(apitypes.Gear{}, errors.New("boom")) != nil {
@@ -135,37 +135,6 @@ func TestStoreOpsLoadAndSaveGear(t *testing.T) {
 	}
 }
 
-func TestStoreOpsCanonicalizesPublicKeyText(t *testing.T) {
-	server := &Server{Store: mustBadgerInMemory(t, nil)}
-	ctx := context.Background()
-	key, err := giznet.KeyFromHex(strings.Repeat("ab", giznet.KeySize))
-	if err != nil {
-		t.Fatalf("KeyFromHex error = %v", err)
-	}
-	hexKey := strings.Repeat("ab", giznet.KeySize)
-
-	saved, err := server.SaveGear(ctx, apitypes.Gear{
-		PublicKey:     hexKey,
-		Role:          apitypes.GearRoleGear,
-		Status:        apitypes.GearStatusActive,
-		Configuration: apitypes.Configuration{},
-	})
-	if err != nil {
-		t.Fatalf("SaveGear error = %v", err)
-	}
-	if saved.PublicKey != key.String() {
-		t.Fatalf("SaveGear public key = %q, want canonical %q", saved.PublicKey, key.String())
-	}
-
-	loaded, err := server.LoadGear(ctx, key)
-	if err != nil {
-		t.Fatalf("LoadGear error = %v", err)
-	}
-	if loaded.PublicKey != key.String() {
-		t.Fatalf("LoadGear public key = %q, want canonical %q", loaded.PublicKey, key.String())
-	}
-}
-
 func TestStoreOpsLoadGearMissing(t *testing.T) {
 	server := &Server{Store: mustBadgerInMemory(t, nil)}
 
@@ -179,19 +148,10 @@ func TestStoreOpsSaveGearRejectsInvalidGear(t *testing.T) {
 	server := &Server{Store: mustBadgerInMemory(t, nil)}
 
 	_, err := server.SaveGear(context.Background(), apitypes.Gear{})
-	if err == nil || !strings.Contains(err.Error(), "empty public key") {
+	if err == nil || !strings.Contains(err.Error(), "empty key") {
 		t.Fatalf("SaveGear invalid err = %v", err)
 	}
 
-	_, err = server.SaveGear(context.Background(), apitypes.Gear{
-		PublicKey:     "server",
-		Role:          apitypes.GearRoleGear,
-		Status:        apitypes.GearStatusActive,
-		Configuration: apitypes.Configuration{},
-	})
-	if err == nil || !strings.Contains(err.Error(), "invalid public key") {
-		t.Fatalf("SaveGear invalid public key err = %v", err)
-	}
 }
 
 func TestStoreOpsExists(t *testing.T) {

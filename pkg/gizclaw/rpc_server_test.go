@@ -25,17 +25,17 @@ func TestRPCClientServerGearMethods(t *testing.T) {
 		wantPublicKey:   publicKey,
 		config:          apitypes.Configuration{},
 		info:            apitypes.DeviceInfo{Name: stringPtr("gear-1")},
-		ota:             apitypes.OTASummary{Depot: "main", Channel: "stable", FirmwareSemver: "1.2.3"},
-		registration:    testRPCRegistration(publicKey.String(), now),
+		registration:    testRPCRegistration(publicKey, now),
 		runtime:         apitypes.Runtime{Online: true, LastSeenAt: now},
-		registerResult:  testRPCRegistrationResult(publicKey.String(), now),
+		registerResult:  testRPCRegistrationResult(publicKey, now),
 		putInfoResponse: apitypes.DeviceInfo{Name: stringPtr("gear-2")},
 	}
+	serverPublicKey := giznet.PublicKey{9, 8, 7}
 	serverInfo := &fakeRPCServerInfoService{
 		t:             t,
 		wantPublicKey: publicKey,
 		info: apitypes.ServerInfo{
-			PublicKey:   "server-public",
+			PublicKey:   serverPublicKey.String(),
 			ServerTime:  123,
 			BuildCommit: "test",
 		},
@@ -46,7 +46,7 @@ func TestRPCClientServerGearMethods(t *testing.T) {
 	infoResp := callRPCPair(t, server, func(conn net.Conn) (*rpcapi.ServerGetInfoResponse, error) {
 		return client.GetServerInfo(context.Background(), conn, "server-info")
 	})
-	if infoResp.PublicKey != "server-public" || infoResp.ServerTime != 123 || infoResp.BuildCommit != "test" {
+	if infoResp.PublicKey != serverPublicKey.String() || infoResp.ServerTime != 123 || infoResp.BuildCommit != "test" {
 		t.Fatalf("GetServerInfo() = %+v", infoResp)
 	}
 
@@ -71,13 +71,6 @@ func TestRPCClientServerGearMethods(t *testing.T) {
 	}
 	if fake.lastPutInfo == nil || fake.lastPutInfo.Name == nil || *fake.lastPutInfo.Name != "gear-put" {
 		t.Fatalf("PutInfo request = %+v", fake.lastPutInfo)
-	}
-
-	ota := callRPCPair(t, server, func(conn net.Conn) (*rpcapi.GearGetOTAResponse, error) {
-		return client.GetOTA(context.Background(), conn, "ota")
-	})
-	if ota.Depot != "main" || ota.Channel != "stable" || ota.FirmwareSemver != "1.2.3" {
-		t.Fatalf("GetOTA() = %+v", ota)
 	}
 
 	registration := callRPCPair(t, server, func(conn net.Conn) (*rpcapi.GearGetRegistrationResponse, error) {
@@ -229,12 +222,6 @@ func TestRPCServerDispatchErrorPaths(t *testing.T) {
 			code:    404,
 		},
 		{
-			name:    "ota not found",
-			server:  &rpcServer{gear: &fakeRPCGearService{otaError: errResp}},
-			request: newRPCRequest("ota", rpcapi.RPCMethodGearOtaGet, mustRPCParams(rpcapi.GearGetOTARequest{}, (*rpcapi.RPCRequest_Params).FromGearGetOTARequest)),
-			code:    404,
-		},
-		{
 			name:    "registration not found",
 			server:  &rpcServer{gear: &fakeRPCGearService{registrationError: errResp}},
 			request: newRPCRequest("registration", rpcapi.RPCMethodGearRegistrationGet, mustRPCParams(rpcapi.GearGetRegistrationRequest{}, (*rpcapi.RPCRequest_Params).FromGearGetRegistrationRequest)),
@@ -334,7 +321,6 @@ type fakeRPCGearService struct {
 	config          apitypes.Configuration
 	info            apitypes.DeviceInfo
 	putInfoResponse apitypes.DeviceInfo
-	ota             apitypes.OTASummary
 	registration    apitypes.Registration
 	registerResult  gearservice.RegistrationResult
 	runtime         apitypes.Runtime
@@ -345,7 +331,6 @@ type fakeRPCGearService struct {
 	getInfoError       apitypes.ErrorResponse
 	putInfo400         apitypes.ErrorResponse
 	putInfo404         apitypes.ErrorResponse
-	otaError           apitypes.ErrorResponse
 	registrationError  apitypes.ErrorResponse
 	register400        apitypes.ErrorResponse
 	register409        apitypes.ErrorResponse
@@ -384,10 +369,6 @@ func (f *fakeRPCGearService) GetConfig(ctx context.Context, _ gearservice.GetCon
 	return gearservice.GetConfig200JSONResponse(f.config), nil
 }
 
-func (f *fakeRPCGearService) DownloadFirmware(context.Context, gearservice.DownloadFirmwareRequestObject) (gearservice.DownloadFirmwareResponseObject, error) {
-	return nil, errors.New("unexpected DownloadFirmware call")
-}
-
 func (f *fakeRPCGearService) GetInfo(ctx context.Context, _ gearservice.GetInfoRequestObject) (gearservice.GetInfoResponseObject, error) {
 	f.checkPublicKey(ctx)
 	if f.getInfoError.Error.Code != "" {
@@ -406,14 +387,6 @@ func (f *fakeRPCGearService) PutInfo(ctx context.Context, request gearservice.Pu
 		return gearservice.PutInfo404JSONResponse(f.putInfo404), nil
 	}
 	return gearservice.PutInfo200JSONResponse(f.putInfoResponse), nil
-}
-
-func (f *fakeRPCGearService) GetOTA(ctx context.Context, _ gearservice.GetOTARequestObject) (gearservice.GetOTAResponseObject, error) {
-	f.checkPublicKey(ctx)
-	if f.otaError.Error.Code != "" {
-		return gearservice.GetOTA404JSONResponse(f.otaError), nil
-	}
-	return gearservice.GetOTA200JSONResponse(f.ota), nil
 }
 
 func (f *fakeRPCGearService) GetRegistration(ctx context.Context, _ gearservice.GetRegistrationRequestObject) (gearservice.GetRegistrationResponseObject, error) {
@@ -457,9 +430,9 @@ func (f *fakeRPCGearService) checkPublicKey(ctx context.Context) {
 	}
 }
 
-func testRPCRegistration(publicKey string, now time.Time) apitypes.Registration {
+func testRPCRegistration(publicKey giznet.PublicKey, now time.Time) apitypes.Registration {
 	return apitypes.Registration{
-		PublicKey: publicKey,
+		PublicKey: publicKey.String(),
 		Role:      apitypes.GearRoleGear,
 		Status:    apitypes.GearStatusActive,
 		CreatedAt: now,
@@ -467,11 +440,11 @@ func testRPCRegistration(publicKey string, now time.Time) apitypes.Registration 
 	}
 }
 
-func testRPCRegistrationResult(publicKey string, now time.Time) gearservice.RegistrationResult {
+func testRPCRegistrationResult(publicKey giznet.PublicKey, now time.Time) gearservice.RegistrationResult {
 	registration := testRPCRegistration(publicKey, now)
 	return gearservice.RegistrationResult{
 		Gear: apitypes.Gear{
-			PublicKey:     publicKey,
+			PublicKey:     publicKey.String(),
 			Role:          apitypes.GearRoleGear,
 			Status:        apitypes.GearStatusActive,
 			Device:        apitypes.DeviceInfo{Name: stringPtr("gear-registered")},

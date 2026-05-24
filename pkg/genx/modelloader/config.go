@@ -86,8 +86,8 @@ type Entry struct {
 	InvokeParams      *genx.ModelParams `json:"invoke_params,omitzero" yaml:"invoke_params,omitzero"`
 	SupportJSONOutput bool              `json:"support_json_output,omitzero" yaml:"support_json_output,omitzero"`
 	SupportToolCalls  bool              `json:"support_tool_calls,omitzero" yaml:"support_tool_calls,omitzero"`
-	SupportTextOnly   bool              `json:"support_text_only,omitzero" yaml:"support_text_only,omitzero"`
-	UseSystemRole     bool              `json:"use_system_role,omitzero" yaml:"use_system_role,omitzero"`
+	TextOnly          bool              `json:"text_only,omitzero" yaml:"text_only,omitzero"`
+	PromptRole        genx.PromptRole   `json:"prompt_role,omitzero" yaml:"prompt_role,omitzero"`
 	ExtraFields       map[string]any    `json:"extra_fields,omitzero" yaml:"extra_fields,omitzero"`
 
 	// ASR/Realtime specific fields
@@ -262,8 +262,8 @@ func registerOpenAI(cfg ConfigFile) ([]string, error) {
 			InvokeParams:      m.InvokeParams,
 			SupportJSONOutput: m.SupportJSONOutput,
 			SupportToolCalls:  m.SupportToolCalls,
-			SupportTextOnly:   m.SupportTextOnly,
-			UseSystemRole:     m.UseSystemRole,
+			TextOnly:          m.TextOnly,
+			PromptRole:        m.PromptRole,
 			ExtraFields:       m.ExtraFields,
 		}); err != nil {
 			return nil, fmt.Errorf("register generator %q: %w", m.Name, err)

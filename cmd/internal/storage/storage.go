@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
@@ -24,11 +25,7 @@ const (
 	KindKeyValue   = "keyvalue"
 	KindVecStore   = "vecstore"
 	KindFilesystem = "filesystem"
-	KindDepotStore = "depotstore"
 	KindSQL        = "sql"
-
-	// KindFS is the legacy one-layer firmware store kind.
-	KindFS = "filestore"
 )
 
 // Config is the YAML representation of a physical storage backend.
@@ -39,18 +36,16 @@ const (
 //	    badger:
 //	      dir: data/kv
 type Config struct {
-	Kind          string         `yaml:"kind"`
-	Memory        *MemoryConfig  `yaml:"memory"`
-	Badger        *BadgerConfig  `yaml:"badger"`
-	FS            *FSConfig      `yaml:"fs"`
-	SQLite        *SQLConfig     `yaml:"sqlite"`
-	Postgres      *SQLConfig     `yaml:"postgres"`
-	DepotFS       *DepotFSConfig `yaml:"depot-fs"`
-	LegacyDepotFS *DepotFSConfig `yaml:"depot-kvfs"`
-	Backend       string         `yaml:"backend"` // legacy driver field
-	Dir           string         `yaml:"dir"`     // legacy driver dir field
-	Dim           int            `yaml:"dim"`     // legacy vecstore dimension field
-	DSN           string         `yaml:"dsn"`     // legacy sql connection string field
+	Kind     string        `yaml:"kind"`
+	Memory   *MemoryConfig `yaml:"memory"`
+	Badger   *BadgerConfig `yaml:"badger"`
+	FS       *FSConfig     `yaml:"fs"`
+	SQLite   *SQLConfig    `yaml:"sqlite"`
+	Postgres *SQLConfig    `yaml:"postgres"`
+	Backend  string        `yaml:"backend"` // legacy driver field
+	Dir      string        `yaml:"dir"`     // legacy driver dir field
+	Dim      int           `yaml:"dim"`     // legacy vecstore dimension field
+	DSN      string        `yaml:"dsn"`     // legacy sql connection string field
 }
 
 type MemoryConfig struct{}
@@ -68,34 +63,23 @@ type SQLConfig struct {
 	Dir string `yaml:"dir"`
 }
 
-type FilesystemRef struct {
-	Storage string `yaml:"storage"`
-	BaseDir string `yaml:"base-dir"`
-}
-
-type DepotFSConfig struct{}
-
 // Storage holds physical backend instances created eagerly by New.
 type Storage struct {
-	kvs          map[string]kv.Store
-	vecs         map[string]vecstore.Index
-	sqls         map[string]*sql.DB
-	fss          map[string]depotstore.Dir
-	depots       map[string]depotstore.Store
-	depotDrivers map[string]string
-	closers      []io.Closer
+	kvs     map[string]kv.Store
+	vecs    map[string]vecstore.Index
+	sqls    map[string]*sql.DB
+	fss     map[string]depotstore.Dir
+	closers []io.Closer
 }
 
 // New creates a Storage registry and eagerly instantiates every configured
 // physical backend. Dir fields are used as provided by the caller.
 func New(configs map[string]Config) (*Storage, error) {
 	s := &Storage{
-		kvs:          make(map[string]kv.Store),
-		vecs:         make(map[string]vecstore.Index),
-		sqls:         make(map[string]*sql.DB),
-		fss:          make(map[string]depotstore.Dir),
-		depots:       make(map[string]depotstore.Store),
-		depotDrivers: make(map[string]string),
+		kvs:  make(map[string]kv.Store),
+		vecs: make(map[string]vecstore.Index),
+		sqls: make(map[string]*sql.DB),
+		fss:  make(map[string]depotstore.Dir),
 	}
 	ok := false
 	defer func() {
@@ -156,25 +140,6 @@ func (s *Storage) Filesystem(name string) (depotstore.Dir, error) {
 	return st, nil
 }
 
-// DepotStore returns the named physical depot store backend.
-// It is kept for legacy filestore configs. New depotstore configs are assembled
-// by the logical stores layer from a depot driver plus backend refs.
-func (s *Storage) DepotStore(name string) (depotstore.Store, error) {
-	st, ok := s.depots[name]
-	if !ok {
-		return nil, fmt.Errorf("storage: depotstore %q not found", name)
-	}
-	return st, nil
-}
-
-func (s *Storage) DepotDriver(name string) (string, error) {
-	driver, ok := s.depotDrivers[name]
-	if !ok {
-		return "", fmt.Errorf("storage: depotstore %q not found", name)
-	}
-	return driver, nil
-}
-
 // Close releases all opened physical backends in reverse creation order.
 func (s *Storage) Close() error {
 	var errs []error
@@ -227,19 +192,6 @@ func (s *Storage) build(name string, configs map[string]Config, states map[strin
 		st, err = newFilesystem(name, cfg)
 		if err == nil {
 			s.fss[name] = st
-		}
-	case KindDepotStore:
-		var driver string
-		driver, err = newDepotDriver(name, cfg)
-		if err == nil {
-			s.depotDrivers[name] = driver
-		}
-	case KindFS:
-		var st depotstore.Dir
-		st, err = newLegacyFS(name, cfg)
-		if err == nil {
-			s.fss[name] = st
-			s.depots[name] = st
 		}
 	case KindSQL:
 		var st *sql.DB
@@ -321,17 +273,6 @@ func newFilesystem(name string, cfg Config) (depotstore.Dir, error) {
 	return newFilesystemDir(name, cfg.FS.Dir)
 }
 
-func newLegacyFS(name string, cfg Config) (depotstore.Dir, error) {
-	switch cfg.Backend {
-	case "filesystem":
-		return newFilesystemDir(name, cfg.Dir)
-	case "":
-		return "", fmt.Errorf("storage: filestore %q requires backend", name)
-	default:
-		return "", fmt.Errorf("storage: filestore %q unknown backend %q", name, cfg.Backend)
-	}
-}
-
 func newFilesystemDir(name, dir string) (depotstore.Dir, error) {
 	if dir == "" {
 		return "", fmt.Errorf("storage: filesystem %q (fs) requires dir", name)
@@ -340,18 +281,6 @@ func newFilesystemDir(name, dir string) (depotstore.Dir, error) {
 		return "", fmt.Errorf("storage: filesystem %q mkdir: %w", name, err)
 	}
 	return depotstore.Dir(dir), nil
-}
-
-func newDepotDriver(name string, cfg Config) (string, error) {
-	if blocks := driverBlocks(cfg); len(blocks) > 0 {
-		if err := validateDriverBlocks(name, KindDepotStore, blocks, "depot-fs"); err != nil {
-			return "", err
-		}
-	}
-	if cfg.DepotFS == nil && cfg.LegacyDepotFS == nil {
-		return "", fmt.Errorf("storage: depotstore %q requires depot-fs driver", name)
-	}
-	return "depot-fs", nil
 }
 
 func newSQL(name string, cfg Config) (*sql.DB, error) {
@@ -367,6 +296,9 @@ func newSQL(name string, cfg Config) (*sql.DB, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("storage: sql %q requires dsn", name)
 	}
+	if err := prepareSQLDir(name, cfg); err != nil {
+		return nil, err
+	}
 	db, err := sql.Open(backend, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("storage: sql %q open: %w", name, err)
@@ -376,6 +308,26 @@ func newSQL(name string, cfg Config) (*sql.DB, error) {
 		return nil, fmt.Errorf("storage: sql %q ping: %w", name, err)
 	}
 	return db, nil
+}
+
+func prepareSQLDir(name string, cfg Config) error {
+	var dir string
+	if cfg.SQLite != nil && cfg.SQLite.DSN == "" {
+		dir = cfg.SQLite.Dir
+	} else if cfg.Backend == "sqlite" && cfg.DSN == "" {
+		dir = cfg.Dir
+	}
+	if dir == "" {
+		return nil
+	}
+	parent := filepath.Dir(dir)
+	if parent == "." || parent == "" {
+		return nil
+	}
+	if err := os.MkdirAll(parent, 0o755); err != nil {
+		return fmt.Errorf("storage: sql %q mkdir: %w", name, err)
+	}
+	return nil
 }
 
 func driverBlocks(cfg Config) []string {
@@ -394,12 +346,6 @@ func driverBlocks(cfg Config) []string {
 	}
 	if cfg.Postgres != nil {
 		blocks = append(blocks, "postgres")
-	}
-	if cfg.LegacyDepotFS != nil {
-		blocks = append(blocks, "depot-fs")
-	}
-	if cfg.DepotFS != nil {
-		blocks = append(blocks, "depot-fs")
 	}
 	return blocks
 }

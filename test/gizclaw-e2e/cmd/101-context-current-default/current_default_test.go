@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	clitest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/cmd"
 )
 
@@ -14,7 +15,7 @@ func TestCurrentContextDefaultUserStory(t *testing.T) {
 	h.CreateContext("valid").MustSucceed(t)
 	h.WaitForPing("valid")
 
-	invalidPubKey := strings.Repeat("0", 64)
+	invalidPubKey := giznet.PublicKey{}.String()
 	h.CreateContextWith("invalid", h.ServerAddr, invalidPubKey).MustSucceed(t)
 
 	h.UseContext("valid").MustSucceed(t)

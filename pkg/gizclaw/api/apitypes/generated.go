@@ -11,6 +11,177 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// Defines values for ACLPermission.
+const (
+	ACLPermissionCredentialAdmin ACLPermission = "credential.admin"
+	ACLPermissionCredentialRead  ACLPermission = "credential.read"
+	ACLPermissionCredentialUse   ACLPermission = "credential.use"
+	ACLPermissionEditor          ACLPermission = "editor"
+	ACLPermissionModelAdmin      ACLPermission = "model.admin"
+	ACLPermissionModelRead       ACLPermission = "model.read"
+	ACLPermissionModelUse        ACLPermission = "model.use"
+	ACLPermissionOwner           ACLPermission = "owner"
+	ACLPermissionViewAdmin       ACLPermission = "view.admin"
+	ACLPermissionViewRead        ACLPermission = "view.read"
+	ACLPermissionViewUse         ACLPermission = "view.use"
+	ACLPermissionViewer          ACLPermission = "viewer"
+	ACLPermissionVoiceAdmin      ACLPermission = "voice.admin"
+	ACLPermissionVoiceRead       ACLPermission = "voice.read"
+	ACLPermissionVoiceUse        ACLPermission = "voice.use"
+	ACLPermissionWorkflowAdmin   ACLPermission = "workflow.admin"
+	ACLPermissionWorkflowRead    ACLPermission = "workflow.read"
+	ACLPermissionWorkflowUse     ACLPermission = "workflow.use"
+	ACLPermissionWorkspaceAdmin  ACLPermission = "workspace.admin"
+	ACLPermissionWorkspaceRead   ACLPermission = "workspace.read"
+	ACLPermissionWorkspaceUse    ACLPermission = "workspace.use"
+)
+
+// Valid indicates whether the value is a known member of the ACLPermission enum.
+func (e ACLPermission) Valid() bool {
+	switch e {
+	case ACLPermissionCredentialAdmin:
+		return true
+	case ACLPermissionCredentialRead:
+		return true
+	case ACLPermissionCredentialUse:
+		return true
+	case ACLPermissionEditor:
+		return true
+	case ACLPermissionModelAdmin:
+		return true
+	case ACLPermissionModelRead:
+		return true
+	case ACLPermissionModelUse:
+		return true
+	case ACLPermissionOwner:
+		return true
+	case ACLPermissionViewAdmin:
+		return true
+	case ACLPermissionViewRead:
+		return true
+	case ACLPermissionViewUse:
+		return true
+	case ACLPermissionViewer:
+		return true
+	case ACLPermissionVoiceAdmin:
+		return true
+	case ACLPermissionVoiceRead:
+		return true
+	case ACLPermissionVoiceUse:
+		return true
+	case ACLPermissionWorkflowAdmin:
+		return true
+	case ACLPermissionWorkflowRead:
+		return true
+	case ACLPermissionWorkflowUse:
+		return true
+	case ACLPermissionWorkspaceAdmin:
+		return true
+	case ACLPermissionWorkspaceRead:
+		return true
+	case ACLPermissionWorkspaceUse:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ACLPolicyBindingResourceKind.
+const (
+	ACLPolicyBindingResourceKindACLPolicyBinding ACLPolicyBindingResourceKind = "ACLPolicyBinding"
+)
+
+// Valid indicates whether the value is a known member of the ACLPolicyBindingResourceKind enum.
+func (e ACLPolicyBindingResourceKind) Valid() bool {
+	switch e {
+	case ACLPolicyBindingResourceKindACLPolicyBinding:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ACLResourceKind.
+const (
+	ACLResourceKindCredential ACLResourceKind = "credential"
+	ACLResourceKindModel      ACLResourceKind = "model"
+	ACLResourceKindView       ACLResourceKind = "view"
+	ACLResourceKindVoice      ACLResourceKind = "voice"
+	ACLResourceKindWorkflow   ACLResourceKind = "workflow"
+	ACLResourceKindWorkspace  ACLResourceKind = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the ACLResourceKind enum.
+func (e ACLResourceKind) Valid() bool {
+	switch e {
+	case ACLResourceKindCredential:
+		return true
+	case ACLResourceKindModel:
+		return true
+	case ACLResourceKindView:
+		return true
+	case ACLResourceKindVoice:
+		return true
+	case ACLResourceKindWorkflow:
+		return true
+	case ACLResourceKindWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ACLRoleResourceKind.
+const (
+	ACLRoleResourceKindACLRole ACLRoleResourceKind = "ACLRole"
+)
+
+// Valid indicates whether the value is a known member of the ACLRoleResourceKind enum.
+func (e ACLRoleResourceKind) Valid() bool {
+	switch e {
+	case ACLRoleResourceKindACLRole:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ACLSubjectKind.
+const (
+	ACLSubjectKindAllPeers ACLSubjectKind = "all_peers"
+	ACLSubjectKindPk       ACLSubjectKind = "pk"
+	ACLSubjectKindView     ACLSubjectKind = "view"
+)
+
+// Valid indicates whether the value is a known member of the ACLSubjectKind enum.
+func (e ACLSubjectKind) Valid() bool {
+	switch e {
+	case ACLSubjectKindAllPeers:
+		return true
+	case ACLSubjectKindPk:
+		return true
+	case ACLSubjectKindView:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ACLViewResourceKind.
+const (
+	ACLViewResourceKindACLView ACLViewResourceKind = "ACLView"
+)
+
+// Valid indicates whether the value is a known member of the ACLViewResourceKind enum.
+func (e ACLViewResourceKind) Valid() bool {
+	switch e {
+	case ACLViewResourceKindACLView:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApplyAction.
 const (
 	ApplyActionApplied   ApplyAction = "applied"
@@ -71,6 +242,72 @@ func (e CredentialResourceKind) Valid() bool {
 	}
 }
 
+// Defines values for DashScopeTenantModelProviderDataApiMode.
+const (
+	DashScopeTenantModelProviderDataApiModeChatCompletions DashScopeTenantModelProviderDataApiMode = "chat_completions"
+	DashScopeTenantModelProviderDataApiModeRealtime        DashScopeTenantModelProviderDataApiMode = "realtime"
+)
+
+// Valid indicates whether the value is a known member of the DashScopeTenantModelProviderDataApiMode enum.
+func (e DashScopeTenantModelProviderDataApiMode) Valid() bool {
+	switch e {
+	case DashScopeTenantModelProviderDataApiModeChatCompletions:
+		return true
+	case DashScopeTenantModelProviderDataApiModeRealtime:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DashScopeTenantResourceKind.
+const (
+	DashScopeTenantResourceKindDashScopeTenant DashScopeTenantResourceKind = "DashScopeTenant"
+)
+
+// Valid indicates whether the value is a known member of the DashScopeTenantResourceKind enum.
+func (e DashScopeTenantResourceKind) Valid() bool {
+	switch e {
+	case DashScopeTenantResourceKindDashScopeTenant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FirmwareArtifactKind.
+const (
+	FirmwareArtifactKindApp  FirmwareArtifactKind = "app"
+	FirmwareArtifactKindData FirmwareArtifactKind = "data"
+)
+
+// Valid indicates whether the value is a known member of the FirmwareArtifactKind enum.
+func (e FirmwareArtifactKind) Valid() bool {
+	switch e {
+	case FirmwareArtifactKindApp:
+		return true
+	case FirmwareArtifactKindData:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for FirmwareResourceKind.
+const (
+	FirmwareResourceKindFirmware FirmwareResourceKind = "Firmware"
+)
+
+// Valid indicates whether the value is a known member of the FirmwareResourceKind enum.
+func (e FirmwareResourceKind) Valid() bool {
+	switch e {
+	case FirmwareResourceKindFirmware:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for FlowcraftWorkflowKind.
 const (
 	FlowcraftWorkflowKindFlowcraftWorkflow FlowcraftWorkflowKind = "FlowcraftWorkflow"
@@ -80,60 +317,6 @@ const (
 func (e FlowcraftWorkflowKind) Valid() bool {
 	switch e {
 	case FlowcraftWorkflowKindFlowcraftWorkflow:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearCertificationAuthority.
-const (
-	GearCertificationAuthorityCcc      GearCertificationAuthority = "ccc"
-	GearCertificationAuthorityCe       GearCertificationAuthority = "ce"
-	GearCertificationAuthorityFcc      GearCertificationAuthority = "fcc"
-	GearCertificationAuthorityInternal GearCertificationAuthority = "internal"
-	GearCertificationAuthorityMiit     GearCertificationAuthority = "miit"
-	GearCertificationAuthorityRohs     GearCertificationAuthority = "rohs"
-	GearCertificationAuthoritySrrc     GearCertificationAuthority = "srrc"
-	GearCertificationAuthorityUnknown  GearCertificationAuthority = "unknown"
-)
-
-// Valid indicates whether the value is a known member of the GearCertificationAuthority enum.
-func (e GearCertificationAuthority) Valid() bool {
-	switch e {
-	case GearCertificationAuthorityCcc:
-		return true
-	case GearCertificationAuthorityCe:
-		return true
-	case GearCertificationAuthorityFcc:
-		return true
-	case GearCertificationAuthorityInternal:
-		return true
-	case GearCertificationAuthorityMiit:
-		return true
-	case GearCertificationAuthorityRohs:
-		return true
-	case GearCertificationAuthoritySrrc:
-		return true
-	case GearCertificationAuthorityUnknown:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for GearCertificationType.
-const (
-	GearCertificationTypeCertification GearCertificationType = "certification"
-	GearCertificationTypeLicense       GearCertificationType = "license"
-)
-
-// Valid indicates whether the value is a known member of the GearCertificationType enum.
-func (e GearCertificationType) Valid() bool {
-	switch e {
-	case GearCertificationTypeCertification:
-		return true
-	case GearCertificationTypeLicense:
 		return true
 	default:
 		return false
@@ -185,6 +368,21 @@ func (e GearStatus) Valid() bool {
 	}
 }
 
+// Defines values for GeminiTenantResourceKind.
+const (
+	GeminiTenantResourceKindGeminiTenant GeminiTenantResourceKind = "GeminiTenant"
+)
+
+// Valid indicates whether the value is a known member of the GeminiTenantResourceKind enum.
+func (e GeminiTenantResourceKind) Valid() bool {
+	switch e {
+	case GeminiTenantResourceKindGeminiTenant:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MiniMaxTenantResourceKind.
 const (
 	MiniMaxTenantResourceKindMiniMaxTenant MiniMaxTenantResourceKind = "MiniMaxTenant"
@@ -202,9 +400,10 @@ func (e MiniMaxTenantResourceKind) Valid() bool {
 
 // Defines values for ModelKind.
 const (
-	ModelKindAsr ModelKind = "asr"
-	ModelKindLlm ModelKind = "llm"
-	ModelKindTts ModelKind = "tts"
+	ModelKindAsr       ModelKind = "asr"
+	ModelKindEmbedding ModelKind = "embedding"
+	ModelKindLlm       ModelKind = "llm"
+	ModelKindTts       ModelKind = "tts"
 )
 
 // Valid indicates whether the value is a known member of the ModelKind enum.
@@ -212,9 +411,32 @@ func (e ModelKind) Valid() bool {
 	switch e {
 	case ModelKindAsr:
 		return true
+	case ModelKindEmbedding:
+		return true
 	case ModelKindLlm:
 		return true
 	case ModelKindTts:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ModelProviderKind.
+const (
+	ModelProviderKindDashscopeTenant ModelProviderKind = "dashscope-tenant"
+	ModelProviderKindGeminiTenant    ModelProviderKind = "gemini-tenant"
+	ModelProviderKindOpenaiTenant    ModelProviderKind = "openai-tenant"
+)
+
+// Valid indicates whether the value is a known member of the ModelProviderKind enum.
+func (e ModelProviderKind) Valid() bool {
+	switch e {
+	case ModelProviderKindDashscopeTenant:
+		return true
+	case ModelProviderKindGeminiTenant:
+		return true
+	case ModelProviderKindOpenaiTenant:
 		return true
 	default:
 		return false
@@ -254,6 +476,57 @@ func (e ModelSource) Valid() bool {
 	}
 }
 
+// Defines values for OpenAITenantAPIMode.
+const (
+	OpenAITenantAPIModeChatCompletions OpenAITenantAPIMode = "chat_completions"
+)
+
+// Valid indicates whether the value is a known member of the OpenAITenantAPIMode enum.
+func (e OpenAITenantAPIMode) Valid() bool {
+	switch e {
+	case OpenAITenantAPIModeChatCompletions:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OpenAITenantKind.
+const (
+	OpenAITenantKindAzure      OpenAITenantKind = "azure"
+	OpenAITenantKindCompatible OpenAITenantKind = "compatible"
+	OpenAITenantKindOpenai     OpenAITenantKind = "openai"
+)
+
+// Valid indicates whether the value is a known member of the OpenAITenantKind enum.
+func (e OpenAITenantKind) Valid() bool {
+	switch e {
+	case OpenAITenantKindAzure:
+		return true
+	case OpenAITenantKindCompatible:
+		return true
+	case OpenAITenantKindOpenai:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OpenAITenantResourceKind.
+const (
+	OpenAITenantResourceKindOpenAITenant OpenAITenantResourceKind = "OpenAITenant"
+)
+
+// Valid indicates whether the value is a known member of the OpenAITenantResourceKind enum.
+func (e OpenAITenantResourceKind) Valid() bool {
+	switch e {
+	case OpenAITenantResourceKindOpenAITenant:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PeerConfigResourceKind.
 const (
 	PeerConfigResourceKindPeerConfig PeerConfigResourceKind = "PeerConfig"
@@ -263,6 +536,33 @@ const (
 func (e PeerConfigResourceKind) Valid() bool {
 	switch e {
 	case PeerConfigResourceKindPeerConfig:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ProviderKind.
+const (
+	ProviderKindDashscopeTenant ProviderKind = "dashscope-tenant"
+	ProviderKindGeminiTenant    ProviderKind = "gemini-tenant"
+	ProviderKindMinimaxTenant   ProviderKind = "minimax-tenant"
+	ProviderKindOpenaiTenant    ProviderKind = "openai-tenant"
+	ProviderKindVolcTenant      ProviderKind = "volc-tenant"
+)
+
+// Valid indicates whether the value is a known member of the ProviderKind enum.
+func (e ProviderKind) Valid() bool {
+	switch e {
+	case ProviderKindDashscopeTenant:
+		return true
+	case ProviderKindGeminiTenant:
+		return true
+	case ProviderKindMinimaxTenant:
+		return true
+	case ProviderKindOpenaiTenant:
+		return true
+	case ProviderKindVolcTenant:
 		return true
 	default:
 		return false
@@ -286,25 +586,46 @@ func (e ResourceAPIVersion) Valid() bool {
 
 // Defines values for ResourceKind.
 const (
-	ResourceKindCredential    ResourceKind = "Credential"
-	ResourceKindMiniMaxTenant ResourceKind = "MiniMaxTenant"
-	ResourceKindModel         ResourceKind = "Model"
-	ResourceKindPeerConfig    ResourceKind = "PeerConfig"
-	ResourceKindResourceList  ResourceKind = "ResourceList"
-	ResourceKindVoice         ResourceKind = "Voice"
-	ResourceKindVolcTenant    ResourceKind = "VolcTenant"
-	ResourceKindWorkflow      ResourceKind = "Workflow"
-	ResourceKindWorkspace     ResourceKind = "Workspace"
+	ResourceKindACLPolicyBinding ResourceKind = "ACLPolicyBinding"
+	ResourceKindACLRole          ResourceKind = "ACLRole"
+	ResourceKindACLView          ResourceKind = "ACLView"
+	ResourceKindCredential       ResourceKind = "Credential"
+	ResourceKindDashScopeTenant  ResourceKind = "DashScopeTenant"
+	ResourceKindFirmware         ResourceKind = "Firmware"
+	ResourceKindGeminiTenant     ResourceKind = "GeminiTenant"
+	ResourceKindMiniMaxTenant    ResourceKind = "MiniMaxTenant"
+	ResourceKindModel            ResourceKind = "Model"
+	ResourceKindOpenAITenant     ResourceKind = "OpenAITenant"
+	ResourceKindPeerConfig       ResourceKind = "PeerConfig"
+	ResourceKindResourceList     ResourceKind = "ResourceList"
+	ResourceKindVoice            ResourceKind = "Voice"
+	ResourceKindVolcTenant       ResourceKind = "VolcTenant"
+	ResourceKindWorkflow         ResourceKind = "Workflow"
+	ResourceKindWorkspace        ResourceKind = "Workspace"
 )
 
 // Valid indicates whether the value is a known member of the ResourceKind enum.
 func (e ResourceKind) Valid() bool {
 	switch e {
+	case ResourceKindACLPolicyBinding:
+		return true
+	case ResourceKindACLRole:
+		return true
+	case ResourceKindACLView:
+		return true
 	case ResourceKindCredential:
+		return true
+	case ResourceKindDashScopeTenant:
+		return true
+	case ResourceKindFirmware:
+		return true
+	case ResourceKindGeminiTenant:
 		return true
 	case ResourceKindMiniMaxTenant:
 		return true
 	case ResourceKindModel:
+		return true
+	case ResourceKindOpenAITenant:
 		return true
 	case ResourceKindPeerConfig:
 		return true
@@ -332,6 +653,33 @@ const (
 func (e ResourceListResourceKind) Valid() bool {
 	switch e {
 	case ResourceListResourceKindResourceList:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VoiceProviderKind.
+const (
+	VoiceProviderKindDashscopeTenant VoiceProviderKind = "dashscope-tenant"
+	VoiceProviderKindGeminiTenant    VoiceProviderKind = "gemini-tenant"
+	VoiceProviderKindMinimaxTenant   VoiceProviderKind = "minimax-tenant"
+	VoiceProviderKindOpenaiTenant    VoiceProviderKind = "openai-tenant"
+	VoiceProviderKindVolcTenant      VoiceProviderKind = "volc-tenant"
+)
+
+// Valid indicates whether the value is a known member of the VoiceProviderKind enum.
+func (e VoiceProviderKind) Valid() bool {
+	switch e {
+	case VoiceProviderKindDashscopeTenant:
+		return true
+	case VoiceProviderKindGeminiTenant:
+		return true
+	case VoiceProviderKindMinimaxTenant:
+		return true
+	case VoiceProviderKindOpenaiTenant:
+		return true
+	case VoiceProviderKindVolcTenant:
 		return true
 	default:
 		return false
@@ -431,6 +779,124 @@ func (e WorkspaceResourceKind) Valid() bool {
 	}
 }
 
+// ACLPermission ACL permission enum.
+type ACLPermission string
+
+// ACLPermissionList defines model for ACLPermissionList.
+type ACLPermissionList = []ACLPermission
+
+// ACLPolicy ACL policy describing one subject-resource-role relation and optional validity window.
+type ACLPolicy struct {
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	NotBefore *time.Time `json:"not_before,omitempty"`
+
+	// Resource ACL resource identity. Stored canonically as kind:id.
+	Resource ACLResource `json:"resource"`
+	Role     string      `json:"role"`
+
+	// Subject ACL subject identity. Stored canonically as kind:id.
+	Subject ACLSubject `json:"subject"`
+}
+
+// ACLPolicyBinding defines model for ACLPolicyBinding.
+type ACLPolicyBinding struct {
+	CreatedAt    time.Time `json:"created_at"`
+	DisplayOrder float64   `json:"display_order"`
+	Id           string    `json:"id"`
+
+	// Policy ACL policy describing one subject-resource-role relation and optional validity window.
+	Policy    ACLPolicy `json:"policy"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// ACLPolicyBindingResource defines model for ACLPolicyBindingResource.
+type ACLPolicyBindingResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion           `json:"apiVersion"`
+	Kind       ACLPolicyBindingResourceKind `json:"kind"`
+	Metadata   ResourceMetadata             `json:"metadata"`
+
+	// Spec ACL policy describing one subject-resource-role relation and optional validity window.
+	Spec ACLPolicy `json:"spec"`
+}
+
+// ACLPolicyBindingResourceKind defines model for ACLPolicyBindingResource.Kind.
+type ACLPolicyBindingResourceKind string
+
+// ACLResource ACL resource identity. Stored canonically as kind:id.
+type ACLResource struct {
+	// Id Resource identifier for the selected kind.
+	Id string `json:"id"`
+
+	// Kind ACL resource identity kind.
+	Kind ACLResourceKind `json:"kind"`
+}
+
+// ACLResourceKind ACL resource identity kind.
+type ACLResourceKind string
+
+// ACLRole defines model for ACLRole.
+type ACLRole struct {
+	CreatedAt   time.Time         `json:"created_at"`
+	Name        string            `json:"name"`
+	Permissions ACLPermissionList `json:"permissions"`
+	UpdatedAt   time.Time         `json:"updated_at"`
+}
+
+// ACLRoleResource defines model for ACLRoleResource.
+type ACLRoleResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion  `json:"apiVersion"`
+	Kind       ACLRoleResourceKind `json:"kind"`
+	Metadata   ResourceMetadata    `json:"metadata"`
+	Spec       ACLRoleSpec         `json:"spec"`
+}
+
+// ACLRoleResourceKind defines model for ACLRoleResource.Kind.
+type ACLRoleResourceKind string
+
+// ACLRoleSpec defines model for ACLRoleSpec.
+type ACLRoleSpec struct {
+	Permissions ACLPermissionList `json:"permissions"`
+}
+
+// ACLSubject ACL subject identity. Stored canonically as kind:id.
+type ACLSubject struct {
+	// Id Subject identifier for the selected kind.
+	Id string `json:"id"`
+
+	// Kind ACL subject identity kind.
+	Kind ACLSubjectKind `json:"kind"`
+}
+
+// ACLSubjectKind ACL subject identity kind.
+type ACLSubjectKind string
+
+// ACLView defines model for ACLView.
+type ACLView struct {
+	CreatedAt   time.Time `json:"created_at"`
+	Description *string   `json:"description,omitempty"`
+	Name        string    `json:"name"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// ACLViewResource defines model for ACLViewResource.
+type ACLViewResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion  `json:"apiVersion"`
+	Kind       ACLViewResourceKind `json:"kind"`
+	Metadata   ResourceMetadata    `json:"metadata"`
+	Spec       ACLViewSpec         `json:"spec"`
+}
+
+// ACLViewResourceKind defines model for ACLViewResource.Kind.
+type ACLViewResourceKind string
+
+// ACLViewSpec defines model for ACLViewSpec.
+type ACLViewSpec struct {
+	Description *string `json:"description,omitempty"`
+}
+
 // ApplyAction Result of applying the resource.
 type ApplyAction string
 
@@ -454,13 +920,10 @@ type ApplyResult struct {
 	Name    string       `json:"name"`
 }
 
-// Channel defines model for Channel.
-type Channel = string
-
 // Configuration defines model for Configuration.
 type Configuration struct {
-	Certifications *[]GearCertification `json:"certifications,omitempty"`
-	Firmware       *FirmwareConfig      `json:"firmware,omitempty"`
+	// View Current content view name selected for this gear.
+	View *string `json:"view,omitempty"`
 }
 
 // Credential defines model for Credential.
@@ -470,14 +933,10 @@ type Credential struct {
 	Description *string        `json:"description,omitempty"`
 
 	// Method Credential authentication method
-	Method CredentialMethod `json:"method"`
-
-	// Name Credential name
-	Name CredentialName `json:"name"`
-
-	// Provider Credential provider name
-	Provider  CredentialProvider `json:"provider"`
-	UpdatedAt time.Time          `json:"updated_at"`
+	Method    CredentialMethod `json:"method"`
+	Name      string           `json:"name"`
+	Provider  string           `json:"provider"`
+	UpdatedAt time.Time        `json:"updated_at"`
 }
 
 // CredentialBody defines model for CredentialBody.
@@ -485,12 +944,6 @@ type CredentialBody map[string]interface{}
 
 // CredentialMethod Credential authentication method
 type CredentialMethod string
-
-// CredentialName Credential name
-type CredentialName = string
-
-// CredentialProvider Credential provider name
-type CredentialProvider = string
 
 // CredentialResource defines model for CredentialResource.
 type CredentialResource struct {
@@ -510,44 +963,52 @@ type CredentialSpec struct {
 	Description *string        `json:"description,omitempty"`
 
 	// Method Credential authentication method
-	Method CredentialMethod `json:"method"`
-
-	// Provider Credential provider name
-	Provider CredentialProvider `json:"provider"`
+	Method   CredentialMethod `json:"method"`
+	Provider string           `json:"provider"`
 }
 
-// Depot defines model for Depot.
-type Depot struct {
-	Beta     DepotRelease `json:"beta"`
-	Info     DepotInfo    `json:"info"`
-	Name     string       `json:"name"`
-	Rollback DepotRelease `json:"rollback"`
-	Stable   DepotRelease `json:"stable"`
-	Testing  DepotRelease `json:"testing"`
+// DashScopeTenant defines model for DashScopeTenant.
+type DashScopeTenant struct {
+	BaseUrl        *string   `json:"base_url,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	CredentialName string    `json:"credential_name"`
+	Description    *string   `json:"description,omitempty"`
+	Name           string    `json:"name"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
-// DepotFile defines model for DepotFile.
-type DepotFile struct {
-	Md5    string `json:"md5"`
-	Path   string `json:"path"`
-	Sha256 string `json:"sha256"`
+// DashScopeTenantModelProviderData defines model for DashScopeTenantModelProviderData.
+type DashScopeTenantModelProviderData struct {
+	ApiMode       *DashScopeTenantModelProviderDataApiMode `json:"api_mode,omitempty"`
+	UpstreamModel *string                                  `json:"upstream_model,omitempty"`
 }
 
-// DepotInfo defines model for DepotInfo.
-type DepotInfo struct {
-	Files *[]DepotInfoFile `json:"files,omitempty"`
+// DashScopeTenantModelProviderDataApiMode defines model for DashScopeTenantModelProviderData.ApiMode.
+type DashScopeTenantModelProviderDataApiMode string
+
+// DashScopeTenantResource defines model for DashScopeTenantResource.
+type DashScopeTenantResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion          `json:"apiVersion"`
+	Kind       DashScopeTenantResourceKind `json:"kind"`
+	Metadata   ResourceMetadata            `json:"metadata"`
+	Spec       DashScopeTenantSpec         `json:"spec"`
 }
 
-// DepotInfoFile defines model for DepotInfoFile.
-type DepotInfoFile struct {
-	Path string `json:"path"`
+// DashScopeTenantResourceKind defines model for DashScopeTenantResource.Kind.
+type DashScopeTenantResourceKind string
+
+// DashScopeTenantSpec defines model for DashScopeTenantSpec.
+type DashScopeTenantSpec struct {
+	BaseUrl        *string `json:"base_url,omitempty"`
+	CredentialName string  `json:"credential_name"`
+	Description    *string `json:"description,omitempty"`
 }
 
-// DepotRelease defines model for DepotRelease.
-type DepotRelease struct {
-	Channel        *string      `json:"channel,omitempty"`
-	Files          *[]DepotFile `json:"files,omitempty"`
-	FirmwareSemver string       `json:"firmware_semver"`
+// DashScopeTenantVoiceProviderData defines model for DashScopeTenantVoiceProviderData.
+type DashScopeTenantVoiceProviderData struct {
+	Raw     *map[string]interface{} `json:"raw,omitempty"`
+	VoiceId *string                 `json:"voice_id,omitempty"`
 }
 
 // DeviceInfo defines model for DeviceInfo.
@@ -576,9 +1037,71 @@ type Event struct {
 	V    int              `json:"v"`
 }
 
-// FirmwareConfig defines model for FirmwareConfig.
-type FirmwareConfig struct {
-	Channel *GearFirmwareChannel `json:"channel,omitempty"`
+// Firmware defines model for Firmware.
+type Firmware struct {
+	CreatedAt   time.Time     `json:"created_at"`
+	Description *string       `json:"description,omitempty"`
+	Name        string        `json:"name"`
+	Slots       FirmwareSlots `json:"slots"`
+	UpdatedAt   time.Time     `json:"updated_at"`
+}
+
+// FirmwareArtifact defines model for FirmwareArtifact.
+type FirmwareArtifact struct {
+	// Kind Kind of payload carried by a firmware artifact.
+	Kind FirmwareArtifactKind `json:"kind"`
+
+	// Name Device-defined artifact name.
+	Name string `json:"name"`
+
+	// Sha256 Optional SHA-256 digest for integrity checks.
+	Sha256 *string `json:"sha256,omitempty"`
+
+	// Size Optional artifact size in bytes.
+	Size *int64 `json:"size,omitempty"`
+
+	// Url Download URL for this artifact.
+	Url string `json:"url"`
+}
+
+// FirmwareArtifactKind Kind of payload carried by a firmware artifact.
+type FirmwareArtifactKind string
+
+// FirmwareResource defines model for FirmwareResource.
+type FirmwareResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion   `json:"apiVersion"`
+	Kind       FirmwareResourceKind `json:"kind"`
+	Metadata   ResourceMetadata     `json:"metadata"`
+	Spec       FirmwareSpec         `json:"spec"`
+}
+
+// FirmwareResourceKind defines model for FirmwareResource.Kind.
+type FirmwareResourceKind string
+
+// FirmwareSlot defines model for FirmwareSlot.
+type FirmwareSlot struct {
+	// Artifacts Device-defined artifact list for this slot.
+	Artifacts   *[]FirmwareArtifact `json:"artifacts,omitempty"`
+	Description *string             `json:"description,omitempty"`
+
+	// Version Version carried by this slot.
+	Version *string `json:"version,omitempty"`
+}
+
+// FirmwareSlots defines model for FirmwareSlots.
+type FirmwareSlots struct {
+	Beta     FirmwareSlot `json:"beta"`
+	Develop  FirmwareSlot `json:"develop"`
+	Pending  FirmwareSlot `json:"pending"`
+	Rollback FirmwareSlot `json:"rollback"`
+	Stable   FirmwareSlot `json:"stable"`
+}
+
+// FirmwareSpec defines model for FirmwareSpec.
+type FirmwareSpec struct {
+	Description *string       `json:"description,omitempty"`
+	Slots       FirmwareSlots `json:"slots"`
 }
 
 // FlowcraftWorkflow defines model for FlowcraftWorkflow.
@@ -608,23 +1131,6 @@ type Gear struct {
 	UpdatedAt      time.Time     `json:"updated_at"`
 }
 
-// GearCertification defines model for GearCertification.
-type GearCertification struct {
-	Authority     GearCertificationAuthority `json:"authority"`
-	AuthorityName *string                    `json:"authority_name,omitempty"`
-	Id            string                     `json:"id"`
-	Type          GearCertificationType      `json:"type"`
-}
-
-// GearCertificationAuthority defines model for GearCertificationAuthority.
-type GearCertificationAuthority string
-
-// GearCertificationType defines model for GearCertificationType.
-type GearCertificationType string
-
-// GearFirmwareChannel defines model for GearFirmwareChannel.
-type GearFirmwareChannel = string
-
 // GearIMEI defines model for GearIMEI.
 type GearIMEI struct {
 	Name   *string `json:"name,omitempty"`
@@ -644,10 +1150,52 @@ type GearRole string
 // GearStatus defines model for GearStatus.
 type GearStatus string
 
+// GeminiTenant defines model for GeminiTenant.
+type GeminiTenant struct {
+	BaseUrl        *string   `json:"base_url,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
+	CredentialName string    `json:"credential_name"`
+	Description    *string   `json:"description,omitempty"`
+	Location       *string   `json:"location,omitempty"`
+	Name           string    `json:"name"`
+	ProjectId      *string   `json:"project_id,omitempty"`
+	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+// GeminiTenantModelProviderData defines model for GeminiTenantModelProviderData.
+type GeminiTenantModelProviderData struct {
+	UpstreamModel *string `json:"upstream_model,omitempty"`
+}
+
+// GeminiTenantResource defines model for GeminiTenantResource.
+type GeminiTenantResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion       `json:"apiVersion"`
+	Kind       GeminiTenantResourceKind `json:"kind"`
+	Metadata   ResourceMetadata         `json:"metadata"`
+	Spec       GeminiTenantSpec         `json:"spec"`
+}
+
+// GeminiTenantResourceKind defines model for GeminiTenantResource.Kind.
+type GeminiTenantResourceKind string
+
+// GeminiTenantSpec defines model for GeminiTenantSpec.
+type GeminiTenantSpec struct {
+	BaseUrl        *string `json:"base_url,omitempty"`
+	CredentialName string  `json:"credential_name"`
+	Description    *string `json:"description,omitempty"`
+	Location       *string `json:"location,omitempty"`
+	ProjectId      *string `json:"project_id,omitempty"`
+}
+
+// GeminiTenantVoiceProviderData defines model for GeminiTenantVoiceProviderData.
+type GeminiTenantVoiceProviderData struct {
+	Raw     *map[string]interface{} `json:"raw,omitempty"`
+	VoiceId *string                 `json:"voice_id,omitempty"`
+}
+
 // HardwareInfo defines model for HardwareInfo.
 type HardwareInfo struct {
-	Depot            *string      `json:"depot,omitempty"`
-	FirmwareSemver   *string      `json:"firmware_semver,omitempty"`
 	HardwareRevision *string      `json:"hardware_revision,omitempty"`
 	Imeis            *[]GearIMEI  `json:"imeis,omitempty"`
 	Labels           *[]GearLabel `json:"labels,omitempty"`
@@ -655,34 +1203,18 @@ type HardwareInfo struct {
 	Model            *string      `json:"model,omitempty"`
 }
 
-// MiniMaxAppID MiniMax app identifier
-type MiniMaxAppID = string
-
-// MiniMaxGroupID MiniMax group identifier
-type MiniMaxGroupID = string
-
 // MiniMaxTenant defines model for MiniMaxTenant.
 type MiniMaxTenant struct {
-	// AppId MiniMax app identifier
-	AppId     MiniMaxAppID `json:"app_id"`
-	BaseUrl   *string      `json:"base_url,omitempty"`
-	CreatedAt time.Time    `json:"created_at"`
-
-	// CredentialName Credential name
-	CredentialName CredentialName `json:"credential_name"`
-	Description    *string        `json:"description,omitempty"`
-
-	// GroupId MiniMax group identifier
-	GroupId      MiniMaxGroupID `json:"group_id"`
-	LastSyncedAt *time.Time     `json:"last_synced_at,omitempty"`
-
-	// Name MiniMax tenant name
-	Name      MiniMaxTenantName `json:"name"`
-	UpdatedAt time.Time         `json:"updated_at"`
+	AppId          string     `json:"app_id"`
+	BaseUrl        *string    `json:"base_url,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
+	CredentialName string     `json:"credential_name"`
+	Description    *string    `json:"description,omitempty"`
+	GroupId        string     `json:"group_id"`
+	LastSyncedAt   *time.Time `json:"last_synced_at,omitempty"`
+	Name           string     `json:"name"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
-
-// MiniMaxTenantName MiniMax tenant name
-type MiniMaxTenantName = string
 
 // MiniMaxTenantResource defines model for MiniMaxTenantResource.
 type MiniMaxTenantResource struct {
@@ -698,33 +1230,34 @@ type MiniMaxTenantResourceKind string
 
 // MiniMaxTenantSpec defines model for MiniMaxTenantSpec.
 type MiniMaxTenantSpec struct {
-	// AppId MiniMax app identifier
-	AppId   MiniMaxAppID `json:"app_id"`
-	BaseUrl *string      `json:"base_url,omitempty"`
+	AppId          string  `json:"app_id"`
+	BaseUrl        *string `json:"base_url,omitempty"`
+	CredentialName string  `json:"credential_name"`
+	Description    *string `json:"description,omitempty"`
+	GroupId        string  `json:"group_id"`
+}
 
-	// CredentialName Credential name
-	CredentialName CredentialName `json:"credential_name"`
-	Description    *string        `json:"description,omitempty"`
-
-	// GroupId MiniMax group identifier
-	GroupId MiniMaxGroupID `json:"group_id"`
+// MiniMaxTenantVoiceProviderData defines model for MiniMaxTenantVoiceProviderData.
+type MiniMaxTenantVoiceProviderData struct {
+	Raw       *map[string]interface{} `json:"raw,omitempty"`
+	VoiceId   *string                 `json:"voice_id,omitempty"`
+	VoiceType *string                 `json:"voice_type,omitempty"`
 }
 
 // Model defines model for Model.
 type Model struct {
-	CreatedAt   time.Time `json:"created_at"`
-	Description *string   `json:"description,omitempty"`
+	Capabilities *ModelCapabilities `json:"capabilities,omitempty"`
+	CreatedAt    time.Time          `json:"created_at"`
+	Description  *string            `json:"description,omitempty"`
+	Id           string             `json:"id"`
 
-	// Id Global model identifier
-	Id ModelID `json:"id"`
-
-	// Kind Model capability kind
+	// Kind Runtime role of a model.
 	Kind     ModelKind     `json:"kind"`
 	Name     *string       `json:"name,omitempty"`
 	Provider ModelProvider `json:"provider"`
 
-	// ProviderData Provider-specific data keyed by provider kind.
-	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
+	// ProviderData Provider-specific model runtime configuration keyed by provider kind.
+	ProviderData *ModelProviderData `json:"provider_data,omitempty"`
 
 	// Source How the model entered the global catalog
 	Source    ModelSource `json:"source"`
@@ -732,26 +1265,31 @@ type Model struct {
 	UpdatedAt time.Time   `json:"updated_at"`
 }
 
-// ModelID Global model identifier
-type ModelID = string
+// ModelCapabilities defines model for ModelCapabilities.
+type ModelCapabilities struct {
+	JsonOutput  *bool                    `json:"json_output,omitempty"`
+	SystemRole  *bool                    `json:"system_role,omitempty"`
+	Temperature *bool                    `json:"temperature,omitempty"`
+	TextOnly    *bool                    `json:"text_only,omitempty"`
+	Thinking    *ModelThinkingCapability `json:"thinking,omitempty"`
+	ToolCalls   *bool                    `json:"tool_calls,omitempty"`
+}
 
-// ModelKind Model capability kind
+// ModelKind Runtime role of a model.
 type ModelKind string
 
 // ModelProvider defines model for ModelProvider.
 type ModelProvider struct {
-	// Kind Model provider kind
+	// Kind Provider resource kind usable by model runtime.
 	Kind ModelProviderKind `json:"kind"`
-
-	// Name Model provider instance name
-	Name ModelProviderName `json:"name"`
+	Name string            `json:"name"`
 }
 
-// ModelProviderKind Model provider kind
-type ModelProviderKind = string
+// ModelProviderData Provider-specific model runtime configuration keyed by provider kind.
+type ModelProviderData map[string]interface{}
 
-// ModelProviderName Model provider instance name
-type ModelProviderName = string
+// ModelProviderKind Provider resource kind usable by model runtime.
+type ModelProviderKind string
 
 // ModelResource defines model for ModelResource.
 type ModelResource struct {
@@ -770,26 +1308,97 @@ type ModelSource string
 
 // ModelSpec defines model for ModelSpec.
 type ModelSpec struct {
-	Description *string `json:"description,omitempty"`
+	Capabilities *ModelCapabilities `json:"capabilities,omitempty"`
+	Description  *string            `json:"description,omitempty"`
 
-	// Kind Model capability kind
+	// Kind Runtime role of a model.
 	Kind     ModelKind     `json:"kind"`
 	Name     *string       `json:"name,omitempty"`
 	Provider ModelProvider `json:"provider"`
 
-	// ProviderData Provider-specific data keyed by provider kind.
-	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
+	// ProviderData Provider-specific model runtime configuration keyed by provider kind.
+	ProviderData *ModelProviderData `json:"provider_data,omitempty"`
 
 	// Source How the model entered the global catalog
 	Source ModelSource `json:"source"`
 }
 
-// OTASummary defines model for OTASummary.
-type OTASummary struct {
-	Channel        string      `json:"channel"`
-	Depot          string      `json:"depot"`
-	Files          []DepotFile `json:"files"`
-	FirmwareSemver string      `json:"firmware_semver"`
+// ModelThinkingCapability defines model for ModelThinkingCapability.
+type ModelThinkingCapability struct {
+	DefaultLevel *string `json:"default_level,omitempty"`
+
+	// LevelParam Optional provider request parameter used for the selected thinking level or budget.
+	LevelParam *string   `json:"level_param,omitempty"`
+	Levels     *[]string `json:"levels,omitempty"`
+
+	// Param Provider request parameter mapping, such as reasoning_effort, thinking.type, or enable_thinking.
+	Param     *string `json:"param,omitempty"`
+	Supported bool    `json:"supported"`
+}
+
+// OpenAITenant defines model for OpenAITenant.
+type OpenAITenant struct {
+	// ApiMode OpenAI API mode used by this tenant.
+	ApiMode        OpenAITenantAPIMode `json:"api_mode"`
+	BaseUrl        *string             `json:"base_url,omitempty"`
+	CreatedAt      time.Time           `json:"created_at"`
+	CredentialName string              `json:"credential_name"`
+	Description    *string             `json:"description,omitempty"`
+
+	// Kind OpenAI-compatible endpoint kind.
+	Kind      OpenAITenantKind `json:"kind"`
+	Name      string           `json:"name"`
+	UpdatedAt time.Time        `json:"updated_at"`
+}
+
+// OpenAITenantAPIMode OpenAI API mode used by this tenant.
+type OpenAITenantAPIMode string
+
+// OpenAITenantKind OpenAI-compatible endpoint kind.
+type OpenAITenantKind string
+
+// OpenAITenantModelProviderData defines model for OpenAITenantModelProviderData.
+type OpenAITenantModelProviderData struct {
+	DefaultThinkingLevel *string   `json:"default_thinking_level,omitempty"`
+	SupportJsonOutput    *bool     `json:"support_json_output,omitempty"`
+	SupportTextOnly      *bool     `json:"support_text_only,omitempty"`
+	SupportThinking      *bool     `json:"support_thinking,omitempty"`
+	SupportToolCalls     *bool     `json:"support_tool_calls,omitempty"`
+	ThinkingLevelParam   *string   `json:"thinking_level_param,omitempty"`
+	ThinkingLevels       *[]string `json:"thinking_levels,omitempty"`
+	ThinkingParam        *string   `json:"thinking_param,omitempty"`
+	UpstreamModel        *string   `json:"upstream_model,omitempty"`
+	UseSystemRole        *bool     `json:"use_system_role,omitempty"`
+}
+
+// OpenAITenantResource defines model for OpenAITenantResource.
+type OpenAITenantResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion       `json:"apiVersion"`
+	Kind       OpenAITenantResourceKind `json:"kind"`
+	Metadata   ResourceMetadata         `json:"metadata"`
+	Spec       OpenAITenantSpec         `json:"spec"`
+}
+
+// OpenAITenantResourceKind defines model for OpenAITenantResource.Kind.
+type OpenAITenantResourceKind string
+
+// OpenAITenantSpec defines model for OpenAITenantSpec.
+type OpenAITenantSpec struct {
+	// ApiMode OpenAI API mode used by this tenant.
+	ApiMode        *OpenAITenantAPIMode `json:"api_mode,omitempty"`
+	BaseUrl        *string              `json:"base_url,omitempty"`
+	CredentialName string               `json:"credential_name"`
+	Description    *string              `json:"description,omitempty"`
+
+	// Kind OpenAI-compatible endpoint kind.
+	Kind *OpenAITenantKind `json:"kind,omitempty"`
+}
+
+// OpenAITenantVoiceProviderData defines model for OpenAITenantVoiceProviderData.
+type OpenAITenantVoiceProviderData struct {
+	Raw     *map[string]interface{} `json:"raw,omitempty"`
+	VoiceId *string                 `json:"voice_id,omitempty"`
 }
 
 // PeerConfigResource defines model for PeerConfigResource.
@@ -804,6 +1413,16 @@ type PeerConfigResource struct {
 // PeerConfigResourceKind defines model for PeerConfigResource.Kind.
 type PeerConfigResourceKind string
 
+// Provider defines model for Provider.
+type Provider struct {
+	// Kind Provider resource kind, such as openai-tenant, minimax-tenant, or volc-tenant.
+	Kind ProviderKind `json:"kind"`
+	Name string       `json:"name"`
+}
+
+// ProviderKind Provider resource kind, such as openai-tenant, minimax-tenant, or volc-tenant.
+type ProviderKind string
+
 // RefreshIdentifiers defines model for RefreshIdentifiers.
 type RefreshIdentifiers struct {
 	Imeis  *[]GearIMEI  `json:"imeis,omitempty"`
@@ -817,12 +1436,6 @@ type RefreshInfo struct {
 	Manufacturer     *string `json:"manufacturer,omitempty"`
 	Model            *string `json:"model,omitempty"`
 	Name             *string `json:"name,omitempty"`
-}
-
-// RefreshVersion defines model for RefreshVersion.
-type RefreshVersion struct {
-	Depot          *string `json:"depot,omitempty"`
-	FirmwareSemver *string `json:"firmware_semver,omitempty"`
 }
 
 // Registration defines model for Registration.
@@ -895,16 +1508,14 @@ type ServerInfo struct {
 
 // Voice defines model for Voice.
 type Voice struct {
-	CreatedAt   time.Time `json:"created_at"`
-	Description *string   `json:"description,omitempty"`
+	CreatedAt   time.Time     `json:"created_at"`
+	Description *string       `json:"description,omitempty"`
+	Id          string        `json:"id"`
+	Name        *string       `json:"name,omitempty"`
+	Provider    VoiceProvider `json:"provider"`
 
-	// Id Global voice identifier
-	Id       VoiceID       `json:"id"`
-	Name     *string       `json:"name,omitempty"`
-	Provider VoiceProvider `json:"provider"`
-
-	// ProviderData Provider-specific debug data keyed by provider kind.
-	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
+	// ProviderData Provider-specific voice runtime configuration keyed by provider kind.
+	ProviderData *VoiceProviderData `json:"provider_data,omitempty"`
 
 	// Source How the voice entered the global catalog
 	Source    VoiceSource `json:"source"`
@@ -912,23 +1523,18 @@ type Voice struct {
 	UpdatedAt time.Time   `json:"updated_at"`
 }
 
-// VoiceID Global voice identifier
-type VoiceID = string
-
 // VoiceProvider defines model for VoiceProvider.
 type VoiceProvider struct {
-	// Kind Voice provider kind
+	// Kind Provider resource kind usable by voice runtime.
 	Kind VoiceProviderKind `json:"kind"`
-
-	// Name Voice provider instance name
-	Name VoiceProviderName `json:"name"`
+	Name string            `json:"name"`
 }
 
-// VoiceProviderKind Voice provider kind
-type VoiceProviderKind = string
+// VoiceProviderData Provider-specific voice runtime configuration keyed by provider kind.
+type VoiceProviderData map[string]interface{}
 
-// VoiceProviderName Voice provider instance name
-type VoiceProviderName = string
+// VoiceProviderKind Provider resource kind usable by voice runtime.
+type VoiceProviderKind string
 
 // VoiceResource defines model for VoiceResource.
 type VoiceResource struct {
@@ -951,40 +1557,26 @@ type VoiceSpec struct {
 	Name        *string       `json:"name,omitempty"`
 	Provider    VoiceProvider `json:"provider"`
 
-	// ProviderData Provider-specific debug data keyed by provider kind.
-	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
+	// ProviderData Provider-specific voice runtime configuration keyed by provider kind.
+	ProviderData *VoiceProviderData `json:"provider_data,omitempty"`
 
 	// Source How the voice entered the global catalog
 	Source VoiceSource `json:"source"`
 }
 
-// VolcAppID Volcengine speech application identifier
-type VolcAppID = string
-
-// VolcResourceID Volcengine speech resource identifier.
-type VolcResourceID = string
-
 // VolcTenant defines model for VolcTenant.
 type VolcTenant struct {
-	// AppId Volcengine speech application identifier
-	AppId     VolcAppID `json:"app_id"`
-	CreatedAt time.Time `json:"created_at"`
-
-	// CredentialName Credential name
-	CredentialName CredentialName `json:"credential_name"`
-	Description    *string        `json:"description,omitempty"`
-	Endpoint       *string        `json:"endpoint,omitempty"`
-	LastSyncedAt   *time.Time     `json:"last_synced_at,omitempty"`
-
-	// Name Volcengine tenant name.
-	Name        VolcTenantName    `json:"name"`
-	Region      *string           `json:"region,omitempty"`
-	ResourceIds *[]VolcResourceID `json:"resource_ids,omitempty"`
-	UpdatedAt   time.Time         `json:"updated_at"`
+	AppId          string     `json:"app_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	CredentialName string     `json:"credential_name"`
+	Description    *string    `json:"description,omitempty"`
+	Endpoint       *string    `json:"endpoint,omitempty"`
+	LastSyncedAt   *time.Time `json:"last_synced_at,omitempty"`
+	Name           string     `json:"name"`
+	Region         *string    `json:"region,omitempty"`
+	ResourceIds    *[]string  `json:"resource_ids,omitempty"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
-
-// VolcTenantName Volcengine tenant name.
-type VolcTenantName = string
 
 // VolcTenantResource defines model for VolcTenantResource.
 type VolcTenantResource struct {
@@ -1000,15 +1592,22 @@ type VolcTenantResourceKind string
 
 // VolcTenantSpec defines model for VolcTenantSpec.
 type VolcTenantSpec struct {
-	// AppId Volcengine speech application identifier
-	AppId VolcAppID `json:"app_id"`
+	AppId          string    `json:"app_id"`
+	CredentialName string    `json:"credential_name"`
+	Description    *string   `json:"description,omitempty"`
+	Endpoint       *string   `json:"endpoint,omitempty"`
+	Region         *string   `json:"region,omitempty"`
+	ResourceIds    *[]string `json:"resource_ids,omitempty"`
+}
 
-	// CredentialName Credential name
-	CredentialName CredentialName    `json:"credential_name"`
-	Description    *string           `json:"description,omitempty"`
-	Endpoint       *string           `json:"endpoint,omitempty"`
-	Region         *string           `json:"region,omitempty"`
-	ResourceIds    *[]VolcResourceID `json:"resource_ids,omitempty"`
+// VolcTenantVoiceProviderData defines model for VolcTenantVoiceProviderData.
+type VolcTenantVoiceProviderData struct {
+	AppId      *string                 `json:"app_id,omitempty"`
+	Raw        *map[string]interface{} `json:"raw,omitempty"`
+	ResourceId *string                 `json:"resource_id,omitempty"`
+	State      *string                 `json:"state,omitempty"`
+	Status     *string                 `json:"status,omitempty"`
+	VoiceId    *string                 `json:"voice_id,omitempty"`
 }
 
 // WorkflowAPIVersion defines model for WorkflowAPIVersion.
@@ -1022,9 +1621,6 @@ type WorkflowMetadata struct {
 	Description *string `json:"description,omitempty"`
 	Name        string  `json:"name"`
 }
-
-// WorkflowName Workflow name
-type WorkflowName = string
 
 // WorkflowResource defines model for WorkflowResource.
 type WorkflowResource struct {
@@ -1040,19 +1636,12 @@ type WorkflowResourceKind string
 
 // Workspace defines model for Workspace.
 type Workspace struct {
-	CreatedAt time.Time `json:"created_at"`
-
-	// Name Workspace name
-	Name       WorkspaceName           `json:"name"`
-	Parameters *map[string]interface{} `json:"parameters,omitempty"`
-	UpdatedAt  time.Time               `json:"updated_at"`
-
-	// WorkflowName Workflow name
-	WorkflowName WorkflowName `json:"workflow_name"`
+	CreatedAt    time.Time               `json:"created_at"`
+	Name         string                  `json:"name"`
+	Parameters   *map[string]interface{} `json:"parameters,omitempty"`
+	UpdatedAt    time.Time               `json:"updated_at"`
+	WorkflowName string                  `json:"workflow_name"`
 }
-
-// WorkspaceName Workspace name
-type WorkspaceName = string
 
 // WorkspaceResource defines model for WorkspaceResource.
 type WorkspaceResource struct {
@@ -1068,10 +1657,92 @@ type WorkspaceResourceKind string
 
 // WorkspaceSpec defines model for WorkspaceSpec.
 type WorkspaceSpec struct {
-	Parameters *map[string]interface{} `json:"parameters,omitempty"`
+	Parameters   *map[string]interface{} `json:"parameters,omitempty"`
+	WorkflowName string                  `json:"workflow_name"`
+}
 
-	// WorkflowName Workflow name
-	WorkflowName WorkflowName `json:"workflow_name"`
+// AsACLPolicyBindingResource returns the union data inside the Resource as a ACLPolicyBindingResource
+func (t Resource) AsACLPolicyBindingResource() (ACLPolicyBindingResource, error) {
+	var body ACLPolicyBindingResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromACLPolicyBindingResource overwrites any union data inside the Resource as the provided ACLPolicyBindingResource
+func (t *Resource) FromACLPolicyBindingResource(v ACLPolicyBindingResource) error {
+	v.Kind = "ACLPolicyBindingResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeACLPolicyBindingResource performs a merge with any union data inside the Resource, using the provided ACLPolicyBindingResource
+func (t *Resource) MergeACLPolicyBindingResource(v ACLPolicyBindingResource) error {
+	v.Kind = "ACLPolicyBindingResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsACLRoleResource returns the union data inside the Resource as a ACLRoleResource
+func (t Resource) AsACLRoleResource() (ACLRoleResource, error) {
+	var body ACLRoleResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromACLRoleResource overwrites any union data inside the Resource as the provided ACLRoleResource
+func (t *Resource) FromACLRoleResource(v ACLRoleResource) error {
+	v.Kind = "ACLRoleResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeACLRoleResource performs a merge with any union data inside the Resource, using the provided ACLRoleResource
+func (t *Resource) MergeACLRoleResource(v ACLRoleResource) error {
+	v.Kind = "ACLRoleResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsACLViewResource returns the union data inside the Resource as a ACLViewResource
+func (t Resource) AsACLViewResource() (ACLViewResource, error) {
+	var body ACLViewResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromACLViewResource overwrites any union data inside the Resource as the provided ACLViewResource
+func (t *Resource) FromACLViewResource(v ACLViewResource) error {
+	v.Kind = "ACLViewResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeACLViewResource performs a merge with any union data inside the Resource, using the provided ACLViewResource
+func (t *Resource) MergeACLViewResource(v ACLViewResource) error {
+	v.Kind = "ACLViewResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
 }
 
 // AsCredentialResource returns the union data inside the Resource as a CredentialResource
@@ -1092,6 +1763,34 @@ func (t *Resource) FromCredentialResource(v CredentialResource) error {
 // MergeCredentialResource performs a merge with any union data inside the Resource, using the provided CredentialResource
 func (t *Resource) MergeCredentialResource(v CredentialResource) error {
 	v.Kind = "CredentialResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsFirmwareResource returns the union data inside the Resource as a FirmwareResource
+func (t Resource) AsFirmwareResource() (FirmwareResource, error) {
+	var body FirmwareResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromFirmwareResource overwrites any union data inside the Resource as the provided FirmwareResource
+func (t *Resource) FromFirmwareResource(v FirmwareResource) error {
+	v.Kind = "FirmwareResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeFirmwareResource performs a merge with any union data inside the Resource, using the provided FirmwareResource
+func (t *Resource) MergeFirmwareResource(v FirmwareResource) error {
+	v.Kind = "FirmwareResource"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -1130,6 +1829,62 @@ func (t *Resource) MergeModelResource(v ModelResource) error {
 	return err
 }
 
+// AsDashScopeTenantResource returns the union data inside the Resource as a DashScopeTenantResource
+func (t Resource) AsDashScopeTenantResource() (DashScopeTenantResource, error) {
+	var body DashScopeTenantResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromDashScopeTenantResource overwrites any union data inside the Resource as the provided DashScopeTenantResource
+func (t *Resource) FromDashScopeTenantResource(v DashScopeTenantResource) error {
+	v.Kind = "DashScopeTenantResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeDashScopeTenantResource performs a merge with any union data inside the Resource, using the provided DashScopeTenantResource
+func (t *Resource) MergeDashScopeTenantResource(v DashScopeTenantResource) error {
+	v.Kind = "DashScopeTenantResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsGeminiTenantResource returns the union data inside the Resource as a GeminiTenantResource
+func (t Resource) AsGeminiTenantResource() (GeminiTenantResource, error) {
+	var body GeminiTenantResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromGeminiTenantResource overwrites any union data inside the Resource as the provided GeminiTenantResource
+func (t *Resource) FromGeminiTenantResource(v GeminiTenantResource) error {
+	v.Kind = "GeminiTenantResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeGeminiTenantResource performs a merge with any union data inside the Resource, using the provided GeminiTenantResource
+func (t *Resource) MergeGeminiTenantResource(v GeminiTenantResource) error {
+	v.Kind = "GeminiTenantResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 // AsMiniMaxTenantResource returns the union data inside the Resource as a MiniMaxTenantResource
 func (t Resource) AsMiniMaxTenantResource() (MiniMaxTenantResource, error) {
 	var body MiniMaxTenantResource
@@ -1148,6 +1903,34 @@ func (t *Resource) FromMiniMaxTenantResource(v MiniMaxTenantResource) error {
 // MergeMiniMaxTenantResource performs a merge with any union data inside the Resource, using the provided MiniMaxTenantResource
 func (t *Resource) MergeMiniMaxTenantResource(v MiniMaxTenantResource) error {
 	v.Kind = "MiniMaxTenantResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsOpenAITenantResource returns the union data inside the Resource as a OpenAITenantResource
+func (t Resource) AsOpenAITenantResource() (OpenAITenantResource, error) {
+	var body OpenAITenantResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromOpenAITenantResource overwrites any union data inside the Resource as the provided OpenAITenantResource
+func (t *Resource) FromOpenAITenantResource(v OpenAITenantResource) error {
+	v.Kind = "OpenAITenantResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeOpenAITenantResource performs a merge with any union data inside the Resource, using the provided OpenAITenantResource
+func (t *Resource) MergeOpenAITenantResource(v OpenAITenantResource) error {
+	v.Kind = "OpenAITenantResource"
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -1340,12 +2123,26 @@ func (t Resource) ValueByDiscriminator() (interface{}, error) {
 		return nil, err
 	}
 	switch discriminator {
+	case "ACLPolicyBindingResource":
+		return t.AsACLPolicyBindingResource()
+	case "ACLRoleResource":
+		return t.AsACLRoleResource()
+	case "ACLViewResource":
+		return t.AsACLViewResource()
 	case "CredentialResource":
 		return t.AsCredentialResource()
+	case "DashScopeTenantResource":
+		return t.AsDashScopeTenantResource()
+	case "FirmwareResource":
+		return t.AsFirmwareResource()
+	case "GeminiTenantResource":
+		return t.AsGeminiTenantResource()
 	case "MiniMaxTenantResource":
 		return t.AsMiniMaxTenantResource()
 	case "ModelResource":
 		return t.AsModelResource()
+	case "OpenAITenantResource":
+		return t.AsOpenAITenantResource()
 	case "PeerConfigResource":
 		return t.AsPeerConfigResource()
 	case "ResourceListResource":

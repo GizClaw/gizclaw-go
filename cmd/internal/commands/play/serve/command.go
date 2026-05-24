@@ -19,8 +19,6 @@ func NewCmd() *cobra.Command {
 	var model string
 	var hardwareRevision string
 	var sn string
-	var depot string
-	var firmwareSemver string
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -39,8 +37,6 @@ func NewCmd() *cobra.Command {
 					Manufacturer:     optionalString(manufacturer),
 					Model:            optionalString(model),
 					HardwareRevision: optionalString(hardwareRevision),
-					Depot:            optionalString(depot),
-					FirmwareSemver:   optionalString(firmwareSemver),
 				},
 			}
 
@@ -62,8 +58,6 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().StringVar(&model, "model", "", "model")
 	cmd.Flags().StringVar(&hardwareRevision, "hardware-revision", "", "hardware revision")
 	cmd.Flags().StringVar(&sn, "sn", "", "serial number")
-	cmd.Flags().StringVar(&depot, "depot", "", "firmware depot")
-	cmd.Flags().StringVar(&firmwareSemver, "firmware-semver", "", "firmware semver")
 	return cmd
 }
 

@@ -1,0 +1,55 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Gemini Tenant Type",
+    "description": "Gemini tenant schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "GeminiTenant": {
+        "type": "object",
+        "required": [
+          "name",
+          "credential_name",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "credential_name": {
+            "type": "string"
+          },
+          "project_id": {
+            "type": "string",
+            "example": "my-gemini-project"
+          },
+          "location": {
+            "type": "string",
+            "example": "global"
+          },
+          "base_url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://generativelanguage.googleapis.com"
+          },
+          "description": {
+            "type": "string",
+            "example": "Gemini tenant"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

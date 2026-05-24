@@ -5,7 +5,6 @@ import {
   getPeer,
   getPeerConfig,
   getPeerInfo,
-  getPeerOta,
   getPeerRuntime,
   type Configuration,
   type DeviceInfo,
@@ -16,7 +15,6 @@ import {
 export interface GearDetail {
   config: Configuration | null;
   info: DeviceInfo | null;
-  ota: unknown | null;
   registration: Registration | null;
   runtime: Runtime | null;
 }
@@ -43,18 +41,16 @@ export function usePeerDetail(publicKey: string | undefined): GearDetailState & 
     setState({ data: null, error: "", loading: true });
     try {
       const registration = await expectData(getPeer({ path: { publicKey } }));
-      const [info, config, runtime, ota] = await Promise.all([
+      const [info, config, runtime] = await Promise.all([
         loadOptional(() => expectData(getPeerInfo({ path: { publicKey } }))),
         loadOptional(() => expectData(getPeerConfig({ path: { publicKey } }))),
         loadOptional(() => expectData(getPeerRuntime({ path: { publicKey } }))),
-        loadOptional(() => expectData(getPeerOta({ path: { publicKey } }))),
       ]);
 
       setState({
         data: {
           config,
           info,
-          ota,
           registration,
           runtime,
         },

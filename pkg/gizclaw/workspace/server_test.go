@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -108,7 +107,7 @@ func TestServerListWorkspacesPagination(t *testing.T) {
 
 	for _, name := range []string{"alpha", "beta", "gamma"} {
 		body := adminservice.WorkspaceUpsert{
-			Name:         apitypes.WorkspaceName(name),
+			Name:         string(name),
 			WorkflowName: "workflow-1",
 		}
 		if _, err := srv.CreateWorkspace(ctx, adminservice.CreateWorkspaceRequestObject{Body: &body}); err != nil {
@@ -116,7 +115,7 @@ func TestServerListWorkspacesPagination(t *testing.T) {
 		}
 	}
 
-	limit := adminservice.Limit(1)
+	limit := int32(1)
 	firstResp, err := srv.ListWorkspaces(ctx, adminservice.ListWorkspacesRequestObject{
 		Params: adminservice.ListWorkspacesParams{Limit: &limit},
 	})
@@ -131,7 +130,7 @@ func TestServerListWorkspacesPagination(t *testing.T) {
 		t.Fatalf("ListWorkspaces(first page) = %#v", first)
 	}
 
-	cursor := adminservice.Cursor(*first.NextCursor)
+	cursor := string(*first.NextCursor)
 	secondResp, err := srv.ListWorkspaces(ctx, adminservice.ListWorkspacesRequestObject{
 		Params: adminservice.ListWorkspacesParams{
 			Cursor: &cursor,

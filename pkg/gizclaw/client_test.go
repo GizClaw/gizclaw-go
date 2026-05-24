@@ -1,12 +1,7 @@
 package gizclaw
 
 import (
-	"archive/tar"
-	"bytes"
 	"context"
-	"crypto/md5"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net"
@@ -19,11 +14,8 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
-	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
-	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
 func TestClientDialValidation(t *testing.T) {
@@ -70,14 +62,14 @@ func TestClientProxyHandlerValidation(t *testing.T) {
 		server := httptest.NewServer(client.ProxyHandler())
 		defer server.Close()
 
-		resp, err := http.Get(server.URL + "/api/admin/depots")
+		resp, err := http.Get(server.URL + "/api/admin/peers")
 		if err != nil {
-			t.Fatalf("GET /api/admin/depots error = %v", err)
+			t.Fatalf("GET /api/admin/peers error = %v", err)
 		}
 		body, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if resp.StatusCode != http.StatusServiceUnavailable {
-			t.Fatalf("GET /api/admin/depots status = %d body=%s", resp.StatusCode, string(body))
+			t.Fatalf("GET /api/admin/peers status = %d body=%s", resp.StatusCode, string(body))
 		}
 	})
 
@@ -108,17 +100,12 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 		ServerPublicKey: giznet.PublicKey{1},
 	}
 	manager := NewManager(gearServer)
-	firmwareServer := &firmware.Server{Store: depotstore.Dir(t.TempDir()), MetadataStore: kv.NewMemory(nil)}
 	service := &PeerService{
 		manager: manager,
 		admin: &adminService{
-			FirmwareAdminService: firmwareServer,
-			PeerAdminService:     gearServer,
+			PeerAdminService: gearServer,
 		},
-		gear: &gearAPIBundle{
-			FirmwareGearService: firmwareServer,
-			GearService:         gearServer,
-		},
+		gear: gearServer,
 		public: &serverPublic{
 			ServerPublicService: gearServer,
 		},
@@ -131,32 +118,9 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 	proxy := httptest.NewServer(client.ProxyHandler())
 	defer proxy.Close()
 
-	resp, body := mustProxyGET(t, proxy.URL+"/api/admin/depots")
+	resp, body := mustProxyGET(t, proxy.URL+"/api/admin/peers")
 	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("GET /api/admin/depots status = %d body=%s", resp.StatusCode, string(body))
-	}
-
-	req, err := http.NewRequest(http.MethodPut, proxy.URL+"/api/admin/depots/demo-main/channels/stable", bytes.NewReader(buildFirmwareReleaseTar(t)))
-	if err != nil {
-		t.Fatalf("NewRequest(PUT channel) error = %v", err)
-	}
-	req.Header.Set("Content-Type", "application/octet-stream")
-	resp, err = http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("PUT /api/admin/depots/demo-main/channels/stable error = %v", err)
-	}
-	body, _ = io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("PUT /api/admin/depots/demo-main/channels/stable status = %d body=%s", resp.StatusCode, string(body))
-	}
-
-	resp, body = mustProxyGET(t, proxy.URL+"/api/admin/depots/demo-main/channels/stable")
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("GET /api/admin/depots/demo-main/channels/stable status = %d body=%s", resp.StatusCode, string(body))
-	}
-	if !strings.Contains(string(body), `"firmware_semver":"1.0.0"`) {
-		t.Fatalf("GET /api/admin/depots/demo-main/channels/stable body = %s", string(body))
+		t.Fatalf("GET /api/admin/peers status = %d body=%s", resp.StatusCode, string(body))
 	}
 
 	resp, body = mustProxyGET(t, proxy.URL+"/api/public/server-info")
@@ -167,24 +131,12 @@ func TestClientProxyMuxRoutesRemoteServices(t *testing.T) {
 		t.Fatalf("GET /api/public/server-info body = %s", string(body))
 	}
 
-	resp, err = http.Get(proxy.URL + "/api/gear/download/firmware/fw.bin")
-	if err != nil {
-		t.Fatalf("GET /api/gear/download/firmware/fw.bin error = %v", err)
-	}
-	body, _ = io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("GET /api/gear/download/firmware/fw.bin status = %d body=%s", resp.StatusCode, string(body))
-	}
-	if strings.Contains(string(body), "Cannot GET") {
-		t.Fatalf("GET /api/gear/download/firmware/fw.bin did not reach download handler: %s", string(body))
-	}
-
 	noRedirect := &http.Client{
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
 	}
+	var err error
 	resp, err = noRedirect.Get(proxy.URL + "/api/admin")
 	if err != nil {
 		t.Fatalf("GET /api/admin error = %v", err)
@@ -243,10 +195,8 @@ func TestClientAccessorsAndConversions(t *testing.T) {
 			return &v
 		}(),
 		Hardware: &apitypes.HardwareInfo{
-			Manufacturer:   func() *string { v := "Acme"; return &v }(),
-			Model:          func() *string { v := "M1"; return &v }(),
-			Depot:          func() *string { v := "demo-main"; return &v }(),
-			FirmwareSemver: func() *string { v := "1.2.3"; return &v }(),
+			Manufacturer: func() *string { v := "Acme"; return &v }(),
+			Model:        func() *string { v := "M1"; return &v }(),
 			Imeis: &[]apitypes.GearIMEI{{
 				Name:   &name,
 				Tac:    "12345678",
@@ -273,11 +223,6 @@ func TestClientAccessorsAndConversions(t *testing.T) {
 	}
 	if identifiers.Labels == nil || len(*identifiers.Labels) != 1 || (*identifiers.Labels)[0].Value != "cn-east" {
 		t.Fatalf("gearDeviceToPeerRefreshIdentifiers().Labels = %+v", identifiers.Labels)
-	}
-
-	version := gearDeviceToPeerRefreshVersion(device)
-	if version.Depot == nil || *version.Depot != "demo-main" || version.FirmwareSemver == nil || *version.FirmwareSemver != "1.2.3" {
-		t.Fatalf("gearDeviceToPeerRefreshVersion() = %+v", version)
 	}
 
 	imei := gearToPeerGearIMEI(apitypes.GearIMEI{Name: &name, Tac: "87654321", Serial: "0000009"})
@@ -473,44 +418,6 @@ func mustProxyGET(t *testing.T, url string) (*http.Response, []byte) {
 	}
 	t.Fatalf("GET %s status = %d body=%s", url, lastStatus, string(lastBody))
 	return nil, nil
-}
-
-func buildFirmwareReleaseTar(t *testing.T) []byte {
-	t.Helper()
-
-	payload := []byte("firmware")
-	sum256 := sha256.Sum256(payload)
-	sumMD5 := md5.Sum(payload)
-	channel := "stable"
-	release := apitypes.DepotRelease{
-		FirmwareSemver: "1.0.0",
-		Channel:        &channel,
-		Files: &[]apitypes.DepotFile{{
-			Path:   "firmware.bin",
-			Sha256: hex.EncodeToString(sum256[:]),
-			Md5:    hex.EncodeToString(sumMD5[:]),
-		}},
-	}
-
-	var buf bytes.Buffer
-	tw := tar.NewWriter(&buf)
-	writeTarEntry(t, tw, "manifest.json", mustJSON(t, release))
-	writeTarEntry(t, tw, "firmware.bin", payload)
-	if err := tw.Close(); err != nil {
-		t.Fatalf("tar close: %v", err)
-	}
-	return buf.Bytes()
-}
-
-func writeTarEntry(t *testing.T, tw *tar.Writer, name string, data []byte) {
-	t.Helper()
-
-	if err := tw.WriteHeader(&tar.Header{Name: name, Mode: 0o644, Size: int64(len(data))}); err != nil {
-		t.Fatalf("tar header: %v", err)
-	}
-	if _, err := tw.Write(data); err != nil {
-		t.Fatalf("tar write: %v", err)
-	}
 }
 
 func mustJSON(t *testing.T, v any) []byte {

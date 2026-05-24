@@ -55,10 +55,6 @@ func toAdminRuntime(in apitypes.Runtime) apitypes.Runtime {
 	}
 }
 
-func toAdminOTASummary(in apitypes.OTASummary) (apitypes.OTASummary, error) {
-	return convertViaJSON[apitypes.OTASummary](in)
-}
-
 func toGearRegistration(gear apitypes.Gear) apitypes.Registration {
 	return apitypes.Registration{
 		ApprovedAt:     gear.ApprovedAt,

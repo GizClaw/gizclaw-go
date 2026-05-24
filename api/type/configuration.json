@@ -11,14 +11,10 @@
       "Configuration": {
         "type": "object",
         "properties": {
-          "certifications": {
-            "type": "array",
-            "items": {
-              "$ref": "./gear_certification.json#/components/schemas/GearCertification"
-            }
-          },
-          "firmware": {
-            "$ref": "./firmware_config.json#/components/schemas/FirmwareConfig"
+          "view": {
+            "type": "string",
+            "description": "Current content view name selected for this gear.",
+            "example": "under-12"
           }
         }
       }

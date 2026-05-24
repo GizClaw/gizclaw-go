@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 
 import type { DeviceInfo, Runtime } from "@gizclaw/adminservice";
 import { EmptyState } from "../../components/empty-state";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { StatusBadge } from "../../components/status-badge";
 import { usePeersPage } from "../../hooks/usePeersPage";
 import { formatDate } from "../../lib/format";
@@ -71,23 +71,30 @@ export function PeersListPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb items={[{ href: "/overview", label: "Overview" }, { label: "Peers" }]} />
+      <PageHeader
+        actions={
+          <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refreshDashboard()} variant="outline">
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+              <RefreshCw className="size-4" />
+              Refresh
+            </span>
+          </Button>
+        }
+        items={[{ href: "/overview", label: "Overview" }, { label: "Peers" }]}
+      />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inventory</div>
-          <h1 className="text-3xl font-semibold tracking-tight">Peers</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">
-            Browse paged inventory, filter the current page, and open a peer into its own detail route.
-          </p>
-        </div>
-        <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refreshDashboard()} variant="outline">
-          <span className="inline-flex items-center gap-2 whitespace-nowrap">
-            <RefreshCw className="size-4" />
-            Refresh
-          </span>
-        </Button>
-      </div>
+      <PageSummaryCard
+        description="Browse paged inventory, filter the current page, and open a peer into its own detail route."
+        eyebrow="Inventory"
+        meta={
+          <>
+            <Badge variant="outline">Page {peerPageNumber}</Badge>
+            <Badge variant="secondary">{dashboard.peers.length} loaded</Badge>
+            {peerList.hasNext ? <Badge variant="outline">More Available</Badge> : null}
+          </>
+        }
+        title="Peers"
+      />
 
       {dashboard.error !== "" ? (
         <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{dashboard.error}</div>
@@ -100,11 +107,6 @@ export function PeersListPage(): JSX.Element {
               <div className="space-y-1">
                 <CardTitle>Peer Inventory</CardTitle>
                 <CardDescription>Browse paged peer results and open a row to inspect details.</CardDescription>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">Page {peerPageNumber}</Badge>
-                <Badge variant="secondary">{dashboard.peers.length} loaded</Badge>
-                {peerList.hasNext ? <Badge variant="outline">More Available</Badge> : null}
               </div>
             </div>
 

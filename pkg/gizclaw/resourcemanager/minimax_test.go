@@ -11,7 +11,7 @@ import (
 
 func TestApplyMiniMaxTenantCreatesResource(t *testing.T) {
 	minimax := newFakeMiniMax()
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -40,7 +40,7 @@ func TestApplyMiniMaxTenantCreatesResource(t *testing.T) {
 
 func TestApplyVolcTenantCreatesResource(t *testing.T) {
 	minimax := newFakeMiniMax()
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -80,7 +80,7 @@ func TestGetVolcTenantReturnsResource(t *testing.T) {
 		Name:           "volc-main",
 		UpdatedAt:      time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	resource, err := manager.Get(context.Background(), apitypes.ResourceKindVolcTenant, "volc-main")
 	if err != nil {
@@ -110,7 +110,7 @@ func TestApplyVolcTenantUnchangedSkipsPut(t *testing.T) {
 		Name:           "volc-main",
 		UpdatedAt:      time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -141,7 +141,7 @@ func TestApplyVolcTenantUpdatesResource(t *testing.T) {
 		Name:           "volc-main",
 		UpdatedAt:      time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -165,7 +165,7 @@ func TestApplyVolcTenantUpdatesResource(t *testing.T) {
 
 func TestPutVolcTenantWritesAndReturnsResource(t *testing.T) {
 	minimax := newFakeMiniMax()
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	resource, err := manager.Put(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -200,7 +200,7 @@ func TestDeleteVolcTenantDeletesAndReturnsResource(t *testing.T) {
 		Name:           "volc-main",
 		UpdatedAt:      time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	resource, err := manager.Delete(context.Background(), apitypes.ResourceKindVolcTenant, "volc-main")
 	if err != nil {
@@ -228,7 +228,7 @@ func TestDeleteMiniMaxTenantDeletesAndReturnsResource(t *testing.T) {
 		Name:           "main",
 		UpdatedAt:      time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	resource, err := manager.Delete(context.Background(), apitypes.ResourceKindMiniMaxTenant, "main")
 	if err != nil {
@@ -256,7 +256,7 @@ func TestGetMiniMaxTenantReturnsResource(t *testing.T) {
 		Name:           "main",
 		UpdatedAt:      time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	resource, err := manager.Get(context.Background(), apitypes.ResourceKindMiniMaxTenant, "main")
 	if err != nil {
@@ -284,7 +284,7 @@ func TestApplyMiniMaxTenantUnchangedSkipsPut(t *testing.T) {
 		Name:           "main",
 		UpdatedAt:      time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -317,7 +317,7 @@ func TestApplyMiniMaxTenantUpdatesResource(t *testing.T) {
 		Name:           "main",
 		UpdatedAt:      time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -350,7 +350,7 @@ func TestApplyVoiceUpdatesResource(t *testing.T) {
 		Source:    apitypes.VoiceSourceManual,
 		UpdatedAt: time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -375,7 +375,7 @@ func TestApplyVoiceUpdatesResource(t *testing.T) {
 
 func TestApplyVoiceCreatesResource(t *testing.T) {
 	minimax := newFakeMiniMax()
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -409,7 +409,7 @@ func TestApplyVoiceUnchangedSkipsPut(t *testing.T) {
 		Source:    apitypes.VoiceSourceManual,
 		UpdatedAt: time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	result, err := manager.Apply(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -434,7 +434,7 @@ func TestApplyVoiceUnchangedSkipsPut(t *testing.T) {
 
 func TestPutVoiceWritesAndReturnsResource(t *testing.T) {
 	minimax := newFakeMiniMax()
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	resource, err := manager.Put(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -473,7 +473,7 @@ func TestDeleteVoiceDeletesAndReturnsResource(t *testing.T) {
 		Source:    apitypes.VoiceSourceManual,
 		UpdatedAt: time.Now().UTC(),
 	}
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	resource, err := manager.Delete(context.Background(), apitypes.ResourceKindVoice, "voice-1")
 	if err != nil {
@@ -493,7 +493,7 @@ func TestDeleteVoiceDeletesAndReturnsResource(t *testing.T) {
 
 func TestPutMiniMaxTenantWritesAndReturnsResource(t *testing.T) {
 	minimax := newFakeMiniMax()
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	resource, err := manager.Put(context.Background(), mustResource(t, `{
 		"apiVersion": "gizclaw.admin/v1alpha1",
@@ -519,7 +519,7 @@ func TestPutMiniMaxTenantWritesAndReturnsResource(t *testing.T) {
 
 func TestMiniMaxServiceErrorResponses(t *testing.T) {
 	minimax := newFakeMiniMax()
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	minimax.getTenantStatus = 500
 	_, _, err := manager.getMiniMaxTenant(context.Background(), "main")
@@ -555,7 +555,7 @@ func TestMiniMaxServiceErrorResponses(t *testing.T) {
 
 func TestVolcAndVoiceServiceDeleteErrors(t *testing.T) {
 	minimax := newFakeMiniMax()
-	manager := New(Services{MiniMax: minimax})
+	manager := New(Services{ProviderTenants: minimax, Voices: minimax})
 
 	_, exists, err := manager.deleteVolcTenant(context.Background(), "missing")
 	if err != nil {
@@ -640,6 +640,66 @@ func newFakeMiniMax() *fakeMiniMax {
 }
 
 func (f *fakeMiniMax) ListMiniMaxTenants(context.Context, adminservice.ListMiniMaxTenantsRequestObject) (adminservice.ListMiniMaxTenantsResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) CreateDashScopeTenant(context.Context, adminservice.CreateDashScopeTenantRequestObject) (adminservice.CreateDashScopeTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) ListDashScopeTenants(context.Context, adminservice.ListDashScopeTenantsRequestObject) (adminservice.ListDashScopeTenantsResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) DeleteDashScopeTenant(context.Context, adminservice.DeleteDashScopeTenantRequestObject) (adminservice.DeleteDashScopeTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) GetDashScopeTenant(context.Context, adminservice.GetDashScopeTenantRequestObject) (adminservice.GetDashScopeTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) PutDashScopeTenant(context.Context, adminservice.PutDashScopeTenantRequestObject) (adminservice.PutDashScopeTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) CreateGeminiTenant(context.Context, adminservice.CreateGeminiTenantRequestObject) (adminservice.CreateGeminiTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) ListGeminiTenants(context.Context, adminservice.ListGeminiTenantsRequestObject) (adminservice.ListGeminiTenantsResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) DeleteGeminiTenant(context.Context, adminservice.DeleteGeminiTenantRequestObject) (adminservice.DeleteGeminiTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) GetGeminiTenant(context.Context, adminservice.GetGeminiTenantRequestObject) (adminservice.GetGeminiTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) PutGeminiTenant(context.Context, adminservice.PutGeminiTenantRequestObject) (adminservice.PutGeminiTenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) CreateOpenAITenant(context.Context, adminservice.CreateOpenAITenantRequestObject) (adminservice.CreateOpenAITenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) ListOpenAITenants(context.Context, adminservice.ListOpenAITenantsRequestObject) (adminservice.ListOpenAITenantsResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) DeleteOpenAITenant(context.Context, adminservice.DeleteOpenAITenantRequestObject) (adminservice.DeleteOpenAITenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) GetOpenAITenant(context.Context, adminservice.GetOpenAITenantRequestObject) (adminservice.GetOpenAITenantResponseObject, error) {
+	return nil, nil
+}
+
+func (f *fakeMiniMax) PutOpenAITenant(context.Context, adminservice.PutOpenAITenantRequestObject) (adminservice.PutOpenAITenantResponseObject, error) {
 	return nil, nil
 }
 

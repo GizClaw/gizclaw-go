@@ -19,6 +19,48 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// ACLPolicyBindingList defines model for ACLPolicyBindingList.
+type ACLPolicyBindingList struct {
+	HasNext    bool                            `json:"has_next"`
+	Items      []externalRef0.ACLPolicyBinding `json:"items"`
+	NextCursor *string                         `json:"next_cursor,omitempty"`
+}
+
+// ACLPolicyBindingUpsert defines model for ACLPolicyBindingUpsert.
+type ACLPolicyBindingUpsert struct {
+	DisplayOrder *float64 `json:"display_order,omitempty"`
+	Id           *string  `json:"id,omitempty"`
+
+	// Policy ACL policy describing one subject-resource-role relation and optional validity window.
+	Policy externalRef0.ACLPolicy `json:"policy"`
+}
+
+// ACLRoleList defines model for ACLRoleList.
+type ACLRoleList struct {
+	HasNext    bool                   `json:"has_next"`
+	Items      []externalRef0.ACLRole `json:"items"`
+	NextCursor *string                `json:"next_cursor,omitempty"`
+}
+
+// ACLRoleUpsert defines model for ACLRoleUpsert.
+type ACLRoleUpsert struct {
+	Name        string                         `json:"name"`
+	Permissions externalRef0.ACLPermissionList `json:"permissions"`
+}
+
+// ACLViewList defines model for ACLViewList.
+type ACLViewList struct {
+	HasNext    bool                   `json:"has_next"`
+	Items      []externalRef0.ACLView `json:"items"`
+	NextCursor *string                `json:"next_cursor,omitempty"`
+}
+
+// ACLViewUpsert defines model for ACLViewUpsert.
+type ACLViewUpsert struct {
+	Description *string `json:"description,omitempty"`
+	Name        string  `json:"name"`
+}
+
 // ApproveRequest defines model for ApproveRequest.
 type ApproveRequest struct {
 	Role externalRef0.GearRole `json:"role"`
@@ -37,18 +79,55 @@ type CredentialUpsert struct {
 	Description *string                     `json:"description,omitempty"`
 
 	// Method Credential authentication method
-	Method externalRef0.CredentialMethod `json:"method"`
-
-	// Name Credential name
-	Name externalRef0.CredentialName `json:"name"`
-
-	// Provider Credential provider name
-	Provider externalRef0.CredentialProvider `json:"provider"`
+	Method   externalRef0.CredentialMethod `json:"method"`
+	Name     string                        `json:"name"`
+	Provider string                        `json:"provider"`
 }
 
-// DepotList defines model for DepotList.
-type DepotList struct {
-	Items []externalRef0.Depot `json:"items"`
+// DashScopeTenantList defines model for DashScopeTenantList.
+type DashScopeTenantList struct {
+	HasNext    bool                           `json:"has_next"`
+	Items      []externalRef0.DashScopeTenant `json:"items"`
+	NextCursor *string                        `json:"next_cursor,omitempty"`
+}
+
+// DashScopeTenantUpsert defines model for DashScopeTenantUpsert.
+type DashScopeTenantUpsert struct {
+	BaseUrl        *string `json:"base_url,omitempty"`
+	CredentialName string  `json:"credential_name"`
+	Description    *string `json:"description,omitempty"`
+	Name           string  `json:"name"`
+}
+
+// FirmwareList defines model for FirmwareList.
+type FirmwareList struct {
+	HasNext    bool                    `json:"has_next"`
+	Items      []externalRef0.Firmware `json:"items"`
+	NextCursor *string                 `json:"next_cursor,omitempty"`
+}
+
+// FirmwareUpsert defines model for FirmwareUpsert.
+type FirmwareUpsert struct {
+	Description *string                    `json:"description,omitempty"`
+	Name        string                     `json:"name"`
+	Slots       externalRef0.FirmwareSlots `json:"slots"`
+}
+
+// GeminiTenantList defines model for GeminiTenantList.
+type GeminiTenantList struct {
+	HasNext    bool                        `json:"has_next"`
+	Items      []externalRef0.GeminiTenant `json:"items"`
+	NextCursor *string                     `json:"next_cursor,omitempty"`
+}
+
+// GeminiTenantUpsert defines model for GeminiTenantUpsert.
+type GeminiTenantUpsert struct {
+	BaseUrl        *string `json:"base_url,omitempty"`
+	CredentialName string  `json:"credential_name"`
+	Description    *string `json:"description,omitempty"`
+	Location       *string `json:"location,omitempty"`
+	Name           string  `json:"name"`
+	ProjectId      *string `json:"project_id,omitempty"`
 }
 
 // MiniMaxSyncVoicesResult defines model for MiniMaxSyncVoicesResult.
@@ -56,10 +135,8 @@ type MiniMaxSyncVoicesResult struct {
 	CreatedCount int32     `json:"created_count"`
 	DeletedCount int32     `json:"deleted_count"`
 	SyncedAt     time.Time `json:"synced_at"`
-
-	// TenantName MiniMax tenant name
-	TenantName   externalRef0.MiniMaxTenantName `json:"tenant_name"`
-	UpdatedCount int32                          `json:"updated_count"`
+	TenantName   string    `json:"tenant_name"`
+	UpdatedCount int32     `json:"updated_count"`
 }
 
 // MiniMaxTenantList defines model for MiniMaxTenantList.
@@ -71,19 +148,12 @@ type MiniMaxTenantList struct {
 
 // MiniMaxTenantUpsert defines model for MiniMaxTenantUpsert.
 type MiniMaxTenantUpsert struct {
-	// AppId MiniMax app identifier
-	AppId   externalRef0.MiniMaxAppID `json:"app_id"`
-	BaseUrl *string                   `json:"base_url,omitempty"`
-
-	// CredentialName Credential name
-	CredentialName externalRef0.CredentialName `json:"credential_name"`
-	Description    *string                     `json:"description,omitempty"`
-
-	// GroupId MiniMax group identifier
-	GroupId externalRef0.MiniMaxGroupID `json:"group_id"`
-
-	// Name MiniMax tenant name
-	Name externalRef0.MiniMaxTenantName `json:"name"`
+	AppId          string  `json:"app_id"`
+	BaseUrl        *string `json:"base_url,omitempty"`
+	CredentialName string  `json:"credential_name"`
+	Description    *string `json:"description,omitempty"`
+	GroupId        string  `json:"group_id"`
+	Name           string  `json:"name"`
 }
 
 // ModelList defines model for ModelList.
@@ -95,21 +165,40 @@ type ModelList struct {
 
 // ModelUpsert defines model for ModelUpsert.
 type ModelUpsert struct {
-	Description *string `json:"description,omitempty"`
+	Capabilities *externalRef0.ModelCapabilities `json:"capabilities,omitempty"`
+	Description  *string                         `json:"description,omitempty"`
+	Id           string                          `json:"id"`
 
-	// Id Global model identifier
-	Id externalRef0.ModelID `json:"id"`
-
-	// Kind Model capability kind
+	// Kind Runtime role of a model.
 	Kind     externalRef0.ModelKind     `json:"kind"`
 	Name     *string                    `json:"name,omitempty"`
 	Provider externalRef0.ModelProvider `json:"provider"`
 
-	// ProviderData Provider-specific data keyed by provider kind.
-	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
+	// ProviderData Provider-specific model runtime configuration keyed by provider kind.
+	ProviderData *externalRef0.ModelProviderData `json:"provider_data,omitempty"`
 
 	// Source How the model entered the global catalog
 	Source externalRef0.ModelSource `json:"source"`
+}
+
+// OpenAITenantList defines model for OpenAITenantList.
+type OpenAITenantList struct {
+	HasNext    bool                        `json:"has_next"`
+	Items      []externalRef0.OpenAITenant `json:"items"`
+	NextCursor *string                     `json:"next_cursor,omitempty"`
+}
+
+// OpenAITenantUpsert defines model for OpenAITenantUpsert.
+type OpenAITenantUpsert struct {
+	// ApiMode OpenAI API mode used by this tenant.
+	ApiMode        *externalRef0.OpenAITenantAPIMode `json:"api_mode,omitempty"`
+	BaseUrl        *string                           `json:"base_url,omitempty"`
+	CredentialName string                            `json:"credential_name"`
+	Description    *string                           `json:"description,omitempty"`
+
+	// Kind OpenAI-compatible endpoint kind.
+	Kind *externalRef0.OpenAITenantKind `json:"kind,omitempty"`
+	Name string                         `json:"name"`
 }
 
 // PublicKeyResponse defines model for PublicKeyResponse.
@@ -140,15 +229,13 @@ type VoiceList struct {
 
 // VoiceUpsert defines model for VoiceUpsert.
 type VoiceUpsert struct {
-	Description *string `json:"description,omitempty"`
+	Description *string                    `json:"description,omitempty"`
+	Id          string                     `json:"id"`
+	Name        *string                    `json:"name,omitempty"`
+	Provider    externalRef0.VoiceProvider `json:"provider"`
 
-	// Id Global voice identifier
-	Id       externalRef0.VoiceID       `json:"id"`
-	Name     *string                    `json:"name,omitempty"`
-	Provider externalRef0.VoiceProvider `json:"provider"`
-
-	// ProviderData Provider-specific debug data keyed by provider kind.
-	ProviderData *map[string]interface{} `json:"provider_data,omitempty"`
+	// ProviderData Provider-specific voice runtime configuration keyed by provider kind.
+	ProviderData *externalRef0.VoiceProviderData `json:"provider_data,omitempty"`
 
 	// Source How the voice entered the global catalog
 	Source externalRef0.VoiceSource `json:"source"`
@@ -159,10 +246,8 @@ type VolcSyncVoicesResult struct {
 	CreatedCount int32     `json:"created_count"`
 	DeletedCount int32     `json:"deleted_count"`
 	SyncedAt     time.Time `json:"synced_at"`
-
-	// TenantName Volcengine tenant name.
-	TenantName   externalRef0.VolcTenantName `json:"tenant_name"`
-	UpdatedCount int32                       `json:"updated_count"`
+	TenantName   string    `json:"tenant_name"`
+	UpdatedCount int32     `json:"updated_count"`
 }
 
 // VolcTenantList defines model for VolcTenantList.
@@ -174,18 +259,13 @@ type VolcTenantList struct {
 
 // VolcTenantUpsert defines model for VolcTenantUpsert.
 type VolcTenantUpsert struct {
-	// AppId Volcengine speech application identifier
-	AppId externalRef0.VolcAppID `json:"app_id"`
-
-	// CredentialName Credential name
-	CredentialName externalRef0.CredentialName `json:"credential_name"`
-	Description    *string                     `json:"description,omitempty"`
-	Endpoint       *string                     `json:"endpoint,omitempty"`
-
-	// Name Volcengine tenant name.
-	Name        externalRef0.VolcTenantName    `json:"name"`
-	Region      *string                        `json:"region,omitempty"`
-	ResourceIds *[]externalRef0.VolcResourceID `json:"resource_ids,omitempty"`
+	AppId          string    `json:"app_id"`
+	CredentialName string    `json:"credential_name"`
+	Description    *string   `json:"description,omitempty"`
+	Endpoint       *string   `json:"endpoint,omitempty"`
+	Name           string    `json:"name"`
+	Region         *string   `json:"region,omitempty"`
+	ResourceIds    *[]string `json:"resource_ids,omitempty"`
 }
 
 // WorkflowList defines model for WorkflowList.
@@ -204,106 +284,124 @@ type WorkspaceList struct {
 
 // WorkspaceUpsert defines model for WorkspaceUpsert.
 type WorkspaceUpsert struct {
-	// Name Workspace name
-	Name       externalRef0.WorkspaceName `json:"name"`
-	Parameters *map[string]interface{}    `json:"parameters,omitempty"`
-
-	// WorkflowName Workflow name
-	WorkflowName externalRef0.WorkflowName `json:"workflow_name"`
+	Name         string                  `json:"name"`
+	Parameters   *map[string]interface{} `json:"parameters,omitempty"`
+	WorkflowName string                  `json:"workflow_name"`
 }
 
-// Channel defines model for channel.
-type Channel = externalRef0.Channel
-
-// CredentialName Credential name
-type CredentialName = externalRef0.CredentialName
-
-// CredentialProvider Credential provider name
-type CredentialProvider = externalRef0.CredentialProvider
-
-// Cursor defines model for cursor.
-type Cursor = string
-
-// DepotName defines model for depotName.
-type DepotName = string
-
-// Limit defines model for limit.
-type Limit = int32
-
-// MiniMaxTenantName MiniMax tenant name
-type MiniMaxTenantName = externalRef0.MiniMaxTenantName
-
-// ModelID Global model identifier
-type ModelID = externalRef0.ModelID
-
-// ModelKind Model capability kind
-type ModelKind = externalRef0.ModelKind
-
-// ModelProviderKind Model provider kind
+// ModelProviderKind Provider resource kind usable by model runtime.
 type ModelProviderKind = externalRef0.ModelProviderKind
-
-// ModelProviderName Model provider instance name
-type ModelProviderName = externalRef0.ModelProviderName
 
 // ModelSource How the model entered the global catalog
 type ModelSource = externalRef0.ModelSource
 
-// PublicKey defines model for publicKey.
-type PublicKey = string
-
 // ResourceKind Declarative GizClaw resource kind.
 type ResourceKind = externalRef0.ResourceKind
 
-// ResourceName defines model for resourceName.
-type ResourceName = string
-
-// VoiceID Global voice identifier
-type VoiceID = externalRef0.VoiceID
-
-// VoiceProviderKind Voice provider kind
+// VoiceProviderKind Provider resource kind usable by voice runtime.
 type VoiceProviderKind = externalRef0.VoiceProviderKind
-
-// VoiceProviderName Voice provider instance name
-type VoiceProviderName = externalRef0.VoiceProviderName
 
 // VoiceSource How the voice entered the global catalog
 type VoiceSource = externalRef0.VoiceSource
 
-// VolcTenantName Volcengine tenant name.
-type VolcTenantName = externalRef0.VolcTenantName
+// ListACLPolicyBindingsParams defines parameters for ListACLPolicyBindings.
+type ListACLPolicyBindingsParams struct {
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
-// WorkflowName Workflow name
-type WorkflowName = externalRef0.WorkflowName
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 
-// WorkspaceName Workspace name
-type WorkspaceName = externalRef0.WorkspaceName
+	// SubjectKind Filter by ACL subject kind
+	SubjectKind *externalRef0.ACLSubjectKind `form:"subject_kind,omitempty" json:"subject_kind,omitempty"`
+
+	// SubjectId Filter by ACL subject identifier
+	SubjectId *string `form:"subject_id,omitempty" json:"subject_id,omitempty"`
+
+	// ResourceKind Filter by ACL resource kind
+	ResourceKind *externalRef0.ACLResourceKind `form:"resource_kind,omitempty" json:"resource_kind,omitempty"`
+
+	// ResourceId Filter by ACL resource identifier
+	ResourceId *string `form:"resource_id,omitempty" json:"resource_id,omitempty"`
+
+	// Role Filter by ACL role name
+	Role *string `form:"role,omitempty" json:"role,omitempty"`
+
+	// Permission Filter by expanded ACL permission
+	Permission *externalRef0.ACLPermission `form:"permission,omitempty" json:"permission,omitempty"`
+
+	// OrderBy Sort ACL policy bindings by id or display order
+	OrderBy *string `form:"order_by,omitempty" json:"order_by,omitempty"`
+}
+
+// ListACLRolesParams defines parameters for ListACLRoles.
+type ListACLRolesParams struct {
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListACLViewsParams defines parameters for ListACLViews.
+type ListACLViewsParams struct {
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
 
 // ListCredentialsParams defines parameters for ListCredentials.
 type ListCredentialsParams struct {
 	// Provider Filter credentials by provider
-	Provider *CredentialProvider `form:"provider,omitempty" json:"provider,omitempty"`
+	Provider *string `form:"provider,omitempty" json:"provider,omitempty"`
 
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListDashScopeTenantsParams defines parameters for ListDashScopeTenants.
+type ListDashScopeTenantsParams struct {
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListFirmwaresParams defines parameters for ListFirmwares.
+type ListFirmwaresParams struct {
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListGeminiTenantsParams defines parameters for ListGeminiTenants.
+type ListGeminiTenantsParams struct {
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListMiniMaxTenantsParams defines parameters for ListMiniMaxTenants.
 type ListMiniMaxTenantsParams struct {
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListModelsParams defines parameters for ListModels.
 type ListModelsParams struct {
-	// Kind Filter models by kind
-	Kind *ModelKind `form:"kind,omitempty" json:"kind,omitempty"`
-
 	// Source Filter models by source
 	Source *ModelSource `form:"source,omitempty" json:"source,omitempty"`
 
@@ -311,49 +409,40 @@ type ListModelsParams struct {
 	ProviderKind *ModelProviderKind `form:"providerKind,omitempty" json:"providerKind,omitempty"`
 
 	// ProviderName Filter models by provider instance name
-	ProviderName *ModelProviderName `form:"providerName,omitempty" json:"providerName,omitempty"`
+	ProviderName *string `form:"providerName,omitempty" json:"providerName,omitempty"`
 
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListOpenAITenantsParams defines parameters for ListOpenAITenants.
+type ListOpenAITenantsParams struct {
+	// Cursor Opaque cursor returned by the previous list response
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListPeersParams defines parameters for ListPeers.
 type ListPeersParams struct {
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
-// ListPeersByCertificationParams defines parameters for ListPeersByCertification.
-type ListPeersByCertificationParams struct {
-	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
-// ListPeersByFirmwareParams defines parameters for ListPeersByFirmware.
-type ListPeersByFirmwareParams struct {
-	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-
-	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListPeersByLabelParams defines parameters for ListPeersByLabel.
 type ListPeersByLabelParams struct {
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListVoicesParams defines parameters for ListVoices.
@@ -365,44 +454,62 @@ type ListVoicesParams struct {
 	ProviderKind *VoiceProviderKind `form:"providerKind,omitempty" json:"providerKind,omitempty"`
 
 	// ProviderName Filter voices by provider instance name
-	ProviderName *VoiceProviderName `form:"providerName,omitempty" json:"providerName,omitempty"`
+	ProviderName *string `form:"providerName,omitempty" json:"providerName,omitempty"`
 
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListVolcTenantsParams defines parameters for ListVolcTenants.
 type ListVolcTenantsParams struct {
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListWorkflowsParams defines parameters for ListWorkflows.
 type ListWorkflowsParams struct {
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ListWorkspacesParams defines parameters for ListWorkspaces.
 type ListWorkspacesParams struct {
 	// Cursor Opaque cursor returned by the previous list response
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 
 	// Limit Maximum number of items to return. Omitted or non-positive values use the default page size; values above 200 are clamped.
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	Limit *int32 `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
 // ApplyResourceJSONRequestBody defines body for ApplyResource for application/json ContentType.
 type ApplyResourceJSONRequestBody = externalRef0.ApplyResource
+
+// CreateACLPolicyBindingJSONRequestBody defines body for CreateACLPolicyBinding for application/json ContentType.
+type CreateACLPolicyBindingJSONRequestBody = ACLPolicyBindingUpsert
+
+// PutACLPolicyBindingJSONRequestBody defines body for PutACLPolicyBinding for application/json ContentType.
+type PutACLPolicyBindingJSONRequestBody = ACLPolicyBindingUpsert
+
+// CreateACLRoleJSONRequestBody defines body for CreateACLRole for application/json ContentType.
+type CreateACLRoleJSONRequestBody = ACLRoleUpsert
+
+// PutACLRoleJSONRequestBody defines body for PutACLRole for application/json ContentType.
+type PutACLRoleJSONRequestBody = ACLRoleUpsert
+
+// CreateACLViewJSONRequestBody defines body for CreateACLView for application/json ContentType.
+type CreateACLViewJSONRequestBody = ACLViewUpsert
+
+// PutACLViewJSONRequestBody defines body for PutACLView for application/json ContentType.
+type PutACLViewJSONRequestBody = ACLViewUpsert
 
 // CreateCredentialJSONRequestBody defines body for CreateCredential for application/json ContentType.
 type CreateCredentialJSONRequestBody = CredentialUpsert
@@ -410,8 +517,23 @@ type CreateCredentialJSONRequestBody = CredentialUpsert
 // PutCredentialJSONRequestBody defines body for PutCredential for application/json ContentType.
 type PutCredentialJSONRequestBody = CredentialUpsert
 
-// PutDepotInfoJSONRequestBody defines body for PutDepotInfo for application/json ContentType.
-type PutDepotInfoJSONRequestBody = externalRef0.DepotInfo
+// CreateDashScopeTenantJSONRequestBody defines body for CreateDashScopeTenant for application/json ContentType.
+type CreateDashScopeTenantJSONRequestBody = DashScopeTenantUpsert
+
+// PutDashScopeTenantJSONRequestBody defines body for PutDashScopeTenant for application/json ContentType.
+type PutDashScopeTenantJSONRequestBody = DashScopeTenantUpsert
+
+// CreateFirmwareJSONRequestBody defines body for CreateFirmware for application/json ContentType.
+type CreateFirmwareJSONRequestBody = FirmwareUpsert
+
+// PutFirmwareJSONRequestBody defines body for PutFirmware for application/json ContentType.
+type PutFirmwareJSONRequestBody = FirmwareUpsert
+
+// CreateGeminiTenantJSONRequestBody defines body for CreateGeminiTenant for application/json ContentType.
+type CreateGeminiTenantJSONRequestBody = GeminiTenantUpsert
+
+// PutGeminiTenantJSONRequestBody defines body for PutGeminiTenant for application/json ContentType.
+type PutGeminiTenantJSONRequestBody = GeminiTenantUpsert
 
 // CreateMiniMaxTenantJSONRequestBody defines body for CreateMiniMaxTenant for application/json ContentType.
 type CreateMiniMaxTenantJSONRequestBody = MiniMaxTenantUpsert
@@ -425,11 +547,20 @@ type CreateModelJSONRequestBody = ModelUpsert
 // PutModelJSONRequestBody defines body for PutModel for application/json ContentType.
 type PutModelJSONRequestBody = ModelUpsert
 
+// CreateOpenAITenantJSONRequestBody defines body for CreateOpenAITenant for application/json ContentType.
+type CreateOpenAITenantJSONRequestBody = OpenAITenantUpsert
+
+// PutOpenAITenantJSONRequestBody defines body for PutOpenAITenant for application/json ContentType.
+type PutOpenAITenantJSONRequestBody = OpenAITenantUpsert
+
 // ApprovePeerJSONRequestBody defines body for ApprovePeer for application/json ContentType.
 type ApprovePeerJSONRequestBody = ApproveRequest
 
 // PutPeerConfigJSONRequestBody defines body for PutPeerConfig for application/json ContentType.
 type PutPeerConfigJSONRequestBody = externalRef0.Configuration
+
+// PutPeerInfoJSONRequestBody defines body for PutPeerInfo for application/json ContentType.
+type PutPeerInfoJSONRequestBody = externalRef0.DeviceInfo
 
 // PutResourceJSONRequestBody defines body for PutResource for application/json ContentType.
 type PutResourceJSONRequestBody = externalRef0.Resource
@@ -536,6 +667,63 @@ type ClientInterface interface {
 
 	ApplyResource(ctx context.Context, body ApplyResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// ListACLPolicyBindings request
+	ListACLPolicyBindings(ctx context.Context, params *ListACLPolicyBindingsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateACLPolicyBindingWithBody request with any body
+	CreateACLPolicyBindingWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateACLPolicyBinding(ctx context.Context, body CreateACLPolicyBindingJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteACLPolicyBinding request
+	DeleteACLPolicyBinding(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetACLPolicyBinding request
+	GetACLPolicyBinding(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutACLPolicyBindingWithBody request with any body
+	PutACLPolicyBindingWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutACLPolicyBinding(ctx context.Context, id string, body PutACLPolicyBindingJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListACLRoles request
+	ListACLRoles(ctx context.Context, params *ListACLRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateACLRoleWithBody request with any body
+	CreateACLRoleWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateACLRole(ctx context.Context, body CreateACLRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteACLRole request
+	DeleteACLRole(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetACLRole request
+	GetACLRole(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutACLRoleWithBody request with any body
+	PutACLRoleWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutACLRole(ctx context.Context, name string, body PutACLRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListACLViews request
+	ListACLViews(ctx context.Context, params *ListACLViewsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateACLViewWithBody request with any body
+	CreateACLViewWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateACLView(ctx context.Context, body CreateACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteACLView request
+	DeleteACLView(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetACLView request
+	GetACLView(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutACLViewWithBody request with any body
+	PutACLViewWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutACLView(ctx context.Context, name string, body PutACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListCredentials request
 	ListCredentials(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -545,38 +733,78 @@ type ClientInterface interface {
 	CreateCredential(ctx context.Context, body CreateCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteCredential request
-	DeleteCredential(ctx context.Context, name CredentialName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteCredential(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetCredential request
-	GetCredential(ctx context.Context, name CredentialName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetCredential(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutCredentialWithBody request with any body
-	PutCredentialWithBody(ctx context.Context, name CredentialName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutCredentialWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutCredential(ctx context.Context, name CredentialName, body PutCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutCredential(ctx context.Context, name string, body PutCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ListDepots request
-	ListDepots(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ListDashScopeTenants request
+	ListDashScopeTenants(ctx context.Context, params *ListDashScopeTenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetDepot request
-	GetDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// CreateDashScopeTenantWithBody request with any body
+	CreateDashScopeTenantWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PutDepotInfoWithBody request with any body
-	PutDepotInfoWithBody(ctx context.Context, depot DepotName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	CreateDashScopeTenant(ctx context.Context, body CreateDashScopeTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutDepotInfo(ctx context.Context, depot DepotName, body PutDepotInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// DeleteDashScopeTenant request
+	DeleteDashScopeTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// ReleaseDepot request
-	ReleaseDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetDashScopeTenant request
+	GetDashScopeTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// RollbackDepot request
-	RollbackDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// PutDashScopeTenantWithBody request with any body
+	PutDashScopeTenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetChannel request
-	GetChannel(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutDashScopeTenant(ctx context.Context, name string, body PutDashScopeTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// PutChannelWithBody request with any body
-	PutChannelWithBody(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// ListFirmwares request
+	ListFirmwares(ctx context.Context, params *ListFirmwaresParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateFirmwareWithBody request with any body
+	CreateFirmwareWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateFirmware(ctx context.Context, body CreateFirmwareJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteFirmware request
+	DeleteFirmware(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetFirmware request
+	GetFirmware(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutFirmwareWithBody request with any body
+	PutFirmwareWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutFirmware(ctx context.Context, name string, body PutFirmwareJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ReleaseFirmware request
+	ReleaseFirmware(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// RollbackFirmware request
+	RollbackFirmware(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListGeminiTenants request
+	ListGeminiTenants(ctx context.Context, params *ListGeminiTenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateGeminiTenantWithBody request with any body
+	CreateGeminiTenantWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateGeminiTenant(ctx context.Context, body CreateGeminiTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteGeminiTenant request
+	DeleteGeminiTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetGeminiTenant request
+	GetGeminiTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutGeminiTenantWithBody request with any body
+	PutGeminiTenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutGeminiTenant(ctx context.Context, name string, body PutGeminiTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListMiniMaxTenants request
 	ListMiniMaxTenants(ctx context.Context, params *ListMiniMaxTenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -587,18 +815,18 @@ type ClientInterface interface {
 	CreateMiniMaxTenant(ctx context.Context, body CreateMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteMiniMaxTenant request
-	DeleteMiniMaxTenant(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteMiniMaxTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetMiniMaxTenant request
-	GetMiniMaxTenant(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetMiniMaxTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutMiniMaxTenantWithBody request with any body
-	PutMiniMaxTenantWithBody(ctx context.Context, name MiniMaxTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutMiniMaxTenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutMiniMaxTenant(ctx context.Context, name MiniMaxTenantName, body PutMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutMiniMaxTenant(ctx context.Context, name string, body PutMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SyncMiniMaxTenantVoices request
-	SyncMiniMaxTenantVoices(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	SyncMiniMaxTenantVoices(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListModels request
 	ListModels(ctx context.Context, params *ListModelsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -609,24 +837,37 @@ type ClientInterface interface {
 	CreateModel(ctx context.Context, body CreateModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteModel request
-	DeleteModel(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteModel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetModel request
-	GetModel(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetModel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutModelWithBody request with any body
-	PutModelWithBody(ctx context.Context, id ModelID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutModelWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutModel(ctx context.Context, id ModelID, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutModel(ctx context.Context, id string, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListOpenAITenants request
+	ListOpenAITenants(ctx context.Context, params *ListOpenAITenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateOpenAITenantWithBody request with any body
+	CreateOpenAITenantWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateOpenAITenant(ctx context.Context, body CreateOpenAITenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteOpenAITenant request
+	DeleteOpenAITenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetOpenAITenant request
+	GetOpenAITenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// PutOpenAITenantWithBody request with any body
+	PutOpenAITenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutOpenAITenant(ctx context.Context, name string, body PutOpenAITenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListPeers request
 	ListPeers(ctx context.Context, params *ListPeersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListPeersByCertification request
-	ListPeersByCertification(ctx context.Context, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListPeersByCertificationParams, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// ListPeersByFirmware request
-	ListPeersByFirmware(ctx context.Context, depot string, channel externalRef0.GearFirmwareChannel, params *ListPeersByFirmwareParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ResolvePeerByIMEI request
 	ResolvePeerByIMEI(ctx context.Context, tac string, serial string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -638,49 +879,51 @@ type ClientInterface interface {
 	ResolvePeerBySN(ctx context.Context, sn string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeletePeer request
-	DeletePeer(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeletePeer(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPeer request
-	GetPeer(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPeer(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ApprovePeerWithBody request with any body
-	ApprovePeerWithBody(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ApprovePeerWithBody(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	ApprovePeer(ctx context.Context, publicKey PublicKey, body ApprovePeerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	ApprovePeer(ctx context.Context, publicKey string, body ApprovePeerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// BlockPeer request
-	BlockPeer(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+	BlockPeer(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// RefreshPeer request
-	RefreshPeer(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+	RefreshPeer(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPeerConfig request
-	GetPeerConfig(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPeerConfig(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutPeerConfigWithBody request with any body
-	PutPeerConfigWithBody(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutPeerConfigWithBody(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutPeerConfig(ctx context.Context, publicKey PublicKey, body PutPeerConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutPeerConfig(ctx context.Context, publicKey string, body PutPeerConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPeerInfo request
-	GetPeerInfo(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPeerInfo(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetPeerOTA request
-	GetPeerOTA(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// PutPeerInfoWithBody request with any body
+	PutPeerInfoWithBody(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	PutPeerInfo(ctx context.Context, publicKey string, body PutPeerInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetPeerRuntime request
-	GetPeerRuntime(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetPeerRuntime(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteResource request
-	DeleteResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteResource(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetResource request
-	GetResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetResource(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutResourceWithBody request with any body
-	PutResourceWithBody(ctx context.Context, kind ResourceKind, name ResourceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutResourceWithBody(ctx context.Context, kind ResourceKind, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutResource(ctx context.Context, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutResource(ctx context.Context, kind ResourceKind, name string, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListVoices request
 	ListVoices(ctx context.Context, params *ListVoicesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -691,15 +934,15 @@ type ClientInterface interface {
 	CreateVoice(ctx context.Context, body CreateVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteVoice request
-	DeleteVoice(ctx context.Context, id VoiceID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteVoice(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetVoice request
-	GetVoice(ctx context.Context, id VoiceID, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetVoice(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutVoiceWithBody request with any body
-	PutVoiceWithBody(ctx context.Context, id VoiceID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutVoiceWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutVoice(ctx context.Context, id VoiceID, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutVoice(ctx context.Context, id string, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListVolcTenants request
 	ListVolcTenants(ctx context.Context, params *ListVolcTenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -710,18 +953,18 @@ type ClientInterface interface {
 	CreateVolcTenant(ctx context.Context, body CreateVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteVolcTenant request
-	DeleteVolcTenant(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteVolcTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetVolcTenant request
-	GetVolcTenant(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetVolcTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutVolcTenantWithBody request with any body
-	PutVolcTenantWithBody(ctx context.Context, name VolcTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutVolcTenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutVolcTenant(ctx context.Context, name VolcTenantName, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutVolcTenant(ctx context.Context, name string, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// SyncVolcTenantVoices request
-	SyncVolcTenantVoices(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	SyncVolcTenantVoices(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWorkflows request
 	ListWorkflows(ctx context.Context, params *ListWorkflowsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -732,15 +975,15 @@ type ClientInterface interface {
 	CreateWorkflow(ctx context.Context, body CreateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteWorkflow request
-	DeleteWorkflow(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteWorkflow(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetWorkflow request
-	GetWorkflow(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetWorkflow(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutWorkflowWithBody request with any body
-	PutWorkflowWithBody(ctx context.Context, name WorkflowName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutWorkflowWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutWorkflow(ctx context.Context, name WorkflowName, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutWorkflow(ctx context.Context, name string, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListWorkspaces request
 	ListWorkspaces(ctx context.Context, params *ListWorkspacesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -751,15 +994,15 @@ type ClientInterface interface {
 	CreateWorkspace(ctx context.Context, body CreateWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteWorkspace request
-	DeleteWorkspace(ctx context.Context, name WorkspaceName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteWorkspace(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetWorkspace request
-	GetWorkspace(ctx context.Context, name WorkspaceName, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetWorkspace(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutWorkspaceWithBody request with any body
-	PutWorkspaceWithBody(ctx context.Context, name WorkspaceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutWorkspaceWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutWorkspace(ctx context.Context, name WorkspaceName, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutWorkspace(ctx context.Context, name string, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) ApplyResourceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -776,6 +1019,258 @@ func (c *Client) ApplyResourceWithBody(ctx context.Context, contentType string, 
 
 func (c *Client) ApplyResource(ctx context.Context, body ApplyResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewApplyResourceRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListACLPolicyBindings(ctx context.Context, params *ListACLPolicyBindingsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListACLPolicyBindingsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateACLPolicyBindingWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateACLPolicyBindingRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateACLPolicyBinding(ctx context.Context, body CreateACLPolicyBindingJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateACLPolicyBindingRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteACLPolicyBinding(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteACLPolicyBindingRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetACLPolicyBinding(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetACLPolicyBindingRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutACLPolicyBindingWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutACLPolicyBindingRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutACLPolicyBinding(ctx context.Context, id string, body PutACLPolicyBindingJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutACLPolicyBindingRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListACLRoles(ctx context.Context, params *ListACLRolesParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListACLRolesRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateACLRoleWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateACLRoleRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateACLRole(ctx context.Context, body CreateACLRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateACLRoleRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteACLRole(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteACLRoleRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetACLRole(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetACLRoleRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutACLRoleWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutACLRoleRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutACLRole(ctx context.Context, name string, body PutACLRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutACLRoleRequest(c.Server, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListACLViews(ctx context.Context, params *ListACLViewsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListACLViewsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateACLViewWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateACLViewRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateACLView(ctx context.Context, body CreateACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateACLViewRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteACLView(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteACLViewRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetACLView(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetACLViewRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutACLViewWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutACLViewRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutACLView(ctx context.Context, name string, body PutACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutACLViewRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
 	}
@@ -822,7 +1317,7 @@ func (c *Client) CreateCredential(ctx context.Context, body CreateCredentialJSON
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteCredential(ctx context.Context, name CredentialName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteCredential(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteCredentialRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -834,7 +1329,7 @@ func (c *Client) DeleteCredential(ctx context.Context, name CredentialName, reqE
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetCredential(ctx context.Context, name CredentialName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetCredential(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetCredentialRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -846,7 +1341,7 @@ func (c *Client) GetCredential(ctx context.Context, name CredentialName, reqEdit
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutCredentialWithBody(ctx context.Context, name CredentialName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutCredentialWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutCredentialRequestWithBody(c.Server, name, contentType, body)
 	if err != nil {
 		return nil, err
@@ -858,7 +1353,7 @@ func (c *Client) PutCredentialWithBody(ctx context.Context, name CredentialName,
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutCredential(ctx context.Context, name CredentialName, body PutCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutCredential(ctx context.Context, name string, body PutCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutCredentialRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
@@ -870,8 +1365,8 @@ func (c *Client) PutCredential(ctx context.Context, name CredentialName, body Pu
 	return c.Client.Do(req)
 }
 
-func (c *Client) ListDepots(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListDepotsRequest(c.Server)
+func (c *Client) ListDashScopeTenants(ctx context.Context, params *ListDashScopeTenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListDashScopeTenantsRequest(c.Server, params)
 	if err != nil {
 		return nil, err
 	}
@@ -882,8 +1377,8 @@ func (c *Client) ListDepots(ctx context.Context, reqEditors ...RequestEditorFn) 
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetDepotRequest(c.Server, depot)
+func (c *Client) CreateDashScopeTenantWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateDashScopeTenantRequestWithBody(c.Server, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -894,8 +1389,8 @@ func (c *Client) GetDepot(ctx context.Context, depot DepotName, reqEditors ...Re
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutDepotInfoWithBody(ctx context.Context, depot DepotName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutDepotInfoRequestWithBody(c.Server, depot, contentType, body)
+func (c *Client) CreateDashScopeTenant(ctx context.Context, body CreateDashScopeTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateDashScopeTenantRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -906,8 +1401,8 @@ func (c *Client) PutDepotInfoWithBody(ctx context.Context, depot DepotName, cont
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutDepotInfo(ctx context.Context, depot DepotName, body PutDepotInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutDepotInfoRequest(c.Server, depot, body)
+func (c *Client) DeleteDashScopeTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteDashScopeTenantRequest(c.Server, name)
 	if err != nil {
 		return nil, err
 	}
@@ -918,8 +1413,8 @@ func (c *Client) PutDepotInfo(ctx context.Context, depot DepotName, body PutDepo
 	return c.Client.Do(req)
 }
 
-func (c *Client) ReleaseDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewReleaseDepotRequest(c.Server, depot)
+func (c *Client) GetDashScopeTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetDashScopeTenantRequest(c.Server, name)
 	if err != nil {
 		return nil, err
 	}
@@ -930,8 +1425,8 @@ func (c *Client) ReleaseDepot(ctx context.Context, depot DepotName, reqEditors .
 	return c.Client.Do(req)
 }
 
-func (c *Client) RollbackDepot(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRollbackDepotRequest(c.Server, depot)
+func (c *Client) PutDashScopeTenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutDashScopeTenantRequestWithBody(c.Server, name, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -942,8 +1437,8 @@ func (c *Client) RollbackDepot(ctx context.Context, depot DepotName, reqEditors 
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetChannel(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetChannelRequest(c.Server, depot, channel)
+func (c *Client) PutDashScopeTenant(ctx context.Context, name string, body PutDashScopeTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutDashScopeTenantRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
 	}
@@ -954,8 +1449,188 @@ func (c *Client) GetChannel(ctx context.Context, depot DepotName, channel Channe
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutChannelWithBody(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPutChannelRequestWithBody(c.Server, depot, channel, contentType, body)
+func (c *Client) ListFirmwares(ctx context.Context, params *ListFirmwaresParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFirmwaresRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateFirmwareWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFirmwareRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateFirmware(ctx context.Context, body CreateFirmwareJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFirmwareRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteFirmware(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteFirmwareRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetFirmware(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFirmwareRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutFirmwareWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutFirmwareRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutFirmware(ctx context.Context, name string, body PutFirmwareJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutFirmwareRequest(c.Server, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ReleaseFirmware(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewReleaseFirmwareRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) RollbackFirmware(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewRollbackFirmwareRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListGeminiTenants(ctx context.Context, params *ListGeminiTenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListGeminiTenantsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateGeminiTenantWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateGeminiTenantRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateGeminiTenant(ctx context.Context, body CreateGeminiTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateGeminiTenantRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteGeminiTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteGeminiTenantRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetGeminiTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetGeminiTenantRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutGeminiTenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutGeminiTenantRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutGeminiTenant(ctx context.Context, name string, body PutGeminiTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutGeminiTenantRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1002,7 +1677,7 @@ func (c *Client) CreateMiniMaxTenant(ctx context.Context, body CreateMiniMaxTena
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteMiniMaxTenant(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteMiniMaxTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteMiniMaxTenantRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1014,7 +1689,7 @@ func (c *Client) DeleteMiniMaxTenant(ctx context.Context, name MiniMaxTenantName
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetMiniMaxTenant(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetMiniMaxTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetMiniMaxTenantRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1026,7 +1701,7 @@ func (c *Client) GetMiniMaxTenant(ctx context.Context, name MiniMaxTenantName, r
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutMiniMaxTenantWithBody(ctx context.Context, name MiniMaxTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutMiniMaxTenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutMiniMaxTenantRequestWithBody(c.Server, name, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1038,7 +1713,7 @@ func (c *Client) PutMiniMaxTenantWithBody(ctx context.Context, name MiniMaxTenan
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutMiniMaxTenant(ctx context.Context, name MiniMaxTenantName, body PutMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutMiniMaxTenant(ctx context.Context, name string, body PutMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutMiniMaxTenantRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
@@ -1050,7 +1725,7 @@ func (c *Client) PutMiniMaxTenant(ctx context.Context, name MiniMaxTenantName, b
 	return c.Client.Do(req)
 }
 
-func (c *Client) SyncMiniMaxTenantVoices(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) SyncMiniMaxTenantVoices(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSyncMiniMaxTenantVoicesRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1098,7 +1773,7 @@ func (c *Client) CreateModel(ctx context.Context, body CreateModelJSONRequestBod
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteModel(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteModel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteModelRequest(c.Server, id)
 	if err != nil {
 		return nil, err
@@ -1110,7 +1785,7 @@ func (c *Client) DeleteModel(ctx context.Context, id ModelID, reqEditors ...Requ
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetModel(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetModel(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetModelRequest(c.Server, id)
 	if err != nil {
 		return nil, err
@@ -1122,7 +1797,7 @@ func (c *Client) GetModel(ctx context.Context, id ModelID, reqEditors ...Request
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutModelWithBody(ctx context.Context, id ModelID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutModelWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutModelRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1134,8 +1809,92 @@ func (c *Client) PutModelWithBody(ctx context.Context, id ModelID, contentType s
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutModel(ctx context.Context, id ModelID, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutModel(ctx context.Context, id string, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutModelRequest(c.Server, id, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListOpenAITenants(ctx context.Context, params *ListOpenAITenantsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListOpenAITenantsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateOpenAITenantWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateOpenAITenantRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateOpenAITenant(ctx context.Context, body CreateOpenAITenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateOpenAITenantRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteOpenAITenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteOpenAITenantRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetOpenAITenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetOpenAITenantRequest(c.Server, name)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutOpenAITenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutOpenAITenantRequestWithBody(c.Server, name, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) PutOpenAITenant(ctx context.Context, name string, body PutOpenAITenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutOpenAITenantRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1148,30 +1907,6 @@ func (c *Client) PutModel(ctx context.Context, id ModelID, body PutModelJSONRequ
 
 func (c *Client) ListPeers(ctx context.Context, params *ListPeersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewListPeersRequest(c.Server, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ListPeersByCertification(ctx context.Context, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListPeersByCertificationParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListPeersByCertificationRequest(c.Server, pType, authority, id, params)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) ListPeersByFirmware(ctx context.Context, depot string, channel externalRef0.GearFirmwareChannel, params *ListPeersByFirmwareParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewListPeersByFirmwareRequest(c.Server, depot, channel, params)
 	if err != nil {
 		return nil, err
 	}
@@ -1218,7 +1953,7 @@ func (c *Client) ResolvePeerBySN(ctx context.Context, sn string, reqEditors ...R
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeletePeer(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeletePeer(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeletePeerRequest(c.Server, publicKey)
 	if err != nil {
 		return nil, err
@@ -1230,7 +1965,7 @@ func (c *Client) DeletePeer(ctx context.Context, publicKey PublicKey, reqEditors
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetPeer(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetPeer(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPeerRequest(c.Server, publicKey)
 	if err != nil {
 		return nil, err
@@ -1242,7 +1977,7 @@ func (c *Client) GetPeer(ctx context.Context, publicKey PublicKey, reqEditors ..
 	return c.Client.Do(req)
 }
 
-func (c *Client) ApprovePeerWithBody(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ApprovePeerWithBody(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewApprovePeerRequestWithBody(c.Server, publicKey, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1254,7 +1989,7 @@ func (c *Client) ApprovePeerWithBody(ctx context.Context, publicKey PublicKey, c
 	return c.Client.Do(req)
 }
 
-func (c *Client) ApprovePeer(ctx context.Context, publicKey PublicKey, body ApprovePeerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) ApprovePeer(ctx context.Context, publicKey string, body ApprovePeerJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewApprovePeerRequest(c.Server, publicKey, body)
 	if err != nil {
 		return nil, err
@@ -1266,7 +2001,7 @@ func (c *Client) ApprovePeer(ctx context.Context, publicKey PublicKey, body Appr
 	return c.Client.Do(req)
 }
 
-func (c *Client) BlockPeer(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) BlockPeer(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewBlockPeerRequest(c.Server, publicKey)
 	if err != nil {
 		return nil, err
@@ -1278,7 +2013,7 @@ func (c *Client) BlockPeer(ctx context.Context, publicKey PublicKey, reqEditors 
 	return c.Client.Do(req)
 }
 
-func (c *Client) RefreshPeer(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) RefreshPeer(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewRefreshPeerRequest(c.Server, publicKey)
 	if err != nil {
 		return nil, err
@@ -1290,7 +2025,7 @@ func (c *Client) RefreshPeer(ctx context.Context, publicKey PublicKey, reqEditor
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetPeerConfig(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetPeerConfig(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPeerConfigRequest(c.Server, publicKey)
 	if err != nil {
 		return nil, err
@@ -1302,7 +2037,7 @@ func (c *Client) GetPeerConfig(ctx context.Context, publicKey PublicKey, reqEdit
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutPeerConfigWithBody(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutPeerConfigWithBody(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutPeerConfigRequestWithBody(c.Server, publicKey, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1314,7 +2049,7 @@ func (c *Client) PutPeerConfigWithBody(ctx context.Context, publicKey PublicKey,
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutPeerConfig(ctx context.Context, publicKey PublicKey, body PutPeerConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutPeerConfig(ctx context.Context, publicKey string, body PutPeerConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutPeerConfigRequest(c.Server, publicKey, body)
 	if err != nil {
 		return nil, err
@@ -1326,7 +2061,7 @@ func (c *Client) PutPeerConfig(ctx context.Context, publicKey PublicKey, body Pu
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetPeerInfo(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetPeerInfo(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPeerInfoRequest(c.Server, publicKey)
 	if err != nil {
 		return nil, err
@@ -1338,8 +2073,8 @@ func (c *Client) GetPeerInfo(ctx context.Context, publicKey PublicKey, reqEditor
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetPeerOTA(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetPeerOTARequest(c.Server, publicKey)
+func (c *Client) PutPeerInfoWithBody(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutPeerInfoRequestWithBody(c.Server, publicKey, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1350,7 +2085,19 @@ func (c *Client) GetPeerOTA(ctx context.Context, publicKey PublicKey, reqEditors
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetPeerRuntime(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutPeerInfo(ctx context.Context, publicKey string, body PutPeerInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewPutPeerInfoRequest(c.Server, publicKey, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetPeerRuntime(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPeerRuntimeRequest(c.Server, publicKey)
 	if err != nil {
 		return nil, err
@@ -1362,7 +2109,7 @@ func (c *Client) GetPeerRuntime(ctx context.Context, publicKey PublicKey, reqEdi
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteResource(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteResourceRequest(c.Server, kind, name)
 	if err != nil {
 		return nil, err
@@ -1374,7 +2121,7 @@ func (c *Client) DeleteResource(ctx context.Context, kind ResourceKind, name Res
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetResource(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetResource(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetResourceRequest(c.Server, kind, name)
 	if err != nil {
 		return nil, err
@@ -1386,7 +2133,7 @@ func (c *Client) GetResource(ctx context.Context, kind ResourceKind, name Resour
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutResourceWithBody(ctx context.Context, kind ResourceKind, name ResourceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutResourceWithBody(ctx context.Context, kind ResourceKind, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutResourceRequestWithBody(c.Server, kind, name, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1398,7 +2145,7 @@ func (c *Client) PutResourceWithBody(ctx context.Context, kind ResourceKind, nam
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutResource(ctx context.Context, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutResource(ctx context.Context, kind ResourceKind, name string, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutResourceRequest(c.Server, kind, name, body)
 	if err != nil {
 		return nil, err
@@ -1446,7 +2193,7 @@ func (c *Client) CreateVoice(ctx context.Context, body CreateVoiceJSONRequestBod
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteVoice(ctx context.Context, id VoiceID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteVoice(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteVoiceRequest(c.Server, id)
 	if err != nil {
 		return nil, err
@@ -1458,7 +2205,7 @@ func (c *Client) DeleteVoice(ctx context.Context, id VoiceID, reqEditors ...Requ
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetVoice(ctx context.Context, id VoiceID, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetVoice(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetVoiceRequest(c.Server, id)
 	if err != nil {
 		return nil, err
@@ -1470,7 +2217,7 @@ func (c *Client) GetVoice(ctx context.Context, id VoiceID, reqEditors ...Request
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutVoiceWithBody(ctx context.Context, id VoiceID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutVoiceWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutVoiceRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1482,7 +2229,7 @@ func (c *Client) PutVoiceWithBody(ctx context.Context, id VoiceID, contentType s
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutVoice(ctx context.Context, id VoiceID, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutVoice(ctx context.Context, id string, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutVoiceRequest(c.Server, id, body)
 	if err != nil {
 		return nil, err
@@ -1530,7 +2277,7 @@ func (c *Client) CreateVolcTenant(ctx context.Context, body CreateVolcTenantJSON
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteVolcTenant(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteVolcTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteVolcTenantRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1542,7 +2289,7 @@ func (c *Client) DeleteVolcTenant(ctx context.Context, name VolcTenantName, reqE
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetVolcTenant(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetVolcTenant(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetVolcTenantRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1554,7 +2301,7 @@ func (c *Client) GetVolcTenant(ctx context.Context, name VolcTenantName, reqEdit
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutVolcTenantWithBody(ctx context.Context, name VolcTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutVolcTenantWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutVolcTenantRequestWithBody(c.Server, name, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1566,7 +2313,7 @@ func (c *Client) PutVolcTenantWithBody(ctx context.Context, name VolcTenantName,
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutVolcTenant(ctx context.Context, name VolcTenantName, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutVolcTenant(ctx context.Context, name string, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutVolcTenantRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
@@ -1578,7 +2325,7 @@ func (c *Client) PutVolcTenant(ctx context.Context, name VolcTenantName, body Pu
 	return c.Client.Do(req)
 }
 
-func (c *Client) SyncVolcTenantVoices(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) SyncVolcTenantVoices(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewSyncVolcTenantVoicesRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1626,7 +2373,7 @@ func (c *Client) CreateWorkflow(ctx context.Context, body CreateWorkflowJSONRequ
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteWorkflow(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteWorkflow(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteWorkflowRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1638,7 +2385,7 @@ func (c *Client) DeleteWorkflow(ctx context.Context, name WorkflowName, reqEdito
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetWorkflow(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetWorkflow(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetWorkflowRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1650,7 +2397,7 @@ func (c *Client) GetWorkflow(ctx context.Context, name WorkflowName, reqEditors 
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutWorkflowWithBody(ctx context.Context, name WorkflowName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutWorkflowWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutWorkflowRequestWithBody(c.Server, name, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1662,7 +2409,7 @@ func (c *Client) PutWorkflowWithBody(ctx context.Context, name WorkflowName, con
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutWorkflow(ctx context.Context, name WorkflowName, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutWorkflow(ctx context.Context, name string, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutWorkflowRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
@@ -1710,7 +2457,7 @@ func (c *Client) CreateWorkspace(ctx context.Context, body CreateWorkspaceJSONRe
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteWorkspace(ctx context.Context, name WorkspaceName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteWorkspace(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteWorkspaceRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1722,7 +2469,7 @@ func (c *Client) DeleteWorkspace(ctx context.Context, name WorkspaceName, reqEdi
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetWorkspace(ctx context.Context, name WorkspaceName, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetWorkspace(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetWorkspaceRequest(c.Server, name)
 	if err != nil {
 		return nil, err
@@ -1734,7 +2481,7 @@ func (c *Client) GetWorkspace(ctx context.Context, name WorkspaceName, reqEditor
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutWorkspaceWithBody(ctx context.Context, name WorkspaceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutWorkspaceWithBody(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutWorkspaceRequestWithBody(c.Server, name, contentType, body)
 	if err != nil {
 		return nil, err
@@ -1746,7 +2493,7 @@ func (c *Client) PutWorkspaceWithBody(ctx context.Context, name WorkspaceName, c
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutWorkspace(ctx context.Context, name WorkspaceName, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutWorkspace(ctx context.Context, name string, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutWorkspaceRequest(c.Server, name, body)
 	if err != nil {
 		return nil, err
@@ -1789,6 +2536,778 @@ func NewApplyResourceRequestWithBody(server string, contentType string, body io.
 	}
 
 	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListACLPolicyBindingsRequest generates requests for ListACLPolicyBindings
+func NewListACLPolicyBindingsRequest(server string, params *ListACLPolicyBindingsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/policy-bindings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SubjectKind != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "subject_kind", *params.SubjectKind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.SubjectId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "subject_id", *params.SubjectId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ResourceKind != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "resource_kind", *params.ResourceKind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.ResourceId != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "resource_id", *params.ResourceId, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Role != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "role", *params.Role, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Permission != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "permission", *params.Permission, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.OrderBy != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "order_by", *params.OrderBy, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateACLPolicyBindingRequest calls the generic CreateACLPolicyBinding builder with application/json body
+func NewCreateACLPolicyBindingRequest(server string, body CreateACLPolicyBindingJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateACLPolicyBindingRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateACLPolicyBindingRequestWithBody generates requests for CreateACLPolicyBinding with any type of body
+func NewCreateACLPolicyBindingRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/policy-bindings")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteACLPolicyBindingRequest generates requests for DeleteACLPolicyBinding
+func NewDeleteACLPolicyBindingRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/policy-bindings/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetACLPolicyBindingRequest generates requests for GetACLPolicyBinding
+func NewGetACLPolicyBindingRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/policy-bindings/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutACLPolicyBindingRequest calls the generic PutACLPolicyBinding builder with application/json body
+func NewPutACLPolicyBindingRequest(server string, id string, body PutACLPolicyBindingJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutACLPolicyBindingRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewPutACLPolicyBindingRequestWithBody generates requests for PutACLPolicyBinding with any type of body
+func NewPutACLPolicyBindingRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/policy-bindings/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListACLRolesRequest generates requests for ListACLRoles
+func NewListACLRolesRequest(server string, params *ListACLRolesParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/roles")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateACLRoleRequest calls the generic CreateACLRole builder with application/json body
+func NewCreateACLRoleRequest(server string, body CreateACLRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateACLRoleRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateACLRoleRequestWithBody generates requests for CreateACLRole with any type of body
+func NewCreateACLRoleRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/roles")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteACLRoleRequest generates requests for DeleteACLRole
+func NewDeleteACLRoleRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/roles/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetACLRoleRequest generates requests for GetACLRole
+func NewGetACLRoleRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/roles/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutACLRoleRequest calls the generic PutACLRole builder with application/json body
+func NewPutACLRoleRequest(server string, name string, body PutACLRoleJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutACLRoleRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewPutACLRoleRequestWithBody generates requests for PutACLRole with any type of body
+func NewPutACLRoleRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/roles/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewListACLViewsRequest generates requests for ListACLViews
+func NewListACLViewsRequest(server string, params *ListACLViewsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/views")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateACLViewRequest calls the generic CreateACLView builder with application/json body
+func NewCreateACLViewRequest(server string, body CreateACLViewJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateACLViewRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateACLViewRequestWithBody generates requests for CreateACLView with any type of body
+func NewCreateACLViewRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/views")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteACLViewRequest generates requests for DeleteACLView
+func NewDeleteACLViewRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/views/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetACLViewRequest generates requests for GetACLView
+func NewGetACLViewRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/views/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutACLViewRequest calls the generic PutACLView builder with application/json body
+func NewPutACLViewRequest(server string, name string, body PutACLViewJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutACLViewRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewPutACLViewRequestWithBody generates requests for PutACLView with any type of body
+func NewPutACLViewRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/acl/views/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
@@ -1920,7 +3439,7 @@ func NewCreateCredentialRequestWithBody(server string, contentType string, body 
 }
 
 // NewDeleteCredentialRequest generates requests for DeleteCredential
-func NewDeleteCredentialRequest(server string, name CredentialName) (*http.Request, error) {
+func NewDeleteCredentialRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1954,7 +3473,7 @@ func NewDeleteCredentialRequest(server string, name CredentialName) (*http.Reque
 }
 
 // NewGetCredentialRequest generates requests for GetCredential
-func NewGetCredentialRequest(server string, name CredentialName) (*http.Request, error) {
+func NewGetCredentialRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1988,7 +3507,7 @@ func NewGetCredentialRequest(server string, name CredentialName) (*http.Request,
 }
 
 // NewPutCredentialRequest calls the generic PutCredential builder with application/json body
-func NewPutCredentialRequest(server string, name CredentialName, body PutCredentialJSONRequestBody) (*http.Request, error) {
+func NewPutCredentialRequest(server string, name string, body PutCredentialJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -1999,7 +3518,7 @@ func NewPutCredentialRequest(server string, name CredentialName, body PutCredent
 }
 
 // NewPutCredentialRequestWithBody generates requests for PutCredential with any type of body
-func NewPutCredentialRequestWithBody(server string, name CredentialName, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutCredentialRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2034,8 +3553,8 @@ func NewPutCredentialRequestWithBody(server string, name CredentialName, content
 	return req, nil
 }
 
-// NewListDepotsRequest generates requests for ListDepots
-func NewListDepotsRequest(server string) (*http.Request, error) {
+// NewListDashScopeTenantsRequest generates requests for ListDashScopeTenants
+func NewListDashScopeTenantsRequest(server string, params *ListDashScopeTenantsParams) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -2043,7 +3562,7 @@ func NewListDepotsRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/depots")
+	operationPath := fmt.Sprintf("/dashscope-tenants")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2051,6 +3570,44 @@ func NewListDepotsRequest(server string) (*http.Request, error) {
 	queryURL, err := serverURL.Parse(operationPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
 	}
 
 	req, err := http.NewRequest("GET", queryURL.String(), nil)
@@ -2061,58 +3618,53 @@ func NewListDepotsRequest(server string) (*http.Request, error) {
 	return req, nil
 }
 
-// NewGetDepotRequest generates requests for GetDepot
-func NewGetDepotRequest(server string, depot DepotName) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/depots/%s", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewPutDepotInfoRequest calls the generic PutDepotInfo builder with application/json body
-func NewPutDepotInfoRequest(server string, depot DepotName, body PutDepotInfoJSONRequestBody) (*http.Request, error) {
+// NewCreateDashScopeTenantRequest calls the generic CreateDashScopeTenant builder with application/json body
+func NewCreateDashScopeTenantRequest(server string, body CreateDashScopeTenantJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
 	bodyReader = bytes.NewReader(buf)
-	return NewPutDepotInfoRequestWithBody(server, depot, "application/json", bodyReader)
+	return NewCreateDashScopeTenantRequestWithBody(server, "application/json", bodyReader)
 }
 
-// NewPutDepotInfoRequestWithBody generates requests for PutDepotInfo with any type of body
-func NewPutDepotInfoRequestWithBody(server string, depot DepotName, contentType string, body io.Reader) (*http.Request, error) {
+// NewCreateDashScopeTenantRequestWithBody generates requests for CreateDashScopeTenant with any type of body
+func NewCreateDashScopeTenantRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/dashscope-tenants")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteDashScopeTenantRequest generates requests for DeleteDashScopeTenant
+func NewDeleteDashScopeTenantRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
 	if err != nil {
 		return nil, err
 	}
@@ -2122,7 +3674,86 @@ func NewPutDepotInfoRequestWithBody(server string, depot DepotName, contentType 
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/depots/%s", pathParam0)
+	operationPath := fmt.Sprintf("/dashscope-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetDashScopeTenantRequest generates requests for GetDashScopeTenant
+func NewGetDashScopeTenantRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/dashscope-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutDashScopeTenantRequest calls the generic PutDashScopeTenant builder with application/json body
+func NewPutDashScopeTenantRequest(server string, name string, body PutDashScopeTenantJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutDashScopeTenantRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewPutDashScopeTenantRequestWithBody generates requests for PutDashScopeTenant with any type of body
+func NewPutDashScopeTenantRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/dashscope-tenants/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2142,23 +3773,16 @@ func NewPutDepotInfoRequestWithBody(server string, depot DepotName, contentType 
 	return req, nil
 }
 
-// NewReleaseDepotRequest generates requests for ReleaseDepot
-func NewReleaseDepotRequest(server string, depot DepotName) (*http.Request, error) {
+// NewListFirmwaresRequest generates requests for ListFirmwares
+func NewListFirmwaresRequest(server string, params *ListFirmwaresParams) (*http.Request, error) {
 	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/depots/%s/@release", pathParam0)
+	operationPath := fmt.Sprintf("/firmwares")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2168,7 +3792,45 @@ func NewReleaseDepotRequest(server string, depot DepotName) (*http.Request, erro
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PUT", queryURL.String(), nil)
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -2176,23 +3838,27 @@ func NewReleaseDepotRequest(server string, depot DepotName) (*http.Request, erro
 	return req, nil
 }
 
-// NewRollbackDepotRequest generates requests for RollbackDepot
-func NewRollbackDepotRequest(server string, depot DepotName) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+// NewCreateFirmwareRequest calls the generic CreateFirmware builder with application/json body
+func NewCreateFirmwareRequest(server string, body CreateFirmwareJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateFirmwareRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateFirmwareRequestWithBody generates requests for CreateFirmware with any type of body
+func NewCreateFirmwareRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
 
 	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/depots/%s/@rollback", pathParam0)
+	operationPath := fmt.Sprintf("/firmwares")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2202,28 +3868,23 @@ func NewRollbackDepotRequest(server string, depot DepotName) (*http.Request, err
 		return nil, err
 	}
 
-	req, err := http.NewRequest("PUT", queryURL.String(), nil)
+	req, err := http.NewRequest("POST", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
 
-// NewGetChannelRequest generates requests for GetChannel
-func NewGetChannelRequest(server string, depot DepotName, channel Channel) (*http.Request, error) {
+// NewDeleteFirmwareRequest generates requests for DeleteFirmware
+func NewDeleteFirmwareRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "channel", channel, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
 	if err != nil {
 		return nil, err
 	}
@@ -2233,7 +3894,41 @@ func NewGetChannelRequest(server string, depot DepotName, channel Channel) (*htt
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/depots/%s/channels/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/firmwares/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetFirmwareRequest generates requests for GetFirmware
+func NewGetFirmwareRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/firmwares/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2251,20 +3946,24 @@ func NewGetChannelRequest(server string, depot DepotName, channel Channel) (*htt
 	return req, nil
 }
 
-// NewPutChannelRequestWithBody generates requests for PutChannel with any type of body
-func NewPutChannelRequestWithBody(server string, depot DepotName, channel Channel, contentType string, body io.Reader) (*http.Request, error) {
+// NewPutFirmwareRequest calls the generic PutFirmware builder with application/json body
+func NewPutFirmwareRequest(server string, name string, body PutFirmwareJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutFirmwareRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewPutFirmwareRequestWithBody generates requests for PutFirmware with any type of body
+func NewPutFirmwareRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
 
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "channel", channel, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
 	if err != nil {
 		return nil, err
 	}
@@ -2274,7 +3973,295 @@ func NewPutChannelRequestWithBody(server string, depot DepotName, channel Channe
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/depots/%s/channels/%s", pathParam0, pathParam1)
+	operationPath := fmt.Sprintf("/firmwares/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewReleaseFirmwareRequest generates requests for ReleaseFirmware
+func NewReleaseFirmwareRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/firmwares/%s/@release", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewRollbackFirmwareRequest generates requests for RollbackFirmware
+func NewRollbackFirmwareRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/firmwares/%s/@rollback", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewListGeminiTenantsRequest generates requests for ListGeminiTenants
+func NewListGeminiTenantsRequest(server string, params *ListGeminiTenantsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/gemini-tenants")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateGeminiTenantRequest calls the generic CreateGeminiTenant builder with application/json body
+func NewCreateGeminiTenantRequest(server string, body CreateGeminiTenantJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateGeminiTenantRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateGeminiTenantRequestWithBody generates requests for CreateGeminiTenant with any type of body
+func NewCreateGeminiTenantRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/gemini-tenants")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteGeminiTenantRequest generates requests for DeleteGeminiTenant
+func NewDeleteGeminiTenantRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/gemini-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetGeminiTenantRequest generates requests for GetGeminiTenant
+func NewGetGeminiTenantRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/gemini-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutGeminiTenantRequest calls the generic PutGeminiTenant builder with application/json body
+func NewPutGeminiTenantRequest(server string, name string, body PutGeminiTenantJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutGeminiTenantRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewPutGeminiTenantRequestWithBody generates requests for PutGeminiTenant with any type of body
+func NewPutGeminiTenantRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/gemini-tenants/%s", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -2400,7 +4387,7 @@ func NewCreateMiniMaxTenantRequestWithBody(server string, contentType string, bo
 }
 
 // NewDeleteMiniMaxTenantRequest generates requests for DeleteMiniMaxTenant
-func NewDeleteMiniMaxTenantRequest(server string, name MiniMaxTenantName) (*http.Request, error) {
+func NewDeleteMiniMaxTenantRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2434,7 +4421,7 @@ func NewDeleteMiniMaxTenantRequest(server string, name MiniMaxTenantName) (*http
 }
 
 // NewGetMiniMaxTenantRequest generates requests for GetMiniMaxTenant
-func NewGetMiniMaxTenantRequest(server string, name MiniMaxTenantName) (*http.Request, error) {
+func NewGetMiniMaxTenantRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2468,7 +4455,7 @@ func NewGetMiniMaxTenantRequest(server string, name MiniMaxTenantName) (*http.Re
 }
 
 // NewPutMiniMaxTenantRequest calls the generic PutMiniMaxTenant builder with application/json body
-func NewPutMiniMaxTenantRequest(server string, name MiniMaxTenantName, body PutMiniMaxTenantJSONRequestBody) (*http.Request, error) {
+func NewPutMiniMaxTenantRequest(server string, name string, body PutMiniMaxTenantJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -2479,7 +4466,7 @@ func NewPutMiniMaxTenantRequest(server string, name MiniMaxTenantName, body PutM
 }
 
 // NewPutMiniMaxTenantRequestWithBody generates requests for PutMiniMaxTenant with any type of body
-func NewPutMiniMaxTenantRequestWithBody(server string, name MiniMaxTenantName, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutMiniMaxTenantRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2515,7 +4502,7 @@ func NewPutMiniMaxTenantRequestWithBody(server string, name MiniMaxTenantName, c
 }
 
 // NewSyncMiniMaxTenantVoicesRequest generates requests for SyncMiniMaxTenantVoices
-func NewSyncMiniMaxTenantVoicesRequest(server string, name MiniMaxTenantName) (*http.Request, error) {
+func NewSyncMiniMaxTenantVoicesRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2569,22 +4556,6 @@ func NewListModelsRequest(server string, params *ListModelsParams) (*http.Reques
 
 	if params != nil {
 		queryValues := queryURL.Query()
-
-		if params.Kind != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "kind", *params.Kind, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
 
 		if params.Source != nil {
 
@@ -2718,7 +4689,7 @@ func NewCreateModelRequestWithBody(server string, contentType string, body io.Re
 }
 
 // NewDeleteModelRequest generates requests for DeleteModel
-func NewDeleteModelRequest(server string, id ModelID) (*http.Request, error) {
+func NewDeleteModelRequest(server string, id string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2752,7 +4723,7 @@ func NewDeleteModelRequest(server string, id ModelID) (*http.Request, error) {
 }
 
 // NewGetModelRequest generates requests for GetModel
-func NewGetModelRequest(server string, id ModelID) (*http.Request, error) {
+func NewGetModelRequest(server string, id string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2786,7 +4757,7 @@ func NewGetModelRequest(server string, id ModelID) (*http.Request, error) {
 }
 
 // NewPutModelRequest calls the generic PutModel builder with application/json body
-func NewPutModelRequest(server string, id ModelID, body PutModelJSONRequestBody) (*http.Request, error) {
+func NewPutModelRequest(server string, id string, body PutModelJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -2797,7 +4768,7 @@ func NewPutModelRequest(server string, id ModelID, body PutModelJSONRequestBody)
 }
 
 // NewPutModelRequestWithBody generates requests for PutModel with any type of body
-func NewPutModelRequestWithBody(server string, id ModelID, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutModelRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -2832,6 +4803,226 @@ func NewPutModelRequestWithBody(server string, id ModelID, contentType string, b
 	return req, nil
 }
 
+// NewListOpenAITenantsRequest generates requests for ListOpenAITenants
+func NewListOpenAITenantsRequest(server string, params *ListOpenAITenantsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/openai-tenants")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateOpenAITenantRequest calls the generic CreateOpenAITenant builder with application/json body
+func NewCreateOpenAITenantRequest(server string, body CreateOpenAITenantJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateOpenAITenantRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateOpenAITenantRequestWithBody generates requests for CreateOpenAITenant with any type of body
+func NewCreateOpenAITenantRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/openai-tenants")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteOpenAITenantRequest generates requests for DeleteOpenAITenant
+func NewDeleteOpenAITenantRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/openai-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetOpenAITenantRequest generates requests for GetOpenAITenant
+func NewGetOpenAITenantRequest(server string, name string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/openai-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewPutOpenAITenantRequest calls the generic PutOpenAITenant builder with application/json body
+func NewPutOpenAITenantRequest(server string, name string, body PutOpenAITenantJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutOpenAITenantRequestWithBody(server, name, "application/json", bodyReader)
+}
+
+// NewPutOpenAITenantRequestWithBody generates requests for PutOpenAITenant with any type of body
+func NewPutOpenAITenantRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "name", name, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/openai-tenants/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewListPeersRequest generates requests for ListPeers
 func NewListPeersRequest(server string, params *ListPeersParams) (*http.Request, error) {
 	var err error
@@ -2842,171 +5033,6 @@ func NewListPeersRequest(server string, params *ListPeersParams) (*http.Request,
 	}
 
 	operationPath := fmt.Sprintf("/peers")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Cursor != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Limit != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewListPeersByCertificationRequest generates requests for ListPeersByCertification
-func NewListPeersByCertificationRequest(server string, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListPeersByCertificationParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "type", pType, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "authority", authority, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam2 string
-
-	pathParam2, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/peers/certification/%s/%s/%s", pathParam0, pathParam1, pathParam2)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if params != nil {
-		queryValues := queryURL.Query()
-
-		if params.Cursor != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		if params.Limit != nil {
-
-			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: "int32"}); err != nil {
-				return nil, err
-			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
-				return nil, err
-			} else {
-				for k, v := range parsed {
-					for _, v2 := range v {
-						queryValues.Add(k, v2)
-					}
-				}
-			}
-
-		}
-
-		queryURL.RawQuery = queryValues.Encode()
-	}
-
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewListPeersByFirmwareRequest generates requests for ListPeersByFirmware
-func NewListPeersByFirmwareRequest(server string, depot string, channel externalRef0.GearFirmwareChannel, params *ListPeersByFirmwareParams) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "depot", depot, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	var pathParam1 string
-
-	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "channel", channel, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/peers/firmware/%s/%s", pathParam0, pathParam1)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3217,7 +5243,7 @@ func NewResolvePeerBySNRequest(server string, sn string) (*http.Request, error) 
 }
 
 // NewDeletePeerRequest generates requests for DeletePeer
-func NewDeletePeerRequest(server string, publicKey PublicKey) (*http.Request, error) {
+func NewDeletePeerRequest(server string, publicKey string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3251,7 +5277,7 @@ func NewDeletePeerRequest(server string, publicKey PublicKey) (*http.Request, er
 }
 
 // NewGetPeerRequest generates requests for GetPeer
-func NewGetPeerRequest(server string, publicKey PublicKey) (*http.Request, error) {
+func NewGetPeerRequest(server string, publicKey string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3285,7 +5311,7 @@ func NewGetPeerRequest(server string, publicKey PublicKey) (*http.Request, error
 }
 
 // NewApprovePeerRequest calls the generic ApprovePeer builder with application/json body
-func NewApprovePeerRequest(server string, publicKey PublicKey, body ApprovePeerJSONRequestBody) (*http.Request, error) {
+func NewApprovePeerRequest(server string, publicKey string, body ApprovePeerJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -3296,7 +5322,7 @@ func NewApprovePeerRequest(server string, publicKey PublicKey, body ApprovePeerJ
 }
 
 // NewApprovePeerRequestWithBody generates requests for ApprovePeer with any type of body
-func NewApprovePeerRequestWithBody(server string, publicKey PublicKey, contentType string, body io.Reader) (*http.Request, error) {
+func NewApprovePeerRequestWithBody(server string, publicKey string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3332,7 +5358,7 @@ func NewApprovePeerRequestWithBody(server string, publicKey PublicKey, contentTy
 }
 
 // NewBlockPeerRequest generates requests for BlockPeer
-func NewBlockPeerRequest(server string, publicKey PublicKey) (*http.Request, error) {
+func NewBlockPeerRequest(server string, publicKey string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3366,7 +5392,7 @@ func NewBlockPeerRequest(server string, publicKey PublicKey) (*http.Request, err
 }
 
 // NewRefreshPeerRequest generates requests for RefreshPeer
-func NewRefreshPeerRequest(server string, publicKey PublicKey) (*http.Request, error) {
+func NewRefreshPeerRequest(server string, publicKey string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3400,7 +5426,7 @@ func NewRefreshPeerRequest(server string, publicKey PublicKey) (*http.Request, e
 }
 
 // NewGetPeerConfigRequest generates requests for GetPeerConfig
-func NewGetPeerConfigRequest(server string, publicKey PublicKey) (*http.Request, error) {
+func NewGetPeerConfigRequest(server string, publicKey string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3434,7 +5460,7 @@ func NewGetPeerConfigRequest(server string, publicKey PublicKey) (*http.Request,
 }
 
 // NewPutPeerConfigRequest calls the generic PutPeerConfig builder with application/json body
-func NewPutPeerConfigRequest(server string, publicKey PublicKey, body PutPeerConfigJSONRequestBody) (*http.Request, error) {
+func NewPutPeerConfigRequest(server string, publicKey string, body PutPeerConfigJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -3445,7 +5471,7 @@ func NewPutPeerConfigRequest(server string, publicKey PublicKey, body PutPeerCon
 }
 
 // NewPutPeerConfigRequestWithBody generates requests for PutPeerConfig with any type of body
-func NewPutPeerConfigRequestWithBody(server string, publicKey PublicKey, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutPeerConfigRequestWithBody(server string, publicKey string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3481,7 +5507,7 @@ func NewPutPeerConfigRequestWithBody(server string, publicKey PublicKey, content
 }
 
 // NewGetPeerInfoRequest generates requests for GetPeerInfo
-func NewGetPeerInfoRequest(server string, publicKey PublicKey) (*http.Request, error) {
+func NewGetPeerInfoRequest(server string, publicKey string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3514,8 +5540,19 @@ func NewGetPeerInfoRequest(server string, publicKey PublicKey) (*http.Request, e
 	return req, nil
 }
 
-// NewGetPeerOTARequest generates requests for GetPeerOTA
-func NewGetPeerOTARequest(server string, publicKey PublicKey) (*http.Request, error) {
+// NewPutPeerInfoRequest calls the generic PutPeerInfo builder with application/json body
+func NewPutPeerInfoRequest(server string, publicKey string, body PutPeerInfoJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewPutPeerInfoRequestWithBody(server, publicKey, "application/json", bodyReader)
+}
+
+// NewPutPeerInfoRequestWithBody generates requests for PutPeerInfo with any type of body
+func NewPutPeerInfoRequestWithBody(server string, publicKey string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3530,7 +5567,7 @@ func NewGetPeerOTARequest(server string, publicKey PublicKey) (*http.Request, er
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/peers/%s/ota", pathParam0)
+	operationPath := fmt.Sprintf("/peers/%s/info", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -3540,16 +5577,18 @@ func NewGetPeerOTARequest(server string, publicKey PublicKey) (*http.Request, er
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
 	if err != nil {
 		return nil, err
 	}
+
+	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
 
 // NewGetPeerRuntimeRequest generates requests for GetPeerRuntime
-func NewGetPeerRuntimeRequest(server string, publicKey PublicKey) (*http.Request, error) {
+func NewGetPeerRuntimeRequest(server string, publicKey string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3583,7 +5622,7 @@ func NewGetPeerRuntimeRequest(server string, publicKey PublicKey) (*http.Request
 }
 
 // NewDeleteResourceRequest generates requests for DeleteResource
-func NewDeleteResourceRequest(server string, kind ResourceKind, name ResourceName) (*http.Request, error) {
+func NewDeleteResourceRequest(server string, kind ResourceKind, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3624,7 +5663,7 @@ func NewDeleteResourceRequest(server string, kind ResourceKind, name ResourceNam
 }
 
 // NewGetResourceRequest generates requests for GetResource
-func NewGetResourceRequest(server string, kind ResourceKind, name ResourceName) (*http.Request, error) {
+func NewGetResourceRequest(server string, kind ResourceKind, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3665,7 +5704,7 @@ func NewGetResourceRequest(server string, kind ResourceKind, name ResourceName) 
 }
 
 // NewPutResourceRequest calls the generic PutResource builder with application/json body
-func NewPutResourceRequest(server string, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody) (*http.Request, error) {
+func NewPutResourceRequest(server string, kind ResourceKind, name string, body PutResourceJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -3676,7 +5715,7 @@ func NewPutResourceRequest(server string, kind ResourceKind, name ResourceName, 
 }
 
 // NewPutResourceRequestWithBody generates requests for PutResource with any type of body
-func NewPutResourceRequestWithBody(server string, kind ResourceKind, name ResourceName, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutResourceRequestWithBody(server string, kind ResourceKind, name string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3872,7 +5911,7 @@ func NewCreateVoiceRequestWithBody(server string, contentType string, body io.Re
 }
 
 // NewDeleteVoiceRequest generates requests for DeleteVoice
-func NewDeleteVoiceRequest(server string, id VoiceID) (*http.Request, error) {
+func NewDeleteVoiceRequest(server string, id string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3906,7 +5945,7 @@ func NewDeleteVoiceRequest(server string, id VoiceID) (*http.Request, error) {
 }
 
 // NewGetVoiceRequest generates requests for GetVoice
-func NewGetVoiceRequest(server string, id VoiceID) (*http.Request, error) {
+func NewGetVoiceRequest(server string, id string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -3940,7 +5979,7 @@ func NewGetVoiceRequest(server string, id VoiceID) (*http.Request, error) {
 }
 
 // NewPutVoiceRequest calls the generic PutVoice builder with application/json body
-func NewPutVoiceRequest(server string, id VoiceID, body PutVoiceJSONRequestBody) (*http.Request, error) {
+func NewPutVoiceRequest(server string, id string, body PutVoiceJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -3951,7 +5990,7 @@ func NewPutVoiceRequest(server string, id VoiceID, body PutVoiceJSONRequestBody)
 }
 
 // NewPutVoiceRequestWithBody generates requests for PutVoice with any type of body
-func NewPutVoiceRequestWithBody(server string, id VoiceID, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutVoiceRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4092,7 +6131,7 @@ func NewCreateVolcTenantRequestWithBody(server string, contentType string, body 
 }
 
 // NewDeleteVolcTenantRequest generates requests for DeleteVolcTenant
-func NewDeleteVolcTenantRequest(server string, name VolcTenantName) (*http.Request, error) {
+func NewDeleteVolcTenantRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4126,7 +6165,7 @@ func NewDeleteVolcTenantRequest(server string, name VolcTenantName) (*http.Reque
 }
 
 // NewGetVolcTenantRequest generates requests for GetVolcTenant
-func NewGetVolcTenantRequest(server string, name VolcTenantName) (*http.Request, error) {
+func NewGetVolcTenantRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4160,7 +6199,7 @@ func NewGetVolcTenantRequest(server string, name VolcTenantName) (*http.Request,
 }
 
 // NewPutVolcTenantRequest calls the generic PutVolcTenant builder with application/json body
-func NewPutVolcTenantRequest(server string, name VolcTenantName, body PutVolcTenantJSONRequestBody) (*http.Request, error) {
+func NewPutVolcTenantRequest(server string, name string, body PutVolcTenantJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -4171,7 +6210,7 @@ func NewPutVolcTenantRequest(server string, name VolcTenantName, body PutVolcTen
 }
 
 // NewPutVolcTenantRequestWithBody generates requests for PutVolcTenant with any type of body
-func NewPutVolcTenantRequestWithBody(server string, name VolcTenantName, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutVolcTenantRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4207,7 +6246,7 @@ func NewPutVolcTenantRequestWithBody(server string, name VolcTenantName, content
 }
 
 // NewSyncVolcTenantVoicesRequest generates requests for SyncVolcTenantVoices
-func NewSyncVolcTenantVoicesRequest(server string, name VolcTenantName) (*http.Request, error) {
+func NewSyncVolcTenantVoicesRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4346,7 +6385,7 @@ func NewCreateWorkflowRequestWithBody(server string, contentType string, body io
 }
 
 // NewDeleteWorkflowRequest generates requests for DeleteWorkflow
-func NewDeleteWorkflowRequest(server string, name WorkflowName) (*http.Request, error) {
+func NewDeleteWorkflowRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4380,7 +6419,7 @@ func NewDeleteWorkflowRequest(server string, name WorkflowName) (*http.Request, 
 }
 
 // NewGetWorkflowRequest generates requests for GetWorkflow
-func NewGetWorkflowRequest(server string, name WorkflowName) (*http.Request, error) {
+func NewGetWorkflowRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4414,7 +6453,7 @@ func NewGetWorkflowRequest(server string, name WorkflowName) (*http.Request, err
 }
 
 // NewPutWorkflowRequest calls the generic PutWorkflow builder with application/json body
-func NewPutWorkflowRequest(server string, name WorkflowName, body PutWorkflowJSONRequestBody) (*http.Request, error) {
+func NewPutWorkflowRequest(server string, name string, body PutWorkflowJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -4425,7 +6464,7 @@ func NewPutWorkflowRequest(server string, name WorkflowName, body PutWorkflowJSO
 }
 
 // NewPutWorkflowRequestWithBody generates requests for PutWorkflow with any type of body
-func NewPutWorkflowRequestWithBody(server string, name WorkflowName, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutWorkflowRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4566,7 +6605,7 @@ func NewCreateWorkspaceRequestWithBody(server string, contentType string, body i
 }
 
 // NewDeleteWorkspaceRequest generates requests for DeleteWorkspace
-func NewDeleteWorkspaceRequest(server string, name WorkspaceName) (*http.Request, error) {
+func NewDeleteWorkspaceRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4600,7 +6639,7 @@ func NewDeleteWorkspaceRequest(server string, name WorkspaceName) (*http.Request
 }
 
 // NewGetWorkspaceRequest generates requests for GetWorkspace
-func NewGetWorkspaceRequest(server string, name WorkspaceName) (*http.Request, error) {
+func NewGetWorkspaceRequest(server string, name string) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4634,7 +6673,7 @@ func NewGetWorkspaceRequest(server string, name WorkspaceName) (*http.Request, e
 }
 
 // NewPutWorkspaceRequest calls the generic PutWorkspace builder with application/json body
-func NewPutWorkspaceRequest(server string, name WorkspaceName, body PutWorkspaceJSONRequestBody) (*http.Request, error) {
+func NewPutWorkspaceRequest(server string, name string, body PutWorkspaceJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -4645,7 +6684,7 @@ func NewPutWorkspaceRequest(server string, name WorkspaceName, body PutWorkspace
 }
 
 // NewPutWorkspaceRequestWithBody generates requests for PutWorkspace with any type of body
-func NewPutWorkspaceRequestWithBody(server string, name WorkspaceName, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutWorkspaceRequestWithBody(server string, name string, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -4728,6 +6767,63 @@ type ClientWithResponsesInterface interface {
 
 	ApplyResourceWithResponse(ctx context.Context, body ApplyResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*ApplyResourceResponse, error)
 
+	// ListACLPolicyBindingsWithResponse request
+	ListACLPolicyBindingsWithResponse(ctx context.Context, params *ListACLPolicyBindingsParams, reqEditors ...RequestEditorFn) (*ListACLPolicyBindingsResponse, error)
+
+	// CreateACLPolicyBindingWithBodyWithResponse request with any body
+	CreateACLPolicyBindingWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateACLPolicyBindingResponse, error)
+
+	CreateACLPolicyBindingWithResponse(ctx context.Context, body CreateACLPolicyBindingJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateACLPolicyBindingResponse, error)
+
+	// DeleteACLPolicyBindingWithResponse request
+	DeleteACLPolicyBindingWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteACLPolicyBindingResponse, error)
+
+	// GetACLPolicyBindingWithResponse request
+	GetACLPolicyBindingWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetACLPolicyBindingResponse, error)
+
+	// PutACLPolicyBindingWithBodyWithResponse request with any body
+	PutACLPolicyBindingWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutACLPolicyBindingResponse, error)
+
+	PutACLPolicyBindingWithResponse(ctx context.Context, id string, body PutACLPolicyBindingJSONRequestBody, reqEditors ...RequestEditorFn) (*PutACLPolicyBindingResponse, error)
+
+	// ListACLRolesWithResponse request
+	ListACLRolesWithResponse(ctx context.Context, params *ListACLRolesParams, reqEditors ...RequestEditorFn) (*ListACLRolesResponse, error)
+
+	// CreateACLRoleWithBodyWithResponse request with any body
+	CreateACLRoleWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateACLRoleResponse, error)
+
+	CreateACLRoleWithResponse(ctx context.Context, body CreateACLRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateACLRoleResponse, error)
+
+	// DeleteACLRoleWithResponse request
+	DeleteACLRoleWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteACLRoleResponse, error)
+
+	// GetACLRoleWithResponse request
+	GetACLRoleWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetACLRoleResponse, error)
+
+	// PutACLRoleWithBodyWithResponse request with any body
+	PutACLRoleWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutACLRoleResponse, error)
+
+	PutACLRoleWithResponse(ctx context.Context, name string, body PutACLRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*PutACLRoleResponse, error)
+
+	// ListACLViewsWithResponse request
+	ListACLViewsWithResponse(ctx context.Context, params *ListACLViewsParams, reqEditors ...RequestEditorFn) (*ListACLViewsResponse, error)
+
+	// CreateACLViewWithBodyWithResponse request with any body
+	CreateACLViewWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateACLViewResponse, error)
+
+	CreateACLViewWithResponse(ctx context.Context, body CreateACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateACLViewResponse, error)
+
+	// DeleteACLViewWithResponse request
+	DeleteACLViewWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteACLViewResponse, error)
+
+	// GetACLViewWithResponse request
+	GetACLViewWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetACLViewResponse, error)
+
+	// PutACLViewWithBodyWithResponse request with any body
+	PutACLViewWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutACLViewResponse, error)
+
+	PutACLViewWithResponse(ctx context.Context, name string, body PutACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*PutACLViewResponse, error)
+
 	// ListCredentialsWithResponse request
 	ListCredentialsWithResponse(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*ListCredentialsResponse, error)
 
@@ -4737,38 +6833,78 @@ type ClientWithResponsesInterface interface {
 	CreateCredentialWithResponse(ctx context.Context, body CreateCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateCredentialResponse, error)
 
 	// DeleteCredentialWithResponse request
-	DeleteCredentialWithResponse(ctx context.Context, name CredentialName, reqEditors ...RequestEditorFn) (*DeleteCredentialResponse, error)
+	DeleteCredentialWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteCredentialResponse, error)
 
 	// GetCredentialWithResponse request
-	GetCredentialWithResponse(ctx context.Context, name CredentialName, reqEditors ...RequestEditorFn) (*GetCredentialResponse, error)
+	GetCredentialWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetCredentialResponse, error)
 
 	// PutCredentialWithBodyWithResponse request with any body
-	PutCredentialWithBodyWithResponse(ctx context.Context, name CredentialName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutCredentialResponse, error)
+	PutCredentialWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutCredentialResponse, error)
 
-	PutCredentialWithResponse(ctx context.Context, name CredentialName, body PutCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*PutCredentialResponse, error)
+	PutCredentialWithResponse(ctx context.Context, name string, body PutCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*PutCredentialResponse, error)
 
-	// ListDepotsWithResponse request
-	ListDepotsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListDepotsResponse, error)
+	// ListDashScopeTenantsWithResponse request
+	ListDashScopeTenantsWithResponse(ctx context.Context, params *ListDashScopeTenantsParams, reqEditors ...RequestEditorFn) (*ListDashScopeTenantsResponse, error)
 
-	// GetDepotWithResponse request
-	GetDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*GetDepotResponse, error)
+	// CreateDashScopeTenantWithBodyWithResponse request with any body
+	CreateDashScopeTenantWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDashScopeTenantResponse, error)
 
-	// PutDepotInfoWithBodyWithResponse request with any body
-	PutDepotInfoWithBodyWithResponse(ctx context.Context, depot DepotName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutDepotInfoResponse, error)
+	CreateDashScopeTenantWithResponse(ctx context.Context, body CreateDashScopeTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateDashScopeTenantResponse, error)
 
-	PutDepotInfoWithResponse(ctx context.Context, depot DepotName, body PutDepotInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*PutDepotInfoResponse, error)
+	// DeleteDashScopeTenantWithResponse request
+	DeleteDashScopeTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteDashScopeTenantResponse, error)
 
-	// ReleaseDepotWithResponse request
-	ReleaseDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*ReleaseDepotResponse, error)
+	// GetDashScopeTenantWithResponse request
+	GetDashScopeTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetDashScopeTenantResponse, error)
 
-	// RollbackDepotWithResponse request
-	RollbackDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*RollbackDepotResponse, error)
+	// PutDashScopeTenantWithBodyWithResponse request with any body
+	PutDashScopeTenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutDashScopeTenantResponse, error)
 
-	// GetChannelWithResponse request
-	GetChannelWithResponse(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*GetChannelResponse, error)
+	PutDashScopeTenantWithResponse(ctx context.Context, name string, body PutDashScopeTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutDashScopeTenantResponse, error)
 
-	// PutChannelWithBodyWithResponse request with any body
-	PutChannelWithBodyWithResponse(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutChannelResponse, error)
+	// ListFirmwaresWithResponse request
+	ListFirmwaresWithResponse(ctx context.Context, params *ListFirmwaresParams, reqEditors ...RequestEditorFn) (*ListFirmwaresResponse, error)
+
+	// CreateFirmwareWithBodyWithResponse request with any body
+	CreateFirmwareWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFirmwareResponse, error)
+
+	CreateFirmwareWithResponse(ctx context.Context, body CreateFirmwareJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFirmwareResponse, error)
+
+	// DeleteFirmwareWithResponse request
+	DeleteFirmwareWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteFirmwareResponse, error)
+
+	// GetFirmwareWithResponse request
+	GetFirmwareWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetFirmwareResponse, error)
+
+	// PutFirmwareWithBodyWithResponse request with any body
+	PutFirmwareWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutFirmwareResponse, error)
+
+	PutFirmwareWithResponse(ctx context.Context, name string, body PutFirmwareJSONRequestBody, reqEditors ...RequestEditorFn) (*PutFirmwareResponse, error)
+
+	// ReleaseFirmwareWithResponse request
+	ReleaseFirmwareWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*ReleaseFirmwareResponse, error)
+
+	// RollbackFirmwareWithResponse request
+	RollbackFirmwareWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*RollbackFirmwareResponse, error)
+
+	// ListGeminiTenantsWithResponse request
+	ListGeminiTenantsWithResponse(ctx context.Context, params *ListGeminiTenantsParams, reqEditors ...RequestEditorFn) (*ListGeminiTenantsResponse, error)
+
+	// CreateGeminiTenantWithBodyWithResponse request with any body
+	CreateGeminiTenantWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateGeminiTenantResponse, error)
+
+	CreateGeminiTenantWithResponse(ctx context.Context, body CreateGeminiTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateGeminiTenantResponse, error)
+
+	// DeleteGeminiTenantWithResponse request
+	DeleteGeminiTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteGeminiTenantResponse, error)
+
+	// GetGeminiTenantWithResponse request
+	GetGeminiTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetGeminiTenantResponse, error)
+
+	// PutGeminiTenantWithBodyWithResponse request with any body
+	PutGeminiTenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutGeminiTenantResponse, error)
+
+	PutGeminiTenantWithResponse(ctx context.Context, name string, body PutGeminiTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutGeminiTenantResponse, error)
 
 	// ListMiniMaxTenantsWithResponse request
 	ListMiniMaxTenantsWithResponse(ctx context.Context, params *ListMiniMaxTenantsParams, reqEditors ...RequestEditorFn) (*ListMiniMaxTenantsResponse, error)
@@ -4779,18 +6915,18 @@ type ClientWithResponsesInterface interface {
 	CreateMiniMaxTenantWithResponse(ctx context.Context, body CreateMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateMiniMaxTenantResponse, error)
 
 	// DeleteMiniMaxTenantWithResponse request
-	DeleteMiniMaxTenantWithResponse(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*DeleteMiniMaxTenantResponse, error)
+	DeleteMiniMaxTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteMiniMaxTenantResponse, error)
 
 	// GetMiniMaxTenantWithResponse request
-	GetMiniMaxTenantWithResponse(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*GetMiniMaxTenantResponse, error)
+	GetMiniMaxTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetMiniMaxTenantResponse, error)
 
 	// PutMiniMaxTenantWithBodyWithResponse request with any body
-	PutMiniMaxTenantWithBodyWithResponse(ctx context.Context, name MiniMaxTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutMiniMaxTenantResponse, error)
+	PutMiniMaxTenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutMiniMaxTenantResponse, error)
 
-	PutMiniMaxTenantWithResponse(ctx context.Context, name MiniMaxTenantName, body PutMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutMiniMaxTenantResponse, error)
+	PutMiniMaxTenantWithResponse(ctx context.Context, name string, body PutMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutMiniMaxTenantResponse, error)
 
 	// SyncMiniMaxTenantVoicesWithResponse request
-	SyncMiniMaxTenantVoicesWithResponse(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*SyncMiniMaxTenantVoicesResponse, error)
+	SyncMiniMaxTenantVoicesWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*SyncMiniMaxTenantVoicesResponse, error)
 
 	// ListModelsWithResponse request
 	ListModelsWithResponse(ctx context.Context, params *ListModelsParams, reqEditors ...RequestEditorFn) (*ListModelsResponse, error)
@@ -4801,24 +6937,37 @@ type ClientWithResponsesInterface interface {
 	CreateModelWithResponse(ctx context.Context, body CreateModelJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateModelResponse, error)
 
 	// DeleteModelWithResponse request
-	DeleteModelWithResponse(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*DeleteModelResponse, error)
+	DeleteModelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteModelResponse, error)
 
 	// GetModelWithResponse request
-	GetModelWithResponse(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*GetModelResponse, error)
+	GetModelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetModelResponse, error)
 
 	// PutModelWithBodyWithResponse request with any body
-	PutModelWithBodyWithResponse(ctx context.Context, id ModelID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutModelResponse, error)
+	PutModelWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutModelResponse, error)
 
-	PutModelWithResponse(ctx context.Context, id ModelID, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*PutModelResponse, error)
+	PutModelWithResponse(ctx context.Context, id string, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*PutModelResponse, error)
+
+	// ListOpenAITenantsWithResponse request
+	ListOpenAITenantsWithResponse(ctx context.Context, params *ListOpenAITenantsParams, reqEditors ...RequestEditorFn) (*ListOpenAITenantsResponse, error)
+
+	// CreateOpenAITenantWithBodyWithResponse request with any body
+	CreateOpenAITenantWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOpenAITenantResponse, error)
+
+	CreateOpenAITenantWithResponse(ctx context.Context, body CreateOpenAITenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOpenAITenantResponse, error)
+
+	// DeleteOpenAITenantWithResponse request
+	DeleteOpenAITenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteOpenAITenantResponse, error)
+
+	// GetOpenAITenantWithResponse request
+	GetOpenAITenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetOpenAITenantResponse, error)
+
+	// PutOpenAITenantWithBodyWithResponse request with any body
+	PutOpenAITenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutOpenAITenantResponse, error)
+
+	PutOpenAITenantWithResponse(ctx context.Context, name string, body PutOpenAITenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutOpenAITenantResponse, error)
 
 	// ListPeersWithResponse request
 	ListPeersWithResponse(ctx context.Context, params *ListPeersParams, reqEditors ...RequestEditorFn) (*ListPeersResponse, error)
-
-	// ListPeersByCertificationWithResponse request
-	ListPeersByCertificationWithResponse(ctx context.Context, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListPeersByCertificationParams, reqEditors ...RequestEditorFn) (*ListPeersByCertificationResponse, error)
-
-	// ListPeersByFirmwareWithResponse request
-	ListPeersByFirmwareWithResponse(ctx context.Context, depot string, channel externalRef0.GearFirmwareChannel, params *ListPeersByFirmwareParams, reqEditors ...RequestEditorFn) (*ListPeersByFirmwareResponse, error)
 
 	// ResolvePeerByIMEIWithResponse request
 	ResolvePeerByIMEIWithResponse(ctx context.Context, tac string, serial string, reqEditors ...RequestEditorFn) (*ResolvePeerByIMEIResponse, error)
@@ -4830,49 +6979,51 @@ type ClientWithResponsesInterface interface {
 	ResolvePeerBySNWithResponse(ctx context.Context, sn string, reqEditors ...RequestEditorFn) (*ResolvePeerBySNResponse, error)
 
 	// DeletePeerWithResponse request
-	DeletePeerWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*DeletePeerResponse, error)
+	DeletePeerWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*DeletePeerResponse, error)
 
 	// GetPeerWithResponse request
-	GetPeerWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerResponse, error)
+	GetPeerWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerResponse, error)
 
 	// ApprovePeerWithBodyWithResponse request with any body
-	ApprovePeerWithBodyWithResponse(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApprovePeerResponse, error)
+	ApprovePeerWithBodyWithResponse(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApprovePeerResponse, error)
 
-	ApprovePeerWithResponse(ctx context.Context, publicKey PublicKey, body ApprovePeerJSONRequestBody, reqEditors ...RequestEditorFn) (*ApprovePeerResponse, error)
+	ApprovePeerWithResponse(ctx context.Context, publicKey string, body ApprovePeerJSONRequestBody, reqEditors ...RequestEditorFn) (*ApprovePeerResponse, error)
 
 	// BlockPeerWithResponse request
-	BlockPeerWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*BlockPeerResponse, error)
+	BlockPeerWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*BlockPeerResponse, error)
 
 	// RefreshPeerWithResponse request
-	RefreshPeerWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*RefreshPeerResponse, error)
+	RefreshPeerWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*RefreshPeerResponse, error)
 
 	// GetPeerConfigWithResponse request
-	GetPeerConfigWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerConfigResponse, error)
+	GetPeerConfigWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerConfigResponse, error)
 
 	// PutPeerConfigWithBodyWithResponse request with any body
-	PutPeerConfigWithBodyWithResponse(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutPeerConfigResponse, error)
+	PutPeerConfigWithBodyWithResponse(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutPeerConfigResponse, error)
 
-	PutPeerConfigWithResponse(ctx context.Context, publicKey PublicKey, body PutPeerConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*PutPeerConfigResponse, error)
+	PutPeerConfigWithResponse(ctx context.Context, publicKey string, body PutPeerConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*PutPeerConfigResponse, error)
 
 	// GetPeerInfoWithResponse request
-	GetPeerInfoWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerInfoResponse, error)
+	GetPeerInfoWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerInfoResponse, error)
 
-	// GetPeerOTAWithResponse request
-	GetPeerOTAWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerOTAResponse, error)
+	// PutPeerInfoWithBodyWithResponse request with any body
+	PutPeerInfoWithBodyWithResponse(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutPeerInfoResponse, error)
+
+	PutPeerInfoWithResponse(ctx context.Context, publicKey string, body PutPeerInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*PutPeerInfoResponse, error)
 
 	// GetPeerRuntimeWithResponse request
-	GetPeerRuntimeWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerRuntimeResponse, error)
+	GetPeerRuntimeWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerRuntimeResponse, error)
 
 	// DeleteResourceWithResponse request
-	DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error)
+	DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error)
 
 	// GetResourceWithResponse request
-	GetResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*GetResourceResponse, error)
+	GetResourceWithResponse(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*GetResourceResponse, error)
 
 	// PutResourceWithBodyWithResponse request with any body
-	PutResourceWithBodyWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutResourceResponse, error)
+	PutResourceWithBodyWithResponse(ctx context.Context, kind ResourceKind, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutResourceResponse, error)
 
-	PutResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutResourceResponse, error)
+	PutResourceWithResponse(ctx context.Context, kind ResourceKind, name string, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutResourceResponse, error)
 
 	// ListVoicesWithResponse request
 	ListVoicesWithResponse(ctx context.Context, params *ListVoicesParams, reqEditors ...RequestEditorFn) (*ListVoicesResponse, error)
@@ -4883,15 +7034,15 @@ type ClientWithResponsesInterface interface {
 	CreateVoiceWithResponse(ctx context.Context, body CreateVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVoiceResponse, error)
 
 	// DeleteVoiceWithResponse request
-	DeleteVoiceWithResponse(ctx context.Context, id VoiceID, reqEditors ...RequestEditorFn) (*DeleteVoiceResponse, error)
+	DeleteVoiceWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteVoiceResponse, error)
 
 	// GetVoiceWithResponse request
-	GetVoiceWithResponse(ctx context.Context, id VoiceID, reqEditors ...RequestEditorFn) (*GetVoiceResponse, error)
+	GetVoiceWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetVoiceResponse, error)
 
 	// PutVoiceWithBodyWithResponse request with any body
-	PutVoiceWithBodyWithResponse(ctx context.Context, id VoiceID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error)
+	PutVoiceWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error)
 
-	PutVoiceWithResponse(ctx context.Context, id VoiceID, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error)
+	PutVoiceWithResponse(ctx context.Context, id string, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error)
 
 	// ListVolcTenantsWithResponse request
 	ListVolcTenantsWithResponse(ctx context.Context, params *ListVolcTenantsParams, reqEditors ...RequestEditorFn) (*ListVolcTenantsResponse, error)
@@ -4902,18 +7053,18 @@ type ClientWithResponsesInterface interface {
 	CreateVolcTenantWithResponse(ctx context.Context, body CreateVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateVolcTenantResponse, error)
 
 	// DeleteVolcTenantWithResponse request
-	DeleteVolcTenantWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*DeleteVolcTenantResponse, error)
+	DeleteVolcTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteVolcTenantResponse, error)
 
 	// GetVolcTenantWithResponse request
-	GetVolcTenantWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*GetVolcTenantResponse, error)
+	GetVolcTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetVolcTenantResponse, error)
 
 	// PutVolcTenantWithBodyWithResponse request with any body
-	PutVolcTenantWithBodyWithResponse(ctx context.Context, name VolcTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error)
+	PutVolcTenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error)
 
-	PutVolcTenantWithResponse(ctx context.Context, name VolcTenantName, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error)
+	PutVolcTenantWithResponse(ctx context.Context, name string, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error)
 
 	// SyncVolcTenantVoicesWithResponse request
-	SyncVolcTenantVoicesWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*SyncVolcTenantVoicesResponse, error)
+	SyncVolcTenantVoicesWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*SyncVolcTenantVoicesResponse, error)
 
 	// ListWorkflowsWithResponse request
 	ListWorkflowsWithResponse(ctx context.Context, params *ListWorkflowsParams, reqEditors ...RequestEditorFn) (*ListWorkflowsResponse, error)
@@ -4924,15 +7075,15 @@ type ClientWithResponsesInterface interface {
 	CreateWorkflowWithResponse(ctx context.Context, body CreateWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkflowResponse, error)
 
 	// DeleteWorkflowWithResponse request
-	DeleteWorkflowWithResponse(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error)
+	DeleteWorkflowWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error)
 
 	// GetWorkflowWithResponse request
-	GetWorkflowWithResponse(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error)
+	GetWorkflowWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error)
 
 	// PutWorkflowWithBodyWithResponse request with any body
-	PutWorkflowWithBodyWithResponse(ctx context.Context, name WorkflowName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error)
+	PutWorkflowWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error)
 
-	PutWorkflowWithResponse(ctx context.Context, name WorkflowName, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error)
+	PutWorkflowWithResponse(ctx context.Context, name string, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error)
 
 	// ListWorkspacesWithResponse request
 	ListWorkspacesWithResponse(ctx context.Context, params *ListWorkspacesParams, reqEditors ...RequestEditorFn) (*ListWorkspacesResponse, error)
@@ -4943,15 +7094,15 @@ type ClientWithResponsesInterface interface {
 	CreateWorkspaceWithResponse(ctx context.Context, body CreateWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateWorkspaceResponse, error)
 
 	// DeleteWorkspaceWithResponse request
-	DeleteWorkspaceWithResponse(ctx context.Context, name WorkspaceName, reqEditors ...RequestEditorFn) (*DeleteWorkspaceResponse, error)
+	DeleteWorkspaceWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteWorkspaceResponse, error)
 
 	// GetWorkspaceWithResponse request
-	GetWorkspaceWithResponse(ctx context.Context, name WorkspaceName, reqEditors ...RequestEditorFn) (*GetWorkspaceResponse, error)
+	GetWorkspaceWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetWorkspaceResponse, error)
 
 	// PutWorkspaceWithBodyWithResponse request with any body
-	PutWorkspaceWithBodyWithResponse(ctx context.Context, name WorkspaceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error)
+	PutWorkspaceWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error)
 
-	PutWorkspaceWithResponse(ctx context.Context, name WorkspaceName, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error)
+	PutWorkspaceWithResponse(ctx context.Context, name string, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error)
 }
 
 type ApplyResourceResponse struct {
@@ -4974,6 +7125,366 @@ func (r ApplyResourceResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r ApplyResourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListACLPolicyBindingsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ACLPolicyBindingList
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListACLPolicyBindingsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListACLPolicyBindingsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateACLPolicyBindingResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLPolicyBinding
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateACLPolicyBindingResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateACLPolicyBindingResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteACLPolicyBindingResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLPolicyBinding
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteACLPolicyBindingResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteACLPolicyBindingResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetACLPolicyBindingResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLPolicyBinding
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetACLPolicyBindingResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetACLPolicyBindingResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutACLPolicyBindingResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLPolicyBinding
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutACLPolicyBindingResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutACLPolicyBindingResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListACLRolesResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ACLRoleList
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListACLRolesResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListACLRolesResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateACLRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLRole
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateACLRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateACLRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteACLRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLRole
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteACLRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteACLRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetACLRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLRole
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetACLRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetACLRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutACLRoleResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLRole
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutACLRoleResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutACLRoleResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListACLViewsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *ACLViewList
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListACLViewsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListACLViewsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateACLViewResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLView
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateACLViewResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateACLViewResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteACLViewResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLView
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteACLViewResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteACLViewResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetACLViewResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLView
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetACLViewResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetACLViewResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutACLViewResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.ACLView
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutACLViewResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutACLViewResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -5100,15 +7611,15 @@ func (r PutCredentialResponse) StatusCode() int {
 	return 0
 }
 
-type ListDepotsResponse struct {
+type ListDashScopeTenantsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *DepotList
+	JSON200      *DashScopeTenantList
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r ListDepotsResponse) Status() string {
+func (r ListDashScopeTenantsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5116,47 +7627,24 @@ func (r ListDepotsResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ListDepotsResponse) StatusCode() int {
+func (r ListDashScopeTenantsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetDepotResponse struct {
+type CreateDashScopeTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.Depot
-	JSON404      *externalRef0.ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r GetDepotResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GetDepotResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type PutDepotInfoResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *externalRef0.Depot
+	JSON200      *externalRef0.DashScopeTenant
 	JSON400      *externalRef0.ErrorResponse
 	JSON409      *externalRef0.ErrorResponse
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r PutDepotInfoResponse) Status() string {
+func (r CreateDashScopeTenantResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5164,24 +7652,216 @@ func (r PutDepotInfoResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r PutDepotInfoResponse) StatusCode() int {
+func (r CreateDashScopeTenantResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type ReleaseDepotResponse struct {
+type DeleteDashScopeTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.Depot
+	JSON200      *externalRef0.DashScopeTenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteDashScopeTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteDashScopeTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetDashScopeTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.DashScopeTenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetDashScopeTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetDashScopeTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutDashScopeTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.DashScopeTenant
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutDashScopeTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutDashScopeTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ListFirmwaresResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *FirmwareList
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFirmwaresResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFirmwaresResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateFirmwareResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Firmware
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateFirmwareResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateFirmwareResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteFirmwareResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Firmware
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteFirmwareResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteFirmwareResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetFirmwareResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Firmware
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetFirmwareResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetFirmwareResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutFirmwareResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Firmware
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutFirmwareResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutFirmwareResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type ReleaseFirmwareResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Firmware
 	JSON404      *externalRef0.ErrorResponse
 	JSON409      *externalRef0.ErrorResponse
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r ReleaseDepotResponse) Status() string {
+func (r ReleaseFirmwareResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5189,24 +7869,24 @@ func (r ReleaseDepotResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r ReleaseDepotResponse) StatusCode() int {
+func (r ReleaseFirmwareResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type RollbackDepotResponse struct {
+type RollbackFirmwareResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.Depot
+	JSON200      *externalRef0.Firmware
 	JSON404      *externalRef0.ErrorResponse
 	JSON409      *externalRef0.ErrorResponse
 	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r RollbackDepotResponse) Status() string {
+func (r RollbackFirmwareResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5214,22 +7894,22 @@ func (r RollbackDepotResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r RollbackDepotResponse) StatusCode() int {
+func (r RollbackFirmwareResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type GetChannelResponse struct {
+type ListGeminiTenantsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.DepotRelease
-	JSON404      *externalRef0.ErrorResponse
+	JSON200      *GeminiTenantList
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r GetChannelResponse) Status() string {
+func (r ListGeminiTenantsResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5237,22 +7917,24 @@ func (r GetChannelResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetChannelResponse) StatusCode() int {
+func (r ListGeminiTenantsResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
 	return 0
 }
 
-type PutChannelResponse struct {
+type CreateGeminiTenantResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.DepotRelease
+	JSON200      *externalRef0.GeminiTenant
+	JSON400      *externalRef0.ErrorResponse
 	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r PutChannelResponse) Status() string {
+func (r CreateGeminiTenantResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5260,7 +7942,79 @@ func (r PutChannelResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r PutChannelResponse) StatusCode() int {
+func (r CreateGeminiTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteGeminiTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.GeminiTenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteGeminiTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteGeminiTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetGeminiTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.GeminiTenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetGeminiTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetGeminiTenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutGeminiTenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.GeminiTenant
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutGeminiTenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutGeminiTenantResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -5534,6 +8288,126 @@ func (r PutModelResponse) StatusCode() int {
 	return 0
 }
 
+type ListOpenAITenantsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *OpenAITenantList
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListOpenAITenantsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListOpenAITenantsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateOpenAITenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.OpenAITenant
+	JSON400      *externalRef0.ErrorResponse
+	JSON409      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateOpenAITenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateOpenAITenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteOpenAITenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.OpenAITenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteOpenAITenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteOpenAITenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetOpenAITenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.OpenAITenant
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetOpenAITenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetOpenAITenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type PutOpenAITenantResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.OpenAITenant
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r PutOpenAITenantResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r PutOpenAITenantResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListPeersResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -5551,52 +8425,6 @@ func (r ListPeersResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r ListPeersResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ListPeersByCertificationResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *RegistrationList
-	JSON500      *externalRef0.ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r ListPeersByCertificationResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListPeersByCertificationResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type ListPeersByFirmwareResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *RegistrationList
-	JSON500      *externalRef0.ErrorResponse
-}
-
-// Status returns HTTPResponse.Status
-func (r ListPeersByFirmwareResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r ListPeersByFirmwareResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -5859,15 +8687,16 @@ func (r GetPeerInfoResponse) StatusCode() int {
 	return 0
 }
 
-type GetPeerOTAResponse struct {
+type PutPeerInfoResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef0.OTASummary
+	JSON200      *externalRef0.DeviceInfo
+	JSON400      *externalRef0.ErrorResponse
 	JSON404      *externalRef0.ErrorResponse
 }
 
 // Status returns HTTPResponse.Status
-func (r GetPeerOTAResponse) Status() string {
+func (r PutPeerInfoResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -5875,7 +8704,7 @@ func (r GetPeerOTAResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetPeerOTAResponse) StatusCode() int {
+func (r PutPeerInfoResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -6507,6 +9336,189 @@ func (c *ClientWithResponses) ApplyResourceWithResponse(ctx context.Context, bod
 	return ParseApplyResourceResponse(rsp)
 }
 
+// ListACLPolicyBindingsWithResponse request returning *ListACLPolicyBindingsResponse
+func (c *ClientWithResponses) ListACLPolicyBindingsWithResponse(ctx context.Context, params *ListACLPolicyBindingsParams, reqEditors ...RequestEditorFn) (*ListACLPolicyBindingsResponse, error) {
+	rsp, err := c.ListACLPolicyBindings(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListACLPolicyBindingsResponse(rsp)
+}
+
+// CreateACLPolicyBindingWithBodyWithResponse request with arbitrary body returning *CreateACLPolicyBindingResponse
+func (c *ClientWithResponses) CreateACLPolicyBindingWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateACLPolicyBindingResponse, error) {
+	rsp, err := c.CreateACLPolicyBindingWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateACLPolicyBindingResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateACLPolicyBindingWithResponse(ctx context.Context, body CreateACLPolicyBindingJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateACLPolicyBindingResponse, error) {
+	rsp, err := c.CreateACLPolicyBinding(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateACLPolicyBindingResponse(rsp)
+}
+
+// DeleteACLPolicyBindingWithResponse request returning *DeleteACLPolicyBindingResponse
+func (c *ClientWithResponses) DeleteACLPolicyBindingWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteACLPolicyBindingResponse, error) {
+	rsp, err := c.DeleteACLPolicyBinding(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteACLPolicyBindingResponse(rsp)
+}
+
+// GetACLPolicyBindingWithResponse request returning *GetACLPolicyBindingResponse
+func (c *ClientWithResponses) GetACLPolicyBindingWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetACLPolicyBindingResponse, error) {
+	rsp, err := c.GetACLPolicyBinding(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetACLPolicyBindingResponse(rsp)
+}
+
+// PutACLPolicyBindingWithBodyWithResponse request with arbitrary body returning *PutACLPolicyBindingResponse
+func (c *ClientWithResponses) PutACLPolicyBindingWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutACLPolicyBindingResponse, error) {
+	rsp, err := c.PutACLPolicyBindingWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutACLPolicyBindingResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutACLPolicyBindingWithResponse(ctx context.Context, id string, body PutACLPolicyBindingJSONRequestBody, reqEditors ...RequestEditorFn) (*PutACLPolicyBindingResponse, error) {
+	rsp, err := c.PutACLPolicyBinding(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutACLPolicyBindingResponse(rsp)
+}
+
+// ListACLRolesWithResponse request returning *ListACLRolesResponse
+func (c *ClientWithResponses) ListACLRolesWithResponse(ctx context.Context, params *ListACLRolesParams, reqEditors ...RequestEditorFn) (*ListACLRolesResponse, error) {
+	rsp, err := c.ListACLRoles(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListACLRolesResponse(rsp)
+}
+
+// CreateACLRoleWithBodyWithResponse request with arbitrary body returning *CreateACLRoleResponse
+func (c *ClientWithResponses) CreateACLRoleWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateACLRoleResponse, error) {
+	rsp, err := c.CreateACLRoleWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateACLRoleResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateACLRoleWithResponse(ctx context.Context, body CreateACLRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateACLRoleResponse, error) {
+	rsp, err := c.CreateACLRole(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateACLRoleResponse(rsp)
+}
+
+// DeleteACLRoleWithResponse request returning *DeleteACLRoleResponse
+func (c *ClientWithResponses) DeleteACLRoleWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteACLRoleResponse, error) {
+	rsp, err := c.DeleteACLRole(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteACLRoleResponse(rsp)
+}
+
+// GetACLRoleWithResponse request returning *GetACLRoleResponse
+func (c *ClientWithResponses) GetACLRoleWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetACLRoleResponse, error) {
+	rsp, err := c.GetACLRole(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetACLRoleResponse(rsp)
+}
+
+// PutACLRoleWithBodyWithResponse request with arbitrary body returning *PutACLRoleResponse
+func (c *ClientWithResponses) PutACLRoleWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutACLRoleResponse, error) {
+	rsp, err := c.PutACLRoleWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutACLRoleResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutACLRoleWithResponse(ctx context.Context, name string, body PutACLRoleJSONRequestBody, reqEditors ...RequestEditorFn) (*PutACLRoleResponse, error) {
+	rsp, err := c.PutACLRole(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutACLRoleResponse(rsp)
+}
+
+// ListACLViewsWithResponse request returning *ListACLViewsResponse
+func (c *ClientWithResponses) ListACLViewsWithResponse(ctx context.Context, params *ListACLViewsParams, reqEditors ...RequestEditorFn) (*ListACLViewsResponse, error) {
+	rsp, err := c.ListACLViews(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListACLViewsResponse(rsp)
+}
+
+// CreateACLViewWithBodyWithResponse request with arbitrary body returning *CreateACLViewResponse
+func (c *ClientWithResponses) CreateACLViewWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateACLViewResponse, error) {
+	rsp, err := c.CreateACLViewWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateACLViewResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateACLViewWithResponse(ctx context.Context, body CreateACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateACLViewResponse, error) {
+	rsp, err := c.CreateACLView(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateACLViewResponse(rsp)
+}
+
+// DeleteACLViewWithResponse request returning *DeleteACLViewResponse
+func (c *ClientWithResponses) DeleteACLViewWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteACLViewResponse, error) {
+	rsp, err := c.DeleteACLView(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteACLViewResponse(rsp)
+}
+
+// GetACLViewWithResponse request returning *GetACLViewResponse
+func (c *ClientWithResponses) GetACLViewWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetACLViewResponse, error) {
+	rsp, err := c.GetACLView(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetACLViewResponse(rsp)
+}
+
+// PutACLViewWithBodyWithResponse request with arbitrary body returning *PutACLViewResponse
+func (c *ClientWithResponses) PutACLViewWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutACLViewResponse, error) {
+	rsp, err := c.PutACLViewWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutACLViewResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutACLViewWithResponse(ctx context.Context, name string, body PutACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*PutACLViewResponse, error) {
+	rsp, err := c.PutACLView(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutACLViewResponse(rsp)
+}
+
 // ListCredentialsWithResponse request returning *ListCredentialsResponse
 func (c *ClientWithResponses) ListCredentialsWithResponse(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*ListCredentialsResponse, error) {
 	rsp, err := c.ListCredentials(ctx, params, reqEditors...)
@@ -6534,7 +9546,7 @@ func (c *ClientWithResponses) CreateCredentialWithResponse(ctx context.Context, 
 }
 
 // DeleteCredentialWithResponse request returning *DeleteCredentialResponse
-func (c *ClientWithResponses) DeleteCredentialWithResponse(ctx context.Context, name CredentialName, reqEditors ...RequestEditorFn) (*DeleteCredentialResponse, error) {
+func (c *ClientWithResponses) DeleteCredentialWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteCredentialResponse, error) {
 	rsp, err := c.DeleteCredential(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6543,7 +9555,7 @@ func (c *ClientWithResponses) DeleteCredentialWithResponse(ctx context.Context, 
 }
 
 // GetCredentialWithResponse request returning *GetCredentialResponse
-func (c *ClientWithResponses) GetCredentialWithResponse(ctx context.Context, name CredentialName, reqEditors ...RequestEditorFn) (*GetCredentialResponse, error) {
+func (c *ClientWithResponses) GetCredentialWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetCredentialResponse, error) {
 	rsp, err := c.GetCredential(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6552,7 +9564,7 @@ func (c *ClientWithResponses) GetCredentialWithResponse(ctx context.Context, nam
 }
 
 // PutCredentialWithBodyWithResponse request with arbitrary body returning *PutCredentialResponse
-func (c *ClientWithResponses) PutCredentialWithBodyWithResponse(ctx context.Context, name CredentialName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutCredentialResponse, error) {
+func (c *ClientWithResponses) PutCredentialWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutCredentialResponse, error) {
 	rsp, err := c.PutCredentialWithBody(ctx, name, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6560,7 +9572,7 @@ func (c *ClientWithResponses) PutCredentialWithBodyWithResponse(ctx context.Cont
 	return ParsePutCredentialResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutCredentialWithResponse(ctx context.Context, name CredentialName, body PutCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*PutCredentialResponse, error) {
+func (c *ClientWithResponses) PutCredentialWithResponse(ctx context.Context, name string, body PutCredentialJSONRequestBody, reqEditors ...RequestEditorFn) (*PutCredentialResponse, error) {
 	rsp, err := c.PutCredential(ctx, name, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6568,75 +9580,205 @@ func (c *ClientWithResponses) PutCredentialWithResponse(ctx context.Context, nam
 	return ParsePutCredentialResponse(rsp)
 }
 
-// ListDepotsWithResponse request returning *ListDepotsResponse
-func (c *ClientWithResponses) ListDepotsWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ListDepotsResponse, error) {
-	rsp, err := c.ListDepots(ctx, reqEditors...)
+// ListDashScopeTenantsWithResponse request returning *ListDashScopeTenantsResponse
+func (c *ClientWithResponses) ListDashScopeTenantsWithResponse(ctx context.Context, params *ListDashScopeTenantsParams, reqEditors ...RequestEditorFn) (*ListDashScopeTenantsResponse, error) {
+	rsp, err := c.ListDashScopeTenants(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseListDepotsResponse(rsp)
+	return ParseListDashScopeTenantsResponse(rsp)
 }
 
-// GetDepotWithResponse request returning *GetDepotResponse
-func (c *ClientWithResponses) GetDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*GetDepotResponse, error) {
-	rsp, err := c.GetDepot(ctx, depot, reqEditors...)
+// CreateDashScopeTenantWithBodyWithResponse request with arbitrary body returning *CreateDashScopeTenantResponse
+func (c *ClientWithResponses) CreateDashScopeTenantWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateDashScopeTenantResponse, error) {
+	rsp, err := c.CreateDashScopeTenantWithBody(ctx, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetDepotResponse(rsp)
+	return ParseCreateDashScopeTenantResponse(rsp)
 }
 
-// PutDepotInfoWithBodyWithResponse request with arbitrary body returning *PutDepotInfoResponse
-func (c *ClientWithResponses) PutDepotInfoWithBodyWithResponse(ctx context.Context, depot DepotName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutDepotInfoResponse, error) {
-	rsp, err := c.PutDepotInfoWithBody(ctx, depot, contentType, body, reqEditors...)
+func (c *ClientWithResponses) CreateDashScopeTenantWithResponse(ctx context.Context, body CreateDashScopeTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateDashScopeTenantResponse, error) {
+	rsp, err := c.CreateDashScopeTenant(ctx, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePutDepotInfoResponse(rsp)
+	return ParseCreateDashScopeTenantResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutDepotInfoWithResponse(ctx context.Context, depot DepotName, body PutDepotInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*PutDepotInfoResponse, error) {
-	rsp, err := c.PutDepotInfo(ctx, depot, body, reqEditors...)
+// DeleteDashScopeTenantWithResponse request returning *DeleteDashScopeTenantResponse
+func (c *ClientWithResponses) DeleteDashScopeTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteDashScopeTenantResponse, error) {
+	rsp, err := c.DeleteDashScopeTenant(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePutDepotInfoResponse(rsp)
+	return ParseDeleteDashScopeTenantResponse(rsp)
 }
 
-// ReleaseDepotWithResponse request returning *ReleaseDepotResponse
-func (c *ClientWithResponses) ReleaseDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*ReleaseDepotResponse, error) {
-	rsp, err := c.ReleaseDepot(ctx, depot, reqEditors...)
+// GetDashScopeTenantWithResponse request returning *GetDashScopeTenantResponse
+func (c *ClientWithResponses) GetDashScopeTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetDashScopeTenantResponse, error) {
+	rsp, err := c.GetDashScopeTenant(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseReleaseDepotResponse(rsp)
+	return ParseGetDashScopeTenantResponse(rsp)
 }
 
-// RollbackDepotWithResponse request returning *RollbackDepotResponse
-func (c *ClientWithResponses) RollbackDepotWithResponse(ctx context.Context, depot DepotName, reqEditors ...RequestEditorFn) (*RollbackDepotResponse, error) {
-	rsp, err := c.RollbackDepot(ctx, depot, reqEditors...)
+// PutDashScopeTenantWithBodyWithResponse request with arbitrary body returning *PutDashScopeTenantResponse
+func (c *ClientWithResponses) PutDashScopeTenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutDashScopeTenantResponse, error) {
+	rsp, err := c.PutDashScopeTenantWithBody(ctx, name, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseRollbackDepotResponse(rsp)
+	return ParsePutDashScopeTenantResponse(rsp)
 }
 
-// GetChannelWithResponse request returning *GetChannelResponse
-func (c *ClientWithResponses) GetChannelWithResponse(ctx context.Context, depot DepotName, channel Channel, reqEditors ...RequestEditorFn) (*GetChannelResponse, error) {
-	rsp, err := c.GetChannel(ctx, depot, channel, reqEditors...)
+func (c *ClientWithResponses) PutDashScopeTenantWithResponse(ctx context.Context, name string, body PutDashScopeTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutDashScopeTenantResponse, error) {
+	rsp, err := c.PutDashScopeTenant(ctx, name, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetChannelResponse(rsp)
+	return ParsePutDashScopeTenantResponse(rsp)
 }
 
-// PutChannelWithBodyWithResponse request with arbitrary body returning *PutChannelResponse
-func (c *ClientWithResponses) PutChannelWithBodyWithResponse(ctx context.Context, depot DepotName, channel Channel, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutChannelResponse, error) {
-	rsp, err := c.PutChannelWithBody(ctx, depot, channel, contentType, body, reqEditors...)
+// ListFirmwaresWithResponse request returning *ListFirmwaresResponse
+func (c *ClientWithResponses) ListFirmwaresWithResponse(ctx context.Context, params *ListFirmwaresParams, reqEditors ...RequestEditorFn) (*ListFirmwaresResponse, error) {
+	rsp, err := c.ListFirmwares(ctx, params, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParsePutChannelResponse(rsp)
+	return ParseListFirmwaresResponse(rsp)
+}
+
+// CreateFirmwareWithBodyWithResponse request with arbitrary body returning *CreateFirmwareResponse
+func (c *ClientWithResponses) CreateFirmwareWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFirmwareResponse, error) {
+	rsp, err := c.CreateFirmwareWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateFirmwareResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateFirmwareWithResponse(ctx context.Context, body CreateFirmwareJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFirmwareResponse, error) {
+	rsp, err := c.CreateFirmware(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateFirmwareResponse(rsp)
+}
+
+// DeleteFirmwareWithResponse request returning *DeleteFirmwareResponse
+func (c *ClientWithResponses) DeleteFirmwareWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteFirmwareResponse, error) {
+	rsp, err := c.DeleteFirmware(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFirmwareResponse(rsp)
+}
+
+// GetFirmwareWithResponse request returning *GetFirmwareResponse
+func (c *ClientWithResponses) GetFirmwareWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetFirmwareResponse, error) {
+	rsp, err := c.GetFirmware(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetFirmwareResponse(rsp)
+}
+
+// PutFirmwareWithBodyWithResponse request with arbitrary body returning *PutFirmwareResponse
+func (c *ClientWithResponses) PutFirmwareWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutFirmwareResponse, error) {
+	rsp, err := c.PutFirmwareWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutFirmwareResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutFirmwareWithResponse(ctx context.Context, name string, body PutFirmwareJSONRequestBody, reqEditors ...RequestEditorFn) (*PutFirmwareResponse, error) {
+	rsp, err := c.PutFirmware(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutFirmwareResponse(rsp)
+}
+
+// ReleaseFirmwareWithResponse request returning *ReleaseFirmwareResponse
+func (c *ClientWithResponses) ReleaseFirmwareWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*ReleaseFirmwareResponse, error) {
+	rsp, err := c.ReleaseFirmware(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseReleaseFirmwareResponse(rsp)
+}
+
+// RollbackFirmwareWithResponse request returning *RollbackFirmwareResponse
+func (c *ClientWithResponses) RollbackFirmwareWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*RollbackFirmwareResponse, error) {
+	rsp, err := c.RollbackFirmware(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseRollbackFirmwareResponse(rsp)
+}
+
+// ListGeminiTenantsWithResponse request returning *ListGeminiTenantsResponse
+func (c *ClientWithResponses) ListGeminiTenantsWithResponse(ctx context.Context, params *ListGeminiTenantsParams, reqEditors ...RequestEditorFn) (*ListGeminiTenantsResponse, error) {
+	rsp, err := c.ListGeminiTenants(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListGeminiTenantsResponse(rsp)
+}
+
+// CreateGeminiTenantWithBodyWithResponse request with arbitrary body returning *CreateGeminiTenantResponse
+func (c *ClientWithResponses) CreateGeminiTenantWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateGeminiTenantResponse, error) {
+	rsp, err := c.CreateGeminiTenantWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateGeminiTenantResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateGeminiTenantWithResponse(ctx context.Context, body CreateGeminiTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateGeminiTenantResponse, error) {
+	rsp, err := c.CreateGeminiTenant(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateGeminiTenantResponse(rsp)
+}
+
+// DeleteGeminiTenantWithResponse request returning *DeleteGeminiTenantResponse
+func (c *ClientWithResponses) DeleteGeminiTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteGeminiTenantResponse, error) {
+	rsp, err := c.DeleteGeminiTenant(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteGeminiTenantResponse(rsp)
+}
+
+// GetGeminiTenantWithResponse request returning *GetGeminiTenantResponse
+func (c *ClientWithResponses) GetGeminiTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetGeminiTenantResponse, error) {
+	rsp, err := c.GetGeminiTenant(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetGeminiTenantResponse(rsp)
+}
+
+// PutGeminiTenantWithBodyWithResponse request with arbitrary body returning *PutGeminiTenantResponse
+func (c *ClientWithResponses) PutGeminiTenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutGeminiTenantResponse, error) {
+	rsp, err := c.PutGeminiTenantWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutGeminiTenantResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutGeminiTenantWithResponse(ctx context.Context, name string, body PutGeminiTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutGeminiTenantResponse, error) {
+	rsp, err := c.PutGeminiTenant(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutGeminiTenantResponse(rsp)
 }
 
 // ListMiniMaxTenantsWithResponse request returning *ListMiniMaxTenantsResponse
@@ -6666,7 +9808,7 @@ func (c *ClientWithResponses) CreateMiniMaxTenantWithResponse(ctx context.Contex
 }
 
 // DeleteMiniMaxTenantWithResponse request returning *DeleteMiniMaxTenantResponse
-func (c *ClientWithResponses) DeleteMiniMaxTenantWithResponse(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*DeleteMiniMaxTenantResponse, error) {
+func (c *ClientWithResponses) DeleteMiniMaxTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteMiniMaxTenantResponse, error) {
 	rsp, err := c.DeleteMiniMaxTenant(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6675,7 +9817,7 @@ func (c *ClientWithResponses) DeleteMiniMaxTenantWithResponse(ctx context.Contex
 }
 
 // GetMiniMaxTenantWithResponse request returning *GetMiniMaxTenantResponse
-func (c *ClientWithResponses) GetMiniMaxTenantWithResponse(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*GetMiniMaxTenantResponse, error) {
+func (c *ClientWithResponses) GetMiniMaxTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetMiniMaxTenantResponse, error) {
 	rsp, err := c.GetMiniMaxTenant(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6684,7 +9826,7 @@ func (c *ClientWithResponses) GetMiniMaxTenantWithResponse(ctx context.Context, 
 }
 
 // PutMiniMaxTenantWithBodyWithResponse request with arbitrary body returning *PutMiniMaxTenantResponse
-func (c *ClientWithResponses) PutMiniMaxTenantWithBodyWithResponse(ctx context.Context, name MiniMaxTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutMiniMaxTenantResponse, error) {
+func (c *ClientWithResponses) PutMiniMaxTenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutMiniMaxTenantResponse, error) {
 	rsp, err := c.PutMiniMaxTenantWithBody(ctx, name, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6692,7 +9834,7 @@ func (c *ClientWithResponses) PutMiniMaxTenantWithBodyWithResponse(ctx context.C
 	return ParsePutMiniMaxTenantResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutMiniMaxTenantWithResponse(ctx context.Context, name MiniMaxTenantName, body PutMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutMiniMaxTenantResponse, error) {
+func (c *ClientWithResponses) PutMiniMaxTenantWithResponse(ctx context.Context, name string, body PutMiniMaxTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutMiniMaxTenantResponse, error) {
 	rsp, err := c.PutMiniMaxTenant(ctx, name, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6701,7 +9843,7 @@ func (c *ClientWithResponses) PutMiniMaxTenantWithResponse(ctx context.Context, 
 }
 
 // SyncMiniMaxTenantVoicesWithResponse request returning *SyncMiniMaxTenantVoicesResponse
-func (c *ClientWithResponses) SyncMiniMaxTenantVoicesWithResponse(ctx context.Context, name MiniMaxTenantName, reqEditors ...RequestEditorFn) (*SyncMiniMaxTenantVoicesResponse, error) {
+func (c *ClientWithResponses) SyncMiniMaxTenantVoicesWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*SyncMiniMaxTenantVoicesResponse, error) {
 	rsp, err := c.SyncMiniMaxTenantVoices(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6736,7 +9878,7 @@ func (c *ClientWithResponses) CreateModelWithResponse(ctx context.Context, body 
 }
 
 // DeleteModelWithResponse request returning *DeleteModelResponse
-func (c *ClientWithResponses) DeleteModelWithResponse(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*DeleteModelResponse, error) {
+func (c *ClientWithResponses) DeleteModelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteModelResponse, error) {
 	rsp, err := c.DeleteModel(ctx, id, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6745,7 +9887,7 @@ func (c *ClientWithResponses) DeleteModelWithResponse(ctx context.Context, id Mo
 }
 
 // GetModelWithResponse request returning *GetModelResponse
-func (c *ClientWithResponses) GetModelWithResponse(ctx context.Context, id ModelID, reqEditors ...RequestEditorFn) (*GetModelResponse, error) {
+func (c *ClientWithResponses) GetModelWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetModelResponse, error) {
 	rsp, err := c.GetModel(ctx, id, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6754,7 +9896,7 @@ func (c *ClientWithResponses) GetModelWithResponse(ctx context.Context, id Model
 }
 
 // PutModelWithBodyWithResponse request with arbitrary body returning *PutModelResponse
-func (c *ClientWithResponses) PutModelWithBodyWithResponse(ctx context.Context, id ModelID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutModelResponse, error) {
+func (c *ClientWithResponses) PutModelWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutModelResponse, error) {
 	rsp, err := c.PutModelWithBody(ctx, id, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6762,12 +9904,73 @@ func (c *ClientWithResponses) PutModelWithBodyWithResponse(ctx context.Context, 
 	return ParsePutModelResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutModelWithResponse(ctx context.Context, id ModelID, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*PutModelResponse, error) {
+func (c *ClientWithResponses) PutModelWithResponse(ctx context.Context, id string, body PutModelJSONRequestBody, reqEditors ...RequestEditorFn) (*PutModelResponse, error) {
 	rsp, err := c.PutModel(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
 	return ParsePutModelResponse(rsp)
+}
+
+// ListOpenAITenantsWithResponse request returning *ListOpenAITenantsResponse
+func (c *ClientWithResponses) ListOpenAITenantsWithResponse(ctx context.Context, params *ListOpenAITenantsParams, reqEditors ...RequestEditorFn) (*ListOpenAITenantsResponse, error) {
+	rsp, err := c.ListOpenAITenants(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListOpenAITenantsResponse(rsp)
+}
+
+// CreateOpenAITenantWithBodyWithResponse request with arbitrary body returning *CreateOpenAITenantResponse
+func (c *ClientWithResponses) CreateOpenAITenantWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateOpenAITenantResponse, error) {
+	rsp, err := c.CreateOpenAITenantWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateOpenAITenantResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateOpenAITenantWithResponse(ctx context.Context, body CreateOpenAITenantJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateOpenAITenantResponse, error) {
+	rsp, err := c.CreateOpenAITenant(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateOpenAITenantResponse(rsp)
+}
+
+// DeleteOpenAITenantWithResponse request returning *DeleteOpenAITenantResponse
+func (c *ClientWithResponses) DeleteOpenAITenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteOpenAITenantResponse, error) {
+	rsp, err := c.DeleteOpenAITenant(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteOpenAITenantResponse(rsp)
+}
+
+// GetOpenAITenantWithResponse request returning *GetOpenAITenantResponse
+func (c *ClientWithResponses) GetOpenAITenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetOpenAITenantResponse, error) {
+	rsp, err := c.GetOpenAITenant(ctx, name, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetOpenAITenantResponse(rsp)
+}
+
+// PutOpenAITenantWithBodyWithResponse request with arbitrary body returning *PutOpenAITenantResponse
+func (c *ClientWithResponses) PutOpenAITenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutOpenAITenantResponse, error) {
+	rsp, err := c.PutOpenAITenantWithBody(ctx, name, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutOpenAITenantResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutOpenAITenantWithResponse(ctx context.Context, name string, body PutOpenAITenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutOpenAITenantResponse, error) {
+	rsp, err := c.PutOpenAITenant(ctx, name, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutOpenAITenantResponse(rsp)
 }
 
 // ListPeersWithResponse request returning *ListPeersResponse
@@ -6777,24 +9980,6 @@ func (c *ClientWithResponses) ListPeersWithResponse(ctx context.Context, params 
 		return nil, err
 	}
 	return ParseListPeersResponse(rsp)
-}
-
-// ListPeersByCertificationWithResponse request returning *ListPeersByCertificationResponse
-func (c *ClientWithResponses) ListPeersByCertificationWithResponse(ctx context.Context, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params *ListPeersByCertificationParams, reqEditors ...RequestEditorFn) (*ListPeersByCertificationResponse, error) {
-	rsp, err := c.ListPeersByCertification(ctx, pType, authority, id, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListPeersByCertificationResponse(rsp)
-}
-
-// ListPeersByFirmwareWithResponse request returning *ListPeersByFirmwareResponse
-func (c *ClientWithResponses) ListPeersByFirmwareWithResponse(ctx context.Context, depot string, channel externalRef0.GearFirmwareChannel, params *ListPeersByFirmwareParams, reqEditors ...RequestEditorFn) (*ListPeersByFirmwareResponse, error) {
-	rsp, err := c.ListPeersByFirmware(ctx, depot, channel, params, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseListPeersByFirmwareResponse(rsp)
 }
 
 // ResolvePeerByIMEIWithResponse request returning *ResolvePeerByIMEIResponse
@@ -6825,7 +10010,7 @@ func (c *ClientWithResponses) ResolvePeerBySNWithResponse(ctx context.Context, s
 }
 
 // DeletePeerWithResponse request returning *DeletePeerResponse
-func (c *ClientWithResponses) DeletePeerWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*DeletePeerResponse, error) {
+func (c *ClientWithResponses) DeletePeerWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*DeletePeerResponse, error) {
 	rsp, err := c.DeletePeer(ctx, publicKey, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6834,7 +10019,7 @@ func (c *ClientWithResponses) DeletePeerWithResponse(ctx context.Context, public
 }
 
 // GetPeerWithResponse request returning *GetPeerResponse
-func (c *ClientWithResponses) GetPeerWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerResponse, error) {
+func (c *ClientWithResponses) GetPeerWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerResponse, error) {
 	rsp, err := c.GetPeer(ctx, publicKey, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6843,7 +10028,7 @@ func (c *ClientWithResponses) GetPeerWithResponse(ctx context.Context, publicKey
 }
 
 // ApprovePeerWithBodyWithResponse request with arbitrary body returning *ApprovePeerResponse
-func (c *ClientWithResponses) ApprovePeerWithBodyWithResponse(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApprovePeerResponse, error) {
+func (c *ClientWithResponses) ApprovePeerWithBodyWithResponse(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*ApprovePeerResponse, error) {
 	rsp, err := c.ApprovePeerWithBody(ctx, publicKey, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6851,7 +10036,7 @@ func (c *ClientWithResponses) ApprovePeerWithBodyWithResponse(ctx context.Contex
 	return ParseApprovePeerResponse(rsp)
 }
 
-func (c *ClientWithResponses) ApprovePeerWithResponse(ctx context.Context, publicKey PublicKey, body ApprovePeerJSONRequestBody, reqEditors ...RequestEditorFn) (*ApprovePeerResponse, error) {
+func (c *ClientWithResponses) ApprovePeerWithResponse(ctx context.Context, publicKey string, body ApprovePeerJSONRequestBody, reqEditors ...RequestEditorFn) (*ApprovePeerResponse, error) {
 	rsp, err := c.ApprovePeer(ctx, publicKey, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6860,7 +10045,7 @@ func (c *ClientWithResponses) ApprovePeerWithResponse(ctx context.Context, publi
 }
 
 // BlockPeerWithResponse request returning *BlockPeerResponse
-func (c *ClientWithResponses) BlockPeerWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*BlockPeerResponse, error) {
+func (c *ClientWithResponses) BlockPeerWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*BlockPeerResponse, error) {
 	rsp, err := c.BlockPeer(ctx, publicKey, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6869,7 +10054,7 @@ func (c *ClientWithResponses) BlockPeerWithResponse(ctx context.Context, publicK
 }
 
 // RefreshPeerWithResponse request returning *RefreshPeerResponse
-func (c *ClientWithResponses) RefreshPeerWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*RefreshPeerResponse, error) {
+func (c *ClientWithResponses) RefreshPeerWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*RefreshPeerResponse, error) {
 	rsp, err := c.RefreshPeer(ctx, publicKey, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6878,7 +10063,7 @@ func (c *ClientWithResponses) RefreshPeerWithResponse(ctx context.Context, publi
 }
 
 // GetPeerConfigWithResponse request returning *GetPeerConfigResponse
-func (c *ClientWithResponses) GetPeerConfigWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerConfigResponse, error) {
+func (c *ClientWithResponses) GetPeerConfigWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerConfigResponse, error) {
 	rsp, err := c.GetPeerConfig(ctx, publicKey, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6887,7 +10072,7 @@ func (c *ClientWithResponses) GetPeerConfigWithResponse(ctx context.Context, pub
 }
 
 // PutPeerConfigWithBodyWithResponse request with arbitrary body returning *PutPeerConfigResponse
-func (c *ClientWithResponses) PutPeerConfigWithBodyWithResponse(ctx context.Context, publicKey PublicKey, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutPeerConfigResponse, error) {
+func (c *ClientWithResponses) PutPeerConfigWithBodyWithResponse(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutPeerConfigResponse, error) {
 	rsp, err := c.PutPeerConfigWithBody(ctx, publicKey, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6895,7 +10080,7 @@ func (c *ClientWithResponses) PutPeerConfigWithBodyWithResponse(ctx context.Cont
 	return ParsePutPeerConfigResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutPeerConfigWithResponse(ctx context.Context, publicKey PublicKey, body PutPeerConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*PutPeerConfigResponse, error) {
+func (c *ClientWithResponses) PutPeerConfigWithResponse(ctx context.Context, publicKey string, body PutPeerConfigJSONRequestBody, reqEditors ...RequestEditorFn) (*PutPeerConfigResponse, error) {
 	rsp, err := c.PutPeerConfig(ctx, publicKey, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6904,7 +10089,7 @@ func (c *ClientWithResponses) PutPeerConfigWithResponse(ctx context.Context, pub
 }
 
 // GetPeerInfoWithResponse request returning *GetPeerInfoResponse
-func (c *ClientWithResponses) GetPeerInfoWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerInfoResponse, error) {
+func (c *ClientWithResponses) GetPeerInfoWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerInfoResponse, error) {
 	rsp, err := c.GetPeerInfo(ctx, publicKey, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6912,17 +10097,25 @@ func (c *ClientWithResponses) GetPeerInfoWithResponse(ctx context.Context, publi
 	return ParseGetPeerInfoResponse(rsp)
 }
 
-// GetPeerOTAWithResponse request returning *GetPeerOTAResponse
-func (c *ClientWithResponses) GetPeerOTAWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerOTAResponse, error) {
-	rsp, err := c.GetPeerOTA(ctx, publicKey, reqEditors...)
+// PutPeerInfoWithBodyWithResponse request with arbitrary body returning *PutPeerInfoResponse
+func (c *ClientWithResponses) PutPeerInfoWithBodyWithResponse(ctx context.Context, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutPeerInfoResponse, error) {
+	rsp, err := c.PutPeerInfoWithBody(ctx, publicKey, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetPeerOTAResponse(rsp)
+	return ParsePutPeerInfoResponse(rsp)
+}
+
+func (c *ClientWithResponses) PutPeerInfoWithResponse(ctx context.Context, publicKey string, body PutPeerInfoJSONRequestBody, reqEditors ...RequestEditorFn) (*PutPeerInfoResponse, error) {
+	rsp, err := c.PutPeerInfo(ctx, publicKey, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParsePutPeerInfoResponse(rsp)
 }
 
 // GetPeerRuntimeWithResponse request returning *GetPeerRuntimeResponse
-func (c *ClientWithResponses) GetPeerRuntimeWithResponse(ctx context.Context, publicKey PublicKey, reqEditors ...RequestEditorFn) (*GetPeerRuntimeResponse, error) {
+func (c *ClientWithResponses) GetPeerRuntimeWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerRuntimeResponse, error) {
 	rsp, err := c.GetPeerRuntime(ctx, publicKey, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6931,7 +10124,7 @@ func (c *ClientWithResponses) GetPeerRuntimeWithResponse(ctx context.Context, pu
 }
 
 // DeleteResourceWithResponse request returning *DeleteResourceResponse
-func (c *ClientWithResponses) DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error) {
+func (c *ClientWithResponses) DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error) {
 	rsp, err := c.DeleteResource(ctx, kind, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6940,7 +10133,7 @@ func (c *ClientWithResponses) DeleteResourceWithResponse(ctx context.Context, ki
 }
 
 // GetResourceWithResponse request returning *GetResourceResponse
-func (c *ClientWithResponses) GetResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, reqEditors ...RequestEditorFn) (*GetResourceResponse, error) {
+func (c *ClientWithResponses) GetResourceWithResponse(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*GetResourceResponse, error) {
 	rsp, err := c.GetResource(ctx, kind, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6949,7 +10142,7 @@ func (c *ClientWithResponses) GetResourceWithResponse(ctx context.Context, kind 
 }
 
 // PutResourceWithBodyWithResponse request with arbitrary body returning *PutResourceResponse
-func (c *ClientWithResponses) PutResourceWithBodyWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutResourceResponse, error) {
+func (c *ClientWithResponses) PutResourceWithBodyWithResponse(ctx context.Context, kind ResourceKind, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutResourceResponse, error) {
 	rsp, err := c.PutResourceWithBody(ctx, kind, name, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6957,7 +10150,7 @@ func (c *ClientWithResponses) PutResourceWithBodyWithResponse(ctx context.Contex
 	return ParsePutResourceResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutResourceWithResponse(ctx context.Context, kind ResourceKind, name ResourceName, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutResourceResponse, error) {
+func (c *ClientWithResponses) PutResourceWithResponse(ctx context.Context, kind ResourceKind, name string, body PutResourceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutResourceResponse, error) {
 	rsp, err := c.PutResource(ctx, kind, name, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -6992,7 +10185,7 @@ func (c *ClientWithResponses) CreateVoiceWithResponse(ctx context.Context, body 
 }
 
 // DeleteVoiceWithResponse request returning *DeleteVoiceResponse
-func (c *ClientWithResponses) DeleteVoiceWithResponse(ctx context.Context, id VoiceID, reqEditors ...RequestEditorFn) (*DeleteVoiceResponse, error) {
+func (c *ClientWithResponses) DeleteVoiceWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DeleteVoiceResponse, error) {
 	rsp, err := c.DeleteVoice(ctx, id, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7001,7 +10194,7 @@ func (c *ClientWithResponses) DeleteVoiceWithResponse(ctx context.Context, id Vo
 }
 
 // GetVoiceWithResponse request returning *GetVoiceResponse
-func (c *ClientWithResponses) GetVoiceWithResponse(ctx context.Context, id VoiceID, reqEditors ...RequestEditorFn) (*GetVoiceResponse, error) {
+func (c *ClientWithResponses) GetVoiceWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*GetVoiceResponse, error) {
 	rsp, err := c.GetVoice(ctx, id, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7010,7 +10203,7 @@ func (c *ClientWithResponses) GetVoiceWithResponse(ctx context.Context, id Voice
 }
 
 // PutVoiceWithBodyWithResponse request with arbitrary body returning *PutVoiceResponse
-func (c *ClientWithResponses) PutVoiceWithBodyWithResponse(ctx context.Context, id VoiceID, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error) {
+func (c *ClientWithResponses) PutVoiceWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error) {
 	rsp, err := c.PutVoiceWithBody(ctx, id, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7018,7 +10211,7 @@ func (c *ClientWithResponses) PutVoiceWithBodyWithResponse(ctx context.Context, 
 	return ParsePutVoiceResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutVoiceWithResponse(ctx context.Context, id VoiceID, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error) {
+func (c *ClientWithResponses) PutVoiceWithResponse(ctx context.Context, id string, body PutVoiceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVoiceResponse, error) {
 	rsp, err := c.PutVoice(ctx, id, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7053,7 +10246,7 @@ func (c *ClientWithResponses) CreateVolcTenantWithResponse(ctx context.Context, 
 }
 
 // DeleteVolcTenantWithResponse request returning *DeleteVolcTenantResponse
-func (c *ClientWithResponses) DeleteVolcTenantWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*DeleteVolcTenantResponse, error) {
+func (c *ClientWithResponses) DeleteVolcTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteVolcTenantResponse, error) {
 	rsp, err := c.DeleteVolcTenant(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7062,7 +10255,7 @@ func (c *ClientWithResponses) DeleteVolcTenantWithResponse(ctx context.Context, 
 }
 
 // GetVolcTenantWithResponse request returning *GetVolcTenantResponse
-func (c *ClientWithResponses) GetVolcTenantWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*GetVolcTenantResponse, error) {
+func (c *ClientWithResponses) GetVolcTenantWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetVolcTenantResponse, error) {
 	rsp, err := c.GetVolcTenant(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7071,7 +10264,7 @@ func (c *ClientWithResponses) GetVolcTenantWithResponse(ctx context.Context, nam
 }
 
 // PutVolcTenantWithBodyWithResponse request with arbitrary body returning *PutVolcTenantResponse
-func (c *ClientWithResponses) PutVolcTenantWithBodyWithResponse(ctx context.Context, name VolcTenantName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error) {
+func (c *ClientWithResponses) PutVolcTenantWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error) {
 	rsp, err := c.PutVolcTenantWithBody(ctx, name, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7079,7 +10272,7 @@ func (c *ClientWithResponses) PutVolcTenantWithBodyWithResponse(ctx context.Cont
 	return ParsePutVolcTenantResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutVolcTenantWithResponse(ctx context.Context, name VolcTenantName, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error) {
+func (c *ClientWithResponses) PutVolcTenantWithResponse(ctx context.Context, name string, body PutVolcTenantJSONRequestBody, reqEditors ...RequestEditorFn) (*PutVolcTenantResponse, error) {
 	rsp, err := c.PutVolcTenant(ctx, name, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7088,7 +10281,7 @@ func (c *ClientWithResponses) PutVolcTenantWithResponse(ctx context.Context, nam
 }
 
 // SyncVolcTenantVoicesWithResponse request returning *SyncVolcTenantVoicesResponse
-func (c *ClientWithResponses) SyncVolcTenantVoicesWithResponse(ctx context.Context, name VolcTenantName, reqEditors ...RequestEditorFn) (*SyncVolcTenantVoicesResponse, error) {
+func (c *ClientWithResponses) SyncVolcTenantVoicesWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*SyncVolcTenantVoicesResponse, error) {
 	rsp, err := c.SyncVolcTenantVoices(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7123,7 +10316,7 @@ func (c *ClientWithResponses) CreateWorkflowWithResponse(ctx context.Context, bo
 }
 
 // DeleteWorkflowWithResponse request returning *DeleteWorkflowResponse
-func (c *ClientWithResponses) DeleteWorkflowWithResponse(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error) {
+func (c *ClientWithResponses) DeleteWorkflowWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteWorkflowResponse, error) {
 	rsp, err := c.DeleteWorkflow(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7132,7 +10325,7 @@ func (c *ClientWithResponses) DeleteWorkflowWithResponse(ctx context.Context, na
 }
 
 // GetWorkflowWithResponse request returning *GetWorkflowResponse
-func (c *ClientWithResponses) GetWorkflowWithResponse(ctx context.Context, name WorkflowName, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error) {
+func (c *ClientWithResponses) GetWorkflowWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetWorkflowResponse, error) {
 	rsp, err := c.GetWorkflow(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7141,7 +10334,7 @@ func (c *ClientWithResponses) GetWorkflowWithResponse(ctx context.Context, name 
 }
 
 // PutWorkflowWithBodyWithResponse request with arbitrary body returning *PutWorkflowResponse
-func (c *ClientWithResponses) PutWorkflowWithBodyWithResponse(ctx context.Context, name WorkflowName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error) {
+func (c *ClientWithResponses) PutWorkflowWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error) {
 	rsp, err := c.PutWorkflowWithBody(ctx, name, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7149,7 +10342,7 @@ func (c *ClientWithResponses) PutWorkflowWithBodyWithResponse(ctx context.Contex
 	return ParsePutWorkflowResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutWorkflowWithResponse(ctx context.Context, name WorkflowName, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error) {
+func (c *ClientWithResponses) PutWorkflowWithResponse(ctx context.Context, name string, body PutWorkflowJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkflowResponse, error) {
 	rsp, err := c.PutWorkflow(ctx, name, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7184,7 +10377,7 @@ func (c *ClientWithResponses) CreateWorkspaceWithResponse(ctx context.Context, b
 }
 
 // DeleteWorkspaceWithResponse request returning *DeleteWorkspaceResponse
-func (c *ClientWithResponses) DeleteWorkspaceWithResponse(ctx context.Context, name WorkspaceName, reqEditors ...RequestEditorFn) (*DeleteWorkspaceResponse, error) {
+func (c *ClientWithResponses) DeleteWorkspaceWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*DeleteWorkspaceResponse, error) {
 	rsp, err := c.DeleteWorkspace(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7193,7 +10386,7 @@ func (c *ClientWithResponses) DeleteWorkspaceWithResponse(ctx context.Context, n
 }
 
 // GetWorkspaceWithResponse request returning *GetWorkspaceResponse
-func (c *ClientWithResponses) GetWorkspaceWithResponse(ctx context.Context, name WorkspaceName, reqEditors ...RequestEditorFn) (*GetWorkspaceResponse, error) {
+func (c *ClientWithResponses) GetWorkspaceWithResponse(ctx context.Context, name string, reqEditors ...RequestEditorFn) (*GetWorkspaceResponse, error) {
 	rsp, err := c.GetWorkspace(ctx, name, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7202,7 +10395,7 @@ func (c *ClientWithResponses) GetWorkspaceWithResponse(ctx context.Context, name
 }
 
 // PutWorkspaceWithBodyWithResponse request with arbitrary body returning *PutWorkspaceResponse
-func (c *ClientWithResponses) PutWorkspaceWithBodyWithResponse(ctx context.Context, name WorkspaceName, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error) {
+func (c *ClientWithResponses) PutWorkspaceWithBodyWithResponse(ctx context.Context, name string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error) {
 	rsp, err := c.PutWorkspaceWithBody(ctx, name, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7210,7 +10403,7 @@ func (c *ClientWithResponses) PutWorkspaceWithBodyWithResponse(ctx context.Conte
 	return ParsePutWorkspaceResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutWorkspaceWithResponse(ctx context.Context, name WorkspaceName, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error) {
+func (c *ClientWithResponses) PutWorkspaceWithResponse(ctx context.Context, name string, body PutWorkspaceJSONRequestBody, reqEditors ...RequestEditorFn) (*PutWorkspaceResponse, error) {
 	rsp, err := c.PutWorkspace(ctx, name, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -7266,6 +10459,606 @@ func ParseApplyResourceResponse(rsp *http.Response) (*ApplyResourceResponse, err
 			return nil, err
 		}
 		response.JSON501 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListACLPolicyBindingsResponse parses an HTTP response from a ListACLPolicyBindingsWithResponse call
+func ParseListACLPolicyBindingsResponse(rsp *http.Response) (*ListACLPolicyBindingsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListACLPolicyBindingsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ACLPolicyBindingList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateACLPolicyBindingResponse parses an HTTP response from a CreateACLPolicyBindingWithResponse call
+func ParseCreateACLPolicyBindingResponse(rsp *http.Response) (*CreateACLPolicyBindingResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateACLPolicyBindingResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLPolicyBinding
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteACLPolicyBindingResponse parses an HTTP response from a DeleteACLPolicyBindingWithResponse call
+func ParseDeleteACLPolicyBindingResponse(rsp *http.Response) (*DeleteACLPolicyBindingResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteACLPolicyBindingResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLPolicyBinding
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetACLPolicyBindingResponse parses an HTTP response from a GetACLPolicyBindingWithResponse call
+func ParseGetACLPolicyBindingResponse(rsp *http.Response) (*GetACLPolicyBindingResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetACLPolicyBindingResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLPolicyBinding
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutACLPolicyBindingResponse parses an HTTP response from a PutACLPolicyBindingWithResponse call
+func ParsePutACLPolicyBindingResponse(rsp *http.Response) (*PutACLPolicyBindingResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutACLPolicyBindingResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLPolicyBinding
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListACLRolesResponse parses an HTTP response from a ListACLRolesWithResponse call
+func ParseListACLRolesResponse(rsp *http.Response) (*ListACLRolesResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListACLRolesResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ACLRoleList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateACLRoleResponse parses an HTTP response from a CreateACLRoleWithResponse call
+func ParseCreateACLRoleResponse(rsp *http.Response) (*CreateACLRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateACLRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLRole
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteACLRoleResponse parses an HTTP response from a DeleteACLRoleWithResponse call
+func ParseDeleteACLRoleResponse(rsp *http.Response) (*DeleteACLRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteACLRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLRole
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetACLRoleResponse parses an HTTP response from a GetACLRoleWithResponse call
+func ParseGetACLRoleResponse(rsp *http.Response) (*GetACLRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetACLRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLRole
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutACLRoleResponse parses an HTTP response from a PutACLRoleWithResponse call
+func ParsePutACLRoleResponse(rsp *http.Response) (*PutACLRoleResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutACLRoleResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLRole
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListACLViewsResponse parses an HTTP response from a ListACLViewsWithResponse call
+func ParseListACLViewsResponse(rsp *http.Response) (*ListACLViewsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListACLViewsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest ACLViewList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateACLViewResponse parses an HTTP response from a CreateACLViewWithResponse call
+func ParseCreateACLViewResponse(rsp *http.Response) (*CreateACLViewResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateACLViewResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLView
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteACLViewResponse parses an HTTP response from a DeleteACLViewWithResponse call
+func ParseDeleteACLViewResponse(rsp *http.Response) (*DeleteACLViewResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteACLViewResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLView
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetACLViewResponse parses an HTTP response from a GetACLViewWithResponse call
+func ParseGetACLViewResponse(rsp *http.Response) (*GetACLViewResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetACLViewResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLView
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutACLViewResponse parses an HTTP response from a PutACLViewWithResponse call
+func ParsePutACLViewResponse(rsp *http.Response) (*PutACLViewResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutACLViewResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.ACLView
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 
@@ -7472,22 +11265,22 @@ func ParsePutCredentialResponse(rsp *http.Response) (*PutCredentialResponse, err
 	return response, nil
 }
 
-// ParseListDepotsResponse parses an HTTP response from a ListDepotsWithResponse call
-func ParseListDepotsResponse(rsp *http.Response) (*ListDepotsResponse, error) {
+// ParseListDashScopeTenantsResponse parses an HTTP response from a ListDashScopeTenantsWithResponse call
+func ParseListDashScopeTenantsResponse(rsp *http.Response) (*ListDashScopeTenantsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ListDepotsResponse{
+	response := &ListDashScopeTenantsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest DepotList
+		var dest DashScopeTenantList
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7505,55 +11298,22 @@ func ParseListDepotsResponse(rsp *http.Response) (*ListDepotsResponse, error) {
 	return response, nil
 }
 
-// ParseGetDepotResponse parses an HTTP response from a GetDepotWithResponse call
-func ParseGetDepotResponse(rsp *http.Response) (*GetDepotResponse, error) {
+// ParseCreateDashScopeTenantResponse parses an HTTP response from a CreateDashScopeTenantWithResponse call
+func ParseCreateDashScopeTenantResponse(rsp *http.Response) (*CreateDashScopeTenantResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetDepotResponse{
+	response := &CreateDashScopeTenantResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.Depot
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
-		var dest externalRef0.ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON404 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePutDepotInfoResponse parses an HTTP response from a PutDepotInfoWithResponse call
-func ParsePutDepotInfoResponse(rsp *http.Response) (*PutDepotInfoResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PutDepotInfoResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.Depot
+		var dest externalRef0.DashScopeTenant
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7585,22 +11345,342 @@ func ParsePutDepotInfoResponse(rsp *http.Response) (*PutDepotInfoResponse, error
 	return response, nil
 }
 
-// ParseReleaseDepotResponse parses an HTTP response from a ReleaseDepotWithResponse call
-func ParseReleaseDepotResponse(rsp *http.Response) (*ReleaseDepotResponse, error) {
+// ParseDeleteDashScopeTenantResponse parses an HTTP response from a DeleteDashScopeTenantWithResponse call
+func ParseDeleteDashScopeTenantResponse(rsp *http.Response) (*DeleteDashScopeTenantResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &ReleaseDepotResponse{
+	response := &DeleteDashScopeTenantResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.Depot
+		var dest externalRef0.DashScopeTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetDashScopeTenantResponse parses an HTTP response from a GetDashScopeTenantWithResponse call
+func ParseGetDashScopeTenantResponse(rsp *http.Response) (*GetDashScopeTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetDashScopeTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.DashScopeTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutDashScopeTenantResponse parses an HTTP response from a PutDashScopeTenantWithResponse call
+func ParsePutDashScopeTenantResponse(rsp *http.Response) (*PutDashScopeTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutDashScopeTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.DashScopeTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListFirmwaresResponse parses an HTTP response from a ListFirmwaresWithResponse call
+func ParseListFirmwaresResponse(rsp *http.Response) (*ListFirmwaresResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFirmwaresResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest FirmwareList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateFirmwareResponse parses an HTTP response from a CreateFirmwareWithResponse call
+func ParseCreateFirmwareResponse(rsp *http.Response) (*CreateFirmwareResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateFirmwareResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Firmware
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteFirmwareResponse parses an HTTP response from a DeleteFirmwareWithResponse call
+func ParseDeleteFirmwareResponse(rsp *http.Response) (*DeleteFirmwareResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteFirmwareResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Firmware
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetFirmwareResponse parses an HTTP response from a GetFirmwareWithResponse call
+func ParseGetFirmwareResponse(rsp *http.Response) (*GetFirmwareResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetFirmwareResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Firmware
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutFirmwareResponse parses an HTTP response from a PutFirmwareWithResponse call
+func ParsePutFirmwareResponse(rsp *http.Response) (*PutFirmwareResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutFirmwareResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Firmware
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseReleaseFirmwareResponse parses an HTTP response from a ReleaseFirmwareWithResponse call
+func ParseReleaseFirmwareResponse(rsp *http.Response) (*ReleaseFirmwareResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ReleaseFirmwareResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Firmware
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7632,22 +11712,22 @@ func ParseReleaseDepotResponse(rsp *http.Response) (*ReleaseDepotResponse, error
 	return response, nil
 }
 
-// ParseRollbackDepotResponse parses an HTTP response from a RollbackDepotWithResponse call
-func ParseRollbackDepotResponse(rsp *http.Response) (*RollbackDepotResponse, error) {
+// ParseRollbackFirmwareResponse parses an HTTP response from a RollbackFirmwareWithResponse call
+func ParseRollbackFirmwareResponse(rsp *http.Response) (*RollbackFirmwareResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &RollbackDepotResponse{
+	response := &RollbackFirmwareResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.Depot
+		var dest externalRef0.Firmware
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7679,22 +11759,102 @@ func ParseRollbackDepotResponse(rsp *http.Response) (*RollbackDepotResponse, err
 	return response, nil
 }
 
-// ParseGetChannelResponse parses an HTTP response from a GetChannelWithResponse call
-func ParseGetChannelResponse(rsp *http.Response) (*GetChannelResponse, error) {
+// ParseListGeminiTenantsResponse parses an HTTP response from a ListGeminiTenantsWithResponse call
+func ParseListGeminiTenantsResponse(rsp *http.Response) (*ListGeminiTenantsResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetChannelResponse{
+	response := &ListGeminiTenantsResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.DepotRelease
+		var dest GeminiTenantList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateGeminiTenantResponse parses an HTTP response from a CreateGeminiTenantWithResponse call
+func ParseCreateGeminiTenantResponse(rsp *http.Response) (*CreateGeminiTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateGeminiTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.GeminiTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteGeminiTenantResponse parses an HTTP response from a DeleteGeminiTenantWithResponse call
+func ParseDeleteGeminiTenantResponse(rsp *http.Response) (*DeleteGeminiTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteGeminiTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.GeminiTenant
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -7707,38 +11867,92 @@ func ParseGetChannelResponse(rsp *http.Response) (*GetChannelResponse, error) {
 		}
 		response.JSON404 = &dest
 
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
 	}
 
 	return response, nil
 }
 
-// ParsePutChannelResponse parses an HTTP response from a PutChannelWithResponse call
-func ParsePutChannelResponse(rsp *http.Response) (*PutChannelResponse, error) {
+// ParseGetGeminiTenantResponse parses an HTTP response from a GetGeminiTenantWithResponse call
+func ParseGetGeminiTenantResponse(rsp *http.Response) (*GetGeminiTenantResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &PutChannelResponse{
+	response := &GetGeminiTenantResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.DepotRelease
+		var dest externalRef0.GeminiTenant
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
 
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest externalRef0.ErrorResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON409 = &dest
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutGeminiTenantResponse parses an HTTP response from a PutGeminiTenantWithResponse call
+func ParsePutGeminiTenantResponse(rsp *http.Response) (*PutGeminiTenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutGeminiTenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.GeminiTenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
 
 	}
 
@@ -8206,6 +12420,206 @@ func ParsePutModelResponse(rsp *http.Response) (*PutModelResponse, error) {
 	return response, nil
 }
 
+// ParseListOpenAITenantsResponse parses an HTTP response from a ListOpenAITenantsWithResponse call
+func ParseListOpenAITenantsResponse(rsp *http.Response) (*ListOpenAITenantsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListOpenAITenantsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest OpenAITenantList
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateOpenAITenantResponse parses an HTTP response from a CreateOpenAITenantWithResponse call
+func ParseCreateOpenAITenantResponse(rsp *http.Response) (*CreateOpenAITenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateOpenAITenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.OpenAITenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 409:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON409 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteOpenAITenantResponse parses an HTTP response from a DeleteOpenAITenantWithResponse call
+func ParseDeleteOpenAITenantResponse(rsp *http.Response) (*DeleteOpenAITenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteOpenAITenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.OpenAITenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetOpenAITenantResponse parses an HTTP response from a GetOpenAITenantWithResponse call
+func ParseGetOpenAITenantResponse(rsp *http.Response) (*GetOpenAITenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetOpenAITenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.OpenAITenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParsePutOpenAITenantResponse parses an HTTP response from a PutOpenAITenantWithResponse call
+func ParsePutOpenAITenantResponse(rsp *http.Response) (*PutOpenAITenantResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &PutOpenAITenantResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.OpenAITenant
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListPeersResponse parses an HTTP response from a ListPeersWithResponse call
 func ParseListPeersResponse(rsp *http.Response) (*ListPeersResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -8215,72 +12629,6 @@ func ParseListPeersResponse(rsp *http.Response) (*ListPeersResponse, error) {
 	}
 
 	response := &ListPeersResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest RegistrationList
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest externalRef0.ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListPeersByCertificationResponse parses an HTTP response from a ListPeersByCertificationWithResponse call
-func ParseListPeersByCertificationResponse(rsp *http.Response) (*ListPeersByCertificationResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListPeersByCertificationResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest RegistrationList
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
-		var dest externalRef0.ErrorResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON500 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseListPeersByFirmwareResponse parses an HTTP response from a ListPeersByFirmwareWithResponse call
-func ParseListPeersByFirmwareResponse(rsp *http.Response) (*ListPeersByFirmwareResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &ListPeersByFirmwareResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
@@ -8689,26 +13037,33 @@ func ParseGetPeerInfoResponse(rsp *http.Response) (*GetPeerInfoResponse, error) 
 	return response, nil
 }
 
-// ParseGetPeerOTAResponse parses an HTTP response from a GetPeerOTAWithResponse call
-func ParseGetPeerOTAResponse(rsp *http.Response) (*GetPeerOTAResponse, error) {
+// ParsePutPeerInfoResponse parses an HTTP response from a PutPeerInfoWithResponse call
+func ParsePutPeerInfoResponse(rsp *http.Response) (*PutPeerInfoResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetPeerOTAResponse{
+	response := &PutPeerInfoResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef0.OTASummary
+		var dest externalRef0.DeviceInfo
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
 		var dest externalRef0.ErrorResponse
@@ -9783,6 +14138,51 @@ type ServerInterface interface {
 	// Apply an admin resource
 	// (POST /@apply)
 	ApplyResource(c *fiber.Ctx) error
+	// List ACL policy bindings
+	// (GET /acl/policy-bindings)
+	ListACLPolicyBindings(c *fiber.Ctx, params ListACLPolicyBindingsParams) error
+	// Create an ACL policy binding
+	// (POST /acl/policy-bindings)
+	CreateACLPolicyBinding(c *fiber.Ctx) error
+	// Delete an ACL policy binding
+	// (DELETE /acl/policy-bindings/{id})
+	DeleteACLPolicyBinding(c *fiber.Ctx, id string) error
+	// Get an ACL policy binding
+	// (GET /acl/policy-bindings/{id})
+	GetACLPolicyBinding(c *fiber.Ctx, id string) error
+	// Create or update an ACL policy binding
+	// (PUT /acl/policy-bindings/{id})
+	PutACLPolicyBinding(c *fiber.Ctx, id string) error
+	// List ACL roles
+	// (GET /acl/roles)
+	ListACLRoles(c *fiber.Ctx, params ListACLRolesParams) error
+	// Create an ACL role
+	// (POST /acl/roles)
+	CreateACLRole(c *fiber.Ctx) error
+	// Delete an ACL role
+	// (DELETE /acl/roles/{name})
+	DeleteACLRole(c *fiber.Ctx, name string) error
+	// Get an ACL role
+	// (GET /acl/roles/{name})
+	GetACLRole(c *fiber.Ctx, name string) error
+	// Create or update an ACL role
+	// (PUT /acl/roles/{name})
+	PutACLRole(c *fiber.Ctx, name string) error
+	// List ACL views
+	// (GET /acl/views)
+	ListACLViews(c *fiber.Ctx, params ListACLViewsParams) error
+	// Create an ACL view
+	// (POST /acl/views)
+	CreateACLView(c *fiber.Ctx) error
+	// Delete an ACL view
+	// (DELETE /acl/views/{name})
+	DeleteACLView(c *fiber.Ctx, name string) error
+	// Get an ACL view
+	// (GET /acl/views/{name})
+	GetACLView(c *fiber.Ctx, name string) error
+	// Create or update an ACL view
+	// (PUT /acl/views/{name})
+	PutACLView(c *fiber.Ctx, name string) error
 	// List stored credentials
 	// (GET /credentials)
 	ListCredentials(c *fiber.Ctx, params ListCredentialsParams) error
@@ -9791,34 +14191,64 @@ type ServerInterface interface {
 	CreateCredential(c *fiber.Ctx) error
 	// Delete a credential
 	// (DELETE /credentials/{name})
-	DeleteCredential(c *fiber.Ctx, name CredentialName) error
+	DeleteCredential(c *fiber.Ctx, name string) error
 	// Get a credential
 	// (GET /credentials/{name})
-	GetCredential(c *fiber.Ctx, name CredentialName) error
+	GetCredential(c *fiber.Ctx, name string) error
 	// Create or update a credential
 	// (PUT /credentials/{name})
-	PutCredential(c *fiber.Ctx, name CredentialName) error
-	// List all firmware depots
-	// (GET /depots)
-	ListDepots(c *fiber.Ctx) error
-	// Get a firmware depot snapshot
-	// (GET /depots/{depot})
-	GetDepot(c *fiber.Ctx, depot DepotName) error
-	// Create or update depot info (file manifest)
-	// (PUT /depots/{depot})
-	PutDepotInfo(c *fiber.Ctx, depot DepotName) error
-	// Promote testing channel to stable
-	// (PUT /depots/{depot}/@release)
-	ReleaseDepot(c *fiber.Ctx, depot DepotName) error
-	// Roll back stable channel to the rollback snapshot
-	// (PUT /depots/{depot}/@rollback)
-	RollbackDepot(c *fiber.Ctx, depot DepotName) error
-	// Get a specific channel release
-	// (GET /depots/{depot}/channels/{channel})
-	GetChannel(c *fiber.Ctx, depot DepotName, channel Channel) error
-	// Upload a firmware release tarball for a channel
-	// (PUT /depots/{depot}/channels/{channel})
-	PutChannel(c *fiber.Ctx, depot DepotName, channel Channel) error
+	PutCredential(c *fiber.Ctx, name string) error
+	// List all DashScope tenants
+	// (GET /dashscope-tenants)
+	ListDashScopeTenants(c *fiber.Ctx, params ListDashScopeTenantsParams) error
+	// Create a DashScope tenant
+	// (POST /dashscope-tenants)
+	CreateDashScopeTenant(c *fiber.Ctx) error
+	// Delete a DashScope tenant
+	// (DELETE /dashscope-tenants/{name})
+	DeleteDashScopeTenant(c *fiber.Ctx, name string) error
+	// Get a DashScope tenant
+	// (GET /dashscope-tenants/{name})
+	GetDashScopeTenant(c *fiber.Ctx, name string) error
+	// Create or update a DashScope tenant
+	// (PUT /dashscope-tenants/{name})
+	PutDashScopeTenant(c *fiber.Ctx, name string) error
+	// List firmwares
+	// (GET /firmwares)
+	ListFirmwares(c *fiber.Ctx, params ListFirmwaresParams) error
+	// Create a firmware release line
+	// (POST /firmwares)
+	CreateFirmware(c *fiber.Ctx) error
+	// Delete a firmware release line
+	// (DELETE /firmwares/{name})
+	DeleteFirmware(c *fiber.Ctx, name string) error
+	// Get a firmware release line
+	// (GET /firmwares/{name})
+	GetFirmware(c *fiber.Ctx, name string) error
+	// Create or update a firmware release line
+	// (PUT /firmwares/{name})
+	PutFirmware(c *fiber.Ctx, name string) error
+	// Promote firmware slots
+	// (POST /firmwares/{name}/@release)
+	ReleaseFirmware(c *fiber.Ctx, name string) error
+	// Rollback firmware stable slot
+	// (POST /firmwares/{name}/@rollback)
+	RollbackFirmware(c *fiber.Ctx, name string) error
+	// List all Gemini tenants
+	// (GET /gemini-tenants)
+	ListGeminiTenants(c *fiber.Ctx, params ListGeminiTenantsParams) error
+	// Create a Gemini tenant
+	// (POST /gemini-tenants)
+	CreateGeminiTenant(c *fiber.Ctx) error
+	// Delete a Gemini tenant
+	// (DELETE /gemini-tenants/{name})
+	DeleteGeminiTenant(c *fiber.Ctx, name string) error
+	// Get a Gemini tenant
+	// (GET /gemini-tenants/{name})
+	GetGeminiTenant(c *fiber.Ctx, name string) error
+	// Create or update a Gemini tenant
+	// (PUT /gemini-tenants/{name})
+	PutGeminiTenant(c *fiber.Ctx, name string) error
 	// List all MiniMax tenants
 	// (GET /minimax-tenants)
 	ListMiniMaxTenants(c *fiber.Ctx, params ListMiniMaxTenantsParams) error
@@ -9827,16 +14257,16 @@ type ServerInterface interface {
 	CreateMiniMaxTenant(c *fiber.Ctx) error
 	// Delete a MiniMax tenant
 	// (DELETE /minimax-tenants/{name})
-	DeleteMiniMaxTenant(c *fiber.Ctx, name MiniMaxTenantName) error
+	DeleteMiniMaxTenant(c *fiber.Ctx, name string) error
 	// Get a MiniMax tenant
 	// (GET /minimax-tenants/{name})
-	GetMiniMaxTenant(c *fiber.Ctx, name MiniMaxTenantName) error
+	GetMiniMaxTenant(c *fiber.Ctx, name string) error
 	// Create or update a MiniMax tenant
 	// (PUT /minimax-tenants/{name})
-	PutMiniMaxTenant(c *fiber.Ctx, name MiniMaxTenantName) error
+	PutMiniMaxTenant(c *fiber.Ctx, name string) error
 	// Sync voices from a MiniMax tenant into the global voice catalog
 	// (POST /minimax-tenants/{name}/@sync-voices)
-	SyncMiniMaxTenantVoices(c *fiber.Ctx, name MiniMaxTenantName) error
+	SyncMiniMaxTenantVoices(c *fiber.Ctx, name string) error
 	// List all models
 	// (GET /models)
 	ListModels(c *fiber.Ctx, params ListModelsParams) error
@@ -9845,22 +14275,31 @@ type ServerInterface interface {
 	CreateModel(c *fiber.Ctx) error
 	// Delete a model
 	// (DELETE /models/{id})
-	DeleteModel(c *fiber.Ctx, id ModelID) error
+	DeleteModel(c *fiber.Ctx, id string) error
 	// Get a model
 	// (GET /models/{id})
-	GetModel(c *fiber.Ctx, id ModelID) error
+	GetModel(c *fiber.Ctx, id string) error
 	// Create or update a model
 	// (PUT /models/{id})
-	PutModel(c *fiber.Ctx, id ModelID) error
+	PutModel(c *fiber.Ctx, id string) error
+	// List all OpenAI-compatible tenants
+	// (GET /openai-tenants)
+	ListOpenAITenants(c *fiber.Ctx, params ListOpenAITenantsParams) error
+	// Create an OpenAI-compatible tenant
+	// (POST /openai-tenants)
+	CreateOpenAITenant(c *fiber.Ctx) error
+	// Delete an OpenAI-compatible tenant
+	// (DELETE /openai-tenants/{name})
+	DeleteOpenAITenant(c *fiber.Ctx, name string) error
+	// Get an OpenAI-compatible tenant
+	// (GET /openai-tenants/{name})
+	GetOpenAITenant(c *fiber.Ctx, name string) error
+	// Create or update an OpenAI-compatible tenant
+	// (PUT /openai-tenants/{name})
+	PutOpenAITenant(c *fiber.Ctx, name string) error
 	// List all peers
 	// (GET /peers)
 	ListPeers(c *fiber.Ctx, params ListPeersParams) error
-	// List peers by certification
-	// (GET /peers/certification/{type}/{authority}/{id})
-	ListPeersByCertification(c *fiber.Ctx, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params ListPeersByCertificationParams) error
-	// List peers by firmware depot and channel
-	// (GET /peers/firmware/{depot}/{channel})
-	ListPeersByFirmware(c *fiber.Ctx, depot string, channel externalRef0.GearFirmwareChannel, params ListPeersByFirmwareParams) error
 	// Resolve peer public key by IMEI
 	// (GET /peers/imei/{tac}/{serial})
 	ResolvePeerByIMEI(c *fiber.Ctx, tac string, serial string) error
@@ -9872,43 +14311,43 @@ type ServerInterface interface {
 	ResolvePeerBySN(c *fiber.Ctx, sn string) error
 	// Delete a peer
 	// (DELETE /peers/{publicKey})
-	DeletePeer(c *fiber.Ctx, publicKey PublicKey) error
+	DeletePeer(c *fiber.Ctx, publicKey string) error
 	// Get peer registration
 	// (GET /peers/{publicKey})
-	GetPeer(c *fiber.Ctx, publicKey PublicKey) error
+	GetPeer(c *fiber.Ctx, publicKey string) error
 	// Approve a peer with a given role
 	// (POST /peers/{publicKey}/@approve)
-	ApprovePeer(c *fiber.Ctx, publicKey PublicKey) error
+	ApprovePeer(c *fiber.Ctx, publicKey string) error
 	// Block a peer
 	// (POST /peers/{publicKey}/@block)
-	BlockPeer(c *fiber.Ctx, publicKey PublicKey) error
+	BlockPeer(c *fiber.Ctx, publicKey string) error
 	// Refresh peer info from connected device
 	// (POST /peers/{publicKey}/@refresh)
-	RefreshPeer(c *fiber.Ctx, publicKey PublicKey) error
+	RefreshPeer(c *fiber.Ctx, publicKey string) error
 	// Get peer configuration
 	// (GET /peers/{publicKey}/config)
-	GetPeerConfig(c *fiber.Ctx, publicKey PublicKey) error
+	GetPeerConfig(c *fiber.Ctx, publicKey string) error
 	// Update peer configuration
 	// (PUT /peers/{publicKey}/config)
-	PutPeerConfig(c *fiber.Ctx, publicKey PublicKey) error
+	PutPeerConfig(c *fiber.Ctx, publicKey string) error
 	// Get peer device info
 	// (GET /peers/{publicKey}/info)
-	GetPeerInfo(c *fiber.Ctx, publicKey PublicKey) error
-	// Get peer OTA firmware summary
-	// (GET /peers/{publicKey}/ota)
-	GetPeerOTA(c *fiber.Ctx, publicKey PublicKey) error
+	GetPeerInfo(c *fiber.Ctx, publicKey string) error
+	// Update peer device info
+	// (PUT /peers/{publicKey}/info)
+	PutPeerInfo(c *fiber.Ctx, publicKey string) error
 	// Get peer runtime status
 	// (GET /peers/{publicKey}/runtime)
-	GetPeerRuntime(c *fiber.Ctx, publicKey PublicKey) error
+	GetPeerRuntime(c *fiber.Ctx, publicKey string) error
 	// Delete an admin resource
 	// (DELETE /resources/{kind}/{name})
-	DeleteResource(c *fiber.Ctx, kind ResourceKind, name ResourceName) error
+	DeleteResource(c *fiber.Ctx, kind ResourceKind, name string) error
 	// Get an admin resource
 	// (GET /resources/{kind}/{name})
-	GetResource(c *fiber.Ctx, kind ResourceKind, name ResourceName) error
+	GetResource(c *fiber.Ctx, kind ResourceKind, name string) error
 	// Create or update an admin resource
 	// (PUT /resources/{kind}/{name})
-	PutResource(c *fiber.Ctx, kind ResourceKind, name ResourceName) error
+	PutResource(c *fiber.Ctx, kind ResourceKind, name string) error
 	// List all voices
 	// (GET /voices)
 	ListVoices(c *fiber.Ctx, params ListVoicesParams) error
@@ -9917,13 +14356,13 @@ type ServerInterface interface {
 	CreateVoice(c *fiber.Ctx) error
 	// Delete a voice
 	// (DELETE /voices/{id})
-	DeleteVoice(c *fiber.Ctx, id VoiceID) error
+	DeleteVoice(c *fiber.Ctx, id string) error
 	// Get a voice
 	// (GET /voices/{id})
-	GetVoice(c *fiber.Ctx, id VoiceID) error
+	GetVoice(c *fiber.Ctx, id string) error
 	// Create or update a voice
 	// (PUT /voices/{id})
-	PutVoice(c *fiber.Ctx, id VoiceID) error
+	PutVoice(c *fiber.Ctx, id string) error
 	// List all Volcengine tenants
 	// (GET /volc-tenants)
 	ListVolcTenants(c *fiber.Ctx, params ListVolcTenantsParams) error
@@ -9932,16 +14371,16 @@ type ServerInterface interface {
 	CreateVolcTenant(c *fiber.Ctx) error
 	// Delete a Volcengine tenant
 	// (DELETE /volc-tenants/{name})
-	DeleteVolcTenant(c *fiber.Ctx, name VolcTenantName) error
+	DeleteVolcTenant(c *fiber.Ctx, name string) error
 	// Get a Volcengine tenant
 	// (GET /volc-tenants/{name})
-	GetVolcTenant(c *fiber.Ctx, name VolcTenantName) error
+	GetVolcTenant(c *fiber.Ctx, name string) error
 	// Create or update a Volcengine tenant
 	// (PUT /volc-tenants/{name})
-	PutVolcTenant(c *fiber.Ctx, name VolcTenantName) error
+	PutVolcTenant(c *fiber.Ctx, name string) error
 	// Sync voices from a Volcengine tenant into the global voice catalog
 	// (POST /volc-tenants/{name}/@sync-voices)
-	SyncVolcTenantVoices(c *fiber.Ctx, name VolcTenantName) error
+	SyncVolcTenantVoices(c *fiber.Ctx, name string) error
 	// List all workflows
 	// (GET /workflows)
 	ListWorkflows(c *fiber.Ctx, params ListWorkflowsParams) error
@@ -9950,13 +14389,13 @@ type ServerInterface interface {
 	CreateWorkflow(c *fiber.Ctx) error
 	// Delete a workflow
 	// (DELETE /workflows/{name})
-	DeleteWorkflow(c *fiber.Ctx, name WorkflowName) error
+	DeleteWorkflow(c *fiber.Ctx, name string) error
 	// Get a workflow
 	// (GET /workflows/{name})
-	GetWorkflow(c *fiber.Ctx, name WorkflowName) error
+	GetWorkflow(c *fiber.Ctx, name string) error
 	// Create or update a workflow
 	// (PUT /workflows/{name})
-	PutWorkflow(c *fiber.Ctx, name WorkflowName) error
+	PutWorkflow(c *fiber.Ctx, name string) error
 	// List all workspaces
 	// (GET /workspaces)
 	ListWorkspaces(c *fiber.Ctx, params ListWorkspacesParams) error
@@ -9965,13 +14404,13 @@ type ServerInterface interface {
 	CreateWorkspace(c *fiber.Ctx) error
 	// Delete a workspace
 	// (DELETE /workspaces/{name})
-	DeleteWorkspace(c *fiber.Ctx, name WorkspaceName) error
+	DeleteWorkspace(c *fiber.Ctx, name string) error
 	// Get a workspace
 	// (GET /workspaces/{name})
-	GetWorkspace(c *fiber.Ctx, name WorkspaceName) error
+	GetWorkspace(c *fiber.Ctx, name string) error
 	// Create or update a workspace
 	// (PUT /workspaces/{name})
-	PutWorkspace(c *fiber.Ctx, name WorkspaceName) error
+	PutWorkspace(c *fiber.Ctx, name string) error
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -9985,6 +14424,310 @@ type MiddlewareFunc fiber.Handler
 func (siw *ServerInterfaceWrapper) ApplyResource(c *fiber.Ctx) error {
 
 	return siw.Handler.ApplyResource(c)
+}
+
+// ListACLPolicyBindings operation middleware
+func (siw *ServerInterfaceWrapper) ListACLPolicyBindings(c *fiber.Ctx) error {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListACLPolicyBindingsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "subject_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "subject_kind", query, &params.SubjectKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter subject_kind: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "subject_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "subject_id", query, &params.SubjectId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter subject_id: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "resource_kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "resource_kind", query, &params.ResourceKind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter resource_kind: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "resource_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "resource_id", query, &params.ResourceId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter resource_id: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "role" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "role", query, &params.Role, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter role: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "permission" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "permission", query, &params.Permission, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter permission: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "order_by" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "order_by", query, &params.OrderBy, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter order_by: %w", err).Error())
+	}
+
+	return siw.Handler.ListACLPolicyBindings(c, params)
+}
+
+// CreateACLPolicyBinding operation middleware
+func (siw *ServerInterfaceWrapper) CreateACLPolicyBinding(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateACLPolicyBinding(c)
+}
+
+// DeleteACLPolicyBinding operation middleware
+func (siw *ServerInterfaceWrapper) DeleteACLPolicyBinding(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteACLPolicyBinding(c, id)
+}
+
+// GetACLPolicyBinding operation middleware
+func (siw *ServerInterfaceWrapper) GetACLPolicyBinding(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.GetACLPolicyBinding(c, id)
+}
+
+// PutACLPolicyBinding operation middleware
+func (siw *ServerInterfaceWrapper) PutACLPolicyBinding(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.PutACLPolicyBinding(c, id)
+}
+
+// ListACLRoles operation middleware
+func (siw *ServerInterfaceWrapper) ListACLRoles(c *fiber.Ctx) error {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListACLRolesParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListACLRoles(c, params)
+}
+
+// CreateACLRole operation middleware
+func (siw *ServerInterfaceWrapper) CreateACLRole(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateACLRole(c)
+}
+
+// DeleteACLRole operation middleware
+func (siw *ServerInterfaceWrapper) DeleteACLRole(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteACLRole(c, name)
+}
+
+// GetACLRole operation middleware
+func (siw *ServerInterfaceWrapper) GetACLRole(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.GetACLRole(c, name)
+}
+
+// PutACLRole operation middleware
+func (siw *ServerInterfaceWrapper) PutACLRole(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.PutACLRole(c, name)
+}
+
+// ListACLViews operation middleware
+func (siw *ServerInterfaceWrapper) ListACLViews(c *fiber.Ctx) error {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListACLViewsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListACLViews(c, params)
+}
+
+// CreateACLView operation middleware
+func (siw *ServerInterfaceWrapper) CreateACLView(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateACLView(c)
+}
+
+// DeleteACLView operation middleware
+func (siw *ServerInterfaceWrapper) DeleteACLView(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteACLView(c, name)
+}
+
+// GetACLView operation middleware
+func (siw *ServerInterfaceWrapper) GetACLView(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.GetACLView(c, name)
+}
+
+// PutACLView operation middleware
+func (siw *ServerInterfaceWrapper) PutACLView(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.PutACLView(c, name)
 }
 
 // ListCredentials operation middleware
@@ -10037,7 +14780,7 @@ func (siw *ServerInterfaceWrapper) DeleteCredential(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name CredentialName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10053,7 +14796,7 @@ func (siw *ServerInterfaceWrapper) GetCredential(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name CredentialName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10069,7 +14812,7 @@ func (siw *ServerInterfaceWrapper) PutCredential(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name CredentialName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10079,122 +14822,291 @@ func (siw *ServerInterfaceWrapper) PutCredential(c *fiber.Ctx) error {
 	return siw.Handler.PutCredential(c, name)
 }
 
-// ListDepots operation middleware
-func (siw *ServerInterfaceWrapper) ListDepots(c *fiber.Ctx) error {
-
-	return siw.Handler.ListDepots(c)
-}
-
-// GetDepot operation middleware
-func (siw *ServerInterfaceWrapper) GetDepot(c *fiber.Ctx) error {
+// ListDashScopeTenants operation middleware
+func (siw *ServerInterfaceWrapper) ListDashScopeTenants(c *fiber.Ctx) error {
 
 	var err error
 
-	// ------------- Path parameter "depot" -------------
-	var depot DepotName
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListDashScopeTenantsParams
 
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
 	}
 
-	return siw.Handler.GetDepot(c, depot)
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListDashScopeTenants(c, params)
 }
 
-// PutDepotInfo operation middleware
-func (siw *ServerInterfaceWrapper) PutDepotInfo(c *fiber.Ctx) error {
+// CreateDashScopeTenant operation middleware
+func (siw *ServerInterfaceWrapper) CreateDashScopeTenant(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateDashScopeTenant(c)
+}
+
+// DeleteDashScopeTenant operation middleware
+func (siw *ServerInterfaceWrapper) DeleteDashScopeTenant(c *fiber.Ctx) error {
 
 	var err error
 
-	// ------------- Path parameter "depot" -------------
-	var depot DepotName
+	// ------------- Path parameter "name" -------------
+	var name string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
 	}
 
-	return siw.Handler.PutDepotInfo(c, depot)
+	return siw.Handler.DeleteDashScopeTenant(c, name)
 }
 
-// ReleaseDepot operation middleware
-func (siw *ServerInterfaceWrapper) ReleaseDepot(c *fiber.Ctx) error {
+// GetDashScopeTenant operation middleware
+func (siw *ServerInterfaceWrapper) GetDashScopeTenant(c *fiber.Ctx) error {
 
 	var err error
 
-	// ------------- Path parameter "depot" -------------
-	var depot DepotName
+	// ------------- Path parameter "name" -------------
+	var name string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
 	}
 
-	return siw.Handler.ReleaseDepot(c, depot)
+	return siw.Handler.GetDashScopeTenant(c, name)
 }
 
-// RollbackDepot operation middleware
-func (siw *ServerInterfaceWrapper) RollbackDepot(c *fiber.Ctx) error {
+// PutDashScopeTenant operation middleware
+func (siw *ServerInterfaceWrapper) PutDashScopeTenant(c *fiber.Ctx) error {
 
 	var err error
 
-	// ------------- Path parameter "depot" -------------
-	var depot DepotName
+	// ------------- Path parameter "name" -------------
+	var name string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
 	}
 
-	return siw.Handler.RollbackDepot(c, depot)
+	return siw.Handler.PutDashScopeTenant(c, name)
 }
 
-// GetChannel operation middleware
-func (siw *ServerInterfaceWrapper) GetChannel(c *fiber.Ctx) error {
+// ListFirmwares operation middleware
+func (siw *ServerInterfaceWrapper) ListFirmwares(c *fiber.Ctx) error {
 
 	var err error
 
-	// ------------- Path parameter "depot" -------------
-	var depot DepotName
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListFirmwaresParams
 
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
 	}
 
-	// ------------- Path parameter "channel" -------------
-	var channel Channel
+	// ------------- Optional query parameter "cursor" -------------
 
-	err = runtime.BindStyledParameterWithOptions("simple", "channel", c.Params("channel"), &channel, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter channel: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
 	}
 
-	return siw.Handler.GetChannel(c, depot, channel)
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListFirmwares(c, params)
 }
 
-// PutChannel operation middleware
-func (siw *ServerInterfaceWrapper) PutChannel(c *fiber.Ctx) error {
+// CreateFirmware operation middleware
+func (siw *ServerInterfaceWrapper) CreateFirmware(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateFirmware(c)
+}
+
+// DeleteFirmware operation middleware
+func (siw *ServerInterfaceWrapper) DeleteFirmware(c *fiber.Ctx) error {
 
 	var err error
 
-	// ------------- Path parameter "depot" -------------
-	var depot DepotName
+	// ------------- Path parameter "name" -------------
+	var name string
 
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
 	}
 
-	// ------------- Path parameter "channel" -------------
-	var channel Channel
+	return siw.Handler.DeleteFirmware(c, name)
+}
 
-	err = runtime.BindStyledParameterWithOptions("simple", "channel", c.Params("channel"), &channel, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+// GetFirmware operation middleware
+func (siw *ServerInterfaceWrapper) GetFirmware(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter channel: %w", err).Error())
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
 	}
 
-	return siw.Handler.PutChannel(c, depot, channel)
+	return siw.Handler.GetFirmware(c, name)
+}
+
+// PutFirmware operation middleware
+func (siw *ServerInterfaceWrapper) PutFirmware(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.PutFirmware(c, name)
+}
+
+// ReleaseFirmware operation middleware
+func (siw *ServerInterfaceWrapper) ReleaseFirmware(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.ReleaseFirmware(c, name)
+}
+
+// RollbackFirmware operation middleware
+func (siw *ServerInterfaceWrapper) RollbackFirmware(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.RollbackFirmware(c, name)
+}
+
+// ListGeminiTenants operation middleware
+func (siw *ServerInterfaceWrapper) ListGeminiTenants(c *fiber.Ctx) error {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListGeminiTenantsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListGeminiTenants(c, params)
+}
+
+// CreateGeminiTenant operation middleware
+func (siw *ServerInterfaceWrapper) CreateGeminiTenant(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateGeminiTenant(c)
+}
+
+// DeleteGeminiTenant operation middleware
+func (siw *ServerInterfaceWrapper) DeleteGeminiTenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteGeminiTenant(c, name)
+}
+
+// GetGeminiTenant operation middleware
+func (siw *ServerInterfaceWrapper) GetGeminiTenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.GetGeminiTenant(c, name)
+}
+
+// PutGeminiTenant operation middleware
+func (siw *ServerInterfaceWrapper) PutGeminiTenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.PutGeminiTenant(c, name)
 }
 
 // ListMiniMaxTenants operation middleware
@@ -10240,7 +15152,7 @@ func (siw *ServerInterfaceWrapper) DeleteMiniMaxTenant(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name MiniMaxTenantName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10256,7 +15168,7 @@ func (siw *ServerInterfaceWrapper) GetMiniMaxTenant(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name MiniMaxTenantName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10272,7 +15184,7 @@ func (siw *ServerInterfaceWrapper) PutMiniMaxTenant(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name MiniMaxTenantName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10288,7 +15200,7 @@ func (siw *ServerInterfaceWrapper) SyncMiniMaxTenantVoices(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name MiniMaxTenantName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10310,13 +15222,6 @@ func (siw *ServerInterfaceWrapper) ListModels(c *fiber.Ctx) error {
 	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
-	}
-
-	// ------------- Optional query parameter "kind" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "kind", query, &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter kind: %w", err).Error())
 	}
 
 	// ------------- Optional query parameter "source" -------------
@@ -10369,7 +15274,7 @@ func (siw *ServerInterfaceWrapper) DeleteModel(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id ModelID
+	var id string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10385,7 +15290,7 @@ func (siw *ServerInterfaceWrapper) GetModel(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id ModelID
+	var id string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10401,7 +15306,7 @@ func (siw *ServerInterfaceWrapper) PutModel(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id ModelID
+	var id string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10409,6 +15314,91 @@ func (siw *ServerInterfaceWrapper) PutModel(c *fiber.Ctx) error {
 	}
 
 	return siw.Handler.PutModel(c, id)
+}
+
+// ListOpenAITenants operation middleware
+func (siw *ServerInterfaceWrapper) ListOpenAITenants(c *fiber.Ctx) error {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListOpenAITenantsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListOpenAITenants(c, params)
+}
+
+// CreateOpenAITenant operation middleware
+func (siw *ServerInterfaceWrapper) CreateOpenAITenant(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateOpenAITenant(c)
+}
+
+// DeleteOpenAITenant operation middleware
+func (siw *ServerInterfaceWrapper) DeleteOpenAITenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteOpenAITenant(c, name)
+}
+
+// GetOpenAITenant operation middleware
+func (siw *ServerInterfaceWrapper) GetOpenAITenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.GetOpenAITenant(c, name)
+}
+
+// PutOpenAITenant operation middleware
+func (siw *ServerInterfaceWrapper) PutOpenAITenant(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter name: %w", err).Error())
+	}
+
+	return siw.Handler.PutOpenAITenant(c, name)
 }
 
 // ListPeers operation middleware
@@ -10440,108 +15430,6 @@ func (siw *ServerInterfaceWrapper) ListPeers(c *fiber.Ctx) error {
 	}
 
 	return siw.Handler.ListPeers(c, params)
-}
-
-// ListPeersByCertification operation middleware
-func (siw *ServerInterfaceWrapper) ListPeersByCertification(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "type" -------------
-	var pType externalRef0.GearCertificationType
-
-	err = runtime.BindStyledParameterWithOptions("simple", "type", c.Params("type"), &pType, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter type: %w", err).Error())
-	}
-
-	// ------------- Path parameter "authority" -------------
-	var authority externalRef0.GearCertificationAuthority
-
-	err = runtime.BindStyledParameterWithOptions("simple", "authority", c.Params("authority"), &authority, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter authority: %w", err).Error())
-	}
-
-	// ------------- Path parameter "id" -------------
-	var id string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListPeersByCertificationParams
-
-	var query url.Values
-	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
-	}
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
-	}
-
-	return siw.Handler.ListPeersByCertification(c, pType, authority, id, params)
-}
-
-// ListPeersByFirmware operation middleware
-func (siw *ServerInterfaceWrapper) ListPeersByFirmware(c *fiber.Ctx) error {
-
-	var err error
-
-	// ------------- Path parameter "depot" -------------
-	var depot string
-
-	err = runtime.BindStyledParameterWithOptions("simple", "depot", c.Params("depot"), &depot, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter depot: %w", err).Error())
-	}
-
-	// ------------- Path parameter "channel" -------------
-	var channel externalRef0.GearFirmwareChannel
-
-	err = runtime.BindStyledParameterWithOptions("simple", "channel", c.Params("channel"), &channel, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter channel: %w", err).Error())
-	}
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListPeersByFirmwareParams
-
-	var query url.Values
-	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
-	}
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
-	}
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: "int32"})
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
-	}
-
-	return siw.Handler.ListPeersByFirmware(c, depot, channel, params)
 }
 
 // ResolvePeerByIMEI operation middleware
@@ -10637,7 +15525,7 @@ func (siw *ServerInterfaceWrapper) DeletePeer(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10653,7 +15541,7 @@ func (siw *ServerInterfaceWrapper) GetPeer(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10669,7 +15557,7 @@ func (siw *ServerInterfaceWrapper) ApprovePeer(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10685,7 +15573,7 @@ func (siw *ServerInterfaceWrapper) BlockPeer(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10701,7 +15589,7 @@ func (siw *ServerInterfaceWrapper) RefreshPeer(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10717,7 +15605,7 @@ func (siw *ServerInterfaceWrapper) GetPeerConfig(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10733,7 +15621,7 @@ func (siw *ServerInterfaceWrapper) PutPeerConfig(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10749,7 +15637,7 @@ func (siw *ServerInterfaceWrapper) GetPeerInfo(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10759,20 +15647,20 @@ func (siw *ServerInterfaceWrapper) GetPeerInfo(c *fiber.Ctx) error {
 	return siw.Handler.GetPeerInfo(c, publicKey)
 }
 
-// GetPeerOTA operation middleware
-func (siw *ServerInterfaceWrapper) GetPeerOTA(c *fiber.Ctx) error {
+// PutPeerInfo operation middleware
+func (siw *ServerInterfaceWrapper) PutPeerInfo(c *fiber.Ctx) error {
 
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter publicKey: %w", err).Error())
 	}
 
-	return siw.Handler.GetPeerOTA(c, publicKey)
+	return siw.Handler.PutPeerInfo(c, publicKey)
 }
 
 // GetPeerRuntime operation middleware
@@ -10781,7 +15669,7 @@ func (siw *ServerInterfaceWrapper) GetPeerRuntime(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "publicKey" -------------
-	var publicKey PublicKey
+	var publicKey string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "publicKey", c.Params("publicKey"), &publicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10805,7 +15693,7 @@ func (siw *ServerInterfaceWrapper) DeleteResource(c *fiber.Ctx) error {
 	}
 
 	// ------------- Path parameter "name" -------------
-	var name ResourceName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10829,7 +15717,7 @@ func (siw *ServerInterfaceWrapper) GetResource(c *fiber.Ctx) error {
 	}
 
 	// ------------- Path parameter "name" -------------
-	var name ResourceName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10853,7 +15741,7 @@ func (siw *ServerInterfaceWrapper) PutResource(c *fiber.Ctx) error {
 	}
 
 	// ------------- Path parameter "name" -------------
-	var name ResourceName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10927,7 +15815,7 @@ func (siw *ServerInterfaceWrapper) DeleteVoice(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id VoiceID
+	var id string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10943,7 +15831,7 @@ func (siw *ServerInterfaceWrapper) GetVoice(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id VoiceID
+	var id string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -10959,7 +15847,7 @@ func (siw *ServerInterfaceWrapper) PutVoice(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "id" -------------
-	var id VoiceID
+	var id string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11012,7 +15900,7 @@ func (siw *ServerInterfaceWrapper) DeleteVolcTenant(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name VolcTenantName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11028,7 +15916,7 @@ func (siw *ServerInterfaceWrapper) GetVolcTenant(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name VolcTenantName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11044,7 +15932,7 @@ func (siw *ServerInterfaceWrapper) PutVolcTenant(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name VolcTenantName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11060,7 +15948,7 @@ func (siw *ServerInterfaceWrapper) SyncVolcTenantVoices(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name VolcTenantName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11113,7 +16001,7 @@ func (siw *ServerInterfaceWrapper) DeleteWorkflow(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkflowName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11129,7 +16017,7 @@ func (siw *ServerInterfaceWrapper) GetWorkflow(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkflowName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11145,7 +16033,7 @@ func (siw *ServerInterfaceWrapper) PutWorkflow(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkflowName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11198,7 +16086,7 @@ func (siw *ServerInterfaceWrapper) DeleteWorkspace(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkspaceName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11214,7 +16102,7 @@ func (siw *ServerInterfaceWrapper) GetWorkspace(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkspaceName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11230,7 +16118,7 @@ func (siw *ServerInterfaceWrapper) PutWorkspace(c *fiber.Ctx) error {
 	var err error
 
 	// ------------- Path parameter "name" -------------
-	var name WorkspaceName
+	var name string
 
 	err = runtime.BindStyledParameterWithOptions("simple", "name", c.Params("name"), &name, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
 	if err != nil {
@@ -11263,6 +16151,36 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Post(options.BaseURL+"/@apply", wrapper.ApplyResource)
 
+	router.Get(options.BaseURL+"/acl/policy-bindings", wrapper.ListACLPolicyBindings)
+
+	router.Post(options.BaseURL+"/acl/policy-bindings", wrapper.CreateACLPolicyBinding)
+
+	router.Delete(options.BaseURL+"/acl/policy-bindings/:id", wrapper.DeleteACLPolicyBinding)
+
+	router.Get(options.BaseURL+"/acl/policy-bindings/:id", wrapper.GetACLPolicyBinding)
+
+	router.Put(options.BaseURL+"/acl/policy-bindings/:id", wrapper.PutACLPolicyBinding)
+
+	router.Get(options.BaseURL+"/acl/roles", wrapper.ListACLRoles)
+
+	router.Post(options.BaseURL+"/acl/roles", wrapper.CreateACLRole)
+
+	router.Delete(options.BaseURL+"/acl/roles/:name", wrapper.DeleteACLRole)
+
+	router.Get(options.BaseURL+"/acl/roles/:name", wrapper.GetACLRole)
+
+	router.Put(options.BaseURL+"/acl/roles/:name", wrapper.PutACLRole)
+
+	router.Get(options.BaseURL+"/acl/views", wrapper.ListACLViews)
+
+	router.Post(options.BaseURL+"/acl/views", wrapper.CreateACLView)
+
+	router.Delete(options.BaseURL+"/acl/views/:name", wrapper.DeleteACLView)
+
+	router.Get(options.BaseURL+"/acl/views/:name", wrapper.GetACLView)
+
+	router.Put(options.BaseURL+"/acl/views/:name", wrapper.PutACLView)
+
 	router.Get(options.BaseURL+"/credentials", wrapper.ListCredentials)
 
 	router.Post(options.BaseURL+"/credentials", wrapper.CreateCredential)
@@ -11273,19 +16191,39 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Put(options.BaseURL+"/credentials/:name", wrapper.PutCredential)
 
-	router.Get(options.BaseURL+"/depots", wrapper.ListDepots)
+	router.Get(options.BaseURL+"/dashscope-tenants", wrapper.ListDashScopeTenants)
 
-	router.Get(options.BaseURL+"/depots/:depot", wrapper.GetDepot)
+	router.Post(options.BaseURL+"/dashscope-tenants", wrapper.CreateDashScopeTenant)
 
-	router.Put(options.BaseURL+"/depots/:depot", wrapper.PutDepotInfo)
+	router.Delete(options.BaseURL+"/dashscope-tenants/:name", wrapper.DeleteDashScopeTenant)
 
-	router.Put(options.BaseURL+"/depots/:depot/@release", wrapper.ReleaseDepot)
+	router.Get(options.BaseURL+"/dashscope-tenants/:name", wrapper.GetDashScopeTenant)
 
-	router.Put(options.BaseURL+"/depots/:depot/@rollback", wrapper.RollbackDepot)
+	router.Put(options.BaseURL+"/dashscope-tenants/:name", wrapper.PutDashScopeTenant)
 
-	router.Get(options.BaseURL+"/depots/:depot/channels/:channel", wrapper.GetChannel)
+	router.Get(options.BaseURL+"/firmwares", wrapper.ListFirmwares)
 
-	router.Put(options.BaseURL+"/depots/:depot/channels/:channel", wrapper.PutChannel)
+	router.Post(options.BaseURL+"/firmwares", wrapper.CreateFirmware)
+
+	router.Delete(options.BaseURL+"/firmwares/:name", wrapper.DeleteFirmware)
+
+	router.Get(options.BaseURL+"/firmwares/:name", wrapper.GetFirmware)
+
+	router.Put(options.BaseURL+"/firmwares/:name", wrapper.PutFirmware)
+
+	router.Post(options.BaseURL+"/firmwares/:name/@release", wrapper.ReleaseFirmware)
+
+	router.Post(options.BaseURL+"/firmwares/:name/@rollback", wrapper.RollbackFirmware)
+
+	router.Get(options.BaseURL+"/gemini-tenants", wrapper.ListGeminiTenants)
+
+	router.Post(options.BaseURL+"/gemini-tenants", wrapper.CreateGeminiTenant)
+
+	router.Delete(options.BaseURL+"/gemini-tenants/:name", wrapper.DeleteGeminiTenant)
+
+	router.Get(options.BaseURL+"/gemini-tenants/:name", wrapper.GetGeminiTenant)
+
+	router.Put(options.BaseURL+"/gemini-tenants/:name", wrapper.PutGeminiTenant)
 
 	router.Get(options.BaseURL+"/minimax-tenants", wrapper.ListMiniMaxTenants)
 
@@ -11309,11 +16247,17 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Put(options.BaseURL+"/models/:id", wrapper.PutModel)
 
+	router.Get(options.BaseURL+"/openai-tenants", wrapper.ListOpenAITenants)
+
+	router.Post(options.BaseURL+"/openai-tenants", wrapper.CreateOpenAITenant)
+
+	router.Delete(options.BaseURL+"/openai-tenants/:name", wrapper.DeleteOpenAITenant)
+
+	router.Get(options.BaseURL+"/openai-tenants/:name", wrapper.GetOpenAITenant)
+
+	router.Put(options.BaseURL+"/openai-tenants/:name", wrapper.PutOpenAITenant)
+
 	router.Get(options.BaseURL+"/peers", wrapper.ListPeers)
-
-	router.Get(options.BaseURL+"/peers/certification/:type/:authority/:id", wrapper.ListPeersByCertification)
-
-	router.Get(options.BaseURL+"/peers/firmware/:depot/:channel", wrapper.ListPeersByFirmware)
 
 	router.Get(options.BaseURL+"/peers/imei/:tac/:serial", wrapper.ResolvePeerByIMEI)
 
@@ -11337,7 +16281,7 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Get(options.BaseURL+"/peers/:publicKey/info", wrapper.GetPeerInfo)
 
-	router.Get(options.BaseURL+"/peers/:publicKey/ota", wrapper.GetPeerOTA)
+	router.Put(options.BaseURL+"/peers/:publicKey/info", wrapper.PutPeerInfo)
 
 	router.Get(options.BaseURL+"/peers/:publicKey/runtime", wrapper.GetPeerRuntime)
 
@@ -11445,6 +16389,534 @@ func (response ApplyResource501JSONResponse) VisitApplyResourceResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
+type ListACLPolicyBindingsRequestObject struct {
+	Params ListACLPolicyBindingsParams
+}
+
+type ListACLPolicyBindingsResponseObject interface {
+	VisitListACLPolicyBindingsResponse(ctx *fiber.Ctx) error
+}
+
+type ListACLPolicyBindings200JSONResponse ACLPolicyBindingList
+
+func (response ListACLPolicyBindings200JSONResponse) VisitListACLPolicyBindingsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListACLPolicyBindings500JSONResponse externalRef0.ErrorResponse
+
+func (response ListACLPolicyBindings500JSONResponse) VisitListACLPolicyBindingsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLPolicyBindingRequestObject struct {
+	Body *CreateACLPolicyBindingJSONRequestBody
+}
+
+type CreateACLPolicyBindingResponseObject interface {
+	VisitCreateACLPolicyBindingResponse(ctx *fiber.Ctx) error
+}
+
+type CreateACLPolicyBinding200JSONResponse externalRef0.ACLPolicyBinding
+
+func (response CreateACLPolicyBinding200JSONResponse) VisitCreateACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLPolicyBinding400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLPolicyBinding400JSONResponse) VisitCreateACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLPolicyBinding409JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLPolicyBinding409JSONResponse) VisitCreateACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLPolicyBinding500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLPolicyBinding500JSONResponse) VisitCreateACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLPolicyBindingRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DeleteACLPolicyBindingResponseObject interface {
+	VisitDeleteACLPolicyBindingResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteACLPolicyBinding200JSONResponse externalRef0.ACLPolicyBinding
+
+func (response DeleteACLPolicyBinding200JSONResponse) VisitDeleteACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLPolicyBinding404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteACLPolicyBinding404JSONResponse) VisitDeleteACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLPolicyBinding500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteACLPolicyBinding500JSONResponse) VisitDeleteACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLPolicyBindingRequestObject struct {
+	Id string `json:"id"`
+}
+
+type GetACLPolicyBindingResponseObject interface {
+	VisitGetACLPolicyBindingResponse(ctx *fiber.Ctx) error
+}
+
+type GetACLPolicyBinding200JSONResponse externalRef0.ACLPolicyBinding
+
+func (response GetACLPolicyBinding200JSONResponse) VisitGetACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLPolicyBinding404JSONResponse externalRef0.ErrorResponse
+
+func (response GetACLPolicyBinding404JSONResponse) VisitGetACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLPolicyBinding500JSONResponse externalRef0.ErrorResponse
+
+func (response GetACLPolicyBinding500JSONResponse) VisitGetACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLPolicyBindingRequestObject struct {
+	Id   string `json:"id"`
+	Body *PutACLPolicyBindingJSONRequestBody
+}
+
+type PutACLPolicyBindingResponseObject interface {
+	VisitPutACLPolicyBindingResponse(ctx *fiber.Ctx) error
+}
+
+type PutACLPolicyBinding200JSONResponse externalRef0.ACLPolicyBinding
+
+func (response PutACLPolicyBinding200JSONResponse) VisitPutACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLPolicyBinding400JSONResponse externalRef0.ErrorResponse
+
+func (response PutACLPolicyBinding400JSONResponse) VisitPutACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLPolicyBinding500JSONResponse externalRef0.ErrorResponse
+
+func (response PutACLPolicyBinding500JSONResponse) VisitPutACLPolicyBindingResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type ListACLRolesRequestObject struct {
+	Params ListACLRolesParams
+}
+
+type ListACLRolesResponseObject interface {
+	VisitListACLRolesResponse(ctx *fiber.Ctx) error
+}
+
+type ListACLRoles200JSONResponse ACLRoleList
+
+func (response ListACLRoles200JSONResponse) VisitListACLRolesResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListACLRoles500JSONResponse externalRef0.ErrorResponse
+
+func (response ListACLRoles500JSONResponse) VisitListACLRolesResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLRoleRequestObject struct {
+	Body *CreateACLRoleJSONRequestBody
+}
+
+type CreateACLRoleResponseObject interface {
+	VisitCreateACLRoleResponse(ctx *fiber.Ctx) error
+}
+
+type CreateACLRole200JSONResponse externalRef0.ACLRole
+
+func (response CreateACLRole200JSONResponse) VisitCreateACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLRole400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLRole400JSONResponse) VisitCreateACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLRole409JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLRole409JSONResponse) VisitCreateACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLRole500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLRole500JSONResponse) VisitCreateACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLRoleRequestObject struct {
+	Name string `json:"name"`
+}
+
+type DeleteACLRoleResponseObject interface {
+	VisitDeleteACLRoleResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteACLRole200JSONResponse externalRef0.ACLRole
+
+func (response DeleteACLRole200JSONResponse) VisitDeleteACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLRole404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteACLRole404JSONResponse) VisitDeleteACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLRole500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteACLRole500JSONResponse) VisitDeleteACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLRoleRequestObject struct {
+	Name string `json:"name"`
+}
+
+type GetACLRoleResponseObject interface {
+	VisitGetACLRoleResponse(ctx *fiber.Ctx) error
+}
+
+type GetACLRole200JSONResponse externalRef0.ACLRole
+
+func (response GetACLRole200JSONResponse) VisitGetACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLRole404JSONResponse externalRef0.ErrorResponse
+
+func (response GetACLRole404JSONResponse) VisitGetACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLRole500JSONResponse externalRef0.ErrorResponse
+
+func (response GetACLRole500JSONResponse) VisitGetACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLRoleRequestObject struct {
+	Name string `json:"name"`
+	Body *PutACLRoleJSONRequestBody
+}
+
+type PutACLRoleResponseObject interface {
+	VisitPutACLRoleResponse(ctx *fiber.Ctx) error
+}
+
+type PutACLRole200JSONResponse externalRef0.ACLRole
+
+func (response PutACLRole200JSONResponse) VisitPutACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLRole400JSONResponse externalRef0.ErrorResponse
+
+func (response PutACLRole400JSONResponse) VisitPutACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLRole500JSONResponse externalRef0.ErrorResponse
+
+func (response PutACLRole500JSONResponse) VisitPutACLRoleResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type ListACLViewsRequestObject struct {
+	Params ListACLViewsParams
+}
+
+type ListACLViewsResponseObject interface {
+	VisitListACLViewsResponse(ctx *fiber.Ctx) error
+}
+
+type ListACLViews200JSONResponse ACLViewList
+
+func (response ListACLViews200JSONResponse) VisitListACLViewsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListACLViews500JSONResponse externalRef0.ErrorResponse
+
+func (response ListACLViews500JSONResponse) VisitListACLViewsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLViewRequestObject struct {
+	Body *CreateACLViewJSONRequestBody
+}
+
+type CreateACLViewResponseObject interface {
+	VisitCreateACLViewResponse(ctx *fiber.Ctx) error
+}
+
+type CreateACLView200JSONResponse externalRef0.ACLView
+
+func (response CreateACLView200JSONResponse) VisitCreateACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLView400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLView400JSONResponse) VisitCreateACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLView409JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLView409JSONResponse) VisitCreateACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type CreateACLView500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateACLView500JSONResponse) VisitCreateACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLViewRequestObject struct {
+	Name string `json:"name"`
+}
+
+type DeleteACLViewResponseObject interface {
+	VisitDeleteACLViewResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteACLView200JSONResponse externalRef0.ACLView
+
+func (response DeleteACLView200JSONResponse) VisitDeleteACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLView404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteACLView404JSONResponse) VisitDeleteACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteACLView500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteACLView500JSONResponse) VisitDeleteACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLViewRequestObject struct {
+	Name string `json:"name"`
+}
+
+type GetACLViewResponseObject interface {
+	VisitGetACLViewResponse(ctx *fiber.Ctx) error
+}
+
+type GetACLView200JSONResponse externalRef0.ACLView
+
+func (response GetACLView200JSONResponse) VisitGetACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLView404JSONResponse externalRef0.ErrorResponse
+
+func (response GetACLView404JSONResponse) VisitGetACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetACLView500JSONResponse externalRef0.ErrorResponse
+
+func (response GetACLView500JSONResponse) VisitGetACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLViewRequestObject struct {
+	Name string `json:"name"`
+	Body *PutACLViewJSONRequestBody
+}
+
+type PutACLViewResponseObject interface {
+	VisitPutACLViewResponse(ctx *fiber.Ctx) error
+}
+
+type PutACLView200JSONResponse externalRef0.ACLView
+
+func (response PutACLView200JSONResponse) VisitPutACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLView400JSONResponse externalRef0.ErrorResponse
+
+func (response PutACLView400JSONResponse) VisitPutACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutACLView500JSONResponse externalRef0.ErrorResponse
+
+func (response PutACLView500JSONResponse) VisitPutACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
 type ListCredentialsRequestObject struct {
 	Params ListCredentialsParams
 }
@@ -11516,7 +16988,7 @@ func (response CreateCredential500JSONResponse) VisitCreateCredentialResponse(ct
 }
 
 type DeleteCredentialRequestObject struct {
-	Name CredentialName `json:"name"`
+	Name string `json:"name"`
 }
 
 type DeleteCredentialResponseObject interface {
@@ -11551,7 +17023,7 @@ func (response DeleteCredential500JSONResponse) VisitDeleteCredentialResponse(ct
 }
 
 type GetCredentialRequestObject struct {
-	Name CredentialName `json:"name"`
+	Name string `json:"name"`
 }
 
 type GetCredentialResponseObject interface {
@@ -11586,7 +17058,7 @@ func (response GetCredential500JSONResponse) VisitGetCredentialResponse(ctx *fib
 }
 
 type PutCredentialRequestObject struct {
-	Name CredentialName `json:"name"`
+	Name string `json:"name"`
 	Body *PutCredentialJSONRequestBody
 }
 
@@ -11621,241 +17093,618 @@ func (response PutCredential500JSONResponse) VisitPutCredentialResponse(ctx *fib
 	return ctx.JSON(&response)
 }
 
-type ListDepotsRequestObject struct {
+type ListDashScopeTenantsRequestObject struct {
+	Params ListDashScopeTenantsParams
 }
 
-type ListDepotsResponseObject interface {
-	VisitListDepotsResponse(ctx *fiber.Ctx) error
+type ListDashScopeTenantsResponseObject interface {
+	VisitListDashScopeTenantsResponse(ctx *fiber.Ctx) error
 }
 
-type ListDepots200JSONResponse DepotList
+type ListDashScopeTenants200JSONResponse DashScopeTenantList
 
-func (response ListDepots200JSONResponse) VisitListDepotsResponse(ctx *fiber.Ctx) error {
+func (response ListDashScopeTenants200JSONResponse) VisitListDashScopeTenantsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type ListDepots500JSONResponse externalRef0.ErrorResponse
+type ListDashScopeTenants500JSONResponse externalRef0.ErrorResponse
 
-func (response ListDepots500JSONResponse) VisitListDepotsResponse(ctx *fiber.Ctx) error {
+func (response ListDashScopeTenants500JSONResponse) VisitListDashScopeTenantsResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
 
-type GetDepotRequestObject struct {
-	Depot DepotName `json:"depot"`
+type CreateDashScopeTenantRequestObject struct {
+	Body *CreateDashScopeTenantJSONRequestBody
 }
 
-type GetDepotResponseObject interface {
-	VisitGetDepotResponse(ctx *fiber.Ctx) error
+type CreateDashScopeTenantResponseObject interface {
+	VisitCreateDashScopeTenantResponse(ctx *fiber.Ctx) error
 }
 
-type GetDepot200JSONResponse externalRef0.Depot
+type CreateDashScopeTenant200JSONResponse externalRef0.DashScopeTenant
 
-func (response GetDepot200JSONResponse) VisitGetDepotResponse(ctx *fiber.Ctx) error {
+func (response CreateDashScopeTenant200JSONResponse) VisitCreateDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type GetDepot404JSONResponse externalRef0.ErrorResponse
+type CreateDashScopeTenant400JSONResponse externalRef0.ErrorResponse
 
-func (response GetDepot404JSONResponse) VisitGetDepotResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(404)
-
-	return ctx.JSON(&response)
-}
-
-type PutDepotInfoRequestObject struct {
-	Depot DepotName `json:"depot"`
-	Body  *PutDepotInfoJSONRequestBody
-}
-
-type PutDepotInfoResponseObject interface {
-	VisitPutDepotInfoResponse(ctx *fiber.Ctx) error
-}
-
-type PutDepotInfo200JSONResponse externalRef0.Depot
-
-func (response PutDepotInfo200JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type PutDepotInfo400JSONResponse externalRef0.ErrorResponse
-
-func (response PutDepotInfo400JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
+func (response CreateDashScopeTenant400JSONResponse) VisitCreateDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(400)
 
 	return ctx.JSON(&response)
 }
 
-type PutDepotInfo409JSONResponse externalRef0.ErrorResponse
+type CreateDashScopeTenant409JSONResponse externalRef0.ErrorResponse
 
-func (response PutDepotInfo409JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
+func (response CreateDashScopeTenant409JSONResponse) VisitCreateDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(409)
 
 	return ctx.JSON(&response)
 }
 
-type PutDepotInfo500JSONResponse externalRef0.ErrorResponse
+type CreateDashScopeTenant500JSONResponse externalRef0.ErrorResponse
 
-func (response PutDepotInfo500JSONResponse) VisitPutDepotInfoResponse(ctx *fiber.Ctx) error {
+func (response CreateDashScopeTenant500JSONResponse) VisitCreateDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepotRequestObject struct {
-	Depot DepotName `json:"depot"`
+type DeleteDashScopeTenantRequestObject struct {
+	Name string `json:"name"`
 }
 
-type ReleaseDepotResponseObject interface {
-	VisitReleaseDepotResponse(ctx *fiber.Ctx) error
+type DeleteDashScopeTenantResponseObject interface {
+	VisitDeleteDashScopeTenantResponse(ctx *fiber.Ctx) error
 }
 
-type ReleaseDepot200JSONResponse externalRef0.Depot
+type DeleteDashScopeTenant200JSONResponse externalRef0.DashScopeTenant
 
-func (response ReleaseDepot200JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
+func (response DeleteDashScopeTenant200JSONResponse) VisitDeleteDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepot404JSONResponse externalRef0.ErrorResponse
+type DeleteDashScopeTenant404JSONResponse externalRef0.ErrorResponse
 
-func (response ReleaseDepot404JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
+func (response DeleteDashScopeTenant404JSONResponse) VisitDeleteDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(404)
 
 	return ctx.JSON(&response)
 }
 
-type ReleaseDepot409JSONResponse externalRef0.ErrorResponse
+type DeleteDashScopeTenant500JSONResponse externalRef0.ErrorResponse
 
-func (response ReleaseDepot409JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(409)
-
-	return ctx.JSON(&response)
-}
-
-type ReleaseDepot500JSONResponse externalRef0.ErrorResponse
-
-func (response ReleaseDepot500JSONResponse) VisitReleaseDepotResponse(ctx *fiber.Ctx) error {
+func (response DeleteDashScopeTenant500JSONResponse) VisitDeleteDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
 
-type RollbackDepotRequestObject struct {
-	Depot DepotName `json:"depot"`
+type GetDashScopeTenantRequestObject struct {
+	Name string `json:"name"`
 }
 
-type RollbackDepotResponseObject interface {
-	VisitRollbackDepotResponse(ctx *fiber.Ctx) error
+type GetDashScopeTenantResponseObject interface {
+	VisitGetDashScopeTenantResponse(ctx *fiber.Ctx) error
 }
 
-type RollbackDepot200JSONResponse externalRef0.Depot
+type GetDashScopeTenant200JSONResponse externalRef0.DashScopeTenant
 
-func (response RollbackDepot200JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
+func (response GetDashScopeTenant200JSONResponse) VisitGetDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type RollbackDepot404JSONResponse externalRef0.ErrorResponse
+type GetDashScopeTenant404JSONResponse externalRef0.ErrorResponse
 
-func (response RollbackDepot404JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
+func (response GetDashScopeTenant404JSONResponse) VisitGetDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(404)
 
 	return ctx.JSON(&response)
 }
 
-type RollbackDepot409JSONResponse externalRef0.ErrorResponse
+type GetDashScopeTenant500JSONResponse externalRef0.ErrorResponse
 
-func (response RollbackDepot409JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(409)
-
-	return ctx.JSON(&response)
-}
-
-type RollbackDepot500JSONResponse externalRef0.ErrorResponse
-
-func (response RollbackDepot500JSONResponse) VisitRollbackDepotResponse(ctx *fiber.Ctx) error {
+func (response GetDashScopeTenant500JSONResponse) VisitGetDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
 
-type GetChannelRequestObject struct {
-	Depot   DepotName `json:"depot"`
-	Channel Channel   `json:"channel"`
+type PutDashScopeTenantRequestObject struct {
+	Name string `json:"name"`
+	Body *PutDashScopeTenantJSONRequestBody
 }
 
-type GetChannelResponseObject interface {
-	VisitGetChannelResponse(ctx *fiber.Ctx) error
+type PutDashScopeTenantResponseObject interface {
+	VisitPutDashScopeTenantResponse(ctx *fiber.Ctx) error
 }
 
-type GetChannel200JSONResponse externalRef0.DepotRelease
+type PutDashScopeTenant200JSONResponse externalRef0.DashScopeTenant
 
-func (response GetChannel200JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
+func (response PutDashScopeTenant200JSONResponse) VisitPutDashScopeTenantResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type GetChannel404JSONResponse externalRef0.ErrorResponse
+type PutDashScopeTenant400JSONResponse externalRef0.ErrorResponse
 
-func (response GetChannel404JSONResponse) VisitGetChannelResponse(ctx *fiber.Ctx) error {
+func (response PutDashScopeTenant400JSONResponse) VisitPutDashScopeTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutDashScopeTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response PutDashScopeTenant500JSONResponse) VisitPutDashScopeTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type ListFirmwaresRequestObject struct {
+	Params ListFirmwaresParams
+}
+
+type ListFirmwaresResponseObject interface {
+	VisitListFirmwaresResponse(ctx *fiber.Ctx) error
+}
+
+type ListFirmwares200JSONResponse FirmwareList
+
+func (response ListFirmwares200JSONResponse) VisitListFirmwaresResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListFirmwares500JSONResponse externalRef0.ErrorResponse
+
+func (response ListFirmwares500JSONResponse) VisitListFirmwaresResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateFirmwareRequestObject struct {
+	Body *CreateFirmwareJSONRequestBody
+}
+
+type CreateFirmwareResponseObject interface {
+	VisitCreateFirmwareResponse(ctx *fiber.Ctx) error
+}
+
+type CreateFirmware200JSONResponse externalRef0.Firmware
+
+func (response CreateFirmware200JSONResponse) VisitCreateFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateFirmware400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateFirmware400JSONResponse) VisitCreateFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateFirmware409JSONResponse externalRef0.ErrorResponse
+
+func (response CreateFirmware409JSONResponse) VisitCreateFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type CreateFirmware500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateFirmware500JSONResponse) VisitCreateFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteFirmwareRequestObject struct {
+	Name string `json:"name"`
+}
+
+type DeleteFirmwareResponseObject interface {
+	VisitDeleteFirmwareResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteFirmware200JSONResponse externalRef0.Firmware
+
+func (response DeleteFirmware200JSONResponse) VisitDeleteFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteFirmware404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteFirmware404JSONResponse) VisitDeleteFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(404)
 
 	return ctx.JSON(&response)
 }
 
-type PutChannelRequestObject struct {
-	Depot   DepotName `json:"depot"`
-	Channel Channel   `json:"channel"`
-	Body    io.Reader
+type DeleteFirmware500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteFirmware500JSONResponse) VisitDeleteFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
 }
 
-type PutChannelResponseObject interface {
-	VisitPutChannelResponse(ctx *fiber.Ctx) error
+type GetFirmwareRequestObject struct {
+	Name string `json:"name"`
 }
 
-type PutChannel200JSONResponse externalRef0.DepotRelease
+type GetFirmwareResponseObject interface {
+	VisitGetFirmwareResponse(ctx *fiber.Ctx) error
+}
 
-func (response PutChannel200JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
+type GetFirmware200JSONResponse externalRef0.Firmware
+
+func (response GetFirmware200JSONResponse) VisitGetFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type PutChannel409JSONResponse externalRef0.ErrorResponse
+type GetFirmware404JSONResponse externalRef0.ErrorResponse
 
-func (response PutChannel409JSONResponse) VisitPutChannelResponse(ctx *fiber.Ctx) error {
+func (response GetFirmware404JSONResponse) VisitGetFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetFirmware500JSONResponse externalRef0.ErrorResponse
+
+func (response GetFirmware500JSONResponse) VisitGetFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutFirmwareRequestObject struct {
+	Name string `json:"name"`
+	Body *PutFirmwareJSONRequestBody
+}
+
+type PutFirmwareResponseObject interface {
+	VisitPutFirmwareResponse(ctx *fiber.Ctx) error
+}
+
+type PutFirmware200JSONResponse externalRef0.Firmware
+
+func (response PutFirmware200JSONResponse) VisitPutFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutFirmware400JSONResponse externalRef0.ErrorResponse
+
+func (response PutFirmware400JSONResponse) VisitPutFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutFirmware500JSONResponse externalRef0.ErrorResponse
+
+func (response PutFirmware500JSONResponse) VisitPutFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type ReleaseFirmwareRequestObject struct {
+	Name string `json:"name"`
+}
+
+type ReleaseFirmwareResponseObject interface {
+	VisitReleaseFirmwareResponse(ctx *fiber.Ctx) error
+}
+
+type ReleaseFirmware200JSONResponse externalRef0.Firmware
+
+func (response ReleaseFirmware200JSONResponse) VisitReleaseFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ReleaseFirmware404JSONResponse externalRef0.ErrorResponse
+
+func (response ReleaseFirmware404JSONResponse) VisitReleaseFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type ReleaseFirmware409JSONResponse externalRef0.ErrorResponse
+
+func (response ReleaseFirmware409JSONResponse) VisitReleaseFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type ReleaseFirmware500JSONResponse externalRef0.ErrorResponse
+
+func (response ReleaseFirmware500JSONResponse) VisitReleaseFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type RollbackFirmwareRequestObject struct {
+	Name string `json:"name"`
+}
+
+type RollbackFirmwareResponseObject interface {
+	VisitRollbackFirmwareResponse(ctx *fiber.Ctx) error
+}
+
+type RollbackFirmware200JSONResponse externalRef0.Firmware
+
+func (response RollbackFirmware200JSONResponse) VisitRollbackFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type RollbackFirmware404JSONResponse externalRef0.ErrorResponse
+
+func (response RollbackFirmware404JSONResponse) VisitRollbackFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type RollbackFirmware409JSONResponse externalRef0.ErrorResponse
+
+func (response RollbackFirmware409JSONResponse) VisitRollbackFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type RollbackFirmware500JSONResponse externalRef0.ErrorResponse
+
+func (response RollbackFirmware500JSONResponse) VisitRollbackFirmwareResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type ListGeminiTenantsRequestObject struct {
+	Params ListGeminiTenantsParams
+}
+
+type ListGeminiTenantsResponseObject interface {
+	VisitListGeminiTenantsResponse(ctx *fiber.Ctx) error
+}
+
+type ListGeminiTenants200JSONResponse GeminiTenantList
+
+func (response ListGeminiTenants200JSONResponse) VisitListGeminiTenantsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListGeminiTenants500JSONResponse externalRef0.ErrorResponse
+
+func (response ListGeminiTenants500JSONResponse) VisitListGeminiTenantsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateGeminiTenantRequestObject struct {
+	Body *CreateGeminiTenantJSONRequestBody
+}
+
+type CreateGeminiTenantResponseObject interface {
+	VisitCreateGeminiTenantResponse(ctx *fiber.Ctx) error
+}
+
+type CreateGeminiTenant200JSONResponse externalRef0.GeminiTenant
+
+func (response CreateGeminiTenant200JSONResponse) VisitCreateGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateGeminiTenant400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateGeminiTenant400JSONResponse) VisitCreateGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateGeminiTenant409JSONResponse externalRef0.ErrorResponse
+
+func (response CreateGeminiTenant409JSONResponse) VisitCreateGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type CreateGeminiTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateGeminiTenant500JSONResponse) VisitCreateGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteGeminiTenantRequestObject struct {
+	Name string `json:"name"`
+}
+
+type DeleteGeminiTenantResponseObject interface {
+	VisitDeleteGeminiTenantResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteGeminiTenant200JSONResponse externalRef0.GeminiTenant
+
+func (response DeleteGeminiTenant200JSONResponse) VisitDeleteGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteGeminiTenant404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteGeminiTenant404JSONResponse) VisitDeleteGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteGeminiTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteGeminiTenant500JSONResponse) VisitDeleteGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetGeminiTenantRequestObject struct {
+	Name string `json:"name"`
+}
+
+type GetGeminiTenantResponseObject interface {
+	VisitGetGeminiTenantResponse(ctx *fiber.Ctx) error
+}
+
+type GetGeminiTenant200JSONResponse externalRef0.GeminiTenant
+
+func (response GetGeminiTenant200JSONResponse) VisitGetGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetGeminiTenant404JSONResponse externalRef0.ErrorResponse
+
+func (response GetGeminiTenant404JSONResponse) VisitGetGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetGeminiTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response GetGeminiTenant500JSONResponse) VisitGetGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutGeminiTenantRequestObject struct {
+	Name string `json:"name"`
+	Body *PutGeminiTenantJSONRequestBody
+}
+
+type PutGeminiTenantResponseObject interface {
+	VisitPutGeminiTenantResponse(ctx *fiber.Ctx) error
+}
+
+type PutGeminiTenant200JSONResponse externalRef0.GeminiTenant
+
+func (response PutGeminiTenant200JSONResponse) VisitPutGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutGeminiTenant400JSONResponse externalRef0.ErrorResponse
+
+func (response PutGeminiTenant400JSONResponse) VisitPutGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutGeminiTenant500JSONResponse externalRef0.ErrorResponse
+
+func (response PutGeminiTenant500JSONResponse) VisitPutGeminiTenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
 
 	return ctx.JSON(&response)
 }
@@ -11931,7 +17780,7 @@ func (response CreateMiniMaxTenant500JSONResponse) VisitCreateMiniMaxTenantRespo
 }
 
 type DeleteMiniMaxTenantRequestObject struct {
-	Name MiniMaxTenantName `json:"name"`
+	Name string `json:"name"`
 }
 
 type DeleteMiniMaxTenantResponseObject interface {
@@ -11966,7 +17815,7 @@ func (response DeleteMiniMaxTenant500JSONResponse) VisitDeleteMiniMaxTenantRespo
 }
 
 type GetMiniMaxTenantRequestObject struct {
-	Name MiniMaxTenantName `json:"name"`
+	Name string `json:"name"`
 }
 
 type GetMiniMaxTenantResponseObject interface {
@@ -12001,7 +17850,7 @@ func (response GetMiniMaxTenant500JSONResponse) VisitGetMiniMaxTenantResponse(ct
 }
 
 type PutMiniMaxTenantRequestObject struct {
-	Name MiniMaxTenantName `json:"name"`
+	Name string `json:"name"`
 	Body *PutMiniMaxTenantJSONRequestBody
 }
 
@@ -12037,7 +17886,7 @@ func (response PutMiniMaxTenant500JSONResponse) VisitPutMiniMaxTenantResponse(ct
 }
 
 type SyncMiniMaxTenantVoicesRequestObject struct {
-	Name MiniMaxTenantName `json:"name"`
+	Name string `json:"name"`
 }
 
 type SyncMiniMaxTenantVoicesResponseObject interface {
@@ -12160,7 +18009,7 @@ func (response CreateModel500JSONResponse) VisitCreateModelResponse(ctx *fiber.C
 }
 
 type DeleteModelRequestObject struct {
-	Id ModelID `json:"id"`
+	Id string `json:"id"`
 }
 
 type DeleteModelResponseObject interface {
@@ -12195,7 +18044,7 @@ func (response DeleteModel500JSONResponse) VisitDeleteModelResponse(ctx *fiber.C
 }
 
 type GetModelRequestObject struct {
-	Id ModelID `json:"id"`
+	Id string `json:"id"`
 }
 
 type GetModelResponseObject interface {
@@ -12230,7 +18079,7 @@ func (response GetModel500JSONResponse) VisitGetModelResponse(ctx *fiber.Ctx) er
 }
 
 type PutModelRequestObject struct {
-	Id   ModelID `json:"id"`
+	Id   string `json:"id"`
 	Body *PutModelJSONRequestBody
 }
 
@@ -12274,6 +18123,182 @@ func (response PutModel500JSONResponse) VisitPutModelResponse(ctx *fiber.Ctx) er
 	return ctx.JSON(&response)
 }
 
+type ListOpenAITenantsRequestObject struct {
+	Params ListOpenAITenantsParams
+}
+
+type ListOpenAITenantsResponseObject interface {
+	VisitListOpenAITenantsResponse(ctx *fiber.Ctx) error
+}
+
+type ListOpenAITenants200JSONResponse OpenAITenantList
+
+func (response ListOpenAITenants200JSONResponse) VisitListOpenAITenantsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListOpenAITenants500JSONResponse externalRef0.ErrorResponse
+
+func (response ListOpenAITenants500JSONResponse) VisitListOpenAITenantsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateOpenAITenantRequestObject struct {
+	Body *CreateOpenAITenantJSONRequestBody
+}
+
+type CreateOpenAITenantResponseObject interface {
+	VisitCreateOpenAITenantResponse(ctx *fiber.Ctx) error
+}
+
+type CreateOpenAITenant200JSONResponse externalRef0.OpenAITenant
+
+func (response CreateOpenAITenant200JSONResponse) VisitCreateOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateOpenAITenant400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateOpenAITenant400JSONResponse) VisitCreateOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateOpenAITenant409JSONResponse externalRef0.ErrorResponse
+
+func (response CreateOpenAITenant409JSONResponse) VisitCreateOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(409)
+
+	return ctx.JSON(&response)
+}
+
+type CreateOpenAITenant500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateOpenAITenant500JSONResponse) VisitCreateOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteOpenAITenantRequestObject struct {
+	Name string `json:"name"`
+}
+
+type DeleteOpenAITenantResponseObject interface {
+	VisitDeleteOpenAITenantResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteOpenAITenant200JSONResponse externalRef0.OpenAITenant
+
+func (response DeleteOpenAITenant200JSONResponse) VisitDeleteOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteOpenAITenant404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteOpenAITenant404JSONResponse) VisitDeleteOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteOpenAITenant500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteOpenAITenant500JSONResponse) VisitDeleteOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetOpenAITenantRequestObject struct {
+	Name string `json:"name"`
+}
+
+type GetOpenAITenantResponseObject interface {
+	VisitGetOpenAITenantResponse(ctx *fiber.Ctx) error
+}
+
+type GetOpenAITenant200JSONResponse externalRef0.OpenAITenant
+
+func (response GetOpenAITenant200JSONResponse) VisitGetOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetOpenAITenant404JSONResponse externalRef0.ErrorResponse
+
+func (response GetOpenAITenant404JSONResponse) VisitGetOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetOpenAITenant500JSONResponse externalRef0.ErrorResponse
+
+func (response GetOpenAITenant500JSONResponse) VisitGetOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type PutOpenAITenantRequestObject struct {
+	Name string `json:"name"`
+	Body *PutOpenAITenantJSONRequestBody
+}
+
+type PutOpenAITenantResponseObject interface {
+	VisitPutOpenAITenantResponse(ctx *fiber.Ctx) error
+}
+
+type PutOpenAITenant200JSONResponse externalRef0.OpenAITenant
+
+func (response PutOpenAITenant200JSONResponse) VisitPutOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type PutOpenAITenant400JSONResponse externalRef0.ErrorResponse
+
+func (response PutOpenAITenant400JSONResponse) VisitPutOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutOpenAITenant500JSONResponse externalRef0.ErrorResponse
+
+func (response PutOpenAITenant500JSONResponse) VisitPutOpenAITenantResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
 type ListPeersRequestObject struct {
 	Params ListPeersParams
 }
@@ -12294,63 +18319,6 @@ func (response ListPeers200JSONResponse) VisitListPeersResponse(ctx *fiber.Ctx) 
 type ListPeers500JSONResponse externalRef0.ErrorResponse
 
 func (response ListPeers500JSONResponse) VisitListPeersResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(500)
-
-	return ctx.JSON(&response)
-}
-
-type ListPeersByCertificationRequestObject struct {
-	Type      externalRef0.GearCertificationType      `json:"type"`
-	Authority externalRef0.GearCertificationAuthority `json:"authority"`
-	Id        string                                  `json:"id"`
-	Params    ListPeersByCertificationParams
-}
-
-type ListPeersByCertificationResponseObject interface {
-	VisitListPeersByCertificationResponse(ctx *fiber.Ctx) error
-}
-
-type ListPeersByCertification200JSONResponse RegistrationList
-
-func (response ListPeersByCertification200JSONResponse) VisitListPeersByCertificationResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type ListPeersByCertification500JSONResponse externalRef0.ErrorResponse
-
-func (response ListPeersByCertification500JSONResponse) VisitListPeersByCertificationResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(500)
-
-	return ctx.JSON(&response)
-}
-
-type ListPeersByFirmwareRequestObject struct {
-	Depot   string                           `json:"depot"`
-	Channel externalRef0.GearFirmwareChannel `json:"channel"`
-	Params  ListPeersByFirmwareParams
-}
-
-type ListPeersByFirmwareResponseObject interface {
-	VisitListPeersByFirmwareResponse(ctx *fiber.Ctx) error
-}
-
-type ListPeersByFirmware200JSONResponse RegistrationList
-
-func (response ListPeersByFirmware200JSONResponse) VisitListPeersByFirmwareResponse(ctx *fiber.Ctx) error {
-	ctx.Response().Header.Set("Content-Type", "application/json")
-	ctx.Status(200)
-
-	return ctx.JSON(&response)
-}
-
-type ListPeersByFirmware500JSONResponse externalRef0.ErrorResponse
-
-func (response ListPeersByFirmware500JSONResponse) VisitListPeersByFirmwareResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
@@ -12439,7 +18407,7 @@ func (response ResolvePeerBySN404JSONResponse) VisitResolvePeerBySNResponse(ctx 
 }
 
 type DeletePeerRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 }
 
 type DeletePeerResponseObject interface {
@@ -12465,7 +18433,7 @@ func (response DeletePeer404JSONResponse) VisitDeletePeerResponse(ctx *fiber.Ctx
 }
 
 type GetPeerRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 }
 
 type GetPeerResponseObject interface {
@@ -12491,7 +18459,7 @@ func (response GetPeer404JSONResponse) VisitGetPeerResponse(ctx *fiber.Ctx) erro
 }
 
 type ApprovePeerRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 	Body      *ApprovePeerJSONRequestBody
 }
 
@@ -12518,7 +18486,7 @@ func (response ApprovePeer400JSONResponse) VisitApprovePeerResponse(ctx *fiber.C
 }
 
 type BlockPeerRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 }
 
 type BlockPeerResponseObject interface {
@@ -12544,7 +18512,7 @@ func (response BlockPeer404JSONResponse) VisitBlockPeerResponse(ctx *fiber.Ctx) 
 }
 
 type RefreshPeerRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 }
 
 type RefreshPeerResponseObject interface {
@@ -12588,7 +18556,7 @@ func (response RefreshPeer502JSONResponse) VisitRefreshPeerResponse(ctx *fiber.C
 }
 
 type GetPeerConfigRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 }
 
 type GetPeerConfigResponseObject interface {
@@ -12614,7 +18582,7 @@ func (response GetPeerConfig404JSONResponse) VisitGetPeerConfigResponse(ctx *fib
 }
 
 type PutPeerConfigRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 	Body      *PutPeerConfigJSONRequestBody
 }
 
@@ -12650,7 +18618,7 @@ func (response PutPeerConfig404JSONResponse) VisitPutPeerConfigResponse(ctx *fib
 }
 
 type GetPeerInfoRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 }
 
 type GetPeerInfoResponseObject interface {
@@ -12675,26 +18643,36 @@ func (response GetPeerInfo404JSONResponse) VisitGetPeerInfoResponse(ctx *fiber.C
 	return ctx.JSON(&response)
 }
 
-type GetPeerOTARequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+type PutPeerInfoRequestObject struct {
+	PublicKey string `json:"publicKey"`
+	Body      *PutPeerInfoJSONRequestBody
 }
 
-type GetPeerOTAResponseObject interface {
-	VisitGetPeerOTAResponse(ctx *fiber.Ctx) error
+type PutPeerInfoResponseObject interface {
+	VisitPutPeerInfoResponse(ctx *fiber.Ctx) error
 }
 
-type GetPeerOTA200JSONResponse externalRef0.OTASummary
+type PutPeerInfo200JSONResponse externalRef0.DeviceInfo
 
-func (response GetPeerOTA200JSONResponse) VisitGetPeerOTAResponse(ctx *fiber.Ctx) error {
+func (response PutPeerInfo200JSONResponse) VisitPutPeerInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(200)
 
 	return ctx.JSON(&response)
 }
 
-type GetPeerOTA404JSONResponse externalRef0.ErrorResponse
+type PutPeerInfo400JSONResponse externalRef0.ErrorResponse
 
-func (response GetPeerOTA404JSONResponse) VisitGetPeerOTAResponse(ctx *fiber.Ctx) error {
+func (response PutPeerInfo400JSONResponse) VisitPutPeerInfoResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type PutPeerInfo404JSONResponse externalRef0.ErrorResponse
+
+func (response PutPeerInfo404JSONResponse) VisitPutPeerInfoResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(404)
 
@@ -12702,7 +18680,7 @@ func (response GetPeerOTA404JSONResponse) VisitGetPeerOTAResponse(ctx *fiber.Ctx
 }
 
 type GetPeerRuntimeRequestObject struct {
-	PublicKey PublicKey `json:"publicKey"`
+	PublicKey string `json:"publicKey"`
 }
 
 type GetPeerRuntimeResponseObject interface {
@@ -12720,7 +18698,7 @@ func (response GetPeerRuntime200JSONResponse) VisitGetPeerRuntimeResponse(ctx *f
 
 type DeleteResourceRequestObject struct {
 	Kind ResourceKind `json:"kind"`
-	Name ResourceName `json:"name"`
+	Name string       `json:"name"`
 }
 
 type DeleteResourceResponseObject interface {
@@ -12774,7 +18752,7 @@ func (response DeleteResource500JSONResponse) VisitDeleteResourceResponse(ctx *f
 
 type GetResourceRequestObject struct {
 	Kind ResourceKind `json:"kind"`
-	Name ResourceName `json:"name"`
+	Name string       `json:"name"`
 }
 
 type GetResourceResponseObject interface {
@@ -12828,7 +18806,7 @@ func (response GetResource501JSONResponse) VisitGetResourceResponse(ctx *fiber.C
 
 type PutResourceRequestObject struct {
 	Kind     ResourceKind `json:"kind"`
-	Name     ResourceName `json:"name"`
+	Name     string       `json:"name"`
 	JSONBody *PutResourceJSONRequestBody
 	Body     io.Reader
 }
@@ -12962,7 +18940,7 @@ func (response CreateVoice500JSONResponse) VisitCreateVoiceResponse(ctx *fiber.C
 }
 
 type DeleteVoiceRequestObject struct {
-	Id VoiceID `json:"id"`
+	Id string `json:"id"`
 }
 
 type DeleteVoiceResponseObject interface {
@@ -12997,7 +18975,7 @@ func (response DeleteVoice500JSONResponse) VisitDeleteVoiceResponse(ctx *fiber.C
 }
 
 type GetVoiceRequestObject struct {
-	Id VoiceID `json:"id"`
+	Id string `json:"id"`
 }
 
 type GetVoiceResponseObject interface {
@@ -13032,7 +19010,7 @@ func (response GetVoice500JSONResponse) VisitGetVoiceResponse(ctx *fiber.Ctx) er
 }
 
 type PutVoiceRequestObject struct {
-	Id   VoiceID `json:"id"`
+	Id   string `json:"id"`
 	Body *PutVoiceJSONRequestBody
 }
 
@@ -13147,7 +19125,7 @@ func (response CreateVolcTenant500JSONResponse) VisitCreateVolcTenantResponse(ct
 }
 
 type DeleteVolcTenantRequestObject struct {
-	Name VolcTenantName `json:"name"`
+	Name string `json:"name"`
 }
 
 type DeleteVolcTenantResponseObject interface {
@@ -13182,7 +19160,7 @@ func (response DeleteVolcTenant500JSONResponse) VisitDeleteVolcTenantResponse(ct
 }
 
 type GetVolcTenantRequestObject struct {
-	Name VolcTenantName `json:"name"`
+	Name string `json:"name"`
 }
 
 type GetVolcTenantResponseObject interface {
@@ -13217,7 +19195,7 @@ func (response GetVolcTenant500JSONResponse) VisitGetVolcTenantResponse(ctx *fib
 }
 
 type PutVolcTenantRequestObject struct {
-	Name VolcTenantName `json:"name"`
+	Name string `json:"name"`
 	Body *PutVolcTenantJSONRequestBody
 }
 
@@ -13253,7 +19231,7 @@ func (response PutVolcTenant500JSONResponse) VisitPutVolcTenantResponse(ctx *fib
 }
 
 type SyncVolcTenantVoicesRequestObject struct {
-	Name VolcTenantName `json:"name"`
+	Name string `json:"name"`
 }
 
 type SyncVolcTenantVoicesResponseObject interface {
@@ -13376,7 +19354,7 @@ func (response CreateWorkflow500JSONResponse) VisitCreateWorkflowResponse(ctx *f
 }
 
 type DeleteWorkflowRequestObject struct {
-	Name WorkflowName `json:"name"`
+	Name string `json:"name"`
 }
 
 type DeleteWorkflowResponseObject interface {
@@ -13411,7 +19389,7 @@ func (response DeleteWorkflow500JSONResponse) VisitDeleteWorkflowResponse(ctx *f
 }
 
 type GetWorkflowRequestObject struct {
-	Name WorkflowName `json:"name"`
+	Name string `json:"name"`
 }
 
 type GetWorkflowResponseObject interface {
@@ -13446,7 +19424,7 @@ func (response GetWorkflow500JSONResponse) VisitGetWorkflowResponse(ctx *fiber.C
 }
 
 type PutWorkflowRequestObject struct {
-	Name WorkflowName `json:"name"`
+	Name string `json:"name"`
 	Body *PutWorkflowJSONRequestBody
 }
 
@@ -13552,7 +19530,7 @@ func (response CreateWorkspace500JSONResponse) VisitCreateWorkspaceResponse(ctx 
 }
 
 type DeleteWorkspaceRequestObject struct {
-	Name WorkspaceName `json:"name"`
+	Name string `json:"name"`
 }
 
 type DeleteWorkspaceResponseObject interface {
@@ -13587,7 +19565,7 @@ func (response DeleteWorkspace500JSONResponse) VisitDeleteWorkspaceResponse(ctx 
 }
 
 type GetWorkspaceRequestObject struct {
-	Name WorkspaceName `json:"name"`
+	Name string `json:"name"`
 }
 
 type GetWorkspaceResponseObject interface {
@@ -13622,7 +19600,7 @@ func (response GetWorkspace500JSONResponse) VisitGetWorkspaceResponse(ctx *fiber
 }
 
 type PutWorkspaceRequestObject struct {
-	Name WorkspaceName `json:"name"`
+	Name string `json:"name"`
 	Body *PutWorkspaceJSONRequestBody
 }
 
@@ -13662,6 +19640,51 @@ type StrictServerInterface interface {
 	// Apply an admin resource
 	// (POST /@apply)
 	ApplyResource(ctx context.Context, request ApplyResourceRequestObject) (ApplyResourceResponseObject, error)
+	// List ACL policy bindings
+	// (GET /acl/policy-bindings)
+	ListACLPolicyBindings(ctx context.Context, request ListACLPolicyBindingsRequestObject) (ListACLPolicyBindingsResponseObject, error)
+	// Create an ACL policy binding
+	// (POST /acl/policy-bindings)
+	CreateACLPolicyBinding(ctx context.Context, request CreateACLPolicyBindingRequestObject) (CreateACLPolicyBindingResponseObject, error)
+	// Delete an ACL policy binding
+	// (DELETE /acl/policy-bindings/{id})
+	DeleteACLPolicyBinding(ctx context.Context, request DeleteACLPolicyBindingRequestObject) (DeleteACLPolicyBindingResponseObject, error)
+	// Get an ACL policy binding
+	// (GET /acl/policy-bindings/{id})
+	GetACLPolicyBinding(ctx context.Context, request GetACLPolicyBindingRequestObject) (GetACLPolicyBindingResponseObject, error)
+	// Create or update an ACL policy binding
+	// (PUT /acl/policy-bindings/{id})
+	PutACLPolicyBinding(ctx context.Context, request PutACLPolicyBindingRequestObject) (PutACLPolicyBindingResponseObject, error)
+	// List ACL roles
+	// (GET /acl/roles)
+	ListACLRoles(ctx context.Context, request ListACLRolesRequestObject) (ListACLRolesResponseObject, error)
+	// Create an ACL role
+	// (POST /acl/roles)
+	CreateACLRole(ctx context.Context, request CreateACLRoleRequestObject) (CreateACLRoleResponseObject, error)
+	// Delete an ACL role
+	// (DELETE /acl/roles/{name})
+	DeleteACLRole(ctx context.Context, request DeleteACLRoleRequestObject) (DeleteACLRoleResponseObject, error)
+	// Get an ACL role
+	// (GET /acl/roles/{name})
+	GetACLRole(ctx context.Context, request GetACLRoleRequestObject) (GetACLRoleResponseObject, error)
+	// Create or update an ACL role
+	// (PUT /acl/roles/{name})
+	PutACLRole(ctx context.Context, request PutACLRoleRequestObject) (PutACLRoleResponseObject, error)
+	// List ACL views
+	// (GET /acl/views)
+	ListACLViews(ctx context.Context, request ListACLViewsRequestObject) (ListACLViewsResponseObject, error)
+	// Create an ACL view
+	// (POST /acl/views)
+	CreateACLView(ctx context.Context, request CreateACLViewRequestObject) (CreateACLViewResponseObject, error)
+	// Delete an ACL view
+	// (DELETE /acl/views/{name})
+	DeleteACLView(ctx context.Context, request DeleteACLViewRequestObject) (DeleteACLViewResponseObject, error)
+	// Get an ACL view
+	// (GET /acl/views/{name})
+	GetACLView(ctx context.Context, request GetACLViewRequestObject) (GetACLViewResponseObject, error)
+	// Create or update an ACL view
+	// (PUT /acl/views/{name})
+	PutACLView(ctx context.Context, request PutACLViewRequestObject) (PutACLViewResponseObject, error)
 	// List stored credentials
 	// (GET /credentials)
 	ListCredentials(ctx context.Context, request ListCredentialsRequestObject) (ListCredentialsResponseObject, error)
@@ -13677,27 +19700,57 @@ type StrictServerInterface interface {
 	// Create or update a credential
 	// (PUT /credentials/{name})
 	PutCredential(ctx context.Context, request PutCredentialRequestObject) (PutCredentialResponseObject, error)
-	// List all firmware depots
-	// (GET /depots)
-	ListDepots(ctx context.Context, request ListDepotsRequestObject) (ListDepotsResponseObject, error)
-	// Get a firmware depot snapshot
-	// (GET /depots/{depot})
-	GetDepot(ctx context.Context, request GetDepotRequestObject) (GetDepotResponseObject, error)
-	// Create or update depot info (file manifest)
-	// (PUT /depots/{depot})
-	PutDepotInfo(ctx context.Context, request PutDepotInfoRequestObject) (PutDepotInfoResponseObject, error)
-	// Promote testing channel to stable
-	// (PUT /depots/{depot}/@release)
-	ReleaseDepot(ctx context.Context, request ReleaseDepotRequestObject) (ReleaseDepotResponseObject, error)
-	// Roll back stable channel to the rollback snapshot
-	// (PUT /depots/{depot}/@rollback)
-	RollbackDepot(ctx context.Context, request RollbackDepotRequestObject) (RollbackDepotResponseObject, error)
-	// Get a specific channel release
-	// (GET /depots/{depot}/channels/{channel})
-	GetChannel(ctx context.Context, request GetChannelRequestObject) (GetChannelResponseObject, error)
-	// Upload a firmware release tarball for a channel
-	// (PUT /depots/{depot}/channels/{channel})
-	PutChannel(ctx context.Context, request PutChannelRequestObject) (PutChannelResponseObject, error)
+	// List all DashScope tenants
+	// (GET /dashscope-tenants)
+	ListDashScopeTenants(ctx context.Context, request ListDashScopeTenantsRequestObject) (ListDashScopeTenantsResponseObject, error)
+	// Create a DashScope tenant
+	// (POST /dashscope-tenants)
+	CreateDashScopeTenant(ctx context.Context, request CreateDashScopeTenantRequestObject) (CreateDashScopeTenantResponseObject, error)
+	// Delete a DashScope tenant
+	// (DELETE /dashscope-tenants/{name})
+	DeleteDashScopeTenant(ctx context.Context, request DeleteDashScopeTenantRequestObject) (DeleteDashScopeTenantResponseObject, error)
+	// Get a DashScope tenant
+	// (GET /dashscope-tenants/{name})
+	GetDashScopeTenant(ctx context.Context, request GetDashScopeTenantRequestObject) (GetDashScopeTenantResponseObject, error)
+	// Create or update a DashScope tenant
+	// (PUT /dashscope-tenants/{name})
+	PutDashScopeTenant(ctx context.Context, request PutDashScopeTenantRequestObject) (PutDashScopeTenantResponseObject, error)
+	// List firmwares
+	// (GET /firmwares)
+	ListFirmwares(ctx context.Context, request ListFirmwaresRequestObject) (ListFirmwaresResponseObject, error)
+	// Create a firmware release line
+	// (POST /firmwares)
+	CreateFirmware(ctx context.Context, request CreateFirmwareRequestObject) (CreateFirmwareResponseObject, error)
+	// Delete a firmware release line
+	// (DELETE /firmwares/{name})
+	DeleteFirmware(ctx context.Context, request DeleteFirmwareRequestObject) (DeleteFirmwareResponseObject, error)
+	// Get a firmware release line
+	// (GET /firmwares/{name})
+	GetFirmware(ctx context.Context, request GetFirmwareRequestObject) (GetFirmwareResponseObject, error)
+	// Create or update a firmware release line
+	// (PUT /firmwares/{name})
+	PutFirmware(ctx context.Context, request PutFirmwareRequestObject) (PutFirmwareResponseObject, error)
+	// Promote firmware slots
+	// (POST /firmwares/{name}/@release)
+	ReleaseFirmware(ctx context.Context, request ReleaseFirmwareRequestObject) (ReleaseFirmwareResponseObject, error)
+	// Rollback firmware stable slot
+	// (POST /firmwares/{name}/@rollback)
+	RollbackFirmware(ctx context.Context, request RollbackFirmwareRequestObject) (RollbackFirmwareResponseObject, error)
+	// List all Gemini tenants
+	// (GET /gemini-tenants)
+	ListGeminiTenants(ctx context.Context, request ListGeminiTenantsRequestObject) (ListGeminiTenantsResponseObject, error)
+	// Create a Gemini tenant
+	// (POST /gemini-tenants)
+	CreateGeminiTenant(ctx context.Context, request CreateGeminiTenantRequestObject) (CreateGeminiTenantResponseObject, error)
+	// Delete a Gemini tenant
+	// (DELETE /gemini-tenants/{name})
+	DeleteGeminiTenant(ctx context.Context, request DeleteGeminiTenantRequestObject) (DeleteGeminiTenantResponseObject, error)
+	// Get a Gemini tenant
+	// (GET /gemini-tenants/{name})
+	GetGeminiTenant(ctx context.Context, request GetGeminiTenantRequestObject) (GetGeminiTenantResponseObject, error)
+	// Create or update a Gemini tenant
+	// (PUT /gemini-tenants/{name})
+	PutGeminiTenant(ctx context.Context, request PutGeminiTenantRequestObject) (PutGeminiTenantResponseObject, error)
 	// List all MiniMax tenants
 	// (GET /minimax-tenants)
 	ListMiniMaxTenants(ctx context.Context, request ListMiniMaxTenantsRequestObject) (ListMiniMaxTenantsResponseObject, error)
@@ -13731,15 +19784,24 @@ type StrictServerInterface interface {
 	// Create or update a model
 	// (PUT /models/{id})
 	PutModel(ctx context.Context, request PutModelRequestObject) (PutModelResponseObject, error)
+	// List all OpenAI-compatible tenants
+	// (GET /openai-tenants)
+	ListOpenAITenants(ctx context.Context, request ListOpenAITenantsRequestObject) (ListOpenAITenantsResponseObject, error)
+	// Create an OpenAI-compatible tenant
+	// (POST /openai-tenants)
+	CreateOpenAITenant(ctx context.Context, request CreateOpenAITenantRequestObject) (CreateOpenAITenantResponseObject, error)
+	// Delete an OpenAI-compatible tenant
+	// (DELETE /openai-tenants/{name})
+	DeleteOpenAITenant(ctx context.Context, request DeleteOpenAITenantRequestObject) (DeleteOpenAITenantResponseObject, error)
+	// Get an OpenAI-compatible tenant
+	// (GET /openai-tenants/{name})
+	GetOpenAITenant(ctx context.Context, request GetOpenAITenantRequestObject) (GetOpenAITenantResponseObject, error)
+	// Create or update an OpenAI-compatible tenant
+	// (PUT /openai-tenants/{name})
+	PutOpenAITenant(ctx context.Context, request PutOpenAITenantRequestObject) (PutOpenAITenantResponseObject, error)
 	// List all peers
 	// (GET /peers)
 	ListPeers(ctx context.Context, request ListPeersRequestObject) (ListPeersResponseObject, error)
-	// List peers by certification
-	// (GET /peers/certification/{type}/{authority}/{id})
-	ListPeersByCertification(ctx context.Context, request ListPeersByCertificationRequestObject) (ListPeersByCertificationResponseObject, error)
-	// List peers by firmware depot and channel
-	// (GET /peers/firmware/{depot}/{channel})
-	ListPeersByFirmware(ctx context.Context, request ListPeersByFirmwareRequestObject) (ListPeersByFirmwareResponseObject, error)
 	// Resolve peer public key by IMEI
 	// (GET /peers/imei/{tac}/{serial})
 	ResolvePeerByIMEI(ctx context.Context, request ResolvePeerByIMEIRequestObject) (ResolvePeerByIMEIResponseObject, error)
@@ -13773,9 +19835,9 @@ type StrictServerInterface interface {
 	// Get peer device info
 	// (GET /peers/{publicKey}/info)
 	GetPeerInfo(ctx context.Context, request GetPeerInfoRequestObject) (GetPeerInfoResponseObject, error)
-	// Get peer OTA firmware summary
-	// (GET /peers/{publicKey}/ota)
-	GetPeerOTA(ctx context.Context, request GetPeerOTARequestObject) (GetPeerOTAResponseObject, error)
+	// Update peer device info
+	// (PUT /peers/{publicKey}/info)
+	PutPeerInfo(ctx context.Context, request PutPeerInfoRequestObject) (PutPeerInfoResponseObject, error)
 	// Get peer runtime status
 	// (GET /peers/{publicKey}/runtime)
 	GetPeerRuntime(ctx context.Context, request GetPeerRuntimeRequestObject) (GetPeerRuntimeResponseObject, error)
@@ -13904,6 +19966,441 @@ func (sh *strictHandler) ApplyResource(ctx *fiber.Ctx) error {
 	return nil
 }
 
+// ListACLPolicyBindings operation middleware
+func (sh *strictHandler) ListACLPolicyBindings(ctx *fiber.Ctx, params ListACLPolicyBindingsParams) error {
+	var request ListACLPolicyBindingsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListACLPolicyBindings(ctx.UserContext(), request.(ListACLPolicyBindingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListACLPolicyBindings")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListACLPolicyBindingsResponseObject); ok {
+		if err := validResponse.VisitListACLPolicyBindingsResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateACLPolicyBinding operation middleware
+func (sh *strictHandler) CreateACLPolicyBinding(ctx *fiber.Ctx) error {
+	var request CreateACLPolicyBindingRequestObject
+
+	var body CreateACLPolicyBindingJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateACLPolicyBinding(ctx.UserContext(), request.(CreateACLPolicyBindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateACLPolicyBinding")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateACLPolicyBindingResponseObject); ok {
+		if err := validResponse.VisitCreateACLPolicyBindingResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteACLPolicyBinding operation middleware
+func (sh *strictHandler) DeleteACLPolicyBinding(ctx *fiber.Ctx, id string) error {
+	var request DeleteACLPolicyBindingRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteACLPolicyBinding(ctx.UserContext(), request.(DeleteACLPolicyBindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteACLPolicyBinding")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteACLPolicyBindingResponseObject); ok {
+		if err := validResponse.VisitDeleteACLPolicyBindingResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetACLPolicyBinding operation middleware
+func (sh *strictHandler) GetACLPolicyBinding(ctx *fiber.Ctx, id string) error {
+	var request GetACLPolicyBindingRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetACLPolicyBinding(ctx.UserContext(), request.(GetACLPolicyBindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetACLPolicyBinding")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetACLPolicyBindingResponseObject); ok {
+		if err := validResponse.VisitGetACLPolicyBindingResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutACLPolicyBinding operation middleware
+func (sh *strictHandler) PutACLPolicyBinding(ctx *fiber.Ctx, id string) error {
+	var request PutACLPolicyBindingRequestObject
+
+	request.Id = id
+
+	var body PutACLPolicyBindingJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutACLPolicyBinding(ctx.UserContext(), request.(PutACLPolicyBindingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutACLPolicyBinding")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutACLPolicyBindingResponseObject); ok {
+		if err := validResponse.VisitPutACLPolicyBindingResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListACLRoles operation middleware
+func (sh *strictHandler) ListACLRoles(ctx *fiber.Ctx, params ListACLRolesParams) error {
+	var request ListACLRolesRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListACLRoles(ctx.UserContext(), request.(ListACLRolesRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListACLRoles")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListACLRolesResponseObject); ok {
+		if err := validResponse.VisitListACLRolesResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateACLRole operation middleware
+func (sh *strictHandler) CreateACLRole(ctx *fiber.Ctx) error {
+	var request CreateACLRoleRequestObject
+
+	var body CreateACLRoleJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateACLRole(ctx.UserContext(), request.(CreateACLRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateACLRole")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateACLRoleResponseObject); ok {
+		if err := validResponse.VisitCreateACLRoleResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteACLRole operation middleware
+func (sh *strictHandler) DeleteACLRole(ctx *fiber.Ctx, name string) error {
+	var request DeleteACLRoleRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteACLRole(ctx.UserContext(), request.(DeleteACLRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteACLRole")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteACLRoleResponseObject); ok {
+		if err := validResponse.VisitDeleteACLRoleResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetACLRole operation middleware
+func (sh *strictHandler) GetACLRole(ctx *fiber.Ctx, name string) error {
+	var request GetACLRoleRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetACLRole(ctx.UserContext(), request.(GetACLRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetACLRole")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetACLRoleResponseObject); ok {
+		if err := validResponse.VisitGetACLRoleResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutACLRole operation middleware
+func (sh *strictHandler) PutACLRole(ctx *fiber.Ctx, name string) error {
+	var request PutACLRoleRequestObject
+
+	request.Name = name
+
+	var body PutACLRoleJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutACLRole(ctx.UserContext(), request.(PutACLRoleRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutACLRole")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutACLRoleResponseObject); ok {
+		if err := validResponse.VisitPutACLRoleResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListACLViews operation middleware
+func (sh *strictHandler) ListACLViews(ctx *fiber.Ctx, params ListACLViewsParams) error {
+	var request ListACLViewsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListACLViews(ctx.UserContext(), request.(ListACLViewsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListACLViews")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListACLViewsResponseObject); ok {
+		if err := validResponse.VisitListACLViewsResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateACLView operation middleware
+func (sh *strictHandler) CreateACLView(ctx *fiber.Ctx) error {
+	var request CreateACLViewRequestObject
+
+	var body CreateACLViewJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateACLView(ctx.UserContext(), request.(CreateACLViewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateACLView")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateACLViewResponseObject); ok {
+		if err := validResponse.VisitCreateACLViewResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteACLView operation middleware
+func (sh *strictHandler) DeleteACLView(ctx *fiber.Ctx, name string) error {
+	var request DeleteACLViewRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteACLView(ctx.UserContext(), request.(DeleteACLViewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteACLView")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteACLViewResponseObject); ok {
+		if err := validResponse.VisitDeleteACLViewResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetACLView operation middleware
+func (sh *strictHandler) GetACLView(ctx *fiber.Ctx, name string) error {
+	var request GetACLViewRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetACLView(ctx.UserContext(), request.(GetACLViewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetACLView")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetACLViewResponseObject); ok {
+		if err := validResponse.VisitGetACLViewResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutACLView operation middleware
+func (sh *strictHandler) PutACLView(ctx *fiber.Ctx, name string) error {
+	var request PutACLViewRequestObject
+
+	request.Name = name
+
+	var body PutACLViewJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutACLView(ctx.UserContext(), request.(PutACLViewRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutACLView")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutACLViewResponseObject); ok {
+		if err := validResponse.VisitPutACLViewResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
 // ListCredentials operation middleware
 func (sh *strictHandler) ListCredentials(ctx *fiber.Ctx, params ListCredentialsParams) error {
 	var request ListCredentialsRequestObject
@@ -13963,7 +20460,7 @@ func (sh *strictHandler) CreateCredential(ctx *fiber.Ctx) error {
 }
 
 // DeleteCredential operation middleware
-func (sh *strictHandler) DeleteCredential(ctx *fiber.Ctx, name CredentialName) error {
+func (sh *strictHandler) DeleteCredential(ctx *fiber.Ctx, name string) error {
 	var request DeleteCredentialRequestObject
 
 	request.Name = name
@@ -13990,7 +20487,7 @@ func (sh *strictHandler) DeleteCredential(ctx *fiber.Ctx, name CredentialName) e
 }
 
 // GetCredential operation middleware
-func (sh *strictHandler) GetCredential(ctx *fiber.Ctx, name CredentialName) error {
+func (sh *strictHandler) GetCredential(ctx *fiber.Ctx, name string) error {
 	var request GetCredentialRequestObject
 
 	request.Name = name
@@ -14017,7 +20514,7 @@ func (sh *strictHandler) GetCredential(ctx *fiber.Ctx, name CredentialName) erro
 }
 
 // PutCredential operation middleware
-func (sh *strictHandler) PutCredential(ctx *fiber.Ctx, name CredentialName) error {
+func (sh *strictHandler) PutCredential(ctx *fiber.Ctx, name string) error {
 	var request PutCredentialRequestObject
 
 	request.Name = name
@@ -14049,23 +20546,25 @@ func (sh *strictHandler) PutCredential(ctx *fiber.Ctx, name CredentialName) erro
 	return nil
 }
 
-// ListDepots operation middleware
-func (sh *strictHandler) ListDepots(ctx *fiber.Ctx) error {
-	var request ListDepotsRequestObject
+// ListDashScopeTenants operation middleware
+func (sh *strictHandler) ListDashScopeTenants(ctx *fiber.Ctx, params ListDashScopeTenantsParams) error {
+	var request ListDashScopeTenantsRequestObject
+
+	request.Params = params
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.ListDepots(ctx.UserContext(), request.(ListDepotsRequestObject))
+		return sh.ssi.ListDashScopeTenants(ctx.UserContext(), request.(ListDashScopeTenantsRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListDepots")
+		handler = middleware(handler, "ListDashScopeTenants")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(ListDepotsResponseObject); ok {
-		if err := validResponse.VisitListDepotsResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(ListDashScopeTenantsResponseObject); ok {
+		if err := validResponse.VisitListDashScopeTenantsResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14074,58 +20573,29 @@ func (sh *strictHandler) ListDepots(ctx *fiber.Ctx) error {
 	return nil
 }
 
-// GetDepot operation middleware
-func (sh *strictHandler) GetDepot(ctx *fiber.Ctx, depot DepotName) error {
-	var request GetDepotRequestObject
+// CreateDashScopeTenant operation middleware
+func (sh *strictHandler) CreateDashScopeTenant(ctx *fiber.Ctx) error {
+	var request CreateDashScopeTenantRequestObject
 
-	request.Depot = depot
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.GetDepot(ctx.UserContext(), request.(GetDepotRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetDepot")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(GetDepotResponseObject); ok {
-		if err := validResponse.VisitGetDepotResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// PutDepotInfo operation middleware
-func (sh *strictHandler) PutDepotInfo(ctx *fiber.Ctx, depot DepotName) error {
-	var request PutDepotInfoRequestObject
-
-	request.Depot = depot
-
-	var body PutDepotInfoJSONRequestBody
+	var body CreateDashScopeTenantJSONRequestBody
 	if err := ctx.BodyParser(&body); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 	request.Body = &body
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.PutDepotInfo(ctx.UserContext(), request.(PutDepotInfoRequestObject))
+		return sh.ssi.CreateDashScopeTenant(ctx.UserContext(), request.(CreateDashScopeTenantRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PutDepotInfo")
+		handler = middleware(handler, "CreateDashScopeTenant")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(PutDepotInfoResponseObject); ok {
-		if err := validResponse.VisitPutDepotInfoResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(CreateDashScopeTenantResponseObject); ok {
+		if err := validResponse.VisitCreateDashScopeTenantResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14134,25 +20604,25 @@ func (sh *strictHandler) PutDepotInfo(ctx *fiber.Ctx, depot DepotName) error {
 	return nil
 }
 
-// ReleaseDepot operation middleware
-func (sh *strictHandler) ReleaseDepot(ctx *fiber.Ctx, depot DepotName) error {
-	var request ReleaseDepotRequestObject
+// DeleteDashScopeTenant operation middleware
+func (sh *strictHandler) DeleteDashScopeTenant(ctx *fiber.Ctx, name string) error {
+	var request DeleteDashScopeTenantRequestObject
 
-	request.Depot = depot
+	request.Name = name
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.ReleaseDepot(ctx.UserContext(), request.(ReleaseDepotRequestObject))
+		return sh.ssi.DeleteDashScopeTenant(ctx.UserContext(), request.(DeleteDashScopeTenantRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ReleaseDepot")
+		handler = middleware(handler, "DeleteDashScopeTenant")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(ReleaseDepotResponseObject); ok {
-		if err := validResponse.VisitReleaseDepotResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(DeleteDashScopeTenantResponseObject); ok {
+		if err := validResponse.VisitDeleteDashScopeTenantResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14161,25 +20631,25 @@ func (sh *strictHandler) ReleaseDepot(ctx *fiber.Ctx, depot DepotName) error {
 	return nil
 }
 
-// RollbackDepot operation middleware
-func (sh *strictHandler) RollbackDepot(ctx *fiber.Ctx, depot DepotName) error {
-	var request RollbackDepotRequestObject
+// GetDashScopeTenant operation middleware
+func (sh *strictHandler) GetDashScopeTenant(ctx *fiber.Ctx, name string) error {
+	var request GetDashScopeTenantRequestObject
 
-	request.Depot = depot
+	request.Name = name
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.RollbackDepot(ctx.UserContext(), request.(RollbackDepotRequestObject))
+		return sh.ssi.GetDashScopeTenant(ctx.UserContext(), request.(GetDashScopeTenantRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "RollbackDepot")
+		handler = middleware(handler, "GetDashScopeTenant")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(RollbackDepotResponseObject); ok {
-		if err := validResponse.VisitRollbackDepotResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(GetDashScopeTenantResponseObject); ok {
+		if err := validResponse.VisitGetDashScopeTenantResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14188,26 +20658,31 @@ func (sh *strictHandler) RollbackDepot(ctx *fiber.Ctx, depot DepotName) error {
 	return nil
 }
 
-// GetChannel operation middleware
-func (sh *strictHandler) GetChannel(ctx *fiber.Ctx, depot DepotName, channel Channel) error {
-	var request GetChannelRequestObject
+// PutDashScopeTenant operation middleware
+func (sh *strictHandler) PutDashScopeTenant(ctx *fiber.Ctx, name string) error {
+	var request PutDashScopeTenantRequestObject
 
-	request.Depot = depot
-	request.Channel = channel
+	request.Name = name
+
+	var body PutDashScopeTenantJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.GetChannel(ctx.UserContext(), request.(GetChannelRequestObject))
+		return sh.ssi.PutDashScopeTenant(ctx.UserContext(), request.(PutDashScopeTenantRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetChannel")
+		handler = middleware(handler, "PutDashScopeTenant")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(GetChannelResponseObject); ok {
-		if err := validResponse.VisitGetChannelResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(PutDashScopeTenantResponseObject); ok {
+		if err := validResponse.VisitPutDashScopeTenantResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14216,28 +20691,342 @@ func (sh *strictHandler) GetChannel(ctx *fiber.Ctx, depot DepotName, channel Cha
 	return nil
 }
 
-// PutChannel operation middleware
-func (sh *strictHandler) PutChannel(ctx *fiber.Ctx, depot DepotName, channel Channel) error {
-	var request PutChannelRequestObject
+// ListFirmwares operation middleware
+func (sh *strictHandler) ListFirmwares(ctx *fiber.Ctx, params ListFirmwaresParams) error {
+	var request ListFirmwaresRequestObject
 
-	request.Depot = depot
-	request.Channel = channel
-
-	request.Body = bytes.NewReader(ctx.Request().Body())
+	request.Params = params
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.PutChannel(ctx.UserContext(), request.(PutChannelRequestObject))
+		return sh.ssi.ListFirmwares(ctx.UserContext(), request.(ListFirmwaresRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "PutChannel")
+		handler = middleware(handler, "ListFirmwares")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(PutChannelResponseObject); ok {
-		if err := validResponse.VisitPutChannelResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(ListFirmwaresResponseObject); ok {
+		if err := validResponse.VisitListFirmwaresResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateFirmware operation middleware
+func (sh *strictHandler) CreateFirmware(ctx *fiber.Ctx) error {
+	var request CreateFirmwareRequestObject
+
+	var body CreateFirmwareJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateFirmware(ctx.UserContext(), request.(CreateFirmwareRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateFirmware")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateFirmwareResponseObject); ok {
+		if err := validResponse.VisitCreateFirmwareResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteFirmware operation middleware
+func (sh *strictHandler) DeleteFirmware(ctx *fiber.Ctx, name string) error {
+	var request DeleteFirmwareRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteFirmware(ctx.UserContext(), request.(DeleteFirmwareRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteFirmware")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteFirmwareResponseObject); ok {
+		if err := validResponse.VisitDeleteFirmwareResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetFirmware operation middleware
+func (sh *strictHandler) GetFirmware(ctx *fiber.Ctx, name string) error {
+	var request GetFirmwareRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFirmware(ctx.UserContext(), request.(GetFirmwareRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFirmware")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetFirmwareResponseObject); ok {
+		if err := validResponse.VisitGetFirmwareResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutFirmware operation middleware
+func (sh *strictHandler) PutFirmware(ctx *fiber.Ctx, name string) error {
+	var request PutFirmwareRequestObject
+
+	request.Name = name
+
+	var body PutFirmwareJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutFirmware(ctx.UserContext(), request.(PutFirmwareRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutFirmware")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutFirmwareResponseObject); ok {
+		if err := validResponse.VisitPutFirmwareResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ReleaseFirmware operation middleware
+func (sh *strictHandler) ReleaseFirmware(ctx *fiber.Ctx, name string) error {
+	var request ReleaseFirmwareRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ReleaseFirmware(ctx.UserContext(), request.(ReleaseFirmwareRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ReleaseFirmware")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ReleaseFirmwareResponseObject); ok {
+		if err := validResponse.VisitReleaseFirmwareResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// RollbackFirmware operation middleware
+func (sh *strictHandler) RollbackFirmware(ctx *fiber.Ctx, name string) error {
+	var request RollbackFirmwareRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.RollbackFirmware(ctx.UserContext(), request.(RollbackFirmwareRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "RollbackFirmware")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(RollbackFirmwareResponseObject); ok {
+		if err := validResponse.VisitRollbackFirmwareResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListGeminiTenants operation middleware
+func (sh *strictHandler) ListGeminiTenants(ctx *fiber.Ctx, params ListGeminiTenantsParams) error {
+	var request ListGeminiTenantsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListGeminiTenants(ctx.UserContext(), request.(ListGeminiTenantsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListGeminiTenants")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListGeminiTenantsResponseObject); ok {
+		if err := validResponse.VisitListGeminiTenantsResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateGeminiTenant operation middleware
+func (sh *strictHandler) CreateGeminiTenant(ctx *fiber.Ctx) error {
+	var request CreateGeminiTenantRequestObject
+
+	var body CreateGeminiTenantJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateGeminiTenant(ctx.UserContext(), request.(CreateGeminiTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateGeminiTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateGeminiTenantResponseObject); ok {
+		if err := validResponse.VisitCreateGeminiTenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteGeminiTenant operation middleware
+func (sh *strictHandler) DeleteGeminiTenant(ctx *fiber.Ctx, name string) error {
+	var request DeleteGeminiTenantRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteGeminiTenant(ctx.UserContext(), request.(DeleteGeminiTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteGeminiTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteGeminiTenantResponseObject); ok {
+		if err := validResponse.VisitDeleteGeminiTenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetGeminiTenant operation middleware
+func (sh *strictHandler) GetGeminiTenant(ctx *fiber.Ctx, name string) error {
+	var request GetGeminiTenantRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetGeminiTenant(ctx.UserContext(), request.(GetGeminiTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetGeminiTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetGeminiTenantResponseObject); ok {
+		if err := validResponse.VisitGetGeminiTenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutGeminiTenant operation middleware
+func (sh *strictHandler) PutGeminiTenant(ctx *fiber.Ctx, name string) error {
+	var request PutGeminiTenantRequestObject
+
+	request.Name = name
+
+	var body PutGeminiTenantJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutGeminiTenant(ctx.UserContext(), request.(PutGeminiTenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutGeminiTenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutGeminiTenantResponseObject); ok {
+		if err := validResponse.VisitPutGeminiTenantResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14305,7 +21094,7 @@ func (sh *strictHandler) CreateMiniMaxTenant(ctx *fiber.Ctx) error {
 }
 
 // DeleteMiniMaxTenant operation middleware
-func (sh *strictHandler) DeleteMiniMaxTenant(ctx *fiber.Ctx, name MiniMaxTenantName) error {
+func (sh *strictHandler) DeleteMiniMaxTenant(ctx *fiber.Ctx, name string) error {
 	var request DeleteMiniMaxTenantRequestObject
 
 	request.Name = name
@@ -14332,7 +21121,7 @@ func (sh *strictHandler) DeleteMiniMaxTenant(ctx *fiber.Ctx, name MiniMaxTenantN
 }
 
 // GetMiniMaxTenant operation middleware
-func (sh *strictHandler) GetMiniMaxTenant(ctx *fiber.Ctx, name MiniMaxTenantName) error {
+func (sh *strictHandler) GetMiniMaxTenant(ctx *fiber.Ctx, name string) error {
 	var request GetMiniMaxTenantRequestObject
 
 	request.Name = name
@@ -14359,7 +21148,7 @@ func (sh *strictHandler) GetMiniMaxTenant(ctx *fiber.Ctx, name MiniMaxTenantName
 }
 
 // PutMiniMaxTenant operation middleware
-func (sh *strictHandler) PutMiniMaxTenant(ctx *fiber.Ctx, name MiniMaxTenantName) error {
+func (sh *strictHandler) PutMiniMaxTenant(ctx *fiber.Ctx, name string) error {
 	var request PutMiniMaxTenantRequestObject
 
 	request.Name = name
@@ -14392,7 +21181,7 @@ func (sh *strictHandler) PutMiniMaxTenant(ctx *fiber.Ctx, name MiniMaxTenantName
 }
 
 // SyncMiniMaxTenantVoices operation middleware
-func (sh *strictHandler) SyncMiniMaxTenantVoices(ctx *fiber.Ctx, name MiniMaxTenantName) error {
+func (sh *strictHandler) SyncMiniMaxTenantVoices(ctx *fiber.Ctx, name string) error {
 	var request SyncMiniMaxTenantVoicesRequestObject
 
 	request.Name = name
@@ -14477,7 +21266,7 @@ func (sh *strictHandler) CreateModel(ctx *fiber.Ctx) error {
 }
 
 // DeleteModel operation middleware
-func (sh *strictHandler) DeleteModel(ctx *fiber.Ctx, id ModelID) error {
+func (sh *strictHandler) DeleteModel(ctx *fiber.Ctx, id string) error {
 	var request DeleteModelRequestObject
 
 	request.Id = id
@@ -14504,7 +21293,7 @@ func (sh *strictHandler) DeleteModel(ctx *fiber.Ctx, id ModelID) error {
 }
 
 // GetModel operation middleware
-func (sh *strictHandler) GetModel(ctx *fiber.Ctx, id ModelID) error {
+func (sh *strictHandler) GetModel(ctx *fiber.Ctx, id string) error {
 	var request GetModelRequestObject
 
 	request.Id = id
@@ -14531,7 +21320,7 @@ func (sh *strictHandler) GetModel(ctx *fiber.Ctx, id ModelID) error {
 }
 
 // PutModel operation middleware
-func (sh *strictHandler) PutModel(ctx *fiber.Ctx, id ModelID) error {
+func (sh *strictHandler) PutModel(ctx *fiber.Ctx, id string) error {
 	var request PutModelRequestObject
 
 	request.Id = id
@@ -14563,6 +21352,151 @@ func (sh *strictHandler) PutModel(ctx *fiber.Ctx, id ModelID) error {
 	return nil
 }
 
+// ListOpenAITenants operation middleware
+func (sh *strictHandler) ListOpenAITenants(ctx *fiber.Ctx, params ListOpenAITenantsParams) error {
+	var request ListOpenAITenantsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListOpenAITenants(ctx.UserContext(), request.(ListOpenAITenantsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListOpenAITenants")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListOpenAITenantsResponseObject); ok {
+		if err := validResponse.VisitListOpenAITenantsResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateOpenAITenant operation middleware
+func (sh *strictHandler) CreateOpenAITenant(ctx *fiber.Ctx) error {
+	var request CreateOpenAITenantRequestObject
+
+	var body CreateOpenAITenantJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateOpenAITenant(ctx.UserContext(), request.(CreateOpenAITenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateOpenAITenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateOpenAITenantResponseObject); ok {
+		if err := validResponse.VisitCreateOpenAITenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteOpenAITenant operation middleware
+func (sh *strictHandler) DeleteOpenAITenant(ctx *fiber.Ctx, name string) error {
+	var request DeleteOpenAITenantRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteOpenAITenant(ctx.UserContext(), request.(DeleteOpenAITenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteOpenAITenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteOpenAITenantResponseObject); ok {
+		if err := validResponse.VisitDeleteOpenAITenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetOpenAITenant operation middleware
+func (sh *strictHandler) GetOpenAITenant(ctx *fiber.Ctx, name string) error {
+	var request GetOpenAITenantRequestObject
+
+	request.Name = name
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetOpenAITenant(ctx.UserContext(), request.(GetOpenAITenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetOpenAITenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetOpenAITenantResponseObject); ok {
+		if err := validResponse.VisitGetOpenAITenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// PutOpenAITenant operation middleware
+func (sh *strictHandler) PutOpenAITenant(ctx *fiber.Ctx, name string) error {
+	var request PutOpenAITenantRequestObject
+
+	request.Name = name
+
+	var body PutOpenAITenantJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.PutOpenAITenant(ctx.UserContext(), request.(PutOpenAITenantRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutOpenAITenant")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(PutOpenAITenantResponseObject); ok {
+		if err := validResponse.VisitPutOpenAITenantResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
 // ListPeers operation middleware
 func (sh *strictHandler) ListPeers(ctx *fiber.Ctx, params ListPeersParams) error {
 	var request ListPeersRequestObject
@@ -14582,65 +21516,6 @@ func (sh *strictHandler) ListPeers(ctx *fiber.Ctx, params ListPeersParams) error
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(ListPeersResponseObject); ok {
 		if err := validResponse.VisitListPeersResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// ListPeersByCertification operation middleware
-func (sh *strictHandler) ListPeersByCertification(ctx *fiber.Ctx, pType externalRef0.GearCertificationType, authority externalRef0.GearCertificationAuthority, id string, params ListPeersByCertificationParams) error {
-	var request ListPeersByCertificationRequestObject
-
-	request.Type = pType
-	request.Authority = authority
-	request.Id = id
-	request.Params = params
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.ListPeersByCertification(ctx.UserContext(), request.(ListPeersByCertificationRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListPeersByCertification")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(ListPeersByCertificationResponseObject); ok {
-		if err := validResponse.VisitListPeersByCertificationResponse(ctx); err != nil {
-			return fiber.NewError(fiber.StatusBadRequest, err.Error())
-		}
-	} else if response != nil {
-		return fmt.Errorf("unexpected response type: %T", response)
-	}
-	return nil
-}
-
-// ListPeersByFirmware operation middleware
-func (sh *strictHandler) ListPeersByFirmware(ctx *fiber.Ctx, depot string, channel externalRef0.GearFirmwareChannel, params ListPeersByFirmwareParams) error {
-	var request ListPeersByFirmwareRequestObject
-
-	request.Depot = depot
-	request.Channel = channel
-	request.Params = params
-
-	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.ListPeersByFirmware(ctx.UserContext(), request.(ListPeersByFirmwareRequestObject))
-	}
-	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "ListPeersByFirmware")
-	}
-
-	response, err := handler(ctx, request)
-
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(ListPeersByFirmwareResponseObject); ok {
-		if err := validResponse.VisitListPeersByFirmwareResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14734,7 +21609,7 @@ func (sh *strictHandler) ResolvePeerBySN(ctx *fiber.Ctx, sn string) error {
 }
 
 // DeletePeer operation middleware
-func (sh *strictHandler) DeletePeer(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) DeletePeer(ctx *fiber.Ctx, publicKey string) error {
 	var request DeletePeerRequestObject
 
 	request.PublicKey = publicKey
@@ -14761,7 +21636,7 @@ func (sh *strictHandler) DeletePeer(ctx *fiber.Ctx, publicKey PublicKey) error {
 }
 
 // GetPeer operation middleware
-func (sh *strictHandler) GetPeer(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) GetPeer(ctx *fiber.Ctx, publicKey string) error {
 	var request GetPeerRequestObject
 
 	request.PublicKey = publicKey
@@ -14788,7 +21663,7 @@ func (sh *strictHandler) GetPeer(ctx *fiber.Ctx, publicKey PublicKey) error {
 }
 
 // ApprovePeer operation middleware
-func (sh *strictHandler) ApprovePeer(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) ApprovePeer(ctx *fiber.Ctx, publicKey string) error {
 	var request ApprovePeerRequestObject
 
 	request.PublicKey = publicKey
@@ -14821,7 +21696,7 @@ func (sh *strictHandler) ApprovePeer(ctx *fiber.Ctx, publicKey PublicKey) error 
 }
 
 // BlockPeer operation middleware
-func (sh *strictHandler) BlockPeer(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) BlockPeer(ctx *fiber.Ctx, publicKey string) error {
 	var request BlockPeerRequestObject
 
 	request.PublicKey = publicKey
@@ -14848,7 +21723,7 @@ func (sh *strictHandler) BlockPeer(ctx *fiber.Ctx, publicKey PublicKey) error {
 }
 
 // RefreshPeer operation middleware
-func (sh *strictHandler) RefreshPeer(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) RefreshPeer(ctx *fiber.Ctx, publicKey string) error {
 	var request RefreshPeerRequestObject
 
 	request.PublicKey = publicKey
@@ -14875,7 +21750,7 @@ func (sh *strictHandler) RefreshPeer(ctx *fiber.Ctx, publicKey PublicKey) error 
 }
 
 // GetPeerConfig operation middleware
-func (sh *strictHandler) GetPeerConfig(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) GetPeerConfig(ctx *fiber.Ctx, publicKey string) error {
 	var request GetPeerConfigRequestObject
 
 	request.PublicKey = publicKey
@@ -14902,7 +21777,7 @@ func (sh *strictHandler) GetPeerConfig(ctx *fiber.Ctx, publicKey PublicKey) erro
 }
 
 // PutPeerConfig operation middleware
-func (sh *strictHandler) PutPeerConfig(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) PutPeerConfig(ctx *fiber.Ctx, publicKey string) error {
 	var request PutPeerConfigRequestObject
 
 	request.PublicKey = publicKey
@@ -14935,7 +21810,7 @@ func (sh *strictHandler) PutPeerConfig(ctx *fiber.Ctx, publicKey PublicKey) erro
 }
 
 // GetPeerInfo operation middleware
-func (sh *strictHandler) GetPeerInfo(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) GetPeerInfo(ctx *fiber.Ctx, publicKey string) error {
 	var request GetPeerInfoRequestObject
 
 	request.PublicKey = publicKey
@@ -14961,25 +21836,31 @@ func (sh *strictHandler) GetPeerInfo(ctx *fiber.Ctx, publicKey PublicKey) error 
 	return nil
 }
 
-// GetPeerOTA operation middleware
-func (sh *strictHandler) GetPeerOTA(ctx *fiber.Ctx, publicKey PublicKey) error {
-	var request GetPeerOTARequestObject
+// PutPeerInfo operation middleware
+func (sh *strictHandler) PutPeerInfo(ctx *fiber.Ctx, publicKey string) error {
+	var request PutPeerInfoRequestObject
 
 	request.PublicKey = publicKey
 
+	var body PutPeerInfoJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
-		return sh.ssi.GetPeerOTA(ctx.UserContext(), request.(GetPeerOTARequestObject))
+		return sh.ssi.PutPeerInfo(ctx.UserContext(), request.(PutPeerInfoRequestObject))
 	}
 	for _, middleware := range sh.middlewares {
-		handler = middleware(handler, "GetPeerOTA")
+		handler = middleware(handler, "PutPeerInfo")
 	}
 
 	response, err := handler(ctx, request)
 
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	} else if validResponse, ok := response.(GetPeerOTAResponseObject); ok {
-		if err := validResponse.VisitGetPeerOTAResponse(ctx); err != nil {
+	} else if validResponse, ok := response.(PutPeerInfoResponseObject); ok {
+		if err := validResponse.VisitPutPeerInfoResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -14989,7 +21870,7 @@ func (sh *strictHandler) GetPeerOTA(ctx *fiber.Ctx, publicKey PublicKey) error {
 }
 
 // GetPeerRuntime operation middleware
-func (sh *strictHandler) GetPeerRuntime(ctx *fiber.Ctx, publicKey PublicKey) error {
+func (sh *strictHandler) GetPeerRuntime(ctx *fiber.Ctx, publicKey string) error {
 	var request GetPeerRuntimeRequestObject
 
 	request.PublicKey = publicKey
@@ -15016,7 +21897,7 @@ func (sh *strictHandler) GetPeerRuntime(ctx *fiber.Ctx, publicKey PublicKey) err
 }
 
 // DeleteResource operation middleware
-func (sh *strictHandler) DeleteResource(ctx *fiber.Ctx, kind ResourceKind, name ResourceName) error {
+func (sh *strictHandler) DeleteResource(ctx *fiber.Ctx, kind ResourceKind, name string) error {
 	var request DeleteResourceRequestObject
 
 	request.Kind = kind
@@ -15044,7 +21925,7 @@ func (sh *strictHandler) DeleteResource(ctx *fiber.Ctx, kind ResourceKind, name 
 }
 
 // GetResource operation middleware
-func (sh *strictHandler) GetResource(ctx *fiber.Ctx, kind ResourceKind, name ResourceName) error {
+func (sh *strictHandler) GetResource(ctx *fiber.Ctx, kind ResourceKind, name string) error {
 	var request GetResourceRequestObject
 
 	request.Kind = kind
@@ -15072,7 +21953,7 @@ func (sh *strictHandler) GetResource(ctx *fiber.Ctx, kind ResourceKind, name Res
 }
 
 // PutResource operation middleware
-func (sh *strictHandler) PutResource(ctx *fiber.Ctx, kind ResourceKind, name ResourceName) error {
+func (sh *strictHandler) PutResource(ctx *fiber.Ctx, kind ResourceKind, name string) error {
 	var request PutResourceRequestObject
 
 	request.Kind = kind
@@ -15170,7 +22051,7 @@ func (sh *strictHandler) CreateVoice(ctx *fiber.Ctx) error {
 }
 
 // DeleteVoice operation middleware
-func (sh *strictHandler) DeleteVoice(ctx *fiber.Ctx, id VoiceID) error {
+func (sh *strictHandler) DeleteVoice(ctx *fiber.Ctx, id string) error {
 	var request DeleteVoiceRequestObject
 
 	request.Id = id
@@ -15197,7 +22078,7 @@ func (sh *strictHandler) DeleteVoice(ctx *fiber.Ctx, id VoiceID) error {
 }
 
 // GetVoice operation middleware
-func (sh *strictHandler) GetVoice(ctx *fiber.Ctx, id VoiceID) error {
+func (sh *strictHandler) GetVoice(ctx *fiber.Ctx, id string) error {
 	var request GetVoiceRequestObject
 
 	request.Id = id
@@ -15224,7 +22105,7 @@ func (sh *strictHandler) GetVoice(ctx *fiber.Ctx, id VoiceID) error {
 }
 
 // PutVoice operation middleware
-func (sh *strictHandler) PutVoice(ctx *fiber.Ctx, id VoiceID) error {
+func (sh *strictHandler) PutVoice(ctx *fiber.Ctx, id string) error {
 	var request PutVoiceRequestObject
 
 	request.Id = id
@@ -15315,7 +22196,7 @@ func (sh *strictHandler) CreateVolcTenant(ctx *fiber.Ctx) error {
 }
 
 // DeleteVolcTenant operation middleware
-func (sh *strictHandler) DeleteVolcTenant(ctx *fiber.Ctx, name VolcTenantName) error {
+func (sh *strictHandler) DeleteVolcTenant(ctx *fiber.Ctx, name string) error {
 	var request DeleteVolcTenantRequestObject
 
 	request.Name = name
@@ -15342,7 +22223,7 @@ func (sh *strictHandler) DeleteVolcTenant(ctx *fiber.Ctx, name VolcTenantName) e
 }
 
 // GetVolcTenant operation middleware
-func (sh *strictHandler) GetVolcTenant(ctx *fiber.Ctx, name VolcTenantName) error {
+func (sh *strictHandler) GetVolcTenant(ctx *fiber.Ctx, name string) error {
 	var request GetVolcTenantRequestObject
 
 	request.Name = name
@@ -15369,7 +22250,7 @@ func (sh *strictHandler) GetVolcTenant(ctx *fiber.Ctx, name VolcTenantName) erro
 }
 
 // PutVolcTenant operation middleware
-func (sh *strictHandler) PutVolcTenant(ctx *fiber.Ctx, name VolcTenantName) error {
+func (sh *strictHandler) PutVolcTenant(ctx *fiber.Ctx, name string) error {
 	var request PutVolcTenantRequestObject
 
 	request.Name = name
@@ -15402,7 +22283,7 @@ func (sh *strictHandler) PutVolcTenant(ctx *fiber.Ctx, name VolcTenantName) erro
 }
 
 // SyncVolcTenantVoices operation middleware
-func (sh *strictHandler) SyncVolcTenantVoices(ctx *fiber.Ctx, name VolcTenantName) error {
+func (sh *strictHandler) SyncVolcTenantVoices(ctx *fiber.Ctx, name string) error {
 	var request SyncVolcTenantVoicesRequestObject
 
 	request.Name = name
@@ -15487,7 +22368,7 @@ func (sh *strictHandler) CreateWorkflow(ctx *fiber.Ctx) error {
 }
 
 // DeleteWorkflow operation middleware
-func (sh *strictHandler) DeleteWorkflow(ctx *fiber.Ctx, name WorkflowName) error {
+func (sh *strictHandler) DeleteWorkflow(ctx *fiber.Ctx, name string) error {
 	var request DeleteWorkflowRequestObject
 
 	request.Name = name
@@ -15514,7 +22395,7 @@ func (sh *strictHandler) DeleteWorkflow(ctx *fiber.Ctx, name WorkflowName) error
 }
 
 // GetWorkflow operation middleware
-func (sh *strictHandler) GetWorkflow(ctx *fiber.Ctx, name WorkflowName) error {
+func (sh *strictHandler) GetWorkflow(ctx *fiber.Ctx, name string) error {
 	var request GetWorkflowRequestObject
 
 	request.Name = name
@@ -15541,7 +22422,7 @@ func (sh *strictHandler) GetWorkflow(ctx *fiber.Ctx, name WorkflowName) error {
 }
 
 // PutWorkflow operation middleware
-func (sh *strictHandler) PutWorkflow(ctx *fiber.Ctx, name WorkflowName) error {
+func (sh *strictHandler) PutWorkflow(ctx *fiber.Ctx, name string) error {
 	var request PutWorkflowRequestObject
 
 	request.Name = name
@@ -15632,7 +22513,7 @@ func (sh *strictHandler) CreateWorkspace(ctx *fiber.Ctx) error {
 }
 
 // DeleteWorkspace operation middleware
-func (sh *strictHandler) DeleteWorkspace(ctx *fiber.Ctx, name WorkspaceName) error {
+func (sh *strictHandler) DeleteWorkspace(ctx *fiber.Ctx, name string) error {
 	var request DeleteWorkspaceRequestObject
 
 	request.Name = name
@@ -15659,7 +22540,7 @@ func (sh *strictHandler) DeleteWorkspace(ctx *fiber.Ctx, name WorkspaceName) err
 }
 
 // GetWorkspace operation middleware
-func (sh *strictHandler) GetWorkspace(ctx *fiber.Ctx, name WorkspaceName) error {
+func (sh *strictHandler) GetWorkspace(ctx *fiber.Ctx, name string) error {
 	var request GetWorkspaceRequestObject
 
 	request.Name = name
@@ -15686,7 +22567,7 @@ func (sh *strictHandler) GetWorkspace(ctx *fiber.Ctx, name WorkspaceName) error 
 }
 
 // PutWorkspace operation middleware
-func (sh *strictHandler) PutWorkspace(ctx *fiber.Ctx, name WorkspaceName) error {
+func (sh *strictHandler) PutWorkspace(ctx *fiber.Ctx, name string) error {
 	var request PutWorkspaceRequestObject
 
 	request.Name = name

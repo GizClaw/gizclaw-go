@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
 func TestNormalizeLegacyLongFlags(t *testing.T) {
@@ -33,6 +35,12 @@ func TestRootHelp(t *testing.T) {
 	if !strings.Contains(out, "context") {
 		t.Fatalf("help missing 'context': %s", out)
 	}
+	if !strings.Contains(out, "gen-key") {
+		t.Fatalf("help missing 'gen-key': %s", out)
+	}
+	if !strings.Contains(out, "migrate") {
+		t.Fatalf("help missing 'migrate': %s", out)
+	}
 	if !strings.Contains(out, "ping") {
 		t.Fatalf("help missing 'ping': %s", out)
 	}
@@ -47,6 +55,32 @@ func TestRootHelp(t *testing.T) {
 	}
 	if !strings.Contains(out, "server-info") {
 		t.Fatalf("help missing 'server-info': %s", out)
+	}
+}
+
+func TestGenKey(t *testing.T) {
+	root := New()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetArgs([]string{"gen-key"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	value := strings.TrimSpace(buf.String())
+	var key giznet.Key
+	if err := key.UnmarshalText([]byte(value)); err != nil {
+		t.Fatalf("gen-key output is not a GizClaw key: %v, output=%q", err, value)
+	}
+	if _, err := giznet.NewKeyPair(key); err != nil {
+		t.Fatalf("gen-key output cannot derive a key pair: %v", err)
+	}
+}
+
+func TestGenKeyRejectsArgs(t *testing.T) {
+	root := New()
+	root.SetArgs([]string{"gen-key", "extra"})
+	if err := root.Execute(); err == nil {
+		t.Fatal("gen-key with args should fail")
 	}
 }
 
@@ -164,7 +198,7 @@ func TestAdminHelp(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	for _, want := range []string{"apply", "delete", "show", "peers", "firmware", "credentials", "minimax-tenants", "volc-tenants", "voices", "workflows", "workspaces"} {
+	for _, want := range []string{"apply", "delete", "show", "peers", "credentials", "minimax-tenants", "volc-tenants", "voices", "workflows", "workspaces"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("admin help missing %q: %s", want, out)
 		}
@@ -217,7 +251,7 @@ func TestAdminHelpShowsListen(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	if !strings.Contains(out, "peers") || !strings.Contains(out, "firmware") {
+	if !strings.Contains(out, "peers") || !strings.Contains(out, "credentials") {
 		t.Fatalf("admin help missing subcommands: %s", out)
 	}
 	if !strings.Contains(out, "--listen") {
@@ -257,33 +291,13 @@ func TestAdminPeersHelp(t *testing.T) {
 		"resolve-sn",
 		"resolve-imei",
 		"list-by-label",
-		"list-by-certification",
-		"list-by-firmware",
 		"info",
 		"config",
 		"put-config",
-		"set-firmware-channel",
 		"runtime",
-		"ota",
 	} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("admin peers help missing %q: %s", want, out)
-		}
-	}
-}
-
-func TestAdminFirmwareHelp(t *testing.T) {
-	root := New()
-	var buf bytes.Buffer
-	root.SetOut(&buf)
-	root.SetArgs([]string{"admin", "firmware", "--help"})
-	if err := root.Execute(); err != nil {
-		t.Fatal(err)
-	}
-	out := buf.String()
-	for _, want := range []string{"get-channel", "put-info", "upload", "rollback", "release"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("admin firmware help missing %q: %s", want, out)
 		}
 	}
 }

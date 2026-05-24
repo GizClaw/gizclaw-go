@@ -8,14 +8,12 @@ package noise
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/pkg/encoding/base32"
 	"github.com/GizClaw/gizclaw-go/pkg/encoding/base58"
 	"golang.org/x/crypto/curve25519"
 )
@@ -53,9 +51,6 @@ func (k Key) MarshalText() ([]byte, error) {
 }
 
 // UnmarshalText decodes a key from Base58 BTC.
-//
-// Crockford Base32, URL-safe base64, and hex are accepted as legacy input
-// formats, but MarshalText always emits Base58 BTC.
 func (k *Key) UnmarshalText(text []byte) error {
 	if k == nil {
 		return errors.New("noise: nil key")
@@ -64,11 +59,12 @@ func (k *Key) UnmarshalText(text []byte) error {
 	if value == "" {
 		return errors.New("noise: empty key")
 	}
-	if decoded, ok := decodeKeyText(value); ok {
-		copy(k[:], decoded)
-		return nil
+	decoded, err := base58.DecodeString(value)
+	if err != nil || len(decoded) != KeySize {
+		return fmt.Errorf("noise: invalid key text")
 	}
-	return fmt.Errorf("noise: invalid key text")
+	copy(k[:], decoded)
+	return nil
 }
 
 // Equal returns true if the two keys are equal.
@@ -79,31 +75,6 @@ func (k Key) Equal(other Key) bool {
 		result |= k[i] ^ other[i]
 	}
 	return result == 0
-}
-
-func decodeKeyText(value string) ([]byte, bool) {
-	if decoded, err := base58.DecodeString(value); err == nil && len(decoded) == KeySize {
-		return decoded, true
-	}
-	if decoded, err := base32.DecodeString(value); err == nil && len(decoded) == KeySize {
-		return decoded, true
-	}
-	for _, encoding := range []*base64.Encoding{
-		base64.RawURLEncoding,
-		base64.URLEncoding,
-		base64.RawStdEncoding,
-		base64.StdEncoding,
-	} {
-		decoded, err := encoding.DecodeString(value)
-		if err == nil && len(decoded) == KeySize {
-			return decoded, true
-		}
-	}
-	decoded, err := hex.DecodeString(value)
-	if err == nil && len(decoded) == KeySize {
-		return decoded, true
-	}
-	return nil, false
 }
 
 // KeyFromHex creates a Key from a hex-encoded string.

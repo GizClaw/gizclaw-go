@@ -13,7 +13,7 @@ import { listVolcTenants, syncVolcTenantVoices, type VolcTenant } from "@gizclaw
 
 import { ErrorBanner } from "../../components/banners";
 import { EmptyState } from "../../components/empty-state";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { useCursorListPage } from "../../hooks/useCursorListPage";
 import { formatDate, formatValue } from "../../lib/format";
 
@@ -61,23 +61,30 @@ export function VolcTenantsListPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb items={[{ href: "/overview", label: "Overview" }, { label: "Volcengine Tenants" }]} />
+      <PageHeader
+        actions={
+          <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refresh()} variant="outline">
+            <span className="inline-flex items-center gap-2 whitespace-nowrap">
+              <RefreshCw className="size-4" />
+              Refresh
+            </span>
+          </Button>
+        }
+        items={[{ href: "/overview", label: "Overview" }, { label: "Volcengine Tenants" }]}
+      />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Providers</div>
-          <h1 className="text-3xl font-semibold tracking-tight">Volcengine Tenants</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">
-            Volcengine speech configurations bound to stored credentials and used for Doubao voice synchronization.
-          </p>
-        </div>
-        <Button className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={() => void refresh()} variant="outline">
-          <span className="inline-flex items-center gap-2 whitespace-nowrap">
-            <RefreshCw className="size-4" />
-            Refresh
-          </span>
-        </Button>
-      </div>
+      <PageSummaryCard
+        description="Volcengine speech configurations bound to stored credentials and used for Doubao voice synchronization."
+        eyebrow="Providers"
+        meta={
+          <>
+            <Badge variant="outline">Page {pageNumber}</Badge>
+            <Badge variant="secondary">{items.length} loaded</Badge>
+            {hasNext ? <Badge variant="outline">More Available</Badge> : null}
+          </>
+        }
+        title="Volcengine Tenants"
+      />
 
       {error !== "" ? <ErrorBanner message={error} /> : null}
       {syncError !== "" ? <ErrorBanner message={syncError} /> : null}
@@ -87,11 +94,6 @@ export function VolcTenantsListPage(): JSX.Element {
           <div className="space-y-1">
             <CardTitle>Tenant catalog</CardTitle>
             <CardDescription>Each tenant maps a Volcengine speech AppID and credential to purchased voice synchronization.</CardDescription>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline">Page {pageNumber}</Badge>
-            <Badge variant="secondary">{items.length} loaded</Badge>
-            {hasNext ? <Badge variant="outline">More Available</Badge> : null}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">

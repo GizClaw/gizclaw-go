@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { GetIdentifiersData, GetIdentifiersErrors, GetIdentifiersResponses, GetInfoData, GetInfoErrors, GetInfoResponses, GetVersionData, GetVersionErrors, GetVersionResponses } from './types.gen';
+import type { GetIdentifiersData, GetIdentifiersErrors, GetIdentifiersResponses, GetInfoData, GetInfoErrors, GetInfoResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -27,8 +27,3 @@ export const getInfo = <ThrowOnError extends boolean = false>(options?: Options<
  * Get device identifiers
  */
 export const getIdentifiers = <ThrowOnError extends boolean = false>(options?: Options<GetIdentifiersData, ThrowOnError>) => (options?.client ?? client).get<GetIdentifiersResponses, GetIdentifiersErrors, ThrowOnError>({ url: '/identifiers', ...options });
-
-/**
- * Get current firmware version metadata
- */
-export const getVersion = <ThrowOnError extends boolean = false>(options?: Options<GetVersionData, ThrowOnError>) => (options?.client ?? client).get<GetVersionResponses, GetVersionErrors, ThrowOnError>({ url: '/version', ...options });

@@ -27,11 +27,14 @@ const (
 	defaultSessionTTL       = 24 * time.Hour
 	maxLoginAssertionTTL    = 5 * time.Minute
 	loginAssertionClockSkew = time.Minute
+
+	PublicKeyHeader = "X-Public-Key"
 )
 
 var (
 	errInvalidLoginAssertion = errors.New("publiclogin: invalid login assertion")
 	errInvalidSession        = errors.New("publiclogin: invalid session")
+	ErrPublicKeyMismatch     = errors.New("publiclogin: public key mismatch")
 )
 
 type loginAssertionHeader struct {
@@ -235,6 +238,17 @@ func (m *SessionManager) Authenticate(header string) (giznet.PublicKey, error) {
 	var publicKey giznet.PublicKey
 	if err := publicKey.UnmarshalText([]byte(sess.PublicKey)); err != nil {
 		return giznet.PublicKey{}, errInvalidSession
+	}
+	return publicKey, nil
+}
+
+func (m *SessionManager) AuthenticateHeaders(authorization, publicKeyHeader string) (giznet.PublicKey, error) {
+	publicKey, err := m.Authenticate(authorization)
+	if err != nil {
+		return giznet.PublicKey{}, err
+	}
+	if publicKeyHeader != "" && publicKeyHeader != publicKey.String() {
+		return giznet.PublicKey{}, ErrPublicKeyMismatch
 	}
 	return publicKey, nil
 }

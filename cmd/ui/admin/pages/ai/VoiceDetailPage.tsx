@@ -9,7 +9,7 @@ import { Button } from "../../components/button";
 import { DetailBlock } from "../../components/detail-block";
 import { EmptyState } from "../../components/empty-state";
 import { ErrorBanner } from "../../components/banners";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { Skeleton } from "../../components/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/tabs";
 import { ResourceCliPanel } from "../../components/ResourceCliPanel";
@@ -54,7 +54,23 @@ export function VoiceDetailPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb
+      <PageHeader
+        actions={
+          <>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/ai/voices">
+                <ChevronLeft className="size-4" />
+                Back to list
+              </Link>
+            </Button>
+            <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void load()} size="sm" variant="outline">
+              <span className="inline-flex items-center gap-2 whitespace-nowrap">
+                <RefreshCw className="size-4" />
+                Reload
+              </span>
+            </Button>
+          </>
+        }
         items={[
           { href: "/overview", label: "Overview" },
           { href: "/ai/voices", label: "Voices" },
@@ -62,28 +78,12 @@ export function VoiceDetailPage(): JSX.Element {
         ]}
       />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">AI</div>
-          <h1 className="text-3xl font-semibold tracking-tight">{voice?.name?.trim() || compactVoiceID(voiceID)}</h1>
-          <p className="max-w-3xl break-all font-mono text-xs leading-6 text-muted-foreground">{voiceID}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link to="/ai/voices">
-              <ChevronLeft className="size-4" />
-              Back to list
-            </Link>
-          </Button>
-          <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void load()} size="sm" variant="outline">
-            <span className="inline-flex items-center gap-2 whitespace-nowrap">
-              <RefreshCw className="size-4" />
-              Reload
-            </span>
-          </Button>
-          {voice ? <Badge variant={voice.source === "sync" ? "secondary" : "outline"}>{voice.source}</Badge> : null}
-        </div>
-      </div>
+      <PageSummaryCard
+        description={<span className="break-all font-mono text-xs">{voiceID}</span>}
+        eyebrow="AI"
+        meta={voice ? <Badge variant={voice.source === "sync" ? "secondary" : "outline"}>{voice.source}</Badge> : null}
+        title={voice?.name?.trim() || compactVoiceID(voiceID)}
+      />
 
       {loading ? (
         <div className="space-y-4">

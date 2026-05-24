@@ -1,785 +1,284 @@
 package firmware
 
 import (
-	"bytes"
 	"context"
-	"errors"
-	"io"
-	"io/fs"
-	"iter"
-	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/gearservice"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
-	"github.com/gofiber/fiber/v2"
 )
 
-var testCallerPublicKey = giznet.PublicKey{1}
-
-func TestListDepotsHandler(t *testing.T) {
-	t.Parallel()
-
-	t.Run("success", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeDepotInfo("depot", "fw.bin")
-
-		resp, err := env.srv.ListDepots(context.Background(), adminservice.ListDepotsRequestObject{})
-		if err != nil {
-			t.Fatalf("ListDepots() unexpected error: %v", err)
-		}
-		okResp, ok := resp.(adminservice.ListDepots200JSONResponse)
-		if !ok || len(okResp.Items) != 1 || okResp.Items[0].Name != "depot" {
-			t.Fatalf("ListDepots() response = %#v", resp)
-		}
-	})
-
-	t.Run("store error", func(t *testing.T) {
-		t.Parallel()
-		meta := newMockKVStore()
-		meta.list = func(context.Context, kv.Key) iter.Seq2[kv.Entry, error] {
-			return func(yield func(kv.Entry, error) bool) {
-				yield(kv.Entry{}, errors.New("boom"))
-			}
-		}
-		srv := &Server{Store: newMockStore(t), MetadataStore: meta}
-
-		resp, err := srv.ListDepots(context.Background(), adminservice.ListDepotsRequestObject{})
-		if err != nil {
-			t.Fatalf("ListDepots() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.ListDepots500JSONResponse); !ok {
-			t.Fatalf("ListDepots() response = %#v", resp)
-		}
-	})
-
-	t.Run("scan depot error", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		if err := env.meta.Set(context.Background(), depotMetadataKey("depot"), []byte(`{"name":"bad:name"}`)); err != nil {
-			t.Fatalf("seed bad metadata: %v", err)
-		}
-		resp, err := env.srv.ListDepots(context.Background(), adminservice.ListDepotsRequestObject{})
-		if err != nil {
-			t.Fatalf("ListDepots() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.ListDepots500JSONResponse); !ok {
-			t.Fatalf("ListDepots() response = %#v", resp)
-		}
-	})
-
-}
-
-func TestAdminHandlers(t *testing.T) {
-	t.Parallel()
-
+func TestServerCRUDReleaseRollback(t *testing.T) {
 	ctx := context.Background()
+	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	s := &Server{Store: kv.NewMemory(nil), Now: func() time.Time { return now }}
 
-	t.Run("get depot invalid path", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		if _, err := env.srv.GetDepot(ctx, adminservice.GetDepotRequestObject{Depot: "%"}); err == nil {
-			t.Fatal("GetDepot() expected invalid params error")
-		}
-	})
-
-	t.Run("get depot not found", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		resp, err := env.srv.GetDepot(ctx, adminservice.GetDepotRequestObject{Depot: "missing"})
-		if err != nil {
-			t.Fatalf("GetDepot() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetDepot404JSONResponse); !ok {
-			t.Fatalf("GetDepot() response = %#v", resp)
-		}
-	})
-
-	t.Run("get depot success", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeDepotInfo("depot", "fw.bin")
-		resp, err := env.srv.GetDepot(ctx, adminservice.GetDepotRequestObject{Depot: "depot"})
-		if err != nil {
-			t.Fatalf("GetDepot() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetDepot200JSONResponse); !ok {
-			t.Fatalf("GetDepot() response = %#v", resp)
-		}
-	})
-
-	t.Run("put depot info validation", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-
-		resp, err := env.srv.PutDepotInfo(ctx, adminservice.PutDepotInfoRequestObject{})
-		if err != nil {
-			t.Fatalf("PutDepotInfo() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.PutDepotInfo400JSONResponse); !ok {
-			t.Fatalf("PutDepotInfo() response = %#v", resp)
-		}
-
-		info := depotInfo("../bad")
-		resp, err = env.srv.PutDepotInfo(ctx, adminservice.PutDepotInfoRequestObject{Depot: "depot", Body: &info})
-		if err != nil {
-			t.Fatalf("PutDepotInfo() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.PutDepotInfo400JSONResponse); !ok {
-			t.Fatalf("PutDepotInfo() response = %#v", resp)
-		}
-	})
-
-	t.Run("put depot info invalid path and invalid depot name", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		info := depotInfo("fw.bin")
-		if _, err := env.srv.PutDepotInfo(ctx, adminservice.PutDepotInfoRequestObject{Depot: "%", Body: &info}); err == nil {
-			t.Fatal("PutDepotInfo() expected invalid params error")
-		}
-		if _, err := env.srv.PutDepotInfo(ctx, adminservice.PutDepotInfoRequestObject{Depot: "%2Fbad", Body: &info}); err == nil {
-			t.Fatal("PutDepotInfo() expected invalid depot name error")
-		}
-	})
-
-	t.Run("put depot info internal error", func(t *testing.T) {
-		t.Parallel()
-		store := newMockStore(t)
-		meta := newMockKVStore()
-		meta.set = func(context.Context, kv.Key, []byte) error { return errors.New("boom") }
-		srv := &Server{Store: store, MetadataStore: meta}
-		info := depotInfo("fw.bin")
-		resp, err := srv.PutDepotInfo(ctx, adminservice.PutDepotInfoRequestObject{Depot: "depot", Body: &info})
-		if err != nil {
-			t.Fatalf("PutDepotInfo() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.PutDepotInfo500JSONResponse); !ok {
-			t.Fatalf("PutDepotInfo() response = %#v", resp)
-		}
-	})
-
-	t.Run("put depot info success and conflict", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		info := depotInfo("fw.bin")
-		resp, err := env.srv.PutDepotInfo(ctx, adminservice.PutDepotInfoRequestObject{Depot: "depot", Body: &info})
-		if err != nil {
-			t.Fatalf("PutDepotInfo() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.PutDepotInfo200JSONResponse); !ok {
-			t.Fatalf("PutDepotInfo() response = %#v", resp)
-		}
-
-		env.writeRelease("depot", Stable, "1.0.0", map[string]string{"fw.bin": "firmware"})
-		other := depotInfo("other.bin")
-		resp, err = env.srv.PutDepotInfo(ctx, adminservice.PutDepotInfoRequestObject{Depot: "depot", Body: &other})
-		if err != nil {
-			t.Fatalf("PutDepotInfo() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.PutDepotInfo409JSONResponse); !ok {
-			t.Fatalf("PutDepotInfo() response = %#v", resp)
-		}
-	})
-
-	t.Run("get channel responses", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.0.0", map[string]string{"fw.bin": "firmware"})
-
-		resp, err := env.srv.GetChannel(ctx, adminservice.GetChannelRequestObject{Depot: "depot", Channel: adminservice.Channel(Stable)})
-		if err != nil {
-			t.Fatalf("GetChannel() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetChannel200JSONResponse); !ok {
-			t.Fatalf("GetChannel() response = %#v", resp)
-		}
-
-		resp, err = env.srv.GetChannel(ctx, adminservice.GetChannelRequestObject{Depot: "depot", Channel: adminservice.Channel(Beta)})
-		if err != nil {
-			t.Fatalf("GetChannel() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetChannel404JSONResponse); !ok {
-			t.Fatalf("GetChannel() response = %#v", resp)
-		}
-	})
-
-	t.Run("get channel invalid path and missing depot", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		if _, err := env.srv.GetChannel(ctx, adminservice.GetChannelRequestObject{Depot: "%", Channel: adminservice.Channel(Beta)}); err == nil {
-			t.Fatal("GetChannel() expected invalid params error")
-		}
-		resp, err := env.srv.GetChannel(ctx, adminservice.GetChannelRequestObject{Depot: "missing", Channel: adminservice.Channel(Beta)})
-		if err != nil {
-			t.Fatalf("GetChannel() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetChannel404JSONResponse); !ok {
-			t.Fatalf("GetChannel() response = %#v", resp)
-		}
-	})
-
-	t.Run("put channel conflict", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		resp, err := env.srv.PutChannel(ctx, adminservice.PutChannelRequestObject{
-			Depot:   "depot",
-			Channel: adminservice.Channel(Beta),
-			Body:    bytes.NewReader([]byte("not-a-tar")),
-		})
-		if err != nil {
-			t.Fatalf("PutChannel() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.PutChannel409JSONResponse); !ok {
-			t.Fatalf("PutChannel() response = %#v", resp)
-		}
-	})
-
-	t.Run("put channel success", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		data := buildTar(t,
-			tarEntry{Name: "manifest.json", Data: mustJSON(t, depotReleaseForFiles(Beta, "1.0.0", map[string]string{"fw.bin": "firmware"}))},
-			tarEntry{Name: "fw.bin", Data: []byte("firmware")},
-		)
-		resp, err := env.srv.PutChannel(ctx, adminservice.PutChannelRequestObject{
-			Depot:   "depot",
-			Channel: adminservice.Channel(Beta),
-			Body:    bytes.NewReader(data),
-		})
-		if err != nil {
-			t.Fatalf("PutChannel() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.PutChannel200JSONResponse); !ok {
-			t.Fatalf("PutChannel() response = %#v", resp)
-		}
-	})
-
-	t.Run("put channel invalid path", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		if _, err := env.srv.PutChannel(ctx, adminservice.PutChannelRequestObject{
-			Depot:   "%",
-			Channel: adminservice.Channel(Beta),
-			Body:    bytes.NewReader(nil),
-		}); err == nil {
-			t.Fatal("PutChannel() expected invalid params error")
-		}
-	})
-
-	t.Run("release and rollback response mapping", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-
-		releaseResp, err := env.srv.ReleaseDepot(ctx, adminservice.ReleaseDepotRequestObject{Depot: "missing"})
-		if err != nil {
-			t.Fatalf("ReleaseDepot() unexpected error: %v", err)
-		}
-		if _, ok := releaseResp.(adminservice.ReleaseDepot404JSONResponse); !ok {
-			t.Fatalf("ReleaseDepot() response = %#v", releaseResp)
-		}
-
-		env.writeDepotInfo("depot", "fw.bin")
-		rollbackResp, err := env.srv.RollbackDepot(ctx, adminservice.RollbackDepotRequestObject{Depot: "depot"})
-		if err != nil {
-			t.Fatalf("RollbackDepot() unexpected error: %v", err)
-		}
-		if _, ok := rollbackResp.(adminservice.RollbackDepot409JSONResponse); !ok {
-			t.Fatalf("RollbackDepot() response = %#v", rollbackResp)
-		}
-
-		releaseConflictEnv := newTestEnv(t)
-		releaseConflictEnv.writeDepotInfo("depot", "fw.bin")
-		releaseResp, err = releaseConflictEnv.srv.ReleaseDepot(ctx, adminservice.ReleaseDepotRequestObject{Depot: "depot"})
-		if err != nil {
-			t.Fatalf("ReleaseDepot() unexpected error: %v", err)
-		}
-		if _, ok := releaseResp.(adminservice.ReleaseDepot409JSONResponse); !ok {
-			t.Fatalf("ReleaseDepot() response = %#v", releaseResp)
-		}
-	})
-
-	t.Run("release and rollback success", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.0.0", map[string]string{"fw.bin": "stable"})
-		env.writeRelease("depot", Beta, "1.1.0", map[string]string{"fw.bin": "beta"})
-		env.writeRelease("depot", Testing, "1.2.0", map[string]string{"fw.bin": "testing"})
-
-		releaseResp, err := env.srv.ReleaseDepot(ctx, adminservice.ReleaseDepotRequestObject{Depot: "depot"})
-		if err != nil {
-			t.Fatalf("ReleaseDepot() unexpected error: %v", err)
-		}
-		if _, ok := releaseResp.(adminservice.ReleaseDepot200JSONResponse); !ok {
-			t.Fatalf("ReleaseDepot() response = %#v", releaseResp)
-		}
-
-		rollbackResp, err := env.srv.RollbackDepot(ctx, adminservice.RollbackDepotRequestObject{Depot: "depot"})
-		if err != nil {
-			t.Fatalf("RollbackDepot() unexpected error: %v", err)
-		}
-		if _, ok := rollbackResp.(adminservice.RollbackDepot200JSONResponse); !ok {
-			t.Fatalf("RollbackDepot() response = %#v", rollbackResp)
-		}
-	})
-
-	t.Run("release internal error and rollback invalid path", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Beta, "1.1.0", map[string]string{"fw.bin": "beta"})
-		env.writeRelease("depot", Testing, "1.2.0", map[string]string{"fw.bin": "testing"})
-		store := newMockStore(t)
-		store.base = env.store
-		store.stat = func(name string) (fs.FileInfo, error) { return nil, errors.New("boom") }
-		srv := &Server{Store: store, MetadataStore: env.meta}
-
-		releaseResp, err := srv.ReleaseDepot(ctx, adminservice.ReleaseDepotRequestObject{Depot: "depot"})
-		if err != nil {
-			t.Fatalf("ReleaseDepot() unexpected error: %v", err)
-		}
-		if _, ok := releaseResp.(adminservice.ReleaseDepot500JSONResponse); !ok {
-			t.Fatalf("ReleaseDepot() response = %#v", releaseResp)
-		}
-
-		if _, err := srv.RollbackDepot(ctx, adminservice.RollbackDepotRequestObject{Depot: "%"}); err == nil {
-			t.Fatal("RollbackDepot() expected invalid params error")
-		}
-	})
-
-	t.Run("release invalid path and rollback missing depot", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		if _, err := env.srv.ReleaseDepot(ctx, adminservice.ReleaseDepotRequestObject{Depot: "%"}); err == nil {
-			t.Fatal("ReleaseDepot() expected invalid params error")
-		}
-		resp, err := env.srv.RollbackDepot(ctx, adminservice.RollbackDepotRequestObject{Depot: "missing"})
-		if err != nil {
-			t.Fatalf("RollbackDepot() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.RollbackDepot404JSONResponse); !ok {
-			t.Fatalf("RollbackDepot() response = %#v", resp)
-		}
-	})
-
-	t.Run("rollback internal error", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Rollback, "1.0.0", map[string]string{"fw.bin": "rollback"})
-		store := newMockStore(t)
-		store.base = env.store
-		store.stat = func(name string) (fs.FileInfo, error) { return nil, errors.New("boom") }
-		srv := &Server{Store: store, MetadataStore: env.meta}
-		resp, err := srv.RollbackDepot(ctx, adminservice.RollbackDepotRequestObject{Depot: "depot"})
-		if err != nil {
-			t.Fatalf("RollbackDepot() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.RollbackDepot500JSONResponse); !ok {
-			t.Fatalf("RollbackDepot() response = %#v", resp)
-		}
-	})
-}
-
-func TestGetPeerOTAHandler(t *testing.T) {
-	t.Parallel()
-
-	ctx := context.Background()
-
-	t.Run("resolver missing", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		resp, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{})
-		if err != nil {
-			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetPeerOTA404JSONResponse); !ok {
-			t.Fatalf("GetPeerOTA() response = %#v", resp)
-		}
-	})
-
-	t.Run("invalid public key", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "depot", Stable, nil
-		}
-		if _, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: "%"}); err == nil {
-			t.Fatal("GetPeerOTA() expected invalid params error")
-		}
-	})
-
-	t.Run("resolver says unavailable", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "", "", nil
-		}
-		resp, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: testCallerPublicKey.String()})
-		if err != nil {
-			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetPeerOTA404JSONResponse); !ok {
-			t.Fatalf("GetPeerOTA() response = %#v", resp)
-		}
-	})
-
-	t.Run("success", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.0.0", map[string]string{"fw.bin": "firmware"})
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "depot", Stable, nil
-		}
-		resp, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: testCallerPublicKey.String()})
-		if err != nil {
-			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetPeerOTA200JSONResponse); !ok {
-			t.Fatalf("GetPeerOTA() response = %#v", resp)
-		}
-	})
-
-	t.Run("resolver error and firmware missing", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "", "", errors.New("boom")
-		}
-		resp, err := env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: testCallerPublicKey.String()})
-		if err != nil {
-			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetPeerOTA404JSONResponse); !ok {
-			t.Fatalf("GetPeerOTA() response = %#v", resp)
-		}
-
-		env = newTestEnv(t)
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "depot", Beta, nil
-		}
-		resp, err = env.srv.GetPeerOTA(ctx, adminservice.GetPeerOTARequestObject{PublicKey: testCallerPublicKey.String()})
-		if err != nil {
-			t.Fatalf("GetPeerOTA() unexpected error: %v", err)
-		}
-		if _, ok := resp.(adminservice.GetPeerOTA404JSONResponse); !ok {
-			t.Fatalf("GetPeerOTA() response = %#v", resp)
-		}
-	})
-}
-
-func TestServerPublicGetOTA(t *testing.T) {
-	t.Parallel()
-
-	t.Run("resolver missing", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		resp, err := env.srv.GetOTA(context.Background(), gearservice.GetOTARequestObject{})
-		if err != nil {
-			t.Fatalf("GetOTA() unexpected error: %v", err)
-		}
-		if _, ok := resp.(gearservice.GetOTA404JSONResponse); !ok {
-			t.Fatalf("GetOTA() response = %#v", resp)
-		}
-	})
-
-	t.Run("caller missing", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "depot", Stable, nil
-		}
-		resp, err := env.srv.GetOTA(context.Background(), gearservice.GetOTARequestObject{})
-		if err != nil {
-			t.Fatalf("GetOTA() unexpected error: %v", err)
-		}
-		if _, ok := resp.(gearservice.GetOTA404JSONResponse); !ok {
-			t.Fatalf("GetOTA() response = %#v", resp)
-		}
-	})
-
-	t.Run("resolver error", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "", "", errors.New("boom")
-		}
-		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
-		resp, err := env.srv.GetOTA(ctx, gearservice.GetOTARequestObject{})
-		if err != nil {
-			t.Fatalf("GetOTA() unexpected error: %v", err)
-		}
-		if _, ok := resp.(gearservice.GetOTA404JSONResponse); !ok {
-			t.Fatalf("GetOTA() response = %#v", resp)
-		}
-	})
-
-	t.Run("success", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			if publicKey != testCallerPublicKey {
-				t.Fatalf("publicKey = %s", publicKey)
-			}
-			return "depot", Stable, nil
-		}
-		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
-		resp, err := env.srv.GetOTA(ctx, gearservice.GetOTARequestObject{})
-		if err != nil {
-			t.Fatalf("GetOTA() unexpected error: %v", err)
-		}
-		okResp, ok := resp.(gearservice.GetOTA200JSONResponse)
-		if !ok {
-			t.Fatalf("GetOTA() response = %#v", resp)
-		}
-		if okResp.Depot != "depot" || okResp.Channel != string(Stable) || okResp.FirmwareSemver != "1.2.3" || len(okResp.Files) != 1 {
-			t.Fatalf("GetOTA() payload = %+v", okResp)
-		}
-	})
-}
-
-func TestServerPublicDownloadFirmware(t *testing.T) {
-	t.Parallel()
-
-	t.Run("target unavailable", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		resp, err := env.srv.DownloadFirmware(context.Background(), gearservice.DownloadFirmwareRequestObject{Path: "fw.bin"})
-		if err != nil {
-			t.Fatalf("DownloadFirmware() unexpected error: %v", err)
-		}
-		if _, ok := resp.(gearservice.DownloadFirmware404JSONResponse); !ok {
-			t.Fatalf("DownloadFirmware() response = %#v", resp)
-		}
-	})
-
-	t.Run("invalid escaped path", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "depot", Stable, nil
-		}
-		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
-		resp, err := env.srv.DownloadFirmware(ctx, gearservice.DownloadFirmwareRequestObject{Path: "%"})
-		if err != nil {
-			t.Fatalf("DownloadFirmware() unexpected error: %v", err)
-		}
-		if _, ok := resp.(gearservice.DownloadFirmware400JSONResponse); !ok {
-			t.Fatalf("DownloadFirmware() response = %#v", resp)
-		}
-	})
-
-	t.Run("invalid relative path", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "depot", Stable, nil
-		}
-		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
-		resp, err := env.srv.DownloadFirmware(ctx, gearservice.DownloadFirmwareRequestObject{Path: "../fw.bin"})
-		if err != nil {
-			t.Fatalf("DownloadFirmware() unexpected error: %v", err)
-		}
-		if _, ok := resp.(gearservice.DownloadFirmware400JSONResponse); !ok {
-			t.Fatalf("DownloadFirmware() response = %#v", resp)
-		}
-	})
-
-	t.Run("file not found", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			return "depot", Stable, nil
-		}
-		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
-		resp, err := env.srv.DownloadFirmware(ctx, gearservice.DownloadFirmwareRequestObject{Path: "missing.bin"})
-		if err != nil {
-			t.Fatalf("DownloadFirmware() unexpected error: %v", err)
-		}
-		if _, ok := resp.(gearservice.DownloadFirmware404JSONResponse); !ok {
-			t.Fatalf("DownloadFirmware() response = %#v", resp)
-		}
-	})
-
-	t.Run("open error", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		store := newMockStore(t)
-		store.base = env.store
-		store.open = func(name string) (fs.File, error) { return nil, errors.New("boom") }
-		srv := &Server{
-			Store:         store,
-			MetadataStore: env.meta,
-			ResolvePeerTarget: func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-				return "depot", Stable, nil
-			},
-		}
-		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
-		resp, err := srv.DownloadFirmware(ctx, gearservice.DownloadFirmwareRequestObject{Path: "bundles/fw.bin"})
-		if err != nil {
-			t.Fatalf("DownloadFirmware() unexpected error: %v", err)
-		}
-		if _, ok := resp.(downloadFirmware500JSONResponse); !ok {
-			t.Fatalf("DownloadFirmware() response = %#v", resp)
-		}
-	})
-
-	t.Run("success", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"bundles/fw.bin": "firmware"})
-		env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-			if publicKey != testCallerPublicKey {
-				t.Fatalf("publicKey = %s", publicKey)
-			}
-			return "depot", Stable, nil
-		}
-		ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
-		resp, err := env.srv.DownloadFirmware(ctx, gearservice.DownloadFirmwareRequestObject{Path: "bundles/fw.bin"})
-		if err != nil {
-			t.Fatalf("DownloadFirmware() unexpected error: %v", err)
-		}
-		okResp, ok := resp.(gearservice.DownloadFirmware200ApplicationoctetStreamResponse)
-		if !ok {
-			t.Fatalf("DownloadFirmware() response = %#v", resp)
-		}
-		data, err := io.ReadAll(okResp.Body)
-		if err != nil {
-			t.Fatalf("ReadAll() unexpected error: %v", err)
-		}
-		if string(data) != "firmware" {
-			t.Fatalf("DownloadFirmware() body = %q", string(data))
-		}
-		if okResp.Headers.XChecksumMD5 == "" || okResp.Headers.XChecksumSHA256 == "" || okResp.ContentLength != int64(len(data)) {
-			t.Fatalf("DownloadFirmware() headers = %+v length = %d", okResp.Headers, okResp.ContentLength)
-		}
-	})
-}
-
-func TestResolveCallerTarget(t *testing.T) {
-	t.Parallel()
-
-	env := newTestEnv(t)
-	if _, _, err := env.srv.resolveCallerTarget(context.Background()); err == nil {
-		t.Fatal("resolveCallerTarget() expected resolver error")
-	}
-
-	env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-		return "depot", Stable, nil
-	}
-	if _, _, err := env.srv.resolveCallerTarget(context.Background()); err == nil {
-		t.Fatal("resolveCallerTarget() expected caller public key error")
-	}
-
-	env.srv.ResolvePeerTarget = func(ctx context.Context, publicKey giznet.PublicKey) (string, Channel, error) {
-		return "", "", nil
-	}
-	ctx := gearservice.WithCallerPublicKey(context.Background(), testCallerPublicKey)
-	if _, _, err := env.srv.resolveCallerTarget(ctx); err == nil {
-		t.Fatal("resolveCallerTarget() expected missing depot/channel error")
-	}
-}
-
-func TestResolveOTAFile(t *testing.T) {
-	t.Parallel()
-
-	t.Run("invalid path", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		if _, _, _, err := env.srv.resolveOTAFile(context.Background(), "depot", Stable, "../bad"); !errors.Is(err, errInvalidPath) {
-			t.Fatalf("resolveOTAFile() error = %v", err)
-		}
-	})
-
-	t.Run("missing depot", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		if _, _, _, err := env.srv.resolveOTAFile(context.Background(), "missing", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
-			t.Fatalf("resolveOTAFile() error = %v", err)
-		}
-	})
-
-	t.Run("missing release", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeDepotInfo("depot", "fw.bin")
-		if _, _, _, err := env.srv.resolveOTAFile(context.Background(), "depot", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
-			t.Fatalf("resolveOTAFile() error = %v", err)
-		}
-	})
-
-	t.Run("open not exist", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"fw.bin": "firmware"})
-		store := newMockStore(t)
-		store.base = env.store
-		store.open = func(name string) (fs.File, error) { return nil, fs.ErrNotExist }
-		srv := &Server{Store: store, MetadataStore: env.meta}
-		if _, _, _, err := srv.resolveOTAFile(context.Background(), "depot", Stable, "fw.bin"); !errors.Is(err, errFirmwareNotFound) {
-			t.Fatalf("resolveOTAFile() error = %v", err)
-		}
-	})
-
-	t.Run("stat error", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"fw.bin": "firmware"})
-		store := newMockStore(t)
-		store.base = env.store
-		store.open = func(name string) (fs.File, error) {
-			return statErrorFile{Reader: bytes.NewReader(nil)}, nil
-		}
-		srv := &Server{Store: store, MetadataStore: env.meta}
-		if _, _, _, err := srv.resolveOTAFile(context.Background(), "depot", Stable, "fw.bin"); err == nil {
-			t.Fatal("resolveOTAFile() expected stat error")
-		}
-	})
-
-	t.Run("success", func(t *testing.T) {
-		t.Parallel()
-		env := newTestEnv(t)
-		env.writeRelease("depot", Stable, "1.2.3", map[string]string{"fw.bin": "firmware"})
-		body, contentLength, headers, err := env.srv.resolveOTAFile(context.Background(), "depot", Stable, "fw.bin")
-		if err != nil {
-			t.Fatalf("resolveOTAFile() unexpected error: %v", err)
-		}
-		data, err := io.ReadAll(body)
-		if err != nil {
-			t.Fatalf("ReadAll() unexpected error: %v", err)
-		}
-		if string(data) != "firmware" || contentLength != int64(len(data)) || headers.XChecksumMD5 == "" || headers.XChecksumSHA256 == "" {
-			t.Fatalf("resolveOTAFile() payload = %q length=%d headers=%+v", string(data), contentLength, headers)
-		}
-	})
-}
-
-func TestDownloadFirmware500Visitor(t *testing.T) {
-	t.Parallel()
-
-	app := fiber.New()
-	app.Get("/", func(c *fiber.Ctx) error {
-		return downloadFirmware500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", "boom")).VisitDownloadFirmwareResponse(c)
-	})
-
-	req := httptest.NewRequest("GET", "/", nil)
-	resp, err := app.Test(req)
+	create, err := s.CreateFirmware(ctx, adminservice.CreateFirmwareRequestObject{Body: ptr(firmwareUpsert("devkit", "stable-1", "beta-1", "develop-1", "pending-1"))})
 	if err != nil {
-		t.Fatalf("app.Test() unexpected error: %v", err)
+		t.Fatalf("CreateFirmware error = %v", err)
 	}
-	if resp.StatusCode != 500 {
-		t.Fatalf("status = %d", resp.StatusCode)
+	if _, ok := create.(adminservice.CreateFirmware200JSONResponse); !ok {
+		t.Fatalf("CreateFirmware response = %T", create)
+	}
+
+	released, err := s.ReleaseFirmware(ctx, adminservice.ReleaseFirmwareRequestObject{Name: "devkit"})
+	if err != nil {
+		t.Fatalf("ReleaseFirmware error = %v", err)
+	}
+	releasedItem := apitypes.Firmware(released.(adminservice.ReleaseFirmware200JSONResponse))
+	if got := slotVersion(releasedItem.Slots.Stable); got != "beta-1" {
+		t.Fatalf("released stable = %q", got)
+	}
+	if got := slotVersion(releasedItem.Slots.Rollback); got != "stable-1" {
+		t.Fatalf("released rollback = %q", got)
+	}
+	if slotVersion(releasedItem.Slots.Pending) != "" {
+		t.Fatalf("released pending should be empty: %+v", releasedItem.Slots.Pending)
+	}
+
+	rolledBack, err := s.RollbackFirmware(ctx, adminservice.RollbackFirmwareRequestObject{Name: "devkit"})
+	if err != nil {
+		t.Fatalf("RollbackFirmware error = %v", err)
+	}
+	rolledBackItem := apitypes.Firmware(rolledBack.(adminservice.RollbackFirmware200JSONResponse))
+	if got := slotVersion(rolledBackItem.Slots.Stable); got != "stable-1" {
+		t.Fatalf("rolled back stable = %q", got)
+	}
+
+	list, err := s.ListFirmwares(ctx, adminservice.ListFirmwaresRequestObject{})
+	if err != nil {
+		t.Fatalf("ListFirmwares error = %v", err)
+	}
+	if got := len(adminservice.FirmwareList(list.(adminservice.ListFirmwares200JSONResponse)).Items); got != 1 {
+		t.Fatalf("ListFirmwares len = %d", got)
 	}
 }
 
-type statErrorFile struct {
-	*bytes.Reader
+func TestServerRejectsOperationLeavingStableEmpty(t *testing.T) {
+	ctx := context.Background()
+	s := &Server{Store: kv.NewMemory(nil)}
+	if _, err := s.CreateFirmware(ctx, adminservice.CreateFirmwareRequestObject{Body: ptr(firmwareUpsert("devkit", "stable-1", "", "", ""))}); err != nil {
+		t.Fatalf("CreateFirmware error = %v", err)
+	}
+	if response, err := s.ReleaseFirmware(ctx, adminservice.ReleaseFirmwareRequestObject{Name: "devkit"}); err != nil {
+		t.Fatalf("ReleaseFirmware error = %v", err)
+	} else if _, ok := response.(adminservice.ReleaseFirmware409JSONResponse); !ok {
+		t.Fatalf("ReleaseFirmware response = %T, want 409", response)
+	}
+	if response, err := s.RollbackFirmware(ctx, adminservice.RollbackFirmwareRequestObject{Name: "devkit"}); err != nil {
+		t.Fatalf("RollbackFirmware error = %v", err)
+	} else if _, ok := response.(adminservice.RollbackFirmware409JSONResponse); !ok {
+		t.Fatalf("RollbackFirmware response = %T, want 409", response)
+	}
 }
 
-func (f statErrorFile) Close() error               { return nil }
-func (f statErrorFile) Stat() (fs.FileInfo, error) { return nil, errors.New("boom") }
+func TestServerPutGetDeleteFirmware(t *testing.T) {
+	ctx := context.Background()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := createdAt.Add(time.Hour)
+	nextTime := createdAt
+	s := &Server{
+		Store: kv.NewMemory(nil),
+		Now: func() time.Time {
+			out := nextTime
+			nextTime = updatedAt
+			return out
+		},
+	}
+
+	put, err := s.PutFirmware(ctx, adminservice.PutFirmwareRequestObject{
+		Name: "devkit",
+		Body: ptr(firmwareUpsertWithArtifact("devkit", "1.0.0")),
+	})
+	if err != nil {
+		t.Fatalf("PutFirmware error = %v", err)
+	}
+	putItem := apitypes.Firmware(put.(adminservice.PutFirmware200JSONResponse))
+	if putItem.CreatedAt != createdAt || putItem.UpdatedAt != createdAt {
+		t.Fatalf("first put timestamps = %s/%s, want %s", putItem.CreatedAt, putItem.UpdatedAt, createdAt)
+	}
+
+	update := firmwareUpsertWithArtifact("devkit", "1.1.0")
+	description := " updated firmware "
+	update.Description = &description
+	updated, err := s.PutFirmware(ctx, adminservice.PutFirmwareRequestObject{Name: "devkit", Body: ptr(update)})
+	if err != nil {
+		t.Fatalf("PutFirmware update error = %v", err)
+	}
+	updatedItem := apitypes.Firmware(updated.(adminservice.PutFirmware200JSONResponse))
+	if updatedItem.CreatedAt != createdAt || updatedItem.UpdatedAt != updatedAt {
+		t.Fatalf("updated timestamps = %s/%s, want %s/%s", updatedItem.CreatedAt, updatedItem.UpdatedAt, createdAt, updatedAt)
+	}
+	if updatedItem.Description == nil || *updatedItem.Description != "updated firmware" {
+		t.Fatalf("updated description = %v", updatedItem.Description)
+	}
+
+	got, err := s.GetFirmware(ctx, adminservice.GetFirmwareRequestObject{Name: "devkit"})
+	if err != nil {
+		t.Fatalf("GetFirmware error = %v", err)
+	}
+	if item := apitypes.Firmware(got.(adminservice.GetFirmware200JSONResponse)); slotVersion(item.Slots.Stable) != "1.1.0" {
+		t.Fatalf("GetFirmware stable = %+v", item.Slots.Stable)
+	}
+
+	deleted, err := s.DeleteFirmware(ctx, adminservice.DeleteFirmwareRequestObject{Name: "devkit"})
+	if err != nil {
+		t.Fatalf("DeleteFirmware error = %v", err)
+	}
+	if item := apitypes.Firmware(deleted.(adminservice.DeleteFirmware200JSONResponse)); item.Name != "devkit" {
+		t.Fatalf("DeleteFirmware item = %+v", item)
+	}
+	if response, err := s.GetFirmware(ctx, adminservice.GetFirmwareRequestObject{Name: "devkit"}); err != nil {
+		t.Fatalf("GetFirmware after delete error = %v", err)
+	} else if _, ok := response.(adminservice.GetFirmware404JSONResponse); !ok {
+		t.Fatalf("GetFirmware after delete response = %T, want 404", response)
+	}
+}
+
+func TestServerCreateAndPutValidation(t *testing.T) {
+	ctx := context.Background()
+	s := &Server{Store: kv.NewMemory(nil)}
+
+	if response, err := s.CreateFirmware(ctx, adminservice.CreateFirmwareRequestObject{}); err != nil {
+		t.Fatalf("CreateFirmware nil body error = %v", err)
+	} else if _, ok := response.(adminservice.CreateFirmware400JSONResponse); !ok {
+		t.Fatalf("CreateFirmware nil body response = %T, want 400", response)
+	}
+	if response, err := s.CreateFirmware(ctx, adminservice.CreateFirmwareRequestObject{Body: ptr(firmwareUpsert("", "", "", "", ""))}); err != nil {
+		t.Fatalf("CreateFirmware empty name error = %v", err)
+	} else if _, ok := response.(adminservice.CreateFirmware400JSONResponse); !ok {
+		t.Fatalf("CreateFirmware empty name response = %T, want 400", response)
+	}
+	if response, err := s.PutFirmware(ctx, adminservice.PutFirmwareRequestObject{Name: "devkit", Body: ptr(firmwareUpsert("other", "", "", "", ""))}); err != nil {
+		t.Fatalf("PutFirmware name mismatch error = %v", err)
+	} else if _, ok := response.(adminservice.PutFirmware400JSONResponse); !ok {
+		t.Fatalf("PutFirmware name mismatch response = %T, want 400", response)
+	}
+	if _, err := s.CreateFirmware(ctx, adminservice.CreateFirmwareRequestObject{Body: ptr(firmwareUpsertWithArtifact("devkit", "1.0.0"))}); err != nil {
+		t.Fatalf("CreateFirmware first error = %v", err)
+	}
+	if response, err := s.CreateFirmware(ctx, adminservice.CreateFirmwareRequestObject{Body: ptr(firmwareUpsertWithArtifact("devkit", "1.0.0"))}); err != nil {
+		t.Fatalf("CreateFirmware duplicate error = %v", err)
+	} else if _, ok := response.(adminservice.CreateFirmware409JSONResponse); !ok {
+		t.Fatalf("CreateFirmware duplicate response = %T, want 409", response)
+	}
+}
+
+func TestServerRejectsInvalidArtifacts(t *testing.T) {
+	tests := []struct {
+		name     string
+		artifact apitypes.FirmwareArtifact
+		want     string
+	}{
+		{name: "missing name", artifact: apitypes.FirmwareArtifact{Kind: apitypes.FirmwareArtifactKindApp, Url: "https://example.test/app.bin"}, want: "name is required"},
+		{name: "missing kind", artifact: apitypes.FirmwareArtifact{Name: "main", Url: "https://example.test/app.bin"}, want: "kind is required"},
+		{name: "bad kind", artifact: apitypes.FirmwareArtifact{Name: "main", Kind: apitypes.FirmwareArtifactKind("other"), Url: "https://example.test/app.bin"}, want: "unsupported kind"},
+		{name: "missing url", artifact: apitypes.FirmwareArtifact{Name: "main", Kind: apitypes.FirmwareArtifactKindApp}, want: "url is required"},
+		{name: "negative size", artifact: apitypes.FirmwareArtifact{Name: "main", Kind: apitypes.FirmwareArtifactKindApp, Url: "https://example.test/app.bin", Size: int64Ptr(-1)}, want: "size must be non-negative"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := firmwareUpsertWithArtifact("devkit", "1.0.0")
+			req.Slots.Stable.Artifacts = &[]apitypes.FirmwareArtifact{tt.artifact}
+			_, err := normalizeFirmwareUpsert(req, "")
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("normalizeFirmwareUpsert error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestServerListFirmwaresPagination(t *testing.T) {
+	ctx := context.Background()
+	s := &Server{Store: kv.NewMemory(nil)}
+	for _, name := range []string{"devkit", "p4_func_ev", "waveshare"} {
+		if _, err := s.CreateFirmware(ctx, adminservice.CreateFirmwareRequestObject{Body: ptr(firmwareUpsertWithArtifact(name, "1.0.0"))}); err != nil {
+			t.Fatalf("CreateFirmware(%s) error = %v", name, err)
+		}
+	}
+
+	limit := int32(2)
+	first, err := s.ListFirmwares(ctx, adminservice.ListFirmwaresRequestObject{Params: adminservice.ListFirmwaresParams{Limit: &limit}})
+	if err != nil {
+		t.Fatalf("ListFirmwares first error = %v", err)
+	}
+	firstPage := adminservice.FirmwareList(first.(adminservice.ListFirmwares200JSONResponse))
+	if len(firstPage.Items) != 2 || !firstPage.HasNext || firstPage.NextCursor == nil {
+		t.Fatalf("first page = %+v", firstPage)
+	}
+
+	second, err := s.ListFirmwares(ctx, adminservice.ListFirmwaresRequestObject{Params: adminservice.ListFirmwaresParams{Cursor: firstPage.NextCursor, Limit: &limit}})
+	if err != nil {
+		t.Fatalf("ListFirmwares second error = %v", err)
+	}
+	secondPage := adminservice.FirmwareList(second.(adminservice.ListFirmwares200JSONResponse))
+	if len(secondPage.Items) != 1 || secondPage.HasNext || secondPage.NextCursor != nil {
+		t.Fatalf("second page = %+v", secondPage)
+	}
+}
+
+func TestServerStoreNotConfigured(t *testing.T) {
+	ctx := context.Background()
+	s := &Server{}
+	if response, err := s.ListFirmwares(ctx, adminservice.ListFirmwaresRequestObject{}); err != nil {
+		t.Fatalf("ListFirmwares error = %v", err)
+	} else if _, ok := response.(adminservice.ListFirmwares500JSONResponse); !ok {
+		t.Fatalf("ListFirmwares response = %T, want 500", response)
+	}
+	if response, err := s.GetFirmware(ctx, adminservice.GetFirmwareRequestObject{Name: "devkit"}); err != nil {
+		t.Fatalf("GetFirmware error = %v", err)
+	} else if _, ok := response.(adminservice.GetFirmware500JSONResponse); !ok {
+		t.Fatalf("GetFirmware response = %T, want 500", response)
+	}
+}
+
+func firmwareUpsert(name, stable, beta, develop, pending string) adminservice.FirmwareUpsert {
+	return adminservice.FirmwareUpsert{
+		Name: name,
+		Slots: apitypes.FirmwareSlots{
+			Stable:  firmwareSlot(stable),
+			Beta:    firmwareSlot(beta),
+			Develop: firmwareSlot(develop),
+			Pending: firmwareSlot(pending),
+		},
+	}
+}
+
+func firmwareUpsertWithArtifact(name, stable string) adminservice.FirmwareUpsert {
+	req := firmwareUpsert(name, stable, "", "", "")
+	sha256 := strings.Repeat("a", 64)
+	size := int64(42)
+	req.Slots.Stable.Artifacts = &[]apitypes.FirmwareArtifact{{
+		Name:   "main",
+		Kind:   apitypes.FirmwareArtifactKindApp,
+		Url:    "https://firmware.example/" + name + "/" + stable + "/app.bin",
+		Sha256: &sha256,
+		Size:   &size,
+	}}
+	return req
+}
+
+func firmwareSlot(version string) apitypes.FirmwareSlot {
+	if version == "" {
+		return apitypes.FirmwareSlot{}
+	}
+	return apitypes.FirmwareSlot{Version: &version}
+}
+
+func slotVersion(slot apitypes.FirmwareSlot) string {
+	if slot.Version == nil {
+		return ""
+	}
+	return *slot.Version
+}
+
+func ptr[T any](value T) *T {
+	return &value
+}
+
+func int64Ptr(value int64) *int64 {
+	return &value
+}

@@ -23,8 +23,8 @@ type resourceClient interface {
 
 type adminResourceAPI interface {
 	ApplyResourceWithResponse(ctx context.Context, body adminservice.ApplyResourceJSONRequestBody, reqEditors ...adminservice.RequestEditorFn) (*adminservice.ApplyResourceResponse, error)
-	DeleteResourceWithResponse(ctx context.Context, kind adminservice.ResourceKind, name adminservice.ResourceName, reqEditors ...adminservice.RequestEditorFn) (*adminservice.DeleteResourceResponse, error)
-	GetResourceWithResponse(ctx context.Context, kind adminservice.ResourceKind, name adminservice.ResourceName, reqEditors ...adminservice.RequestEditorFn) (*adminservice.GetResourceResponse, error)
+	DeleteResourceWithResponse(ctx context.Context, kind adminservice.ResourceKind, name string, reqEditors ...adminservice.RequestEditorFn) (*adminservice.DeleteResourceResponse, error)
+	GetResourceWithResponse(ctx context.Context, kind adminservice.ResourceKind, name string, reqEditors ...adminservice.RequestEditorFn) (*adminservice.GetResourceResponse, error)
 }
 
 type resourceClientBridge struct {
@@ -44,7 +44,7 @@ func (r *resourceClientBridge) ApplyResource(ctx context.Context, resource apity
 }
 
 func (r *resourceClientBridge) DeleteResource(ctx context.Context, kind apitypes.ResourceKind, name string) (apitypes.Resource, error) {
-	resp, err := r.api.DeleteResourceWithResponse(ctx, kind, adminservice.ResourceName(name))
+	resp, err := r.api.DeleteResourceWithResponse(ctx, kind, string(name))
 	if err != nil {
 		return apitypes.Resource{}, err
 	}
@@ -55,7 +55,7 @@ func (r *resourceClientBridge) DeleteResource(ctx context.Context, kind apitypes
 }
 
 func (r *resourceClientBridge) GetResource(ctx context.Context, kind apitypes.ResourceKind, name string) (apitypes.Resource, error) {
-	resp, err := r.api.GetResourceWithResponse(ctx, kind, adminservice.ResourceName(name))
+	resp, err := r.api.GetResourceWithResponse(ctx, kind, string(name))
 	if err != nil {
 		return apitypes.Resource{}, err
 	}

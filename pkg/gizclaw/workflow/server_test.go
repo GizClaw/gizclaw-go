@@ -266,7 +266,7 @@ func TestServerListWorkflowsPagination(t *testing.T) {
 		}
 	}
 
-	limit := adminservice.Limit(1)
+	limit := int32(1)
 	firstResp, err := srv.ListWorkflows(ctx, adminservice.ListWorkflowsRequestObject{
 		Params: adminservice.ListWorkflowsParams{Limit: &limit},
 	})
@@ -281,7 +281,7 @@ func TestServerListWorkflowsPagination(t *testing.T) {
 		t.Fatalf("ListWorkflows(first page) = %#v", first)
 	}
 
-	cursor := adminservice.Cursor(*first.NextCursor)
+	cursor := string(*first.NextCursor)
 	secondResp, err := srv.ListWorkflows(ctx, adminservice.ListWorkflowsRequestObject{
 		Params: adminservice.ListWorkflowsParams{
 			Cursor: &cursor,

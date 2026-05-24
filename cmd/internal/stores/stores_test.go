@@ -5,12 +5,10 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
-	"os"
 	"path/filepath"
 	"testing"
 
 	physicalstorage "github.com/GizClaw/gizclaw-go/cmd/internal/storage"
-	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/graph"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 	"github.com/goccy/go-yaml"
@@ -70,15 +68,6 @@ func resolveTestConfigs(baseDir string, configs map[string]Config) map[string]Co
 		resolved[name] = cfg
 	}
 	return resolved
-}
-
-func depotDir(t *testing.T, store depotstore.Store) string {
-	t.Helper()
-	dir, ok := store.(depotstore.Dir)
-	if !ok {
-		t.Fatalf("store type = %T, want depotstore.Dir", store)
-	}
-	return string(dir)
 }
 
 // --- New ---
@@ -281,24 +270,23 @@ stores:
   mem:
     kind: keyvalue
     backend: memory
-  fs:
-    kind: filestore
-    backend: filesystem
-    dir: data
+  vec:
+    kind: vecstore
+    backend: memory
 `))
 	defer reg.Close()
 
 	if _, err := reg.KV("missing"); err == nil {
 		t.Fatal("expected error for missing store")
 	}
-	if _, err := reg.KV("fs"); err == nil {
+	if _, err := reg.KV("vec"); err == nil {
 		t.Fatal("expected error for wrong kind lookup")
 	}
 }
 
 func TestKVWithStorageWrongKindReference(t *testing.T) {
 	physical, err := physicalstorage.New(map[string]physicalstorage.Config{
-		"fw": {Kind: physicalstorage.KindFS, Backend: "filesystem", Dir: t.TempDir()},
+		"files": {Kind: physicalstorage.KindFilesystem, FS: &physicalstorage.FSConfig{Dir: t.TempDir()}},
 	})
 	if err != nil {
 		t.Fatalf("storage.New: %v", err)
@@ -306,9 +294,9 @@ func TestKVWithStorageWrongKindReference(t *testing.T) {
 	defer physical.Close()
 
 	if _, err := NewWithStorage(physical, map[string]Config{
-		"kv": {Kind: KindKeyValue, Storage: "fw"},
+		"kv": {Kind: KindKeyValue, Storage: "files"},
 	}); err == nil {
-		t.Fatal("expected error for keyvalue store referencing filestore storage")
+		t.Fatal("expected error for keyvalue store referencing filesystem storage")
 	}
 }
 
@@ -459,8 +447,8 @@ func TestNewGraphBadStoreRef(t *testing.T) {
 
 func TestNewGraphWrongKindRef(t *testing.T) {
 	if _, err := New(resolveTestConfigs(t.TempDir(), map[string]Config{
-		"fw": {Kind: KindFS, Backend: "filesystem", Dir: "data"},
-		"g":  {Kind: KindGraph, Backend: "kv", Store: "fw"},
+		"vec": {Kind: KindVecStore, Backend: "memory"},
+		"g":   {Kind: KindGraph, Backend: "kv", Store: "vec"},
 	})); err == nil {
 		t.Fatal("expected error for kv ref pointing at non-kv store")
 	}
@@ -471,142 +459,6 @@ func TestNewGraphUnknownBackend(t *testing.T) {
 		"g": {Kind: KindGraph, Backend: "neo4j"},
 	}); err == nil {
 		t.Fatal("expected error for unknown graph backend")
-	}
-}
-
-// --- FS ---
-
-func TestFS(t *testing.T) {
-	dir := t.TempDir()
-	reg := mustStores(t, dir, []byte(`
-stores:
-  fw:
-    kind: filestore
-    backend: filesystem
-    dir: firmware
-`))
-	defer reg.Close()
-
-	s, err := reg.FS("fw")
-	if err != nil {
-		t.Fatalf("FS(fw): %v", err)
-	}
-	want := filepath.Join(dir, "firmware")
-	if got := depotDir(t, s); got != want {
-		t.Fatalf("Root = %q, want %q", got, want)
-	}
-
-	s2, err := reg.FS("fw")
-	if err != nil {
-		t.Fatalf("FS(fw) second: %v", err)
-	}
-	if s != s2 {
-		t.Fatal("expected same instance")
-	}
-}
-
-func TestFSWithStorageBaseDir(t *testing.T) {
-	root := t.TempDir()
-	physical, err := physicalstorage.New(map[string]physicalstorage.Config{
-		"files": {Kind: physicalstorage.KindFilesystem, FS: &physicalstorage.FSConfig{Dir: root}},
-		"depot": {
-			Kind:    physicalstorage.KindDepotStore,
-			DepotFS: &physicalstorage.DepotFSConfig{},
-		},
-	})
-	if err != nil {
-		t.Fatalf("storage.New: %v", err)
-	}
-	defer physical.Close()
-
-	reg, err := NewWithStorage(physical, map[string]Config{
-		"firmware": {
-			Kind:    KindDepotStore,
-			Storage: "depot",
-			DepotFS: &DepotFSRef{
-				Filesystem: physicalstorage.FilesystemRef{Storage: "files", BaseDir: "firmware/releases"},
-			},
-		},
-	})
-	if err != nil {
-		t.Fatalf("NewWithStorage: %v", err)
-	}
-	defer reg.Close()
-
-	firmware, err := reg.FS("firmware")
-	if err != nil {
-		t.Fatalf("FS(firmware): %v", err)
-	}
-	if err := firmware.WriteFile("demo/manifest.json", []byte("manifest")); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-	wantPath := filepath.Join(root, "firmware", "releases", "demo", "manifest.json")
-	if _, err := os.Stat(wantPath); err != nil {
-		t.Fatalf("stat %q: %v", wantPath, err)
-	}
-}
-
-func TestFSWithStorageRejectsInvalidBaseDir(t *testing.T) {
-	tests := []string{"/tmp/firmware", "../firmware", "firmware/../../secrets"}
-	for _, baseDir := range tests {
-		t.Run(baseDir, func(t *testing.T) {
-			physical, err := physicalstorage.New(map[string]physicalstorage.Config{
-				"files": {Kind: physicalstorage.KindFilesystem, FS: &physicalstorage.FSConfig{Dir: t.TempDir()}},
-				"depot": {
-					Kind:    physicalstorage.KindDepotStore,
-					DepotFS: &physicalstorage.DepotFSConfig{},
-				},
-			})
-			if err != nil {
-				t.Fatalf("storage.New: %v", err)
-			}
-			defer physical.Close()
-			_, err = NewWithStorage(physical, map[string]Config{
-				"firmware": {
-					Kind:    KindDepotStore,
-					Storage: "depot",
-					DepotFS: &DepotFSRef{
-						Filesystem: physicalstorage.FilesystemRef{Storage: "files", BaseDir: baseDir},
-					},
-				},
-			})
-			if err == nil {
-				t.Fatal("expected error for invalid base-dir")
-			}
-		})
-	}
-}
-
-func TestFSNotFound(t *testing.T) {
-	reg := mustStores(t, t.TempDir(), []byte(`
-stores:
-  kv:
-    kind: keyvalue
-    backend: memory
-`))
-	defer reg.Close()
-
-	if _, err := reg.FS("missing"); err == nil {
-		t.Fatal("expected error for missing")
-	}
-	if _, err := reg.FS("kv"); err == nil {
-		t.Fatal("expected error for wrong kind lookup")
-	}
-}
-
-func TestNewFSNoDir(t *testing.T) {
-	if _, err := New(map[string]Config{
-		"x": {Kind: KindFS, Backend: "filesystem"},
-	}); err == nil {
-		t.Fatal("expected error for filesystem without dir")
-	}
-}
-
-func TestNewFSUnknownBackend(t *testing.T) {
-	if _, err := New(map[string]Config{
-		"x": {Kind: KindFS, Backend: "s3"},
-	}); err == nil {
-		t.Fatal("expected error for unknown fs backend")
 	}
 }
 

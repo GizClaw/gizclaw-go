@@ -20,12 +20,6 @@
           "hardware_revision": {
             "type": "string"
           },
-          "depot": {
-            "type": "string"
-          },
-          "firmware_semver": {
-            "type": "string"
-          },
           "imeis": {
             "type": "array",
             "items": {

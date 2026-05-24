@@ -21,8 +21,6 @@ func TestClientRegisterThenReadUserStory(t *testing.T) {
 		"--sn", "device-a-sn",
 		"--manufacturer", "Acme",
 		"--model", "Model-A",
-		"--depot", "demo",
-		"--firmware-semver", "1.0.0",
 	).MustSucceed(t)
 
 	devicePubKey := h.ContextPublicKey("device-a")

@@ -21,7 +21,7 @@ import { EmptyState } from "../../components/empty-state";
 import { ErrorBanner, NoticeBanner } from "../../components/banners";
 import { FormField } from "../../components/form-field";
 import { Input } from "../../components/input";
-import { PageBreadcrumb } from "../../components/page-breadcrumb";
+import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../components/select";
 import { Skeleton } from "../../components/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/tabs";
@@ -136,7 +136,25 @@ export function MiniMaxTenantDetailPage(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <PageBreadcrumb
+      <PageHeader
+        actions={
+          <>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/providers/minimax-tenants">
+                <ChevronLeft className="size-4" />
+                Back to list
+              </Link>
+            </Button>
+            <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void load()} size="sm" variant="outline">
+              <RefreshCw className="size-4" />
+              Reload
+            </Button>
+            <Button className="min-w-fit shrink-0 whitespace-nowrap" disabled={tenant === null || syncing} onClick={() => void syncVoices()} size="sm" variant="outline">
+              <RefreshCw className={`size-4 ${syncing ? "animate-spin" : ""}`} />
+              Sync voices
+            </Button>
+          </>
+        }
         items={[
           { href: "/overview", label: "Overview" },
           { href: "/providers/minimax-tenants", label: "MiniMax Tenants" },
@@ -144,30 +162,12 @@ export function MiniMaxTenantDetailPage(): JSX.Element {
         ]}
       />
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Providers</div>
-          <h1 className="text-3xl font-semibold tracking-tight">{tenant?.name ?? tenantName}</h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground lg:text-base">MiniMax tenant configuration and voice sync controls.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link to="/providers/minimax-tenants">
-              <ChevronLeft className="size-4" />
-              Back to list
-            </Link>
-          </Button>
-          <Button className="min-w-fit shrink-0 whitespace-nowrap" onClick={() => void load()} size="sm" variant="outline">
-            <RefreshCw className="size-4" />
-            Reload
-          </Button>
-          <Button className="min-w-fit shrink-0 whitespace-nowrap" disabled={tenant === null || syncing} onClick={() => void syncVoices()} size="sm" variant="outline">
-            <RefreshCw className={`size-4 ${syncing ? "animate-spin" : ""}`} />
-            Sync voices
-          </Button>
-          {tenant ? <Badge variant="secondary">MiniMax</Badge> : null}
-        </div>
-      </div>
+      <PageSummaryCard
+        description="MiniMax tenant configuration and voice sync controls."
+        eyebrow="Providers"
+        meta={tenant ? <Badge variant="secondary">MiniMax</Badge> : null}
+        title={tenant?.name ?? tenantName}
+      />
 
       {notice !== "" ? <NoticeBanner message={notice} tone="success" /> : null}
       {error !== "" ? <ErrorBanner message={error} /> : null}

@@ -5,9 +5,7 @@
     "hardware": {
       "manufacturer": "GizClaw",
       "model": "UI Device Harness",
-      "hardware_revision": "rev-device",
-      "depot": "ui-seed-depot",
-      "firmware_semver": "1.0.0"
+      "hardware_revision": "rev-device"
     }
   }
 }
