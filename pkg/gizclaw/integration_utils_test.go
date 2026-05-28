@@ -592,12 +592,12 @@ func getPeer(ctx context.Context, c *gizclaw.Client, publicKey string) (apitypes
 	return apitypes.Registration{}, responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func resolvePeerBySN(ctx context.Context, c *gizclaw.Client, sn string) (string, error) {
+func findPubKeyBySN(ctx context.Context, c *gizclaw.Client, sn string) (string, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return "", err
 	}
-	resp, err := api.ResolvePeerBySNWithResponse(ctx, sn)
+	resp, err := api.FindPubKeyBySNWithResponse(ctx, sn)
 	if err != nil {
 		return "", err
 	}
@@ -607,12 +607,12 @@ func resolvePeerBySN(ctx context.Context, c *gizclaw.Client, sn string) (string,
 	return "", responseError(resp.StatusCode(), resp.Body, resp.JSON404)
 }
 
-func resolvePeerByIMEI(ctx context.Context, c *gizclaw.Client, tac, serial string) (string, error) {
+func findPubKeyByIMEI(ctx context.Context, c *gizclaw.Client, tac, serial string) (string, error) {
 	api, err := c.ServerAdminClient()
 	if err != nil {
 		return "", err
 	}
-	resp, err := api.ResolvePeerByIMEIWithResponse(ctx, tac, serial)
+	resp, err := api.FindPubKeyByIMEIWithResponse(ctx, tac, serial)
 	if err != nil {
 		return "", err
 	}

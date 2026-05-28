@@ -153,31 +153,31 @@ func TestServerAdminPeerHandlers(t *testing.T) {
 		t.Fatalf("PutPeerInfo = %+v", updatedInfo)
 	}
 
-	resolveSNResp, err := server.ResolvePeerBySN(ctx, adminservice.ResolvePeerBySNRequestObject{Sn: sn})
+	resolveSNResp, err := server.FindPubKeyBySN(ctx, adminservice.FindPubKeyBySNRequestObject{Sn: sn})
 	if err != nil {
-		t.Fatalf("ResolvePeerBySN error: %v", err)
+		t.Fatalf("FindPubKeyBySN error: %v", err)
 	}
-	resolvedSN, ok := resolveSNResp.(adminservice.ResolvePeerBySN200JSONResponse)
+	resolvedSN, ok := resolveSNResp.(adminservice.FindPubKeyBySN200JSONResponse)
 	if !ok {
-		t.Fatalf("ResolvePeerBySN response type = %T", resolveSNResp)
+		t.Fatalf("FindPubKeyBySN response type = %T", resolveSNResp)
 	}
 	if resolvedSN.PublicKey != peerPublicKey {
-		t.Fatalf("ResolvePeerBySN = %+v", resolvedSN)
+		t.Fatalf("FindPubKeyBySN = %+v", resolvedSN)
 	}
 
-	resolveIMEIResp, err := server.ResolvePeerByIMEI(ctx, adminservice.ResolvePeerByIMEIRequestObject{
+	resolveIMEIResp, err := server.FindPubKeyByIMEI(ctx, adminservice.FindPubKeyByIMEIRequestObject{
 		Tac:    tac,
 		Serial: serial,
 	})
 	if err != nil {
-		t.Fatalf("ResolvePeerByIMEI error: %v", err)
+		t.Fatalf("FindPubKeyByIMEI error: %v", err)
 	}
-	resolvedIMEI, ok := resolveIMEIResp.(adminservice.ResolvePeerByIMEI200JSONResponse)
+	resolvedIMEI, ok := resolveIMEIResp.(adminservice.FindPubKeyByIMEI200JSONResponse)
 	if !ok {
-		t.Fatalf("ResolvePeerByIMEI response type = %T", resolveIMEIResp)
+		t.Fatalf("FindPubKeyByIMEI response type = %T", resolveIMEIResp)
 	}
 	if resolvedIMEI.PublicKey != peerPublicKey {
-		t.Fatalf("ResolvePeerByIMEI = %+v", resolvedIMEI)
+		t.Fatalf("FindPubKeyByIMEI = %+v", resolvedIMEI)
 	}
 
 	approveResp, err := server.ApprovePeer(ctx, adminservice.ApprovePeerRequestObject{

@@ -138,11 +138,11 @@ func (f *fakePeers) ListPeers(context.Context, adminservice.ListPeersRequestObje
 	return nil, nil
 }
 
-func (f *fakePeers) ResolvePeerByIMEI(context.Context, adminservice.ResolvePeerByIMEIRequestObject) (adminservice.ResolvePeerByIMEIResponseObject, error) {
+func (f *fakePeers) FindPubKeyByIMEI(context.Context, adminservice.FindPubKeyByIMEIRequestObject) (adminservice.FindPubKeyByIMEIResponseObject, error) {
 	return nil, nil
 }
 
-func (f *fakePeers) ResolvePeerBySN(context.Context, adminservice.ResolvePeerBySNRequestObject) (adminservice.ResolvePeerBySNResponseObject, error) {
+func (f *fakePeers) FindPubKeyBySN(context.Context, adminservice.FindPubKeyBySNRequestObject) (adminservice.FindPubKeyBySNResponseObject, error) {
 	return nil, nil
 }
 

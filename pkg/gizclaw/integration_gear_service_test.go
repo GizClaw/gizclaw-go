@@ -41,10 +41,10 @@ func TestIntegrationGearServiceLifecycle(t *testing.T) {
 	if _, err := getPeer(context.Background(), admin, devicePublicKey); err != nil {
 		t.Fatalf("GetPeer error: %v", err)
 	}
-	if publicKey, err := resolvePeerBySN(context.Background(), admin, "sn/1"); err != nil || publicKey != devicePublicKey {
+	if publicKey, err := findPubKeyBySN(context.Background(), admin, "sn/1"); err != nil || publicKey != devicePublicKey {
 		t.Fatalf("ResolveGearBySN = %q, %v", publicKey, err)
 	}
-	if publicKey, err := resolvePeerByIMEI(context.Background(), admin, "12345678", "0000001"); err != nil || publicKey != devicePublicKey {
+	if publicKey, err := findPubKeyByIMEI(context.Background(), admin, "12345678", "0000001"); err != nil || publicKey != devicePublicKey {
 		t.Fatalf("ResolveGearByIMEI = %q, %v", publicKey, err)
 	}
 	view := "under-12"

@@ -4673,10 +4673,10 @@
         }
       }
     },
-    "/peers/sn/{sn}": {
+    "/peers/@findPubKeyBySn/{sn}": {
       "get": {
-        "operationId": "resolvePeerBySN",
-        "summary": "Resolve peer public key by serial number",
+        "operationId": "findPubKeyBySN",
+        "summary": "Find peer public key by serial number",
         "tags": [
           "Query"
         ],
@@ -4714,10 +4714,10 @@
         }
       }
     },
-    "/peers/imei/{tac}/{serial}": {
+    "/peers/@findPubKeyByImei/{tac}/{serial}": {
       "get": {
-        "operationId": "resolvePeerByIMEI",
-        "summary": "Resolve peer public key by IMEI",
+        "operationId": "findPubKeyByIMEI",
+        "summary": "Find peer public key by IMEI",
         "tags": [
           "Query"
         ],

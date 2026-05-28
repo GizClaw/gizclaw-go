@@ -100,8 +100,8 @@ func stubPeerCommandClients(t *testing.T) func() {
 	originalConnect := connectFromContext
 	originalList := listPeers
 	originalGet := getPeer
-	originalResolveSN := resolvePeerBySN
-	originalResolveIMEI := resolvePeerByIMEI
+	originalResolveSN := findPubKeyBySN
+	originalResolveIMEI := findPubKeyByIMEI
 	originalApprove := approvePeer
 	originalBlock := blockPeer
 	originalInfo := getPeerInfo
@@ -124,8 +124,8 @@ func stubPeerCommandClients(t *testing.T) func() {
 	getPeer = func(context.Context, *gizclaw.Client, string) (apitypes.Registration, error) {
 		return registration, nil
 	}
-	resolvePeerBySN = func(context.Context, *gizclaw.Client, string) (string, error) { return "device-pk", nil }
-	resolvePeerByIMEI = func(context.Context, *gizclaw.Client, string, string) (string, error) {
+	findPubKeyBySN = func(context.Context, *gizclaw.Client, string) (string, error) { return "device-pk", nil }
+	findPubKeyByIMEI = func(context.Context, *gizclaw.Client, string, string) (string, error) {
 		return "device-pk", nil
 	}
 	approvePeer = func(context.Context, *gizclaw.Client, string, apitypes.GearRole) (apitypes.Registration, error) {
@@ -158,8 +158,8 @@ func stubPeerCommandClients(t *testing.T) func() {
 		connectFromContext = originalConnect
 		listPeers = originalList
 		getPeer = originalGet
-		resolvePeerBySN = originalResolveSN
-		resolvePeerByIMEI = originalResolveIMEI
+		findPubKeyBySN = originalResolveSN
+		findPubKeyByIMEI = originalResolveIMEI
 		approvePeer = originalApprove
 		blockPeer = originalBlock
 		getPeerInfo = originalInfo

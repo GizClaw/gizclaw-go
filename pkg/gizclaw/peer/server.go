@@ -42,8 +42,8 @@ type Server struct {
 
 type PeerAdminService interface {
 	ListPeers(context.Context, adminservice.ListPeersRequestObject) (adminservice.ListPeersResponseObject, error)
-	ResolvePeerByIMEI(context.Context, adminservice.ResolvePeerByIMEIRequestObject) (adminservice.ResolvePeerByIMEIResponseObject, error)
-	ResolvePeerBySN(context.Context, adminservice.ResolvePeerBySNRequestObject) (adminservice.ResolvePeerBySNResponseObject, error)
+	FindPubKeyByIMEI(context.Context, adminservice.FindPubKeyByIMEIRequestObject) (adminservice.FindPubKeyByIMEIResponseObject, error)
+	FindPubKeyBySN(context.Context, adminservice.FindPubKeyBySNRequestObject) (adminservice.FindPubKeyBySNResponseObject, error)
 	DeletePeer(context.Context, adminservice.DeletePeerRequestObject) (adminservice.DeletePeerResponseObject, error)
 	GetPeer(context.Context, adminservice.GetPeerRequestObject) (adminservice.GetPeerResponseObject, error)
 	GetPeerConfig(context.Context, adminservice.GetPeerConfigRequestObject) (adminservice.GetPeerConfigResponseObject, error)
@@ -73,8 +73,8 @@ func (s *Server) ListPeers(ctx context.Context, request adminservice.ListPeersRe
 	return adminservice.ListPeers200JSONResponse(toAdminRegistrationList(items, hasNext, nextCursor)), nil
 }
 
-// ResolvePeerByIMEI implements `adminservice.StrictServerInterface.ResolvePeerByIMEI`.
-func (s *Server) ResolvePeerByIMEI(ctx context.Context, request adminservice.ResolvePeerByIMEIRequestObject) (adminservice.ResolvePeerByIMEIResponseObject, error) {
+// FindPubKeyByIMEI implements `adminservice.StrictServerInterface.FindPubKeyByIMEI`.
+func (s *Server) FindPubKeyByIMEI(ctx context.Context, request adminservice.FindPubKeyByIMEIRequestObject) (adminservice.FindPubKeyByIMEIResponseObject, error) {
 	tac, err := pathUnescape(request.Tac)
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
@@ -85,22 +85,22 @@ func (s *Server) ResolvePeerByIMEI(ctx context.Context, request adminservice.Res
 	}
 	publicKey, err := s.resolveByIMEI(ctx, tac, serial)
 	if err != nil {
-		return adminservice.ResolvePeerByIMEI404JSONResponse(apitypes.NewErrorResponse("PEER_IMEI_NOT_FOUND", err.Error())), nil
+		return adminservice.FindPubKeyByIMEI404JSONResponse(apitypes.NewErrorResponse("PEER_IMEI_NOT_FOUND", err.Error())), nil
 	}
-	return adminservice.ResolvePeerByIMEI200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey.String()}), nil
+	return adminservice.FindPubKeyByIMEI200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey.String()}), nil
 }
 
-// ResolvePeerBySN implements `adminservice.StrictServerInterface.ResolvePeerBySN`.
-func (s *Server) ResolvePeerBySN(ctx context.Context, request adminservice.ResolvePeerBySNRequestObject) (adminservice.ResolvePeerBySNResponseObject, error) {
+// FindPubKeyBySN implements `adminservice.StrictServerInterface.FindPubKeyBySN`.
+func (s *Server) FindPubKeyBySN(ctx context.Context, request adminservice.FindPubKeyBySNRequestObject) (adminservice.FindPubKeyBySNResponseObject, error) {
 	sn, err := pathUnescape(request.Sn)
 	if err != nil {
 		return nil, fmt.Errorf("invalid params: %w", err)
 	}
 	publicKey, err := s.resolveBySN(ctx, sn)
 	if err != nil {
-		return adminservice.ResolvePeerBySN404JSONResponse(apitypes.NewErrorResponse("PEER_SN_NOT_FOUND", err.Error())), nil
+		return adminservice.FindPubKeyBySN404JSONResponse(apitypes.NewErrorResponse("PEER_SN_NOT_FOUND", err.Error())), nil
 	}
-	return adminservice.ResolvePeerBySN200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey.String()}), nil
+	return adminservice.FindPubKeyBySN200JSONResponse(adminservice.PublicKeyResponse{PublicKey: publicKey.String()}), nil
 }
 
 // DeletePeer implements `adminservice.StrictServerInterface.DeletePeer`.

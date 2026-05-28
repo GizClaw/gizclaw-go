@@ -2,77 +2,60 @@
 
 This document describes business-level services, not transport service IDs.
 
+## Doc Style
+
+- Business RPC-style methods use dotted names: `service.resource.method`.
+- Multiple methods on one business resource use braces: `resource.{list,get,create,put,delete}`.
+- Resource endpoints use path-first notation: `/path OPERATION[, OPERATION]`.
+- Custom HTTP verbs are listed under their resource path as subtree items: `@verb`.
+
 ```text
 Peer Service
-└── peer
-    └── ping
+└── peer.ping
 
 Public Service
-├── server.info
-│   └── get
-├── GET /server-info
-└── POST /login
+├── server.info.get
+├── /server-info GET
+└── /login POST
 
 Gear Service
-├── device.info
-│   └── get
-├── device.identifiers
-│   └── get
-├── peer.info
-│   ├── get
-│   └── put
-├── peer.runtime
-│   └── get
-├── workflow
-│   └── list, get, create, put, delete
-├── model
-│   └── list, get, create, put, delete
-└── credential
-    └── list, get, create, put, delete
+├── device.info.get
+├── device.identifiers.get
+├── peer.info.{get,put}
+├── peer.runtime.get
+├── workflow.{list,get,create,put,delete}
+├── model.{list,get,create,put,delete}
+└── credential.{list,get,create,put,delete}
 
 Admin Service
 ├── /@apply POST
 ├── /resources/{kind}/{name} GET, PUT, DELETE
-├── /acl/views GET, POST
-├── /acl/views/{name} GET, PUT, DELETE
-├── /acl/roles GET, POST
-├── /acl/roles/{name} GET, PUT, DELETE
-├── /acl/policy-bindings GET, POST
-├── /acl/policy-bindings/{id} GET, PUT, DELETE
-├── /workflows GET, POST
-├── /workflows/{name} GET, PUT, DELETE
-├── /firmwares GET, POST
-├── /firmwares/{name} GET, PUT, DELETE
-├── /firmwares/{name}/@release POST
-├── /firmwares/{name}/@rollback POST
-├── /credentials GET, POST
-├── /credentials/{name} GET, PUT, DELETE
-├── /models GET, POST
-├── /models/{id} GET, PUT, DELETE
-├── /dashscope-tenants GET, POST
-├── /dashscope-tenants/{name} GET, PUT, DELETE
-├── /gemini-tenants GET, POST
-├── /gemini-tenants/{name} GET, PUT, DELETE
-├── /openai-tenants GET, POST
-├── /openai-tenants/{name} GET, PUT, DELETE
-├── /minimax-tenants GET, POST
-├── /minimax-tenants/{name} GET, PUT, DELETE
-├── /minimax-tenants/{name}/@sync-voices POST
-├── /volc-tenants GET, POST
-├── /volc-tenants/{name} GET, PUT, DELETE
-├── /volc-tenants/{name}/@sync-voices POST
-├── /voices GET, POST
-├── /voices/{id} GET, PUT, DELETE
-├── /workspaces GET, POST
-├── /workspaces/{name} GET, PUT, DELETE
-├── /peers GET
-├── /peers/{publicKey} GET, DELETE
-├── /peers/{publicKey}/@approve POST
-├── /peers/{publicKey}/@block POST
-├── /peers/{publicKey}/@refresh POST
-├── /peers/{publicKey}/info GET, PUT
-├── /peers/{publicKey}/config GET, PUT
-├── /peers/{publicKey}/runtime GET
-├── /peers/sn/{sn} GET
-└── /peers/imei/{tac}/{serial} GET
+├── /acl/views/{name} LIST, CREATE, GET, PUT, DELETE
+├── /acl/roles/{name} LIST, CREATE, GET, PUT, DELETE
+├── /acl/policy-bindings/{id} LIST, CREATE, GET, PUT, DELETE
+├── /workflows/{name} LIST, CREATE, GET, PUT, DELETE
+├── /firmwares/{name} LIST, CREATE, GET, PUT, DELETE
+│   ├── @release
+│   └── @rollback
+├── /credentials/{name} LIST, CREATE, GET, PUT, DELETE
+├── /models/{id} LIST, CREATE, GET, PUT, DELETE
+├── /dashscope-tenants/{name} LIST, CREATE, GET, PUT, DELETE
+├── /gemini-tenants/{name} LIST, CREATE, GET, PUT, DELETE
+├── /openai-tenants/{name} LIST, CREATE, GET, PUT, DELETE
+├── /minimax-tenants/{name} LIST, CREATE, GET, PUT, DELETE
+│   └── @sync-voices
+├── /volc-tenants/{name} LIST, CREATE, GET, PUT, DELETE
+│   └── @sync-voices
+├── /voices/{id} LIST, CREATE, GET, PUT, DELETE
+├── /workspaces/{name} LIST, CREATE, GET, PUT, DELETE
+├── /peers/{publicKey} LIST, GET, DELETE
+│   ├── /info GET, PUT
+│   ├── /config GET, PUT
+│   ├── /runtime GET
+│   ├── @approve
+│   ├── @block
+│   └── @refresh
+└── /peers
+    ├── @findPubKeyBySn
+    └── @findPubKeyByImei
 ```

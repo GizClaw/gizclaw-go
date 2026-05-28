@@ -47,8 +47,8 @@ var (
 	connectFromContext = client.ConnectFromContext
 	listPeers          = client.ListPeers
 	getPeer            = client.GetPeer
-	resolvePeerBySN    = client.ResolvePeerBySN
-	resolvePeerByIMEI  = client.ResolvePeerByIMEI
+	findPubKeyBySN     = client.FindPubKeyBySN
+	findPubKeyByIMEI   = client.FindPubKeyByIMEI
 	approvePeer        = client.ApprovePeer
 	blockPeer          = client.BlockPeer
 	getPeerInfo        = client.GetPeerInfo
@@ -114,7 +114,7 @@ func newCmd(use, short string) *cobra.Command {
 					return err
 				}
 				defer c.Close()
-				publicKey, err := resolvePeerBySN(context.Background(), c, args[0])
+				publicKey, err := findPubKeyBySN(context.Background(), c, args[0])
 				if err != nil {
 					return err
 				}
@@ -132,7 +132,7 @@ func newCmd(use, short string) *cobra.Command {
 					return err
 				}
 				defer c.Close()
-				publicKey, err := resolvePeerByIMEI(context.Background(), c, args[0], args[1])
+				publicKey, err := findPubKeyByIMEI(context.Background(), c, args[0], args[1])
 				if err != nil {
 					return err
 				}
