@@ -21,7 +21,7 @@ func TestRPCClientPingSingleRequestResponse(t *testing.T) {
 	serverErrCh := make(chan error, 1)
 
 	go func() {
-		req, err := rpcapi.ReadRequest(serverSide)
+		req, err := readRPCRequestWithEOS(serverSide)
 		if err != nil {
 			serverErrCh <- err
 			return
@@ -33,7 +33,7 @@ func TestRPCClientPingSingleRequestResponse(t *testing.T) {
 			serverErrCh <- err
 			return
 		}
-		if err := rpcapi.WriteResponse(serverSide, resp); err != nil {
+		if err := writeRPCResponseWithEOS(serverSide, resp); err != nil {
 			serverErrCh <- err
 			return
 		}
@@ -157,8 +157,8 @@ func TestRPCClientPingErrorPaths(t *testing.T) {
 		client := &rpcClient{}
 
 		go func() {
-			req, _ := rpcapi.ReadRequest(serverSide)
-			_ = rpcapi.WriteResponse(serverSide, rpcapi.Error{RequestID: req.Id, Code: -1, Message: "boom"}.RPCResponse())
+			req, _ := readRPCRequestWithEOS(serverSide)
+			_ = writeRPCResponseWithEOS(serverSide, rpcapi.Error{RequestID: req.Id, Code: -1, Message: "boom"}.RPCResponse())
 		}()
 
 		_, err := client.Ping(context.Background(), clientSide, "ping-error")
@@ -182,8 +182,8 @@ func TestRPCClientPingErrorPaths(t *testing.T) {
 		client := &rpcClient{}
 
 		go func() {
-			req, _ := rpcapi.ReadRequest(serverSide)
-			_ = rpcapi.WriteResponse(serverSide, &rpcapi.RPCResponse{V: rpcapi.RPCVersionV1, Id: req.Id})
+			req, _ := readRPCRequestWithEOS(serverSide)
+			_ = writeRPCResponseWithEOS(serverSide, &rpcapi.RPCResponse{V: rpcapi.RPCVersionV1, Id: req.Id})
 		}()
 
 		_, err := client.Ping(context.Background(), clientSide, "ping-missing")
@@ -198,6 +198,24 @@ func rpcServerTimeForID(id string) int64 {
 		return 1
 	}
 	return 2
+}
+
+func readRPCRequestWithEOS(conn net.Conn) (*rpcapi.RPCRequest, error) {
+	req, err := rpcapi.ReadRequest(conn)
+	if err != nil {
+		return nil, err
+	}
+	if err := rpcapi.ReadEOS(conn); err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func writeRPCResponseWithEOS(conn net.Conn, resp *rpcapi.RPCResponse) error {
+	if err := rpcapi.WriteResponse(conn, resp); err != nil {
+		return err
+	}
+	return rpcapi.WriteEOS(conn)
 }
 
 func assertRPCPingRequestHasTimestamp(t *testing.T, req *rpcapi.RPCRequest) {

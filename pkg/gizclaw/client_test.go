@@ -281,10 +281,16 @@ func TestClientRPCHandle(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("WriteRequest() error = %v", err)
 		}
+		if err := rpcapi.WriteEOS(clientSide); err != nil {
+			t.Fatalf("WriteEOS() error = %v", err)
+		}
 
 		resp, err := rpcapi.ReadResponse(clientSide)
 		if err != nil {
 			t.Fatalf("ReadResponse() error = %v", err)
+		}
+		if err := rpcapi.ReadEOS(clientSide); err != nil {
+			t.Fatalf("ReadEOS() error = %v", err)
 		}
 		if resp.Error != nil {
 			t.Fatalf("Handle() response error = %+v", resp.Error)

@@ -5,56 +5,165 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"iter"
 )
 
 // MaxFrameSize is the largest RPC frame payload accepted by ReadFrame.
-const MaxFrameSize = 1 << 20 // 1 MiB
+const MaxFrameSize = 65535
 
-// WriteFrame writes a length-prefixed RPC frame.
-func WriteFrame(w io.Writer, data []byte) error {
-	var hdr [4]byte
-	binary.LittleEndian.PutUint32(hdr[:], uint32(len(data)))
-	if _, err := w.Write(hdr[:]); err != nil {
-		return err
+// FrameType identifies the payload encoding used by an RPC frame.
+type FrameType uint16
+
+const (
+	FrameTypeEOS    FrameType = 0
+	FrameTypeJSON   FrameType = 1
+	FrameTypeBinary FrameType = 2
+	FrameTypeText   FrameType = 3
+)
+
+// Valid reports whether the frame type is known by this protocol version.
+func (t FrameType) Valid() bool {
+	switch t {
+	case FrameTypeEOS, FrameTypeJSON, FrameTypeBinary, FrameTypeText:
+		return true
+	default:
+		return false
 	}
-	_, err := w.Write(data)
-	return err
 }
 
-// ReadFrame reads a length-prefixed RPC frame.
-func ReadFrame(r io.Reader) ([]byte, error) {
+// Frame is one typed payload in an RPC stream.
+type Frame struct {
+	Type    FrameType
+	Payload []byte
+}
+
+// WriteFrame writes a typed RPC frame.
+func WriteFrame(w io.Writer, frame Frame) error {
+	if !frame.Type.Valid() {
+		return fmt.Errorf("rpc: unknown frame type: %d", frame.Type)
+	}
+	if len(frame.Payload) > MaxFrameSize {
+		return fmt.Errorf("rpc: frame too large: %d", len(frame.Payload))
+	}
+	if frame.Type == FrameTypeEOS && len(frame.Payload) != 0 {
+		return fmt.Errorf("rpc: EOS frame must be empty")
+	}
+	var hdr [4]byte
+	binary.LittleEndian.PutUint16(hdr[0:2], uint16(len(frame.Payload)))
+	binary.LittleEndian.PutUint16(hdr[2:4], uint16(frame.Type))
+	if err := writeFull(w, hdr[:]); err != nil {
+		return err
+	}
+	return writeFull(w, frame.Payload)
+}
+
+// ReadFrame reads a typed RPC frame.
+func ReadFrame(r io.Reader) (Frame, error) {
 	var hdr [4]byte
 	if _, err := io.ReadFull(r, hdr[:]); err != nil {
-		return nil, err
+		return Frame{}, err
 	}
-	length := binary.LittleEndian.Uint32(hdr[:])
-	if length > MaxFrameSize {
-		return nil, fmt.Errorf("rpc: frame too large: %d", length)
+	length := binary.LittleEndian.Uint16(hdr[0:2])
+	frameType := FrameType(binary.LittleEndian.Uint16(hdr[2:4]))
+	if !frameType.Valid() {
+		return Frame{}, fmt.Errorf("rpc: unknown frame type: %d", frameType)
+	}
+	if frameType == FrameTypeEOS && length != 0 {
+		return Frame{}, fmt.Errorf("rpc: EOS frame must be empty")
 	}
 	buf := make([]byte, length)
 	if _, err := io.ReadFull(r, buf); err != nil {
-		return nil, err
+		return Frame{}, err
 	}
-	return buf, nil
+	return Frame{Type: frameType, Payload: buf}, nil
+}
+
+// ReadFrames reads frames until EOS. EOF before EOS is returned as an error.
+func ReadFrames(r io.Reader) iter.Seq2[Frame, error] {
+	return func(yield func(Frame, error) bool) {
+		for {
+			frame, err := ReadFrame(r)
+			if err != nil {
+				yield(Frame{}, err)
+				return
+			}
+			if frame.Type == FrameTypeEOS {
+				return
+			}
+			if !yield(frame, nil) {
+				return
+			}
+		}
+	}
+}
+
+// WriteEOS writes the end-of-stream frame for one RPC frame sequence.
+func WriteEOS(w io.Writer) error {
+	return WriteFrame(w, Frame{Type: FrameTypeEOS})
+}
+
+// ReadEOS reads and validates one end-of-stream frame.
+func ReadEOS(r io.Reader) error {
+	frame, err := ReadFrame(r)
+	if err != nil {
+		return err
+	}
+	if frame.Type != FrameTypeEOS {
+		return fmt.Errorf("rpc: expected EOS frame, got type %d", frame.Type)
+	}
+	return nil
+}
+
+// WriteFrames writes frames from the sequence until it is exhausted or errors.
+func WriteFrames(w io.Writer, frames iter.Seq2[Frame, error]) error {
+	for frame, err := range frames {
+		if err != nil {
+			return err
+		}
+		if err := WriteFrame(w, frame); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// NewJSONFrame marshals a value into one compact JSON frame.
+func NewJSONFrame(v any) (Frame, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return Frame{}, err
+	}
+	return Frame{Type: FrameTypeJSON, Payload: data}, nil
+}
+
+// DecodeJSONFrame unmarshals one JSON frame into v.
+func DecodeJSONFrame(frame Frame, v any) error {
+	if frame.Type != FrameTypeJSON {
+		return fmt.Errorf("rpc: expected JSON frame, got type %d", frame.Type)
+	}
+	if err := json.Unmarshal(frame.Payload, v); err != nil {
+		return err
+	}
+	return nil
 }
 
 // WriteRequest writes an RPC request as one JSON frame.
 func WriteRequest(w io.Writer, req *RPCRequest) error {
-	data, err := json.Marshal(req)
+	frame, err := NewJSONFrame(req)
 	if err != nil {
 		return err
 	}
-	return WriteFrame(w, data)
+	return WriteFrame(w, frame)
 }
 
 // ReadRequest reads an RPC request from one JSON frame.
 func ReadRequest(r io.Reader) (*RPCRequest, error) {
-	data, err := ReadFrame(r)
+	frame, err := ReadFrame(r)
 	if err != nil {
 		return nil, err
 	}
 	var req RPCRequest
-	if err := json.Unmarshal(data, &req); err != nil {
+	if err := DecodeJSONFrame(frame, &req); err != nil {
 		return nil, fmt.Errorf("rpc: unmarshal request: %w", err)
 	}
 	return &req, nil
@@ -62,12 +171,12 @@ func ReadRequest(r io.Reader) (*RPCRequest, error) {
 
 // ReadResponse reads an RPC response from one JSON frame.
 func ReadResponse(r io.Reader) (*RPCResponse, error) {
-	data, err := ReadFrame(r)
+	frame, err := ReadFrame(r)
 	if err != nil {
 		return nil, err
 	}
 	var resp RPCResponse
-	if err := json.Unmarshal(data, &resp); err != nil {
+	if err := DecodeJSONFrame(frame, &resp); err != nil {
 		return nil, fmt.Errorf("rpc: unmarshal response: %w", err)
 	}
 	return &resp, nil
@@ -75,11 +184,58 @@ func ReadResponse(r io.Reader) (*RPCResponse, error) {
 
 // WriteResponse writes an RPC response as one JSON frame.
 func WriteResponse(w io.Writer, resp *RPCResponse) error {
-	data, err := json.Marshal(resp)
+	frame, err := NewJSONFrame(resp)
 	if err != nil {
 		return err
 	}
-	return WriteFrame(w, data)
+	return WriteFrame(w, frame)
+}
+
+// ReadResponses reads JSON RPC response frames until EOF.
+func ReadResponses(r io.Reader) iter.Seq2[*RPCResponse, error] {
+	return func(yield func(*RPCResponse, error) bool) {
+		for frame, err := range ReadFrames(r) {
+			if err != nil {
+				yield(nil, err)
+				return
+			}
+			var resp RPCResponse
+			if err := DecodeJSONFrame(frame, &resp); err != nil {
+				yield(nil, fmt.Errorf("rpc: unmarshal response: %w", err))
+				return
+			}
+			if !yield(&resp, nil) {
+				return
+			}
+		}
+	}
+}
+
+// WriteResponses writes each RPC response as a JSON frame.
+func WriteResponses(w io.Writer, responses iter.Seq2[*RPCResponse, error]) error {
+	for resp, err := range responses {
+		if err != nil {
+			return err
+		}
+		if err := WriteResponse(w, resp); err != nil {
+			return err
+		}
+	}
+	return WriteEOS(w)
+}
+
+func writeFull(w io.Writer, data []byte) error {
+	for len(data) > 0 {
+		n, err := w.Write(data)
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return io.ErrShortWrite
+		}
+		data = data[n:]
+	}
+	return nil
 }
 
 // Error is a structured RPC error that can be returned as a Go error or encoded

@@ -4,21 +4,22 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"io"
 	"testing"
 	"time"
 )
 
 func TestFrameRequestResponseRoundTrip(t *testing.T) {
 	var frameBuf bytes.Buffer
-	if err := WriteFrame(&frameBuf, []byte("payload")); err != nil {
+	if err := WriteFrame(&frameBuf, Frame{Type: FrameTypeBinary, Payload: []byte("payload")}); err != nil {
 		t.Fatalf("WriteFrame() error = %v", err)
 	}
 	frame, err := ReadFrame(&frameBuf)
 	if err != nil {
 		t.Fatalf("ReadFrame() error = %v", err)
 	}
-	if string(frame) != "payload" {
-		t.Fatalf("ReadFrame() = %q", frame)
+	if frame.Type != FrameTypeBinary || string(frame.Payload) != "payload" {
+		t.Fatalf("ReadFrame() = %+v", frame)
 	}
 
 	var reqParams RPCRequest_Params
@@ -193,14 +194,14 @@ func stringPtr(value string) *string {
 
 func TestWriteFramePropagatesHeaderWriteError(t *testing.T) {
 	writeErr := errors.New("write failed")
-	if err := WriteFrame(errorWriter{err: writeErr}, []byte("payload")); !errors.Is(err, writeErr) {
+	if err := WriteFrame(errorWriter{err: writeErr}, Frame{Type: FrameTypeJSON, Payload: []byte("payload")}); !errors.Is(err, writeErr) {
 		t.Fatalf("WriteFrame() err = %v, want %v", err, writeErr)
 	}
 }
 
 func TestReadRequestAndResponseRejectInvalidJSON(t *testing.T) {
 	var reqBuf bytes.Buffer
-	if err := WriteFrame(&reqBuf, []byte("{")); err != nil {
+	if err := WriteFrame(&reqBuf, Frame{Type: FrameTypeJSON, Payload: []byte("{")}); err != nil {
 		t.Fatalf("WriteFrame(request) error = %v", err)
 	}
 	if _, err := ReadRequest(&reqBuf); err == nil {
@@ -208,11 +209,29 @@ func TestReadRequestAndResponseRejectInvalidJSON(t *testing.T) {
 	}
 
 	var respBuf bytes.Buffer
-	if err := WriteFrame(&respBuf, []byte("{")); err != nil {
+	if err := WriteFrame(&respBuf, Frame{Type: FrameTypeJSON, Payload: []byte("{")}); err != nil {
 		t.Fatalf("WriteFrame(response) error = %v", err)
 	}
 	if _, err := ReadResponse(&respBuf); err == nil {
 		t.Fatal("ReadResponse() should fail for invalid JSON")
+	}
+}
+
+func TestReadRequestAndResponseRejectNonJSONFrames(t *testing.T) {
+	var reqBuf bytes.Buffer
+	if err := WriteFrame(&reqBuf, Frame{Type: FrameTypeBinary, Payload: []byte("{}")}); err != nil {
+		t.Fatalf("WriteFrame(request) error = %v", err)
+	}
+	if _, err := ReadRequest(&reqBuf); err == nil || err.Error() != "rpc: unmarshal request: rpc: expected JSON frame, got type 2" {
+		t.Fatalf("ReadRequest() err = %v", err)
+	}
+
+	var respBuf bytes.Buffer
+	if err := WriteFrame(&respBuf, Frame{Type: FrameTypeText, Payload: []byte("{}")}); err != nil {
+		t.Fatalf("WriteFrame(response) error = %v", err)
+	}
+	if _, err := ReadResponse(&respBuf); err == nil || err.Error() != "rpc: unmarshal response: rpc: expected JSON frame, got type 3" {
+		t.Fatalf("ReadResponse() err = %v", err)
 	}
 }
 
@@ -224,18 +243,213 @@ func (w errorWriter) Write(_ []byte) (int, error) {
 	return 0, w.err
 }
 
-func TestReadFrameRejectsOversizedFrame(t *testing.T) {
+func TestWriteFrameRejectsOversizedFrame(t *testing.T) {
+	payload := bytes.Repeat([]byte("x"), MaxFrameSize+1)
+	var buf bytes.Buffer
+	err := WriteFrame(&buf, Frame{Type: FrameTypeBinary, Payload: payload})
+	if err == nil || err.Error() != "rpc: frame too large: 65536" {
+		t.Fatalf("WriteFrame() err = %v", err)
+	}
+}
+
+func TestReadFrameRejectsUnknownType(t *testing.T) {
 	var buf bytes.Buffer
 	var hdr [4]byte
-	binary.LittleEndian.PutUint32(hdr[:], MaxFrameSize+1)
+	binary.LittleEndian.PutUint16(hdr[0:2], 0)
+	binary.LittleEndian.PutUint16(hdr[2:4], 99)
 	if _, err := buf.Write(hdr[:]); err != nil {
 		t.Fatalf("Write(header) error = %v", err)
 	}
 
 	_, err := ReadFrame(&buf)
-	if err == nil || err.Error() != "rpc: frame too large: 1048577" {
+	if err == nil || err.Error() != "rpc: unknown frame type: 99" {
 		t.Fatalf("ReadFrame() err = %v", err)
 	}
+}
+
+func TestReadFrameRejectsTruncatedPayload(t *testing.T) {
+	var buf bytes.Buffer
+	var hdr [4]byte
+	binary.LittleEndian.PutUint16(hdr[0:2], 4)
+	binary.LittleEndian.PutUint16(hdr[2:4], uint16(FrameTypeText))
+	if _, err := buf.Write(hdr[:]); err != nil {
+		t.Fatalf("Write(header) error = %v", err)
+	}
+	if _, err := buf.Write([]byte("xy")); err != nil {
+		t.Fatalf("Write(payload) error = %v", err)
+	}
+
+	_, err := ReadFrame(&buf)
+	if !errors.Is(err, io.ErrUnexpectedEOF) {
+		t.Fatalf("ReadFrame() err = %v, want %v", err, io.ErrUnexpectedEOF)
+	}
+}
+
+func TestReadWriteFrames(t *testing.T) {
+	var buf bytes.Buffer
+	err := WriteFrames(&buf, func(yield func(Frame, error) bool) {
+		yield(Frame{Type: FrameTypeJSON, Payload: []byte("{}")}, nil)
+		yield(Frame{Type: FrameTypeText, Payload: []byte("hello")}, nil)
+		yield(Frame{Type: FrameTypeBinary, Payload: []byte{1, 2, 3}}, nil)
+	})
+	if err != nil {
+		t.Fatalf("WriteFrames() error = %v", err)
+	}
+	if err := WriteEOS(&buf); err != nil {
+		t.Fatalf("WriteEOS() error = %v", err)
+	}
+
+	var got []Frame
+	for frame, err := range ReadFrames(&buf) {
+		if err != nil {
+			t.Fatalf("ReadFrames() error = %v", err)
+		}
+		got = append(got, frame)
+	}
+	if len(got) != 3 {
+		t.Fatalf("ReadFrames() got %d frames", len(got))
+	}
+	if got[0].Type != FrameTypeJSON || string(got[0].Payload) != "{}" {
+		t.Fatalf("frame[0] = %+v", got[0])
+	}
+	if got[1].Type != FrameTypeText || string(got[1].Payload) != "hello" {
+		t.Fatalf("frame[1] = %+v", got[1])
+	}
+	if got[2].Type != FrameTypeBinary || !bytes.Equal(got[2].Payload, []byte{1, 2, 3}) {
+		t.Fatalf("frame[2] = %+v", got[2])
+	}
+}
+
+func TestWriteFramesPropagatesSequenceError(t *testing.T) {
+	seqErr := errors.New("sequence failed")
+	var buf bytes.Buffer
+	err := WriteFrames(&buf, func(yield func(Frame, error) bool) {
+		yield(Frame{}, seqErr)
+	})
+	if !errors.Is(err, seqErr) {
+		t.Fatalf("WriteFrames() err = %v, want %v", err, seqErr)
+	}
+}
+
+func TestReadWriteResponses(t *testing.T) {
+	responses := []string{"one", "two"}
+	var buf bytes.Buffer
+	err := WriteResponses(&buf, func(yield func(*RPCResponse, error) bool) {
+		for _, id := range responses {
+			if !yield(&RPCResponse{V: RPCVersionV1, Id: id}, nil) {
+				return
+			}
+		}
+	})
+	if err != nil {
+		t.Fatalf("WriteResponses() error = %v", err)
+	}
+
+	var got []string
+	for resp, err := range ReadResponses(&buf) {
+		if err != nil {
+			t.Fatalf("ReadResponses() error = %v", err)
+		}
+		got = append(got, resp.Id)
+	}
+	if len(got) != len(responses) || got[0] != "one" || got[1] != "two" {
+		t.Fatalf("ReadResponses() ids = %v", got)
+	}
+}
+
+func TestWriteResponsesPropagatesSequenceError(t *testing.T) {
+	seqErr := errors.New("response failed")
+	var buf bytes.Buffer
+	err := WriteResponses(&buf, func(yield func(*RPCResponse, error) bool) {
+		yield(nil, seqErr)
+	})
+	if !errors.Is(err, seqErr) {
+		t.Fatalf("WriteResponses() err = %v, want %v", err, seqErr)
+	}
+}
+
+func TestReadResponsesRejectsNonJSONFrame(t *testing.T) {
+	var buf bytes.Buffer
+	if err := WriteFrame(&buf, Frame{Type: FrameTypeBinary, Payload: []byte("{}")}); err != nil {
+		t.Fatalf("WriteFrame() error = %v", err)
+	}
+	for _, err := range ReadResponses(&buf) {
+		if err == nil || err.Error() != "rpc: unmarshal response: rpc: expected JSON frame, got type 2" {
+			t.Fatalf("ReadResponses() err = %v", err)
+		}
+		return
+	}
+	t.Fatal("ReadResponses() did not yield error")
+}
+
+func TestReadFramesReturnsEOFBeforeEOS(t *testing.T) {
+	var buf bytes.Buffer
+	for _, err := range ReadFrames(&buf) {
+		if !errors.Is(err, io.EOF) {
+			t.Fatalf("ReadFrames() err = %v, want %v", err, io.EOF)
+		}
+		return
+	}
+	t.Fatal("ReadFrames() did not yield EOF before EOS")
+}
+
+func TestReadFramesStopsOnEOS(t *testing.T) {
+	var buf bytes.Buffer
+	if err := WriteEOS(&buf); err != nil {
+		t.Fatalf("WriteEOS() error = %v", err)
+	}
+	for range ReadFrames(&buf) {
+		t.Fatal("ReadFrames() should not yield EOS")
+	}
+}
+
+func TestReadWriteEOS(t *testing.T) {
+	var buf bytes.Buffer
+	if err := WriteEOS(&buf); err != nil {
+		t.Fatalf("WriteEOS() error = %v", err)
+	}
+	if err := ReadEOS(&buf); err != nil {
+		t.Fatalf("ReadEOS() error = %v", err)
+	}
+}
+
+func TestEOSFrameMustBeEmpty(t *testing.T) {
+	var buf bytes.Buffer
+	if err := WriteFrame(&buf, Frame{Type: FrameTypeEOS, Payload: []byte("x")}); err == nil || err.Error() != "rpc: EOS frame must be empty" {
+		t.Fatalf("WriteFrame(EOS payload) err = %v", err)
+	}
+
+	var hdr [4]byte
+	binary.LittleEndian.PutUint16(hdr[0:2], 1)
+	binary.LittleEndian.PutUint16(hdr[2:4], uint16(FrameTypeEOS))
+	if _, err := buf.Write(hdr[:]); err != nil {
+		t.Fatalf("Write(header) error = %v", err)
+	}
+	_, err := ReadFrame(&buf)
+	if err == nil || err.Error() != "rpc: EOS frame must be empty" {
+		t.Fatalf("ReadFrame(EOS payload) err = %v", err)
+	}
+}
+
+func TestWriteFrameRejectsUnknownType(t *testing.T) {
+	var buf bytes.Buffer
+	err := WriteFrame(&buf, Frame{Type: FrameType(99), Payload: []byte("payload")})
+	if err == nil || err.Error() != "rpc: unknown frame type: 99" {
+		t.Fatalf("WriteFrame() err = %v", err)
+	}
+}
+
+func TestWriteFramePropagatesShortWrite(t *testing.T) {
+	err := WriteFrame(shortWriter{}, Frame{Type: FrameTypeJSON, Payload: []byte("payload")})
+	if !errors.Is(err, io.ErrShortWrite) {
+		t.Fatalf("WriteFrame() err = %v, want %v", err, io.ErrShortWrite)
+	}
+}
+
+type shortWriter struct{}
+
+func (shortWriter) Write(_ []byte) (int, error) {
+	return 0, nil
 }
 
 func TestErrorImplementsErrorAndBuildsRPCResponse(t *testing.T) {

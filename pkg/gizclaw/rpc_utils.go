@@ -17,11 +17,20 @@ import (
 var errRPCMissingResult = errors.New("rpc: missing result")
 
 func handleRPC(conn net.Conn, dispatch func(context.Context, *rpcapi.RPCRequest) (*rpcapi.RPCResponse, error)) error {
-	req, err := rpcapi.ReadRequest(conn)
+	stream, err := newRPCStream(context.Background(), conn)
+	if err != nil {
+		return err
+	}
+	defer stream.Close()
+
+	req, err := stream.ReadRequest()
 	if err != nil {
 		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 			return nil
 		}
+		return err
+	}
+	if err := stream.ReadEOS(); err != nil {
 		return err
 	}
 
@@ -46,7 +55,13 @@ func handleRPC(conn net.Conn, dispatch func(context.Context, *rpcapi.RPCRequest)
 	if resp.V == 0 {
 		resp.V = rpcapi.RPCVersionV1
 	}
-	if err := rpcapi.WriteResponse(conn, resp); err != nil {
+	if err := stream.WriteResponse(resp); err != nil {
+		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+			return nil
+		}
+		return err
+	}
+	if err := stream.WriteEOS(); err != nil {
 		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 			return nil
 		}
@@ -112,46 +127,23 @@ func callRPC(ctx context.Context, conn net.Conn, req *rpcapi.RPCRequest) (*rpcap
 		return nil, err
 	}
 
-	deadline, hasDeadline := ctx.Deadline()
-	if hasDeadline {
-		if err := conn.SetDeadline(deadline); err != nil {
-			return nil, err
-		}
-	}
-	stopCancel := make(chan struct{})
-	cancelDone := make(chan struct{})
-	defer func() {
-		close(stopCancel)
-		<-cancelDone
-		_ = conn.SetDeadline(time.Time{})
-	}()
-	go func() {
-		defer close(cancelDone)
-		select {
-		case <-ctx.Done():
-			_ = conn.SetDeadline(time.Now())
-		case <-stopCancel:
-		}
-	}()
-
-	if err := rpcapi.WriteRequest(conn, req); err != nil {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		if hasDeadline && time.Now().After(deadline) {
-			return nil, context.DeadlineExceeded
-		}
+	stream, err := newRPCStream(ctx, conn)
+	if err != nil {
 		return nil, err
 	}
+	defer stream.Close()
 
-	resp, err := rpcapi.ReadResponse(conn)
+	if err := stream.WriteRequest(req); err != nil {
+		return nil, err
+	}
+	if err := stream.WriteEOS(); err != nil {
+		return nil, err
+	}
+	resp, err := stream.ReadResponse()
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		if hasDeadline && time.Now().After(deadline) {
-			return nil, context.DeadlineExceeded
-		}
+		return nil, err
+	}
+	if err := stream.ReadEOS(); err != nil {
 		return nil, err
 	}
 	return resp, nil
