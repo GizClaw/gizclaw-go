@@ -337,7 +337,7 @@ func convertHarnessAPIType[T any](value any) (T, error) {
 func (h *Harness) WaitForPing(contextName string) {
 	h.t.Helper()
 
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", contextName); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", contextName); err != nil {
 		h.t.Fatalf("context %q did not become ping-ready: %v", contextName, err)
 	}
 }

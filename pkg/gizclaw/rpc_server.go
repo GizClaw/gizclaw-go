@@ -28,7 +28,19 @@ type rpcServer struct {
 }
 
 func (s *rpcServer) Handle(conn net.Conn) error {
-	return handleRPC(conn, s.dispatch)
+	return handleRPCWithStream(conn, s.dispatch, s.dispatchStream)
+}
+
+func (s *rpcServer) dispatchStream(ctx context.Context, stream *rpcStream, req *rpcapi.RPCRequest) (bool, error) {
+	if req == nil {
+		return false, nil
+	}
+	switch req.Method {
+	case rpcapi.RPCMethodPeerSpeedTestRun:
+		return true, s.handleSpeedTest(ctx, stream, req)
+	default:
+		return false, nil
+	}
 }
 
 func (s *rpcServer) dispatch(ctx context.Context, req *rpcapi.RPCRequest) (*rpcapi.RPCResponse, error) {

@@ -8,7 +8,7 @@ with clear guidance instead of silently using unexpected global state.
 ## Covered Behaviors
 
 - `gizclaw context list` reports that no contexts exist.
-- `gizclaw ping` without any current context fails with an actionable message.
+- `gizclaw peer ping` without any current context fails with an actionable message.
 
 ## Isolation Rules
 

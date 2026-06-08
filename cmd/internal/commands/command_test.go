@@ -41,20 +41,14 @@ func TestRootHelp(t *testing.T) {
 	if !strings.Contains(out, "migrate") {
 		t.Fatalf("help missing 'migrate': %s", out)
 	}
-	if !strings.Contains(out, "ping") {
-		t.Fatalf("help missing 'ping': %s", out)
-	}
-	if !strings.Contains(out, "set-name") {
-		t.Fatalf("help missing 'set-name': %s", out)
+	if !strings.Contains(out, "peer") {
+		t.Fatalf("help missing 'peer': %s", out)
 	}
 	if !strings.Contains(out, "admin") {
 		t.Fatalf("help missing 'admin': %s", out)
 	}
 	if !strings.Contains(out, "play") {
 		t.Fatalf("help missing 'play': %s", out)
-	}
-	if !strings.Contains(out, "server-info") {
-		t.Fatalf("help missing 'server-info': %s", out)
 	}
 }
 
@@ -155,7 +149,7 @@ func TestSetNameHelp(t *testing.T) {
 	root := New()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
-	root.SetArgs([]string{"set-name", "--help"})
+	root.SetArgs([]string{"peer", "set-name", "--help"})
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
@@ -169,9 +163,25 @@ func TestSetNameHelp(t *testing.T) {
 
 func TestSetNameRejectsEmptyName(t *testing.T) {
 	root := New()
-	root.SetArgs([]string{"set-name", "   "})
+	root.SetArgs([]string{"peer", "set-name", "   "})
 	if err := root.Execute(); err == nil || !strings.Contains(err.Error(), "device name must not be empty") {
 		t.Fatalf("set-name empty err=%v", err)
+	}
+}
+
+func TestPeerHelp(t *testing.T) {
+	root := New()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetArgs([]string{"peer", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"ping", "server-info", "set-name", "test-speed"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("peer help missing %q: %s", want, out)
+		}
 	}
 }
 
@@ -179,13 +189,29 @@ func TestPingHelp(t *testing.T) {
 	root := New()
 	var buf bytes.Buffer
 	root.SetOut(&buf)
-	root.SetArgs([]string{"ping", "--help"})
+	root.SetArgs([]string{"peer", "ping", "--help"})
 	if err := root.Execute(); err != nil {
 		t.Fatal(err)
 	}
 	out := buf.String()
 	if !strings.Contains(out, "--context") {
 		t.Fatalf("ping help missing '--context': %s", out)
+	}
+}
+
+func TestTestSpeedHelp(t *testing.T) {
+	root := New()
+	var buf bytes.Buffer
+	root.SetOut(&buf)
+	root.SetArgs([]string{"peer", "test-speed", "--help"})
+	if err := root.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"--context", "--up-content-length", "--down-content-length", "--timeout"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("test-speed help missing %q: %s", want, out)
+		}
 	}
 }
 

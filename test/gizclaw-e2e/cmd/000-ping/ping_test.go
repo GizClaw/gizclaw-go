@@ -19,7 +19,7 @@ func TestPingUserStory(t *testing.T) {
 
 	t.Run("single client can ping repeatedly", func(t *testing.T) {
 		for range 3 {
-			result, err := h.RunCLIUntilSuccess("ping", "--context", "client-a")
+			result, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -41,7 +41,7 @@ func TestPingUserStory(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				result, err := h.RunCLIUntilSuccess("ping", "--context", ctxName)
+				result, err := h.RunCLIUntilSuccess("peer", "ping", "--context", ctxName)
 				results <- outcome{result: result, err: err}
 			}()
 		}

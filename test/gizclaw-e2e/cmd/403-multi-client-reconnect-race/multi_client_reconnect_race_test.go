@@ -14,7 +14,7 @@ func TestMultiClientReconnectRaceUserStory(t *testing.T) {
 	contexts := []string{"alpha", "beta"}
 	for _, name := range contexts {
 		h.CreateContext(name).MustSucceed(t)
-		if _, err := h.RunCLIUntilSuccess("ping", "--context", name); err != nil {
+		if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", name); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -28,7 +28,7 @@ func TestMultiClientReconnectRaceUserStory(t *testing.T) {
 		wg.Add(1)
 		go func(name string) {
 			defer wg.Done()
-			_, err := h.RunCLIUntilSuccess("ping", "--context", name)
+			_, err := h.RunCLIUntilSuccess("peer", "ping", "--context", name)
 			errs <- err
 		}(name)
 	}

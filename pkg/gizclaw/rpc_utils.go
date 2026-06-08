@@ -16,7 +16,17 @@ import (
 
 var errRPCMissingResult = errors.New("rpc: missing result")
 
+type rpcStreamDispatch func(context.Context, *rpcStream, *rpcapi.RPCRequest) (bool, error)
+
 func handleRPC(conn net.Conn, dispatch func(context.Context, *rpcapi.RPCRequest) (*rpcapi.RPCResponse, error)) error {
+	return handleRPCWithStream(conn, dispatch, nil)
+}
+
+func handleRPCWithStream(
+	conn net.Conn,
+	dispatch func(context.Context, *rpcapi.RPCRequest) (*rpcapi.RPCResponse, error),
+	streamDispatch rpcStreamDispatch,
+) error {
 	stream, err := newRPCStream(context.Background(), conn)
 	if err != nil {
 		return err
@@ -29,6 +39,12 @@ func handleRPC(conn net.Conn, dispatch func(context.Context, *rpcapi.RPCRequest)
 			return nil
 		}
 		return err
+	}
+	if streamDispatch != nil {
+		handled, err := streamDispatch(stream.Context(), stream, req)
+		if handled || err != nil {
+			return err
+		}
 	}
 	if err := stream.ReadEOS(); err != nil {
 		return err

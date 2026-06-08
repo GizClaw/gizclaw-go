@@ -10,7 +10,7 @@ So that I can switch once with `gizclaw context use` and then run follow-up comm
 ## Covered Behaviors
 
 - `gizclaw context use <name>` changes the current context.
-- `gizclaw ping` without `--context` uses the current context.
+- `gizclaw peer ping` without `--context` uses the current context.
 - Switching to a broken context changes the behavior of default commands.
 - Switching back to a valid context restores the default command flow.
 

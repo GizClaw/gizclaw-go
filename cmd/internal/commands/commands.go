@@ -8,12 +8,10 @@ import (
 	contextcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/context"
 	genkeycmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/genkey"
 	migratecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/migrate"
-	pingcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/ping"
+	peercmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/peer"
 	playcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/play"
 	servecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/serve"
-	serverinfocmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/serverinfo"
 	servicecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/service"
-	setnamecmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/setname"
 	"github.com/spf13/cobra"
 )
 
@@ -30,11 +28,9 @@ func New() *cobra.Command {
 		contextcmd.NewCmd(),
 		genkeycmd.NewCmd(),
 		migratecmd.NewCmd(),
-		pingcmd.NewCmd(),
-		setnamecmd.NewCmd(),
+		peercmd.NewCmd(),
 		admincmd.NewCmd(),
 		playcmd.NewCmd(),
-		serverinfocmd.NewCmd(),
 	)
 
 	return root

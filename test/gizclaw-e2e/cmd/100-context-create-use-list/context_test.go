@@ -36,13 +36,13 @@ func TestContextCreateUseListUserStory(t *testing.T) {
 		t.Fatalf("expected alpha to be current after use:\n%s", listAfter.Stdout)
 	}
 
-	pingAlpha, err := h.RunCLIUntilSuccess("ping", "--context", "alpha")
+	pingAlpha, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "alpha")
 	if err != nil {
 		t.Fatal(err)
 	}
 	assertPingOutput(t, pingAlpha.Stdout)
 
-	pingBeta, err := h.RunCLIUntilSuccess("ping", "--context", "beta")
+	pingBeta, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "beta")
 	if err != nil {
 		t.Fatal(err)
 	}

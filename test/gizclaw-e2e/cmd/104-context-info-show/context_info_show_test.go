@@ -38,7 +38,7 @@ func TestContextInfoAndShowUserStory(t *testing.T) {
 		}
 	}
 
-	serverInfo := h.RunCLI("server-info", "--context", "alpha")
+	serverInfo := h.RunCLI("peer", "server-info", "--context", "alpha")
 	serverInfo.MustSucceed(t)
 	if !strings.Contains(serverInfo.Stdout, `"public_key":"`+h.ServerPublicKey+`"`) {
 		t.Fatalf("server-info missing server public key:\n%s", serverInfo.Stdout)

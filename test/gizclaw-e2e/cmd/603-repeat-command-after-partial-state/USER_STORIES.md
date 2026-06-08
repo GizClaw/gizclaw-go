@@ -12,7 +12,7 @@ to be idempotent so retries can safely complete partial device metadata setup.
 3. Prepare that context through the harness API.
 4. Repeat the same preparation request.
 5. Verify the repeated request succeeds and updates the auto-created device info.
-6. Verify the context remains usable with `gizclaw ping`.
+6. Verify the context remains usable with `gizclaw peer ping`.
 
 ## Covered Behaviors
 

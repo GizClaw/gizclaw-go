@@ -51,6 +51,7 @@ const (
 	RPCMethodPeerInfoPut          RPCMethod = "peer.info.put"
 	RPCMethodPeerPing             RPCMethod = "peer.ping"
 	RPCMethodPeerRuntimeGet       RPCMethod = "peer.runtime.get"
+	RPCMethodPeerSpeedTestRun     RPCMethod = "peer.speed_test.run"
 	RPCMethodServerInfoGet        RPCMethod = "server.info.get"
 )
 
@@ -68,6 +69,8 @@ func (e RPCMethod) Valid() bool {
 	case RPCMethodPeerPing:
 		return true
 	case RPCMethodPeerRuntimeGet:
+		return true
+	case RPCMethodPeerSpeedTestRun:
 		return true
 	case RPCMethodServerInfoGet:
 		return true
@@ -238,6 +241,18 @@ type ServerInfo struct {
 	ServerTime  int64  `json:"server_time"`
 }
 
+// SpeedTestRequest defines model for SpeedTestRequest.
+type SpeedTestRequest struct {
+	DownContentLength int64 `json:"down_content_length"`
+	UpContentLength   int64 `json:"up_content_length"`
+}
+
+// SpeedTestResponse defines model for SpeedTestResponse.
+type SpeedTestResponse struct {
+	DownContentLength int64 `json:"down_content_length"`
+	UpContentLength   int64 `json:"up_content_length"`
+}
+
 // AsPingRequest returns the union data inside the RPCRequest_Params as a PingRequest
 func (t RPCRequest_Params) AsPingRequest() (PingRequest, error) {
 	var body PingRequest
@@ -254,6 +269,32 @@ func (t *RPCRequest_Params) FromPingRequest(v PingRequest) error {
 
 // MergePingRequest performs a merge with any union data inside the RPCRequest_Params, using the provided PingRequest
 func (t *RPCRequest_Params) MergePingRequest(v PingRequest) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSpeedTestRequest returns the union data inside the RPCRequest_Params as a SpeedTestRequest
+func (t RPCRequest_Params) AsSpeedTestRequest() (SpeedTestRequest, error) {
+	var body SpeedTestRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSpeedTestRequest overwrites any union data inside the RPCRequest_Params as the provided SpeedTestRequest
+func (t *RPCRequest_Params) FromSpeedTestRequest(v SpeedTestRequest) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSpeedTestRequest performs a merge with any union data inside the RPCRequest_Params, using the provided SpeedTestRequest
+func (t *RPCRequest_Params) MergeSpeedTestRequest(v SpeedTestRequest) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -446,6 +487,32 @@ func (t *RPCResponse_Result) FromPingResponse(v PingResponse) error {
 
 // MergePingResponse performs a merge with any union data inside the RPCResponse_Result, using the provided PingResponse
 func (t *RPCResponse_Result) MergePingResponse(v PingResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsSpeedTestResponse returns the union data inside the RPCResponse_Result as a SpeedTestResponse
+func (t RPCResponse_Result) AsSpeedTestResponse() (SpeedTestResponse, error) {
+	var body SpeedTestResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromSpeedTestResponse overwrites any union data inside the RPCResponse_Result as the provided SpeedTestResponse
+func (t *RPCResponse_Result) FromSpeedTestResponse(v SpeedTestResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeSpeedTestResponse performs a merge with any union data inside the RPCResponse_Result, using the provided SpeedTestResponse
+func (t *RPCResponse_Result) MergeSpeedTestResponse(v SpeedTestResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

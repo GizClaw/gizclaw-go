@@ -16,7 +16,7 @@ So that I can trust a persisted client context across normal local server restar
 - a server workspace can be stopped and restarted by the harness
 - the server reuses the same persisted identity after restart
 - the same stored CLI context still works after restart
-- `gizclaw ping` recovers without recreating the context
+- `gizclaw peer ping` recovers without recreating the context
 
 ## Isolation Rules
 

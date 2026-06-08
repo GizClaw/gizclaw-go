@@ -21,7 +21,7 @@ func TestRepeatCommandAfterPartialStateUserStory(t *testing.T) {
 		t.Fatalf("second register should update auto-registered device info:\n%s", second.Stdout)
 	}
 
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "device-a"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "device-a"); err != nil {
 		t.Fatal(err)
 	}
 }

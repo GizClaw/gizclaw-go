@@ -19,7 +19,7 @@ func TestServerIdentityPersistenceUserStory(t *testing.T) {
 	}
 
 	h.CreateContext("client-a").MustSucceed(t)
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "client-a"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a"); err != nil {
 		t.Fatal(err)
 	}
 }

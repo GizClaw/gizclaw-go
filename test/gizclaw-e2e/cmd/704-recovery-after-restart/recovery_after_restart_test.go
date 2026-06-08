@@ -11,18 +11,18 @@ func TestRecoveryAfterRestartUserStory(t *testing.T) {
 	h.StartServerFromFixture("server_config.yaml")
 
 	h.CreateContext("client-a").MustSucceed(t)
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "client-a"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a"); err != nil {
 		t.Fatal(err)
 	}
 
 	h.StopServer()
-	offline := h.RunCLI("ping", "--context", "client-a")
+	offline := h.RunCLI("peer", "ping", "--context", "client-a")
 	if offline.Err == nil {
 		t.Fatalf("expected ping to fail while server is offline:\nstdout:\n%s\nstderr:\n%s", offline.Stdout, offline.Stderr)
 	}
 
 	h.RestartServer()
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "client-a"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a"); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -16,7 +16,7 @@ So that I can manage multiple local client identities without guessing which one
 - `gizclaw context list` prints sorted context names.
 - `gizclaw context list` marks the current context with `*`.
 - `gizclaw context use <name>` switches the current context.
-- Explicit `gizclaw ping --context <name>` works for each created context.
+- Explicit `gizclaw peer ping --context <name>` works for each created context.
 
 ## Isolation Rules
 

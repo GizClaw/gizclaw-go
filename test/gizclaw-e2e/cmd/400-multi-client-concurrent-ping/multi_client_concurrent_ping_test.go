@@ -22,7 +22,7 @@ func TestMultiClientConcurrentPingUserStory(t *testing.T) {
 		wg.Add(1)
 		go func(name string) {
 			defer wg.Done()
-			_, err := h.RunCLIUntilSuccess("ping", "--context", name)
+			_, err := h.RunCLIUntilSuccess("peer", "ping", "--context", name)
 			errs <- err
 		}(name)
 	}
@@ -35,7 +35,7 @@ func TestMultiClientConcurrentPingUserStory(t *testing.T) {
 		}
 	}
 
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "alpha"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "alpha"); err != nil {
 		t.Fatal(err)
 	}
 }

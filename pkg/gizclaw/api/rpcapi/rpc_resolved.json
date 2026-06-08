@@ -176,6 +176,7 @@
       "RPCMethod": {
         "enum": [
           "peer.ping",
+          "peer.speed_test.run",
           "device.info.get",
           "device.identifiers.get",
           "peer.info.get",
@@ -197,6 +198,9 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/PingRequest"
+              },
+              {
+                "$ref": "#/components/schemas/SpeedTestRequest"
               },
               {
                 "$ref": "#/components/schemas/DeviceGetInfoRequest"
@@ -241,6 +245,9 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/PingResponse"
+              },
+              {
+                "$ref": "#/components/schemas/SpeedTestResponse"
               },
               {
                 "$ref": "#/components/schemas/DeviceGetInfoResponse"
@@ -370,6 +377,46 @@
           "public_key",
           "server_time",
           "build_commit"
+        ],
+        "type": "object"
+      },
+      "SpeedTestRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "down_content_length": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "up_content_length": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "up_content_length",
+          "down_content_length"
+        ],
+        "type": "object"
+      },
+      "SpeedTestResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "down_content_length": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "up_content_length": {
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "up_content_length",
+          "down_content_length"
         ],
         "type": "object"
       }

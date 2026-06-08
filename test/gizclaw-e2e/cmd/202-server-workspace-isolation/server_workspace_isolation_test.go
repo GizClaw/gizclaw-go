@@ -20,10 +20,10 @@ func TestServerWorkspaceIsolationUserStory(t *testing.T) {
 	first.CreateContext("alpha").MustSucceed(t)
 	second.CreateContext("beta").MustSucceed(t)
 
-	if _, err := first.RunCLIUntilSuccess("ping", "--context", "alpha"); err != nil {
+	if _, err := first.RunCLIUntilSuccess("peer", "ping", "--context", "alpha"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := second.RunCLIUntilSuccess("ping", "--context", "beta"); err != nil {
+	if _, err := second.RunCLIUntilSuccess("peer", "ping", "--context", "beta"); err != nil {
 		t.Fatal(err)
 	}
 }

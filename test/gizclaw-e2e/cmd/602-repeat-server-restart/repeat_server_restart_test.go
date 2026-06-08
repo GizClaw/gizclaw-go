@@ -12,13 +12,13 @@ func TestRepeatServerRestartUserStory(t *testing.T) {
 
 	h.CreateContext("client-a").MustSucceed(t)
 	for range 3 {
-		if _, err := h.RunCLIUntilSuccess("ping", "--context", "client-a"); err != nil {
+		if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a"); err != nil {
 			t.Fatal(err)
 		}
 		h.StopServer()
 		h.RestartServer()
 	}
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "client-a"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a"); err != nil {
 		t.Fatal(err)
 	}
 }

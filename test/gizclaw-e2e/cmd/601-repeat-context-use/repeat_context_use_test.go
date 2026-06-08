@@ -16,12 +16,12 @@ func TestRepeatContextUseUserStory(t *testing.T) {
 
 	for range 4 {
 		h.UseContext("alpha").MustSucceed(t)
-		if _, err := h.RunCLIUntilSuccess("ping"); err != nil {
+		if _, err := h.RunCLIUntilSuccess("peer", "ping"); err != nil {
 			t.Fatal(err)
 		}
 
 		h.UseContext("beta").MustSucceed(t)
-		if _, err := h.RunCLIUntilSuccess("ping"); err != nil {
+		if _, err := h.RunCLIUntilSuccess("peer", "ping"); err != nil {
 			t.Fatal(err)
 		}
 	}

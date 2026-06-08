@@ -18,7 +18,7 @@ func TestWrongServerPublicKeyUserStory(t *testing.T) {
 	wrongKey[0] ^= 0xff
 	h.CreateContextWith("broken", h.ServerAddr, wrongKey.String()).MustSucceed(t)
 
-	result := h.RunCLI("ping", "--context", "broken")
+	result := h.RunCLI("peer", "ping", "--context", "broken")
 	if result.Err == nil {
 		t.Fatalf("expected ping to fail with wrong server public key:\nstdout:\n%s\nstderr:\n%s", result.Stdout, result.Stderr)
 	}

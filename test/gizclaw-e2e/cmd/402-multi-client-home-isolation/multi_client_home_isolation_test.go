@@ -29,10 +29,10 @@ func TestMultiClientHomeIsolationUserStory(t *testing.T) {
 		t.Fatalf("unexpected second home contexts:\n%s", secondList.Stdout)
 	}
 
-	if _, err := first.RunCLIUntilSuccess("ping", "--context", "alpha"); err != nil {
+	if _, err := first.RunCLIUntilSuccess("peer", "ping", "--context", "alpha"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := second.RunCLIUntilSuccess("ping", "--context", "beta"); err != nil {
+	if _, err := second.RunCLIUntilSuccess("peer", "ping", "--context", "beta"); err != nil {
 		t.Fatal(err)
 	}
 }

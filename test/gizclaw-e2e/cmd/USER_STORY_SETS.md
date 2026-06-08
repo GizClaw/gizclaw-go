@@ -62,7 +62,7 @@ Cases:
 - `000-ping`
   - start one server from CLI
   - create two client contexts
-  - run repeated `gizclaw ping`
+  - run repeated `gizclaw peer ping`
   - run small concurrent ping across two clients
   - status: implemented
 - `001-ping-reconnect`

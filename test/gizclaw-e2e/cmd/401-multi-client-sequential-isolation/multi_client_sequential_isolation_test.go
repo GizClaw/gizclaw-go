@@ -15,10 +15,10 @@ func TestMultiClientSequentialIsolationUserStory(t *testing.T) {
 	h.CreateContext("beta").MustSucceed(t)
 	h.UseContext("alpha").MustSucceed(t)
 
-	if _, err := h.RunCLIUntilSuccess("ping"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "beta"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "beta"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -27,7 +27,7 @@ func TestMultiClientSequentialIsolationUserStory(t *testing.T) {
 	if !strings.Contains(list.Stdout, "* alpha") {
 		t.Fatalf("expected alpha to remain current after explicit beta command:\n%s", list.Stdout)
 	}
-	if _, err := h.RunCLIUntilSuccess("ping"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping"); err != nil {
 		t.Fatal(err)
 	}
 }

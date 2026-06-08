@@ -27,7 +27,7 @@ func TestClientPublicRetryableReadsUserStory(t *testing.T) {
 		if info == nil || info.Sn == nil || *info.Sn != "device-a-sn" {
 			t.Fatalf("expected device info response on iteration %d, got %+v", i, info)
 		}
-		if _, err := h.RunCLIUntilSuccess("ping", "--context", "device-a"); err != nil {
+		if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "device-a"); err != nil {
 			t.Fatal(err)
 		}
 	}

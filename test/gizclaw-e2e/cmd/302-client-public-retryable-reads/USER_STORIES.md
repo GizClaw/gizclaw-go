@@ -11,7 +11,7 @@ CLI surface.
 1. Start a real server with automatic peer creation enabled.
 2. Create and prepare one device context through the harness API.
 3. Read peer info several times through RPC.
-4. Verify `gizclaw ping` still succeeds after each read.
+4. Verify `gizclaw peer ping` still succeeds after each read.
 
 ## Covered Behaviors
 

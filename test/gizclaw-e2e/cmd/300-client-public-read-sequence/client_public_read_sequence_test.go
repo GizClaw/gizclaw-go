@@ -33,7 +33,7 @@ func TestClientPublicReadSequenceUserStory(t *testing.T) {
 		t.Fatalf("expected device info response, got %+v", info)
 	}
 
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "device-a"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "device-a"); err != nil {
 		t.Fatal(err)
 	}
 }

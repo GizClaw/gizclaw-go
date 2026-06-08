@@ -21,7 +21,7 @@ func TestPingMultiRoundUserStory(t *testing.T) {
 	for round := range 3 {
 		t.Run("sequential-round-"+itoa(round), func(t *testing.T) {
 			for _, name := range contexts {
-				result, err := h.RunCLIUntilSuccess("ping", "--context", name)
+				result, err := h.RunCLIUntilSuccess("peer", "ping", "--context", name)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -34,7 +34,7 @@ func TestPingMultiRoundUserStory(t *testing.T) {
 		})
 	}
 
-	finalCheck, err := h.RunCLIUntilSuccess("ping", "--context", "client-c")
+	finalCheck, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-c")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func runConcurrentPings(t *testing.T, h *clitest.Harness, contexts []string) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			result, err := h.RunCLIUntilSuccess("ping", "--context", ctxName)
+			result, err := h.RunCLIUntilSuccess("peer", "ping", "--context", ctxName)
 			results <- outcome{result: result, err: err}
 		}()
 	}

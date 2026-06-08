@@ -14,7 +14,7 @@ func TestPingReconnectUserStory(t *testing.T) {
 	h.CreateContext("client-a").MustSucceed(t)
 	h.WaitForPing("client-a")
 
-	beforeRestart, err := h.RunCLIUntilSuccess("ping", "--context", "client-a")
+	beforeRestart, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,7 +25,7 @@ func TestPingReconnectUserStory(t *testing.T) {
 
 	h.StopServer()
 
-	duringRestart := h.RunCLI("ping", "--context", "client-a")
+	duringRestart := h.RunCLI("peer", "ping", "--context", "client-a")
 	if duringRestart.Err == nil {
 		t.Fatalf("ping should fail while server is stopped:\nstdout:\n%s\nstderr:\n%s", duringRestart.Stdout, duringRestart.Stderr)
 	}
@@ -39,7 +39,7 @@ func TestPingReconnectUserStory(t *testing.T) {
 		t.Fatalf("server public key changed after restart: got %q want %q", h.ServerPublicKey, originalPubKey)
 	}
 
-	afterRestart, err := h.RunCLIUntilSuccess("ping", "--context", "client-a")
+	afterRestart, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a")
 	if err != nil {
 		t.Fatal(err)
 	}

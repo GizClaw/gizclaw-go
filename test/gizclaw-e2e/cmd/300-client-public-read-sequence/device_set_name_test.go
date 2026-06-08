@@ -14,7 +14,7 @@ func TestSetNameUserStory(t *testing.T) {
 	h.CreateContext("device-a").MustSucceed(t)
 	h.RegisterContext("device-a", "--name", "before-name", "--sn", "device-a-sn").MustSucceed(t)
 
-	setName := h.RunCLI("set-name", "after-name", "--context", "device-a")
+	setName := h.RunCLI("peer", "set-name", "after-name", "--context", "device-a")
 	setName.MustSucceed(t)
 	if !strings.Contains(setName.Stdout, `"name":"after-name"`) {
 		t.Fatalf("set-name missing updated name:\n%s", setName.Stdout)
@@ -24,7 +24,7 @@ func TestSetNameUserStory(t *testing.T) {
 	}
 
 	h.CreateContext("device-b").MustSucceed(t)
-	autoRegistered := h.RunCLI("set-name", "auto-name", "--context", "device-b")
+	autoRegistered := h.RunCLI("peer", "set-name", "auto-name", "--context", "device-b")
 	autoRegistered.MustSucceed(t)
 	if !strings.Contains(autoRegistered.Stdout, `"name":"auto-name"`) {
 		t.Fatalf("set-name should register missing gear with name:\n%s", autoRegistered.Stdout)

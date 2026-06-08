@@ -12,7 +12,7 @@ func TestServerConfigBootUserStory(t *testing.T) {
 	h.StartServerFromFixture("server_config.yaml")
 
 	h.CreateContext("client-a").MustSucceed(t)
-	result, err := h.RunCLIUntilSuccess("ping", "--context", "client-a")
+	result, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "client-a")
 	if err != nil {
 		t.Fatal(err)
 	}

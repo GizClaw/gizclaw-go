@@ -21,7 +21,7 @@ func TestContextDuplicateCreateUserStory(t *testing.T) {
 		t.Fatalf("unexpected duplicate context error:\nstdout:\n%s\nstderr:\n%s", duplicate.Stdout, duplicate.Stderr)
 	}
 
-	if _, err := h.RunCLIUntilSuccess("ping", "--context", "alpha"); err != nil {
+	if _, err := h.RunCLIUntilSuccess("peer", "ping", "--context", "alpha"); err != nil {
 		t.Fatal(err)
 	}
 }

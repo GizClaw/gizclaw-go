@@ -1,7 +1,7 @@
 ---
 name: gizclaw-context
 version: 1.0.0
-description: "Manage GizClaw CLI contexts and connectivity checks. Use for gizclaw context create/use/list/info/show, gizclaw ping, and gizclaw server-info."
+description: "Manage GizClaw CLI contexts and connectivity checks. Use for gizclaw context create/use/list/info/show, gizclaw peer ping, and gizclaw peer server-info."
 metadata:
   requires:
     bins: ["gizclaw"]
@@ -56,4 +56,4 @@ inspect saved contexts, check connectivity, or read public server metadata.
 
 - If there is no active context, create one or run `context use <name>`.
 - If ping fails, verify `context show <name>` has the expected server address and public key.
-- If a server-facing command fails with wrong public key or connection errors, check `server-info --context <name>` and then the server process.
+- If a server-facing command fails with wrong public key or connection errors, check `peer server-info --context <name>` and then the server process.
