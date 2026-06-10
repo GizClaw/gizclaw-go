@@ -28,9 +28,37 @@ Public Service
 Gear Service
 ├── peer.info.{get,put}
 ├── peer.runtime.get
+├── peer.status.{get,put}
+├── audio.say
+├── workspace.{list,get,create,put,delete}
 ├── workflow.{list,get,create,put,delete}
 ├── model.{list,get,create,put,delete}
-└── credential.{list,get,create,put,delete}
+├── credential.{list,get,create,put,delete}
+├── peer.run.agent.{get,set}
+├── peer.run.{reload,status,stop}
+├── pet.{list,get,create,put,delete}
+├── pet.feed
+├── pet.play
+├── pet.level-up
+├── wallet.get
+├── wallet.transactions.list
+├── contact.{list,get,create,put,delete}
+├── contact.block
+├── contact.unblock
+├── friend.requests.{list,create}
+├── friend.requests.accept
+├── friend.requests.reject
+├── friend.{list,delete}
+├── group.{list,get,create,put,delete}
+├── group.members.{list,add,delete}
+├── group.messages.{list,send}
+├── call.{list,get,create}
+├── call.answer
+├── call.reject
+├── call.end
+├── game.results.create
+├── reward.{list,get,create}
+└── reward.claim
 
 Admin Service
 ├── /@apply POST
@@ -53,10 +81,31 @@ Admin Service
 │   └── @sync-voices
 ├── /voices/{id} LIST, CREATE, GET, PUT, DELETE
 ├── /workspaces/{name} LIST, CREATE, GET, PUT, DELETE
+├── /peers/{publicKey}/pets/{id} LIST, GET
+├── /peers/{publicKey}/wallet GET
+│   └── /transactions LIST, GET
+├── /peers/{publicKey}/contacts/{id} LIST, CREATE, GET, PUT, DELETE
+│   ├── @block
+│   └── @unblock
+├── /peers/{publicKey}/friend-requests/{id} LIST, CREATE, GET, PUT, DELETE
+│   ├── @accept
+│   └── @reject
+├── /peers/{publicKey}/friends/{id} LIST, GET, DELETE
+├── /groups/{id} LIST, CREATE, GET, PUT, DELETE
+│   ├── /members LIST, CREATE, GET, DELETE
+│   └── /messages LIST, CREATE, GET
+├── /calls/{id} LIST, CREATE, GET
+│   ├── @answer
+│   ├── @reject
+│   └── @end
+├── /game-results/{id} LIST, CREATE, GET
+├── /rewards/{id} LIST, CREATE, GET
+│   └── @claim
 ├── /peers/{publicKey} LIST, GET, DELETE
 │   ├── /info GET, PUT
 │   ├── /config GET, PUT
 │   ├── /runtime GET
+│   ├── /status GET
 │   ├── @approve
 │   ├── @block
 │   └── @refresh
