@@ -8,8 +8,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"golang.org/x/crypto/chacha20poly1305"
 )
 
 // SessionState represents the current state of a session.
@@ -58,10 +56,11 @@ type Session struct {
 	remoteIndex uint32 // Peer's sender index
 
 	// Transport keys and ciphers
-	sendKey  Key
-	recvKey  Key
-	sendAEAD cipher.AEAD
-	recvAEAD cipher.AEAD
+	sendKey    Key
+	recvKey    Key
+	cipherMode CipherMode
+	sendAEAD   cipher.AEAD
+	recvAEAD   cipher.AEAD
 
 	// Nonce management
 	sendNonce atomic.Uint64
@@ -84,18 +83,26 @@ type SessionConfig struct {
 	SendKey     Key
 	RecvKey     Key
 	RemotePK    PublicKey
+	CipherMode  CipherMode
 }
 
 // NewSession creates a new established session from handshake results.
 func NewSession(cfg SessionConfig) (*Session, error) {
-	sendAEAD, err := chacha20poly1305.New(cfg.SendKey[:])
+	mode, err := NormalizeCipherMode(cfg.CipherMode)
 	if err != nil {
 		return nil, err
 	}
-
-	recvAEAD, err := chacha20poly1305.New(cfg.RecvKey[:])
-	if err != nil {
-		return nil, err
+	var sendAEAD cipher.AEAD
+	var recvAEAD cipher.AEAD
+	if mode != CipherModePlaintext {
+		sendAEAD, err = NewAEADWithMode(mode, cfg.SendKey[:])
+		if err != nil {
+			return nil, err
+		}
+		recvAEAD, err = NewAEADWithMode(mode, cfg.RecvKey[:])
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	now := time.Now()
@@ -104,6 +111,7 @@ func NewSession(cfg SessionConfig) (*Session, error) {
 		remoteIndex:  cfg.RemoteIndex,
 		sendKey:      cfg.SendKey,
 		recvKey:      cfg.RecvKey,
+		cipherMode:   mode,
 		sendAEAD:     sendAEAD,
 		recvAEAD:     recvAEAD,
 		recvNonce:    NewReplayFilter(),
@@ -162,6 +170,7 @@ func (s *Session) Encrypt(plaintext []byte) (ciphertext []byte, nonce uint64, er
 	// Use read lock to get state and cipher (allows concurrent encryptions)
 	s.mu.RLock()
 	state := s.state
+	cipherMode := s.cipherMode
 	sendAEAD := s.sendAEAD
 	s.mu.RUnlock()
 
@@ -177,12 +186,10 @@ func (s *Session) Encrypt(plaintext []byte) (ciphertext []byte, nonce uint64, er
 		return nil, 0, ErrNonceExhausted
 	}
 
-	// Build nonce bytes (12 bytes, little-endian)
-	var nonceBytes [12]byte
-	binary.LittleEndian.PutUint64(nonceBytes[:], nonce)
-
-	// Encrypt (AEAD is safe for concurrent use)
-	ciphertext = sendAEAD.Seal(nil, nonceBytes[:], plaintext, nil)
+	ciphertext, err = sealWithAEAD(cipherMode, sendAEAD, nonce, plaintext, nil)
+	if err != nil {
+		return nil, 0, err
+	}
 
 	// Update last sent time with write lock
 	s.mu.Lock()
@@ -201,6 +208,7 @@ func (s *Session) Decrypt(ciphertext []byte, nonce uint64) ([]byte, error) {
 	// Use read lock to get state and cipher (allows concurrent decryptions)
 	s.mu.RLock()
 	state := s.state
+	cipherMode := s.cipherMode
 	recvAEAD := s.recvAEAD
 	s.mu.RUnlock()
 
@@ -213,12 +221,7 @@ func (s *Session) Decrypt(ciphertext []byte, nonce uint64) ([]byte, error) {
 		return nil, ErrReplayDetected
 	}
 
-	// Build nonce bytes
-	var nonceBytes [12]byte
-	binary.LittleEndian.PutUint64(nonceBytes[:], nonce)
-
-	// Decrypt (AEAD is safe for concurrent use)
-	plaintext, err := recvAEAD.Open(nil, nonceBytes[:], ciphertext, nil)
+	plaintext, err := openWithAEAD(cipherMode, recvAEAD, nonce, ciphertext, nil)
 	if err != nil {
 		return nil, ErrDecryptionFailed
 	}
@@ -279,6 +282,13 @@ func (s *Session) SendNonce() uint64 {
 // RecvMaxNonce returns the highest received nonce.
 func (s *Session) RecvMaxNonce() uint64 {
 	return s.recvNonce.MaxNonce()
+}
+
+// CipherMode returns the cipher mode used by the session.
+func (s *Session) CipherMode() CipherMode {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.cipherMode
 }
 
 // Errors

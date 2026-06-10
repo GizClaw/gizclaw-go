@@ -12,8 +12,9 @@ import (
 
 // ServerConfig holds the connection info for a remote server.
 type ServerConfig struct {
-	Address   string           `yaml:"address"`
-	PublicKey giznet.PublicKey `yaml:"public-key"`
+	Address    string            `yaml:"address"`
+	PublicKey  giznet.PublicKey  `yaml:"public-key"`
+	CipherMode giznet.CipherMode `yaml:"cipher-mode,omitempty"`
 }
 
 // Config is the per-cli-context configuration stored in config.yaml.
@@ -39,8 +40,9 @@ func Load(dir string) (*CLIContext, error) {
 	}
 	var raw struct {
 		Server struct {
-			Address   string           `yaml:"address"`
-			PublicKey giznet.PublicKey `yaml:"public-key"`
+			Address    string            `yaml:"address"`
+			PublicKey  giznet.PublicKey  `yaml:"public-key"`
+			CipherMode giznet.CipherMode `yaml:"cipher-mode"`
 		} `yaml:"server"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
@@ -49,10 +51,14 @@ func Load(dir string) (*CLIContext, error) {
 	if raw.Server.PublicKey.IsZero() {
 		return nil, fmt.Errorf("clicontext: parse server public key: zero key")
 	}
+	if err := validateCipherMode(raw.Server.CipherMode); err != nil {
+		return nil, err
+	}
 	cfg := Config{
 		Server: ServerConfig{
-			Address:   raw.Server.Address,
-			PublicKey: raw.Server.PublicKey,
+			Address:    raw.Server.Address,
+			PublicKey:  raw.Server.PublicKey,
+			CipherMode: raw.Server.CipherMode,
 		},
 	}
 

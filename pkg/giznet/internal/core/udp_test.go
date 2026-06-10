@@ -506,6 +506,98 @@ func TestHandshakeAndTransport(t *testing.T) {
 	}
 }
 
+func TestHandshakeAndTransportCipherModes(t *testing.T) {
+	for _, mode := range []noise.CipherMode{noise.CipherModeAES256GCM, noise.CipherModePlaintext} {
+		t.Run(string(mode), func(t *testing.T) {
+			// Create two UDP instances
+			key1, _ := noise.GenerateKeyPair()
+			key2, _ := noise.GenerateKeyPair()
+
+			udp1, err := NewUDP(key1,
+				WithBindAddr("127.0.0.1:0"),
+				WithCipherMode(mode),
+				WithAllowFunc(func(noise.PublicKey) bool { return true }),
+			)
+			if err != nil {
+				t.Fatalf("NewUDP 1 failed: %v", err)
+			}
+			defer udp1.Close()
+
+			udp2, err := NewUDP(key2,
+				WithBindAddr("127.0.0.1:0"),
+				WithCipherMode(mode),
+				WithAllowFunc(func(noise.PublicKey) bool { return true }),
+			)
+			if err != nil {
+				t.Fatalf("NewUDP 2 failed: %v", err)
+			}
+			defer udp2.Close()
+
+			addr1 := udp1.HostInfo().Addr
+			addr2 := udp2.HostInfo().Addr
+			udp1.SetPeerEndpoint(key2.Public, addr2)
+			udp2.SetPeerEndpoint(key1.Public, addr1)
+
+			received := make(chan []byte, 1)
+			go func() {
+				buf := make([]byte, 1024)
+				for {
+					pk, n, err := udp2.ReadFrom(buf)
+					if err != nil {
+						return
+					}
+					if pk == key1.Public {
+						received <- append([]byte{}, buf[:n]...)
+						return
+					}
+				}
+			}()
+
+			go func() {
+				buf := make([]byte, 1024)
+				for {
+					if _, _, err := udp1.ReadFrom(buf); err != nil {
+						return
+					}
+				}
+			}()
+
+			time.Sleep(50 * time.Millisecond)
+			if err := udp1.Connect(key2.Public); err != nil {
+				t.Fatalf("Connect failed: %v", err)
+			}
+
+			info1 := udp1.PeerInfo(key2.Public)
+			if info1 == nil || info1.State != PeerStateEstablished {
+				t.Fatalf("udp1 peer state = %v, want established", info1)
+			}
+			udp1.mu.RLock()
+			session := udp1.peers[key2.Public].session
+			udp1.mu.RUnlock()
+			if session == nil {
+				t.Fatal("udp1 session should be established")
+			}
+			if session.CipherMode() != mode {
+				t.Fatalf("session cipher mode = %q, want %q", session.CipherMode(), mode)
+			}
+
+			testData := []byte("hello " + string(mode))
+			if err := udp1.WriteTo(key2.Public, testData); err != nil {
+				t.Fatalf("WriteTo failed: %v", err)
+			}
+
+			select {
+			case data := <-received:
+				if !bytes.Equal(data, testData) {
+					t.Fatalf("Data mismatch: %s != %s", data, testData)
+				}
+			case <-time.After(2 * time.Second):
+				t.Fatalf("Timeout waiting for message")
+			}
+		})
+	}
+}
+
 func TestRoaming(t *testing.T) {
 	// Create two UDP instances
 	key1, _ := noise.GenerateKeyPair()

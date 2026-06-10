@@ -57,6 +57,28 @@ server:
 	}
 }
 
+func TestDialFromContextUsesCipherMode(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+
+	store, err := clicontext.DefaultStore()
+	if err != nil {
+		t.Fatalf("DefaultStore error = %v", err)
+	}
+	if err := store.CreateWithOptions("local", "127.0.0.1:9820", testServerPublicKeyText(0xab), clicontext.CreateOptions{
+		CipherMode: giznet.CipherModeAES256GCM,
+	}); err != nil {
+		t.Fatalf("CreateWithOptions error = %v", err)
+	}
+
+	client, _, _, err := DialFromContext("local")
+	if err != nil {
+		t.Fatalf("DialFromContext error = %v", err)
+	}
+	if client.CipherMode != giznet.CipherModeAES256GCM {
+		t.Fatalf("CipherMode = %q, want %q", client.CipherMode, giznet.CipherModeAES256GCM)
+	}
+}
+
 func TestDialFromContextMissingNamedContext(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 

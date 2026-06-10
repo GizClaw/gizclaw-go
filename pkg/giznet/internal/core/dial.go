@@ -27,6 +27,11 @@ import (
 //
 // Returns an established connection ready for Send/Recv, or an error.
 func Dial(ctx context.Context, transport net.PacketConn, addr net.Addr, remotePK noise.PublicKey, localKey *noise.KeyPair) (*Conn, error) {
+	return DialWithCipherMode(ctx, transport, addr, remotePK, localKey, noise.CipherModeChaChaPoly)
+}
+
+// DialWithCipherMode establishes a connection using the selected Noise cipher mode.
+func DialWithCipherMode(ctx context.Context, transport net.PacketConn, addr net.Addr, remotePK noise.PublicKey, localKey *noise.KeyPair, cipherMode noise.CipherMode) (*Conn, error) {
 	if localKey == nil {
 		return nil, ErrMissingLocalKey
 	}
@@ -41,7 +46,7 @@ func Dial(ctx context.Context, transport net.PacketConn, addr net.Addr, remotePK
 	}
 
 	// Create a new connection
-	c, err := newConn(localKey, transport, addr, remotePK)
+	c, err := newConnWithCipherMode(localKey, transport, addr, remotePK, cipherMode)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +74,7 @@ func (c *Conn) dialWithRetry(ctx context.Context) error {
 	localKey := c.localKey
 	remotePK := c.remotePK
 	localIdx := c.localIdx
+	cipherMode := c.cipherMode
 	transport := c.transport
 	remoteAddr := c.remoteAddr
 	c.mu.Unlock()
@@ -88,6 +94,7 @@ func (c *Conn) dialWithRetry(ctx context.Context) error {
 			Initiator:    true,
 			LocalStatic:  localKey,
 			RemoteStatic: &remotePK,
+			CipherMode:   cipherMode,
 		})
 		if err != nil {
 			return c.failHandshake(err)

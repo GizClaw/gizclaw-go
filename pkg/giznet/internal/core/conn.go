@@ -73,6 +73,7 @@ type Conn struct {
 	remotePK   noise.PublicKey
 	transport  net.PacketConn
 	remoteAddr net.Addr
+	cipherMode noise.CipherMode
 
 	// Connection state
 	state    ConnState
@@ -117,11 +118,19 @@ type inboundPacket struct {
 // newConn creates a new connection (internal use only).
 // Use Dial() or Listener.Accept() to create connections.
 func newConn(localKey *noise.KeyPair, transport net.PacketConn, remoteAddr net.Addr, remotePK noise.PublicKey) (*Conn, error) {
+	return newConnWithCipherMode(localKey, transport, remoteAddr, remotePK, noise.CipherModeChaChaPoly)
+}
+
+func newConnWithCipherMode(localKey *noise.KeyPair, transport net.PacketConn, remoteAddr net.Addr, remotePK noise.PublicKey, cipherMode noise.CipherMode) (*Conn, error) {
 	if localKey == nil {
 		return nil, ErrMissingLocalKey
 	}
 	if transport == nil {
 		return nil, ErrMissingTransport
+	}
+	cipherMode, err := noise.NormalizeCipherMode(cipherMode)
+	if err != nil {
+		return nil, err
 	}
 
 	localIdx, err := noise.GenerateIndex()
@@ -135,6 +144,7 @@ func newConn(localKey *noise.KeyPair, transport net.PacketConn, remoteAddr net.A
 		remotePK:       remotePK,
 		transport:      transport,
 		remoteAddr:     remoteAddr,
+		cipherMode:     cipherMode,
 		state:          ConnStateNew,
 		localIdx:       localIdx,
 		createdAt:      now,
@@ -168,6 +178,7 @@ func (c *Conn) accept(msg *noise.HandshakeInitMessage) ([]byte, error) {
 		Pattern:     noise.PatternIK,
 		Initiator:   false,
 		LocalStatic: c.localKey,
+		CipherMode:  c.cipherMode,
 	})
 	if err != nil {
 		c.state = ConnStateNew
@@ -237,6 +248,7 @@ func (c *Conn) completeHandshake(remoteIdx uint32, remotePK *noise.PublicKey) er
 		SendKey:     sendCS.Key(),
 		RecvKey:     recvCS.Key(),
 		RemotePK:    c.remotePK,
+		CipherMode:  c.cipherMode,
 	})
 	if err != nil {
 		c.resetHandshakeStateLocked()
@@ -582,6 +594,7 @@ func (c *Conn) handleHandshakeResponse(resp *noise.HandshakeRespMessage, fromAdd
 	hsState := c.hsState
 	localIdx := c.localIdx
 	remotePK := c.remotePK
+	cipherMode := c.cipherMode
 	c.mu.RUnlock()
 
 	// Verify we have a pending handshake and this is for us
@@ -623,6 +636,7 @@ func (c *Conn) handleHandshakeResponse(resp *noise.HandshakeRespMessage, fromAdd
 		SendKey:     sendCS.Key(),
 		RecvKey:     recvCS.Key(),
 		RemotePK:    remotePK,
+		CipherMode:  cipherMode,
 	})
 	if err != nil {
 		c.mu.Lock()
@@ -676,6 +690,7 @@ func (c *Conn) handleHandshakeInit(init *noise.HandshakeInitMessage, fromAddr ne
 	c.mu.RLock()
 	localKey := c.localKey
 	expectedRemotePK := c.remotePK
+	cipherMode := c.cipherMode
 	transport := c.transport
 	remoteAddr := c.remoteAddr
 	if fromAddr != nil {
@@ -688,6 +703,7 @@ func (c *Conn) handleHandshakeInit(init *noise.HandshakeInitMessage, fromAddr ne
 		Pattern:     noise.PatternIK,
 		Initiator:   false,
 		LocalStatic: localKey,
+		CipherMode:  cipherMode,
 	})
 	if err != nil {
 		return 0, nil, err
@@ -736,6 +752,7 @@ func (c *Conn) handleHandshakeInit(init *noise.HandshakeInitMessage, fromAddr ne
 		SendKey:     sendCS.Key(),
 		RecvKey:     recvCS.Key(),
 		RemotePK:    expectedRemotePK,
+		CipherMode:  cipherMode,
 	})
 	if err != nil {
 		return 0, nil, err
@@ -1039,6 +1056,7 @@ func (c *Conn) initiateRekey() error {
 	}
 	localKey := c.localKey
 	remotePK := c.remotePK
+	cipherMode := c.cipherMode
 	transport := c.transport
 	remoteAddr := c.remoteAddr
 	c.mu.Unlock()
@@ -1054,6 +1072,7 @@ func (c *Conn) initiateRekey() error {
 		Initiator:    true,
 		LocalStatic:  localKey,
 		RemoteStatic: &remotePK,
+		CipherMode:   cipherMode,
 	})
 	if err != nil {
 		return err
@@ -1117,6 +1136,7 @@ func (c *Conn) retransmitHandshake() error {
 	}
 	localKey := c.localKey
 	remotePK := c.remotePK
+	cipherMode := c.cipherMode
 	localIdx := c.localIdx
 	transport := c.transport
 	remoteAddr := c.remoteAddr
@@ -1128,6 +1148,7 @@ func (c *Conn) retransmitHandshake() error {
 		Initiator:    true,
 		LocalStatic:  localKey,
 		RemoteStatic: &remotePK,
+		CipherMode:   cipherMode,
 	})
 	if err != nil {
 		return err

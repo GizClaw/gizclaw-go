@@ -25,9 +25,10 @@ const (
 )
 
 type testServer struct {
-	server *gizclaw.Server
-	addr   string
-	errCh  chan error
+	server     *gizclaw.Server
+	addr       string
+	cipherMode giznet.CipherMode
+	errCh      chan error
 }
 
 func allocateUDPAddr(t testing.TB) string {
@@ -70,6 +71,11 @@ func mustBadgerInMemory(t testing.TB, opts *kv.Options) kv.Store {
 
 func startTestServer(t *testing.T) *testServer {
 	t.Helper()
+	return startTestServerWithCipherMode(t, "")
+}
+
+func startTestServerWithCipherMode(t *testing.T, cipherMode giznet.CipherMode) *testServer {
+	t.Helper()
 
 	keyPair, err := giznet.GenerateKeyPair()
 	if err != nil {
@@ -79,13 +85,15 @@ func startTestServer(t *testing.T) *testServer {
 	srv := &gizclaw.Server{
 		LocalStatic: *keyPair,
 		ListenAddr:  allocateUDPAddr(t),
+		CipherMode:  cipherMode,
 		PeerStore:   mustBadgerInMemory(t, nil),
 	}
 
 	ts := &testServer{
-		server: srv,
-		addr:   srv.ListenAddr,
-		errCh:  make(chan error, 1),
+		server:     srv,
+		addr:       srv.ListenAddr,
+		cipherMode: cipherMode,
+		errCh:      make(chan error, 1),
 	}
 	if err := srv.Listen(); err != nil {
 		t.Fatalf("test server listen: %v", err)
@@ -94,7 +102,7 @@ func startTestServer(t *testing.T) *testServer {
 		ts.errCh <- srv.Serve()
 	}()
 
-	if err := waitForServerReady(ts.addr, srv.PublicKey(), ts.errCh); err != nil {
+	if err := waitForServerReady(ts.addr, srv.PublicKey(), ts.cipherMode, ts.errCh); err != nil {
 		_ = srv.Close()
 		select {
 		case <-ts.errCh:
@@ -115,13 +123,13 @@ func newTestClient(t *testing.T, ts *testServer) *gizclaw.Client {
 		t.Fatalf("GenerateKeyPair(client) error: %v", err)
 	}
 
-	client := &gizclaw.Client{KeyPair: keyPair}
+	client := &gizclaw.Client{KeyPair: keyPair, CipherMode: ts.cipherMode}
 	startTestClient(t, client, ts.server.PublicKey(), ts.addr)
 	t.Cleanup(func() { _ = client.Close() })
 	return client
 }
 
-func waitForServerReady(addr string, pk giznet.PublicKey, errCh <-chan error) error {
+func waitForServerReady(addr string, pk giznet.PublicKey, cipherMode giznet.CipherMode, errCh <-chan error) error {
 	return waitUntil(testReadyTimeout, func() error {
 		select {
 		case err := <-errCh:
@@ -134,7 +142,7 @@ func waitForServerReady(addr string, pk giznet.PublicKey, errCh <-chan error) er
 			return fmt.Errorf("GenerateKeyPair(ready check): %w", err)
 		}
 
-		client := &gizclaw.Client{KeyPair: keyPair}
+		client := &gizclaw.Client{KeyPair: keyPair, CipherMode: cipherMode}
 		if err := client.Dial(pk, addr); err != nil {
 			_ = client.Close()
 			return fmt.Errorf("dial ready check: %w", err)

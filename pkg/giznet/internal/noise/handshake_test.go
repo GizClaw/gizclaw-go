@@ -110,6 +110,137 @@ func TestHandshakeIK(t *testing.T) {
 	}
 }
 
+func TestHandshakeIKCipherModes(t *testing.T) {
+	for _, mode := range []CipherMode{CipherModeChaChaPoly, CipherModeAES256GCM, CipherModePlaintext} {
+		t.Run(string(mode), func(t *testing.T) {
+			initiatorStatic, err := GenerateKeyPair()
+			if err != nil {
+				t.Fatalf("failed to generate initiator static key: %v", err)
+			}
+			responderStatic, err := GenerateKeyPair()
+			if err != nil {
+				t.Fatalf("failed to generate responder static key: %v", err)
+			}
+
+			initiator, err := NewHandshakeState(Config{
+				Pattern:      PatternIK,
+				Initiator:    true,
+				LocalStatic:  initiatorStatic,
+				RemoteStatic: &responderStatic.Public,
+				CipherMode:   mode,
+			})
+			if err != nil {
+				t.Fatalf("failed to create initiator: %v", err)
+			}
+			responder, err := NewHandshakeState(Config{
+				Pattern:     PatternIK,
+				Initiator:   false,
+				LocalStatic: responderStatic,
+				CipherMode:  mode,
+			})
+			if err != nil {
+				t.Fatalf("failed to create responder: %v", err)
+			}
+
+			msg1, err := initiator.WriteMessage(nil)
+			if err != nil {
+				t.Fatalf("initiator.WriteMessage() error = %v", err)
+			}
+			if len(msg1) != KeySize+KeySize+TagSize {
+				t.Fatalf("message 1 length = %d, want %d", len(msg1), KeySize+KeySize+TagSize)
+			}
+			if _, err := responder.ReadMessage(msg1); err != nil {
+				t.Fatalf("responder.ReadMessage() error = %v", err)
+			}
+
+			msg2, err := responder.WriteMessage(nil)
+			if err != nil {
+				t.Fatalf("responder.WriteMessage() error = %v", err)
+			}
+			if len(msg2) != KeySize+TagSize {
+				t.Fatalf("message 2 length = %d, want %d", len(msg2), KeySize+TagSize)
+			}
+			if _, err := initiator.ReadMessage(msg2); err != nil {
+				t.Fatalf("initiator.ReadMessage() error = %v", err)
+			}
+
+			sendI, recvI, err := initiator.Split()
+			if err != nil {
+				t.Fatalf("initiator.Split() error = %v", err)
+			}
+			sendR, recvR, err := responder.Split()
+			if err != nil {
+				t.Fatalf("responder.Split() error = %v", err)
+			}
+			if sendI.CipherMode() != mode || recvR.CipherMode() != mode {
+				t.Fatalf("cipher modes = %q/%q, want %q", sendI.CipherMode(), recvR.CipherMode(), mode)
+			}
+
+			plaintext := []byte("mode transport")
+			ciphertext := sendI.Encrypt(plaintext, nil)
+			if len(ciphertext) != len(plaintext)+TagSize {
+				t.Fatalf("transport ciphertext length = %d, want %d", len(ciphertext), len(plaintext)+TagSize)
+			}
+			decrypted, err := recvR.Decrypt(ciphertext, nil)
+			if err != nil {
+				t.Fatalf("recvR.Decrypt() error = %v", err)
+			}
+			if !bytes.Equal(decrypted, plaintext) {
+				t.Fatalf("decrypted = %q, want %q", decrypted, plaintext)
+			}
+
+			reply := []byte("mode reply")
+			replyCiphertext := sendR.Encrypt(reply, nil)
+			replyPlaintext, err := recvI.Decrypt(replyCiphertext, nil)
+			if err != nil {
+				t.Fatalf("recvI.Decrypt() error = %v", err)
+			}
+			if !bytes.Equal(replyPlaintext, reply) {
+				t.Fatalf("reply plaintext = %q, want %q", replyPlaintext, reply)
+			}
+		})
+	}
+}
+
+func TestHandshakeIKCipherModeMismatchFails(t *testing.T) {
+	initiatorStatic, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("failed to generate initiator static key: %v", err)
+	}
+	responderStatic, err := GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("failed to generate responder static key: %v", err)
+	}
+
+	initiator, err := NewHandshakeState(Config{
+		Pattern:      PatternIK,
+		Initiator:    true,
+		LocalStatic:  initiatorStatic,
+		RemoteStatic: &responderStatic.Public,
+		CipherMode:   CipherModeChaChaPoly,
+	})
+	if err != nil {
+		t.Fatalf("failed to create initiator: %v", err)
+	}
+	responder, err := NewHandshakeState(Config{
+		Pattern:     PatternIK,
+		Initiator:   false,
+		LocalStatic: responderStatic,
+		CipherMode:  CipherModeAES256GCM,
+	})
+	if err != nil {
+		t.Fatalf("failed to create responder: %v", err)
+	}
+
+	msg1, err := initiator.WriteMessage(nil)
+	if err != nil {
+		t.Fatalf("initiator.WriteMessage() error = %v", err)
+	}
+	if _, err := responder.ReadMessage(msg1); err == nil {
+		t.Fatal("responder.ReadMessage should fail for mismatched cipher modes")
+	}
+}
+
 func TestHandshakeXX(t *testing.T) {
 	// Generate key pairs
 	initiatorStatic, _ := GenerateKeyPair()

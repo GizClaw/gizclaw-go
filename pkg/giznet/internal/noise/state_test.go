@@ -376,3 +376,28 @@ func TestSymmetricStateConsistency(t *testing.T) {
 		t.Error("chaining keys should be equal")
 	}
 }
+
+func TestNewSymmetricStateInfersCipherModeFromProtocolName(t *testing.T) {
+	tests := []struct {
+		name string
+		want CipherMode
+	}{
+		{"Noise_IK_25519_ChaChaPoly_BLAKE2s", CipherModeChaChaPoly},
+		{"Noise_IK_25519_AESGCM_BLAKE2s", CipherModeAES256GCM},
+		{"Noise_IK_25519_Plaintext_BLAKE2s", CipherModePlaintext},
+		{"Test", CipherModeChaChaPoly},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ss := NewSymmetricState(tt.name)
+			cs1, cs2, err := ss.Split()
+			if err != nil {
+				t.Fatalf("Split() error = %v", err)
+			}
+			if cs1.CipherMode() != tt.want || cs2.CipherMode() != tt.want {
+				t.Fatalf("cipher modes = %q/%q, want %q", cs1.CipherMode(), cs2.CipherMode(), tt.want)
+			}
+		})
+	}
+}

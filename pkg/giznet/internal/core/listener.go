@@ -13,8 +13,9 @@ import (
 type Listener struct {
 	mu sync.Mutex
 
-	localKey  *noise.KeyPair
-	transport net.PacketConn
+	localKey   *noise.KeyPair
+	transport  net.PacketConn
+	cipherMode noise.CipherMode
 
 	// Active connections indexed by local session index
 	conns map[uint32]*Conn
@@ -38,6 +39,8 @@ type ListenerConfig struct {
 	Transport net.PacketConn
 	// AcceptQueueSize is the size of the accept queue (default: 16).
 	AcceptQueueSize int
+	// CipherMode selects the Noise cipher mode (default: ChaCha20-Poly1305).
+	CipherMode noise.CipherMode
 }
 
 // NewListener creates a new listener with the given configuration.
@@ -48,6 +51,10 @@ func NewListener(cfg ListenerConfig) (*Listener, error) {
 	if cfg.Transport == nil {
 		return nil, ErrMissingTransport
 	}
+	cipherMode, err := noise.NormalizeCipherMode(cfg.CipherMode)
+	if err != nil {
+		return nil, err
+	}
 
 	queueSize := cfg.AcceptQueueSize
 	if queueSize <= 0 {
@@ -55,12 +62,13 @@ func NewListener(cfg ListenerConfig) (*Listener, error) {
 	}
 
 	l := &Listener{
-		localKey:  cfg.LocalKey,
-		transport: cfg.Transport,
-		conns:     make(map[uint32]*Conn),
-		ready:     make(chan *Conn, queueSize),
-		manager:   NewSessionManager(),
-		done:      make(chan struct{}),
+		localKey:   cfg.LocalKey,
+		transport:  cfg.Transport,
+		cipherMode: cipherMode,
+		conns:      make(map[uint32]*Conn),
+		ready:      make(chan *Conn, queueSize),
+		manager:    NewSessionManager(),
+		done:       make(chan struct{}),
 	}
 
 	// Start the receive loop
@@ -177,7 +185,7 @@ func (l *Listener) handleHandshakeInit(data []byte, addr net.Addr) {
 	}
 
 	// Create a new connection for this peer
-	conn, err := newConn(l.localKey, l.transport, addr, noise.PublicKey{})
+	conn, err := newConnWithCipherMode(l.localKey, l.transport, addr, noise.PublicKey{}, l.cipherMode)
 	if err != nil {
 		return
 	}

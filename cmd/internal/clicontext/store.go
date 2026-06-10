@@ -20,6 +20,11 @@ type Store struct {
 	Root string
 }
 
+// CreateOptions holds optional settings for a newly created CLI context.
+type CreateOptions struct {
+	CipherMode giznet.CipherMode
+}
+
 // DefaultStore returns a Store under the gizclaw config directory.
 func DefaultStore() (*Store, error) {
 	root, err := paths.ConfigDir()
@@ -31,7 +36,15 @@ func DefaultStore() (*Store, error) {
 
 // Create creates a new CLI context directory with a generated key pair and config.
 func (s *Store) Create(name, serverAddr, serverPubKey string) error {
+	return s.CreateWithOptions(name, serverAddr, serverPubKey, CreateOptions{})
+}
+
+// CreateWithOptions creates a new CLI context directory with a generated key pair and config.
+func (s *Store) CreateWithOptions(name, serverAddr, serverPubKey string, opts CreateOptions) error {
 	if err := validateName(name); err != nil {
+		return err
+	}
+	if err := validateCipherMode(opts.CipherMode); err != nil {
 		return err
 	}
 	dir := filepath.Join(s.Root, name)
@@ -51,7 +64,7 @@ func (s *Store) Create(name, serverAddr, serverPubKey string) error {
 		return fmt.Errorf("clicontext: generate key: %w", err)
 	}
 
-	cfg := Config{Server: ServerConfig{Address: serverAddr, PublicKey: serverPublicKey}}
+	cfg := Config{Server: ServerConfig{Address: serverAddr, PublicKey: serverPublicKey, CipherMode: opts.CipherMode}}
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("clicontext: marshal config: %w", err)
@@ -66,6 +79,15 @@ func (s *Store) Create(name, serverAddr, serverPubKey string) error {
 	}
 
 	return nil
+}
+
+func validateCipherMode(mode giznet.CipherMode) error {
+	switch mode {
+	case "", giznet.CipherModeChaChaPoly, giznet.CipherModeAES256GCM, giznet.CipherModePlaintext:
+		return nil
+	default:
+		return fmt.Errorf("clicontext: unsupported cipher-mode %q", mode)
+	}
 }
 
 // Use switches the current CLI context by updating the symlink.

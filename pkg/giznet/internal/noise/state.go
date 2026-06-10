@@ -2,11 +2,8 @@ package noise
 
 import (
 	"crypto/cipher"
-	"encoding/binary"
 	"errors"
 	"fmt"
-
-	"golang.org/x/crypto/chacha20poly1305"
 )
 
 // CipherState manages encryption for one direction of communication.
@@ -18,35 +15,50 @@ import (
 type CipherState struct {
 	key   Key
 	nonce uint64
+	mode  CipherMode
 	aead  cipher.AEAD
 }
 
 // NewCipherState creates a new CipherState with the given key.
 func NewCipherState(key Key) (*CipherState, error) {
-	aead, err := chacha20poly1305.New(key[:])
+	return NewCipherStateWithMode(CipherModeChaChaPoly, key)
+}
+
+// NewCipherStateWithMode creates a new CipherState with the given key and cipher mode.
+func NewCipherStateWithMode(mode CipherMode, key Key) (*CipherState, error) {
+	mode, err := NormalizeCipherMode(mode)
 	if err != nil {
-		return nil, fmt.Errorf("noise: failed to create AEAD: %w", err)
+		return nil, fmt.Errorf("noise: failed to create cipher state: %w", err)
+	}
+	var aead cipher.AEAD
+	if mode != CipherModePlaintext {
+		aead, err = NewAEADWithMode(mode, key[:])
+		if err != nil {
+			return nil, fmt.Errorf("noise: failed to create cipher state: %w", err)
+		}
 	}
 	return &CipherState{
 		key:  key,
+		mode: mode,
 		aead: aead,
 	}, nil
 }
 
 // Encrypt encrypts plaintext and increments the nonce.
 func (cs *CipherState) Encrypt(plaintext, ad []byte) []byte {
-	var nonce [12]byte
-	binary.LittleEndian.PutUint64(nonce[:], cs.nonce)
+	ciphertext, err := sealWithAEAD(cs.mode, cs.aead, cs.nonce, plaintext, ad)
 	cs.nonce++
-	return cs.aead.Seal(nil, nonce[:], plaintext, ad)
+	if err != nil {
+		panic(err)
+	}
+	return ciphertext
 }
 
 // Decrypt decrypts ciphertext and increments the nonce.
 func (cs *CipherState) Decrypt(ciphertext, ad []byte) ([]byte, error) {
-	var nonce [12]byte
-	binary.LittleEndian.PutUint64(nonce[:], cs.nonce)
+	plaintext, err := openWithAEAD(cs.mode, cs.aead, cs.nonce, ciphertext, ad)
 	cs.nonce++
-	return cs.aead.Open(nil, nonce[:], ciphertext, ad)
+	return plaintext, err
 }
 
 // DecryptWithNonce decrypts ciphertext using an explicit nonce.
@@ -56,9 +68,7 @@ func (cs *CipherState) Decrypt(ciphertext, ad []byte) ([]byte, error) {
 // out of order or be lost, causing the auto-incrementing nonce to desync.
 // The caller is responsible for obtaining the nonce from the packet header.
 func (cs *CipherState) DecryptWithNonce(ciphertext, ad []byte, nonce uint64) ([]byte, error) {
-	var nonceBytes [12]byte
-	binary.LittleEndian.PutUint64(nonceBytes[:], nonce)
-	return cs.aead.Open(nil, nonceBytes[:], ciphertext, ad)
+	return openWithAEAD(cs.mode, cs.aead, nonce, ciphertext, ad)
 }
 
 // Nonce returns the current nonce value.
@@ -76,11 +86,17 @@ func (cs *CipherState) Key() Key {
 	return cs.key
 }
 
+// CipherMode returns the cipher mode used by the state.
+func (cs *CipherState) CipherMode() CipherMode {
+	return cs.mode
+}
+
 // SymmetricState holds the evolving state during a Noise handshake.
 // It tracks the chaining key (ck) and handshake hash (h).
 type SymmetricState struct {
 	chainingKey Key
 	hash        [HashSize]byte
+	cipherMode  CipherMode
 }
 
 // NewSymmetricState initializes a SymmetricState with a protocol name.
@@ -88,7 +104,31 @@ type SymmetricState struct {
 //
 // Example: "Noise_IK_25519_ChaChaPoly_BLAKE2s"
 func NewSymmetricState(protocolName string) *SymmetricState {
-	ss := &SymmetricState{}
+	ss := &SymmetricState{cipherMode: CipherModeFromProtocolName(protocolName)}
+
+	ss.initProtocolName(protocolName)
+	return ss
+}
+
+// NewSymmetricStateWithMode initializes a SymmetricState using a Noise pattern and cipher mode.
+func NewSymmetricStateWithMode(patternName string, mode CipherMode) (*SymmetricState, error) {
+	mode, err := NormalizeCipherMode(mode)
+	if err != nil {
+		return nil, err
+	}
+	protocolName, err := ProtocolName(patternName, mode)
+	if err != nil {
+		return nil, err
+	}
+
+	ss := &SymmetricState{cipherMode: mode}
+	ss.initProtocolName(protocolName)
+	return ss, nil
+}
+
+func (ss *SymmetricState) initProtocolName(protocolName string) {
+	ss.chainingKey = Key{}
+	ss.hash = [HashSize]byte{}
 
 	// If protocol name is <= 32 bytes, use it directly (padded with zeros)
 	// Otherwise, hash it
@@ -100,8 +140,6 @@ func NewSymmetricState(protocolName string) *SymmetricState {
 
 	// h = ck initially
 	ss.hash = ss.chainingKey
-
-	return ss
 }
 
 // MixKey mixes input into the chaining key using HKDF.
@@ -133,7 +171,7 @@ func (ss *SymmetricState) MixKeyAndHash(input []byte) Key {
 // The hash is used as additional data, then updated with the ciphertext.
 // Returns the ciphertext.
 func (ss *SymmetricState) EncryptAndHash(key *Key, plaintext []byte) []byte {
-	ciphertext := EncryptWithAD(key, ss.hash[:], plaintext)
+	ciphertext := EncryptWithADMode(ss.cipherMode, key, ss.hash[:], plaintext)
 	ss.MixHash(ciphertext)
 	return ciphertext
 }
@@ -142,7 +180,7 @@ func (ss *SymmetricState) EncryptAndHash(key *Key, plaintext []byte) []byte {
 // The hash is used as additional data, then updated with the ciphertext.
 // Returns the plaintext.
 func (ss *SymmetricState) DecryptAndHash(key *Key, ciphertext []byte) ([]byte, error) {
-	plaintext, err := DecryptWithAD(key, ss.hash[:], ciphertext)
+	plaintext, err := DecryptWithADMode(ss.cipherMode, key, ss.hash[:], ciphertext)
 	if err != nil {
 		return nil, err
 	}
@@ -156,12 +194,12 @@ func (ss *SymmetricState) DecryptAndHash(key *Key, ciphertext []byte) ([]byte, e
 func (ss *SymmetricState) Split() (*CipherState, *CipherState, error) {
 	keys := HKDF(&ss.chainingKey, nil, 2)
 
-	cs1, err := NewCipherState(keys[0])
+	cs1, err := NewCipherStateWithMode(ss.cipherMode, keys[0])
 	if err != nil {
 		return nil, nil, err
 	}
 
-	cs2, err := NewCipherState(keys[1])
+	cs2, err := NewCipherStateWithMode(ss.cipherMode, keys[1])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -185,6 +223,7 @@ func (ss *SymmetricState) Clone() *SymmetricState {
 	return &SymmetricState{
 		chainingKey: ss.chainingKey,
 		hash:        ss.hash,
+		cipherMode:  ss.cipherMode,
 	}
 }
 

@@ -1,11 +1,13 @@
 package noise
 
 import (
+	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
 	"encoding/binary"
 	"fmt"
 	"hash"
+	"strings"
 
 	"golang.org/x/crypto/blake2s"
 	"golang.org/x/crypto/chacha20poly1305"
@@ -14,8 +16,79 @@ import (
 // Hash sizes
 const (
 	HashSize = 32 // BLAKE2s-256 output size
-	TagSize  = 16 // Poly1305 tag size
+	TagSize  = 16 // AEAD tag size, also reserved by plaintext mode for wire compatibility
 )
+
+// CipherMode selects the cipher suite used by the Noise symmetric state and transport sessions.
+type CipherMode string
+
+const (
+	// CipherModeChaChaPoly uses ChaCha20-Poly1305 and is the default.
+	CipherModeChaChaPoly CipherMode = "chacha_poly"
+	// CipherModeAES256GCM uses AES-256-GCM.
+	CipherModeAES256GCM CipherMode = "aes_256_gcm"
+	// CipherModePlaintext disables encryption for diagnostics while preserving tag-sized overhead.
+	CipherModePlaintext CipherMode = "plaintext"
+)
+
+// DefaultCipherMode preserves the historical giznet wire behavior.
+const DefaultCipherMode = CipherModeChaChaPoly
+
+// NormalizeCipherMode returns the explicit cipher mode, treating the zero value as the default.
+func NormalizeCipherMode(mode CipherMode) (CipherMode, error) {
+	switch mode {
+	case "", CipherModeChaChaPoly:
+		return CipherModeChaChaPoly, nil
+	case CipherModeAES256GCM, CipherModePlaintext:
+		return mode, nil
+	default:
+		return "", fmt.Errorf("noise: unsupported cipher mode %q", mode)
+	}
+}
+
+// MustNormalizeCipherMode returns the normalized mode or panics.
+func MustNormalizeCipherMode(mode CipherMode) CipherMode {
+	normalized, err := NormalizeCipherMode(mode)
+	if err != nil {
+		panic(err)
+	}
+	return normalized
+}
+
+// ProtocolName returns the Noise protocol name for a pattern and cipher mode.
+func ProtocolName(patternName string, mode CipherMode) (string, error) {
+	mode, err := NormalizeCipherMode(mode)
+	if err != nil {
+		return "", err
+	}
+
+	var cipherName string
+	switch mode {
+	case CipherModeChaChaPoly:
+		cipherName = "ChaChaPoly"
+	case CipherModeAES256GCM:
+		cipherName = "AESGCM"
+	case CipherModePlaintext:
+		cipherName = "Plaintext"
+	default:
+		return "", fmt.Errorf("noise: unsupported cipher mode %q", mode)
+	}
+
+	return fmt.Sprintf("Noise_%s_25519_%s_BLAKE2s", patternName, cipherName), nil
+}
+
+// CipherModeFromProtocolName returns the cipher mode named by a Noise protocol name.
+// Unknown names fall back to ChaCha for compatibility with older tests and custom names.
+func CipherModeFromProtocolName(protocolName string) CipherMode {
+	switch {
+	case strings.Contains(protocolName, "_AESGCM_"):
+		return CipherModeAES256GCM
+	case strings.Contains(protocolName, "_Plaintext_"):
+		return CipherModePlaintext
+	default:
+		return CipherModeChaChaPoly
+	}
+}
 
 // Hash computes BLAKE2s-256 hash of the input data.
 func Hash(data ...[]byte) [HashSize]byte {
@@ -130,16 +203,56 @@ func KDF3(chainingKey *Key, input []byte) (Key, Key, Key) {
 
 // NewAEAD creates a ChaCha20-Poly1305 AEAD cipher.
 func NewAEAD(key []byte) (cipher.AEAD, error) {
+	return NewAEADWithMode(CipherModeChaChaPoly, key)
+}
+
+// NewAEADWithMode creates an AEAD cipher for modes that authenticate ciphertext.
+func NewAEADWithMode(mode CipherMode, key []byte) (cipher.AEAD, error) {
+	mode, err := NormalizeCipherMode(mode)
+	if err != nil {
+		return nil, err
+	}
+	if mode == CipherModePlaintext {
+		return nil, fmt.Errorf("noise: plaintext mode does not use AEAD")
+	}
 	if len(key) != chacha20poly1305.KeySize {
 		return nil, fmt.Errorf("noise: invalid AEAD key size: got %d, want %d", len(key), chacha20poly1305.KeySize)
 	}
-	return chacha20poly1305.New(key)
+	switch mode {
+	case CipherModeChaChaPoly:
+		return chacha20poly1305.New(key)
+	case CipherModeAES256GCM:
+		block, err := aes.NewCipher(key)
+		if err != nil {
+			return nil, fmt.Errorf("noise: failed to create AES cipher: %w", err)
+		}
+		return cipher.NewGCM(block)
+	default:
+		return nil, fmt.Errorf("noise: unsupported cipher mode %q", mode)
+	}
 }
 
 // Encrypt encrypts plaintext using ChaCha20-Poly1305.
 // The nonce is a 64-bit counter encoded as little-endian, padded to 12 bytes.
 func Encrypt(key []byte, nonce uint64, plaintext, additionalData []byte) ([]byte, error) {
-	aead, err := NewAEAD(key)
+	return EncryptWithMode(CipherModeChaChaPoly, key, nonce, plaintext, additionalData)
+}
+
+// EncryptWithMode encrypts plaintext using the selected cipher mode.
+// Plaintext mode copies plaintext and appends a 16-byte zero tag-sized suffix
+// to preserve the transport and handshake wire sizes used by authenticated modes.
+func EncryptWithMode(mode CipherMode, key []byte, nonce uint64, plaintext, additionalData []byte) ([]byte, error) {
+	mode, err := NormalizeCipherMode(mode)
+	if err != nil {
+		return nil, err
+	}
+	if mode == CipherModePlaintext {
+		out := make([]byte, len(plaintext)+TagSize)
+		copy(out, plaintext)
+		return out, nil
+	}
+
+	aead, err := NewAEADWithMode(mode, key)
 	if err != nil {
 		return nil, err
 	}
@@ -150,9 +263,46 @@ func Encrypt(key []byte, nonce uint64, plaintext, additionalData []byte) ([]byte
 	return aead.Seal(nil, nonceBytes[:], plaintext, additionalData), nil
 }
 
+func sealWithAEAD(mode CipherMode, aead cipher.AEAD, nonce uint64, plaintext, additionalData []byte) ([]byte, error) {
+	mode, err := NormalizeCipherMode(mode)
+	if err != nil {
+		return nil, err
+	}
+	if mode == CipherModePlaintext {
+		out := make([]byte, len(plaintext)+TagSize)
+		copy(out, plaintext)
+		return out, nil
+	}
+	if aead == nil {
+		return nil, fmt.Errorf("noise: missing AEAD for cipher mode %q", mode)
+	}
+
+	var nonceBytes [12]byte
+	binary.LittleEndian.PutUint64(nonceBytes[:], nonce)
+	return aead.Seal(nil, nonceBytes[:], plaintext, additionalData), nil
+}
+
 // Decrypt decrypts ciphertext using ChaCha20-Poly1305.
 func Decrypt(key []byte, nonce uint64, ciphertext, additionalData []byte) ([]byte, error) {
-	aead, err := NewAEAD(key)
+	return DecryptWithMode(CipherModeChaChaPoly, key, nonce, ciphertext, additionalData)
+}
+
+// DecryptWithMode decrypts ciphertext using the selected cipher mode.
+func DecryptWithMode(mode CipherMode, key []byte, nonce uint64, ciphertext, additionalData []byte) ([]byte, error) {
+	mode, err := NormalizeCipherMode(mode)
+	if err != nil {
+		return nil, err
+	}
+	if mode == CipherModePlaintext {
+		if len(ciphertext) < TagSize {
+			return nil, ErrDecryptionFailed
+		}
+		plaintext := make([]byte, len(ciphertext)-TagSize)
+		copy(plaintext, ciphertext[:len(ciphertext)-TagSize])
+		return plaintext, nil
+	}
+
+	aead, err := NewAEADWithMode(mode, key)
 	if err != nil {
 		return nil, err
 	}
@@ -163,17 +313,49 @@ func Decrypt(key []byte, nonce uint64, ciphertext, additionalData []byte) ([]byt
 	return aead.Open(nil, nonceBytes[:], ciphertext, additionalData)
 }
 
+func openWithAEAD(mode CipherMode, aead cipher.AEAD, nonce uint64, ciphertext, additionalData []byte) ([]byte, error) {
+	mode, err := NormalizeCipherMode(mode)
+	if err != nil {
+		return nil, err
+	}
+	if mode == CipherModePlaintext {
+		if len(ciphertext) < TagSize {
+			return nil, ErrDecryptionFailed
+		}
+		plaintext := make([]byte, len(ciphertext)-TagSize)
+		copy(plaintext, ciphertext[:len(ciphertext)-TagSize])
+		return plaintext, nil
+	}
+	if aead == nil {
+		return nil, fmt.Errorf("noise: missing AEAD for cipher mode %q", mode)
+	}
+
+	var nonceBytes [12]byte
+	binary.LittleEndian.PutUint64(nonceBytes[:], nonce)
+	return aead.Open(nil, nonceBytes[:], ciphertext, additionalData)
+}
+
 // EncryptWithAD encrypts plaintext with additional data using zero nonce.
 // This is used during handshake where nonce is always 0.
 func EncryptWithAD(key *Key, ad, plaintext []byte) []byte {
-	aead, _ := chacha20poly1305.New(key[:])
-	var nonce [12]byte // zero nonce for handshake
-	return aead.Seal(nil, nonce[:], plaintext, ad)
+	return EncryptWithADMode(CipherModeChaChaPoly, key, ad, plaintext)
+}
+
+// EncryptWithADMode encrypts plaintext with additional data using zero nonce.
+func EncryptWithADMode(mode CipherMode, key *Key, ad, plaintext []byte) []byte {
+	ciphertext, err := EncryptWithMode(mode, key[:], 0, plaintext, ad)
+	if err != nil {
+		panic(err)
+	}
+	return ciphertext
 }
 
 // DecryptWithAD decrypts ciphertext with additional data using zero nonce.
 func DecryptWithAD(key *Key, ad, ciphertext []byte) ([]byte, error) {
-	aead, _ := chacha20poly1305.New(key[:])
-	var nonce [12]byte // zero nonce for handshake
-	return aead.Open(nil, nonce[:], ciphertext, ad)
+	return DecryptWithADMode(CipherModeChaChaPoly, key, ad, ciphertext)
+}
+
+// DecryptWithADMode decrypts ciphertext with additional data using zero nonce.
+func DecryptWithADMode(mode CipherMode, key *Key, ad, ciphertext []byte) ([]byte, error) {
+	return DecryptWithMode(mode, key[:], 0, ciphertext, ad)
 }

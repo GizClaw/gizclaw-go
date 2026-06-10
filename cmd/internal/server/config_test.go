@@ -29,6 +29,9 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.ListenAddr != ":9820" {
 		t.Fatalf("ListenAddr = %q", cfg.ListenAddr)
 	}
+	if cfg.CipherMode != "" {
+		t.Fatalf("CipherMode = %q, want empty default", cfg.CipherMode)
+	}
 }
 
 func TestAdminPublicKeySecurityPolicy(t *testing.T) {
@@ -163,6 +166,23 @@ func TestNewWithPreparedConfig(t *testing.T) {
 	}
 }
 
+func TestNewWiresCipherMode(t *testing.T) {
+	srv, err := New(Config{
+		ListenAddr: ":1234",
+		CipherMode: giznet.CipherModeAES256GCM,
+		Stores:     map[string]stores.Config{"mem": {Kind: stores.KindKeyValue, Backend: "memory"}},
+		Peers:      PeersConfig{Store: "mem"},
+	})
+	if err != nil {
+		t.Fatalf("New error = %v", err)
+	}
+	t.Cleanup(func() { _ = srv.Close() })
+
+	if srv.Server.CipherMode != giznet.CipherModeAES256GCM {
+		t.Fatalf("CipherMode = %q, want %q", srv.Server.CipherMode, giznet.CipherModeAES256GCM)
+	}
+}
+
 func TestConfigValidateRequiresStores(t *testing.T) {
 	cfg := Config{}
 	if err := cfg.validate(); err == nil {
@@ -210,6 +230,21 @@ func TestLoadConfigAcceptsTextEncodedAdminPublicKey(t *testing.T) {
 	}
 }
 
+func TestLoadConfigCipherMode(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte("cipher-mode: aes_256_gcm\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile error = %v", err)
+	}
+
+	cfg, err := LoadConfig(path)
+	if err != nil {
+		t.Fatalf("LoadConfig error = %v", err)
+	}
+	if cfg.CipherMode != giznet.CipherModeAES256GCM {
+		t.Fatalf("CipherMode = %q, want %q", cfg.CipherMode, giznet.CipherModeAES256GCM)
+	}
+}
+
 func TestLoadConfigErrors(t *testing.T) {
 	if _, err := LoadConfig(filepath.Join(t.TempDir(), "missing.yaml")); err == nil {
 		t.Fatal("LoadConfig should fail for a missing file")
@@ -236,6 +271,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	}
 	runtimeCfg := Config{
 		ListenAddr:     ":9999",
+		CipherMode:     giznet.CipherModePlaintext,
 		AdminPublicKey: adminKey,
 		Storage: map[string]storage.Config{
 			"runtime-storage": {Kind: "keyvalue", Backend: "memory"},
@@ -259,6 +295,7 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	}
 	fileCfg := ConfigFile{
 		ListenAddr:     ":1234",
+		CipherMode:     giznet.CipherModeAES256GCM,
 		AdminPublicKey: fileAdminKey,
 		Storage: map[string]storage.Config{
 			"file-storage": {Kind: "keyvalue", Backend: "memory"},
@@ -287,6 +324,9 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	}
 	if merged.ListenAddr != ":9999" {
 		t.Fatalf("ListenAddr = %q", merged.ListenAddr)
+	}
+	if merged.CipherMode != giznet.CipherModePlaintext {
+		t.Fatalf("CipherMode = %q, want %q", merged.CipherMode, giznet.CipherModePlaintext)
 	}
 	if merged.AdminPublicKey != runtimeCfg.AdminPublicKey {
 		t.Fatalf("AdminPublicKey = %v, want %v", merged.AdminPublicKey, runtimeCfg.AdminPublicKey)
@@ -320,6 +360,16 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	}
 }
 
+func TestMergeFileConfigUsesFileCipherModeWhenRuntimeEmpty(t *testing.T) {
+	merged, err := mergeFileConfig(Config{}, ConfigFile{CipherMode: giznet.CipherModeAES256GCM})
+	if err != nil {
+		t.Fatalf("mergeFileConfig error = %v", err)
+	}
+	if merged.CipherMode != giznet.CipherModeAES256GCM {
+		t.Fatalf("CipherMode = %q, want %q", merged.CipherMode, giznet.CipherModeAES256GCM)
+	}
+}
+
 func TestValidateReportsSpecificMissingFields(t *testing.T) {
 	tests := []struct {
 		name string
@@ -330,6 +380,11 @@ func TestValidateReportsSpecificMissingFields(t *testing.T) {
 			name: "missing peers store",
 			cfg:  Config{},
 			want: "server: peers.store is required",
+		},
+		{
+			name: "invalid cipher mode",
+			cfg:  Config{CipherMode: giznet.CipherMode("bad")},
+			want: "server: unsupported cipher-mode \"bad\"",
 		},
 	}
 

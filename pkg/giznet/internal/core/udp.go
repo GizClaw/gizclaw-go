@@ -198,6 +198,7 @@ type UDP struct {
 	// Options
 	allowFunc        func(noise.PublicKey) bool
 	serviceMuxConfig ServiceMuxConfig
+	cipherMode       noise.CipherMode
 
 	// Peer management
 	mu      sync.RWMutex
@@ -272,6 +273,7 @@ type options struct {
 	socketConfig      SocketConfig
 	serviceMuxConfig  ServiceMuxConfig
 	onPeerEvent       func(PeerEvent) bool
+	cipherMode        noise.CipherMode
 }
 
 // WithBindAddr sets the local address to bind to.
@@ -338,6 +340,14 @@ func WithOnPeerEvent(fn func(PeerEvent) bool) Option {
 	}
 }
 
+// WithCipherMode selects the Noise cipher mode used for handshakes and transport sessions.
+// The zero value and omitted option preserve the historical ChaCha20-Poly1305 behavior.
+func WithCipherMode(mode noise.CipherMode) Option {
+	return func(o *options) {
+		o.cipherMode = mode
+	}
+}
+
 // NewUDP creates a new UDP network.
 func NewUDP(key *noise.KeyPair, opts ...Option) (*UDP, error) {
 	if key == nil {
@@ -350,6 +360,10 @@ func NewUDP(key *noise.KeyPair, opts ...Option) (*UDP, error) {
 	}
 	for _, opt := range opts {
 		opt(o)
+	}
+	cipherMode, err := noise.NormalizeCipherMode(o.cipherMode)
+	if err != nil {
+		return nil, err
 	}
 
 	// Resolve and bind address
@@ -382,6 +396,7 @@ func NewUDP(key *noise.KeyPair, opts ...Option) (*UDP, error) {
 		socketConfig:     socketConfig,
 		allowFunc:        o.allowFunc,
 		serviceMuxConfig: o.serviceMuxConfig,
+		cipherMode:       cipherMode,
 		peers:            make(map[noise.PublicKey]*peerState),
 		byIndex:          make(map[uint32]*peerState),
 		pending:          make(map[uint32]*pendingHandshake),
@@ -755,6 +770,7 @@ func (u *UDP) handleHandshakeInit(data []byte, from *net.UDPAddr) {
 		Pattern:     noise.PatternIK,
 		Initiator:   false,
 		LocalStatic: u.localKey,
+		CipherMode:  u.cipherMode,
 	})
 	if err != nil {
 		return
@@ -834,6 +850,7 @@ func (u *UDP) handleHandshakeInit(data []byte, from *net.UDPAddr) {
 		SendKey:     sendCS.Key(),
 		RecvKey:     recvCS.Key(),
 		RemotePK:    remotePK,
+		CipherMode:  u.cipherMode,
 	})
 	if err != nil {
 		return
@@ -923,6 +940,7 @@ func (u *UDP) handleHandshakeResp(data []byte, from *net.UDPAddr) {
 		SendKey:     sendCS.Key(),
 		RecvKey:     recvCS.Key(),
 		RemotePK:    pending.peer.pk,
+		CipherMode:  u.cipherMode,
 	})
 	if err != nil {
 		pending.peer.mu.Lock()
@@ -1020,6 +1038,7 @@ func (u *UDP) initiateHandshake(peer *peerState) error {
 		Initiator:    true,
 		LocalStatic:  u.localKey,
 		RemoteStatic: &pk,
+		CipherMode:   u.cipherMode,
 	})
 	if err != nil {
 		return err

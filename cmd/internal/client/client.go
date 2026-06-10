@@ -30,6 +30,7 @@ func DialFromContext(name string) (*gizclaw.Client, giznet.PublicKey, string, er
 		return nil, giznet.PublicKey{}, "", fmt.Errorf("invalid server public key: %w", err)
 	}
 	return &gizclaw.Client{
-		KeyPair: cliCtx.KeyPair,
+		KeyPair:    cliCtx.KeyPair,
+		CipherMode: cliCtx.Config.Server.CipherMode,
 	}, serverPK, cliCtx.Config.Server.Address, nil
 }

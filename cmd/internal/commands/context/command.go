@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/clicontext"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/spf13/cobra"
 )
 
@@ -27,25 +28,27 @@ func NewCmd() *cobra.Command {
 }
 
 type contextInfo struct {
-	Name            string `json:"name"`
-	Current         bool   `json:"current"`
-	ServerAddress   string `json:"server_address"`
-	ServerPublicKey string `json:"server_public_key"`
-	IdentityPublic  string `json:"identity_public"`
+	Name             string `json:"name"`
+	Current          bool   `json:"current"`
+	ServerAddress    string `json:"server_address"`
+	ServerPublicKey  string `json:"server_public_key"`
+	ServerCipherMode string `json:"server_cipher_mode,omitempty"`
+	IdentityPublic   string `json:"identity_public"`
 }
 
 func buildContextInfo(ctx *clicontext.CLIContext, current string) contextInfo {
 	return contextInfo{
-		Name:            ctx.Name,
-		Current:         ctx.Name == current,
-		ServerAddress:   ctx.Config.Server.Address,
-		ServerPublicKey: ctx.Config.Server.PublicKey.String(),
-		IdentityPublic:  ctx.KeyPair.Public.String(),
+		Name:             ctx.Name,
+		Current:          ctx.Name == current,
+		ServerAddress:    ctx.Config.Server.Address,
+		ServerPublicKey:  ctx.Config.Server.PublicKey.String(),
+		ServerCipherMode: string(ctx.Config.Server.CipherMode),
+		IdentityPublic:   ctx.KeyPair.Public.String(),
 	}
 }
 
 func newCreateCmd() *cobra.Command {
-	var serverAddr, pubkey string
+	var serverAddr, pubkey, cipherMode string
 
 	cmd := &cobra.Command{
 		Use:   "create <name>",
@@ -57,7 +60,9 @@ func newCreateCmd() *cobra.Command {
 				return err
 			}
 			name := args[0]
-			if err := store.Create(name, serverAddr, pubkey); err != nil {
+			if err := store.CreateWithOptions(name, serverAddr, pubkey, clicontext.CreateOptions{
+				CipherMode: giznet.CipherMode(cipherMode),
+			}); err != nil {
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Context %q created.\n", name)
@@ -67,6 +72,7 @@ func newCreateCmd() *cobra.Command {
 
 	cmd.Flags().StringVar(&serverAddr, "server", "", "server address (host:port)")
 	cmd.Flags().StringVar(&pubkey, "pubkey", "", "server public key (base58btc)")
+	cmd.Flags().StringVar(&cipherMode, "cipher-mode", "", "giznet cipher mode: chacha_poly, aes_256_gcm, or plaintext")
 	_ = cmd.MarkFlagRequired("server")
 	_ = cmd.MarkFlagRequired("pubkey")
 

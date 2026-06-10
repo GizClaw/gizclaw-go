@@ -24,6 +24,8 @@ import (
 // Client holds device-side peer client configuration.
 type Client struct {
 	KeyPair *giznet.KeyPair
+	// CipherMode must match the server's low-level giznet cipher mode.
+	CipherMode giznet.CipherMode
 
 	Device apitypes.DeviceInfo
 
@@ -57,6 +59,7 @@ func (c *Client) Dial(serverPK giznet.PublicKey, serverAddr string) error {
 
 	l, err := (&giznet.ListenConfig{
 		Addr:           ":0",
+		CipherMode:     c.CipherMode,
 		SecurityPolicy: clientSecurityPolicy{},
 	}).Listen(c.KeyPair)
 	if err != nil {

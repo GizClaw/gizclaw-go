@@ -13,6 +13,7 @@ import (
 type Config struct {
 	KeyPair        *giznet.KeyPair
 	ListenAddr     string
+	CipherMode     giznet.CipherMode
 	AdminPublicKey giznet.PublicKey
 	Storage        map[string]storage.Config
 	Stores         map[string]stores.Config
@@ -57,6 +58,7 @@ type ACLConfig struct {
 
 type ConfigFile struct {
 	ListenAddr     string                    `yaml:"listen"`
+	CipherMode     giznet.CipherMode         `yaml:"cipher-mode"`
 	AdminPublicKey giznet.PublicKey          `yaml:"admin-public-key"`
 	Storage        map[string]storage.Config `yaml:"storage"`
 	Stores         map[string]stores.Config  `yaml:"stores"`
@@ -76,6 +78,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 	}
 	var raw struct {
 		ListenAddr     string                    `yaml:"listen"`
+		CipherMode     giznet.CipherMode         `yaml:"cipher-mode"`
 		AdminPublicKey *giznet.PublicKey         `yaml:"admin-public-key"`
 		Storage        map[string]storage.Config `yaml:"storage"`
 		Stores         map[string]stores.Config  `yaml:"stores"`
@@ -99,6 +102,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 	}
 	cfg := ConfigFile{
 		ListenAddr:     raw.ListenAddr,
+		CipherMode:     raw.CipherMode,
 		AdminPublicKey: adminPublicKey,
 		Storage:        raw.Storage,
 		Stores:         raw.Stores,
@@ -122,6 +126,9 @@ func DefaultConfig() Config {
 func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	if cfg.ListenAddr == "" {
 		cfg.ListenAddr = fileCfg.ListenAddr
+	}
+	if cfg.CipherMode == "" {
+		cfg.CipherMode = fileCfg.CipherMode
 	}
 	if cfg.AdminPublicKey.IsZero() {
 		cfg.AdminPublicKey = fileCfg.AdminPublicKey
@@ -216,6 +223,9 @@ func prepareConfig(cfg Config) (Config, error) {
 }
 
 func (cfg Config) validate() error {
+	if err := validateCipherMode(cfg.CipherMode); err != nil {
+		return err
+	}
 	if cfg.Peers.Store == "" {
 		return fmt.Errorf("server: peers.store is required")
 	}
@@ -247,4 +257,13 @@ func (cfg Config) validate() error {
 		return fmt.Errorf("server: acl.store is required")
 	}
 	return nil
+}
+
+func validateCipherMode(mode giznet.CipherMode) error {
+	switch mode {
+	case "", giznet.CipherModeChaChaPoly, giznet.CipherModeAES256GCM, giznet.CipherModePlaintext:
+		return nil
+	default:
+		return fmt.Errorf("server: unsupported cipher-mode %q", mode)
+	}
 }

@@ -28,6 +28,7 @@ import (
 type Server struct {
 	LocalStatic giznet.KeyPair
 	ListenAddr  string
+	CipherMode  giznet.CipherMode
 
 	SecurityPolicy giznet.SecurityPolicy
 
@@ -70,6 +71,7 @@ func (s *Server) Listen() error {
 	}
 	cfg := giznet.ListenConfig{
 		Addr:             s.ListenAddr,
+		CipherMode:       s.CipherMode,
 		SecurityPolicy:   (*ServerSecurityPolicy)(s),
 		PeerEventHandler: (*serverPeerEventHandler)(s),
 	}

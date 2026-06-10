@@ -53,6 +53,68 @@ func TestListenAndCloseOwnedListener(t *testing.T) {
 	}
 }
 
+func TestListenConfigCipherModes(t *testing.T) {
+	for _, mode := range []giznet.CipherMode{giznet.CipherModeAES256GCM, giznet.CipherModePlaintext} {
+		t.Run(string(mode), func(t *testing.T) {
+			serverKey, err := giznet.GenerateKeyPair()
+			if err != nil {
+				t.Fatalf("Generate server key failed: %v", err)
+			}
+			clientKey, err := giznet.GenerateKeyPair()
+			if err != nil {
+				t.Fatalf("Generate client key failed: %v", err)
+			}
+
+			serverListener := NewTestListenerConfig(t, giznet.ListenConfig{CipherMode: mode}, serverKey)
+			defer serverListener.Close()
+			clientListener := NewTestListenerConfig(t, giznet.ListenConfig{CipherMode: mode}, clientKey)
+			defer clientListener.Close()
+
+			acceptCh := make(chan *giznet.Conn, 1)
+			errCh := make(chan error, 1)
+			go func() {
+				conn, err := serverListener.Accept()
+				if err != nil {
+					errCh <- err
+					return
+				}
+				acceptCh <- conn
+			}()
+
+			clientConn, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr)
+			if err != nil {
+				t.Fatalf("client Dial failed: %v", err)
+			}
+
+			var serverConn *giznet.Conn
+			select {
+			case serverConn = <-acceptCh:
+			case err := <-errCh:
+				t.Fatalf("server Accept failed: %v", err)
+			case <-time.After(3 * time.Second):
+				t.Fatal("server Accept timeout")
+			}
+
+			payload := []byte("listener cipher " + string(mode))
+			if _, err := clientConn.Write(testProtocolEvent, payload); err != nil {
+				t.Fatalf("client Write failed: %v", err)
+			}
+
+			buf := make([]byte, 1024)
+			proto, n, err := serverConn.Read(buf)
+			if err != nil {
+				t.Fatalf("server Read failed: %v", err)
+			}
+			if proto != testProtocolEvent {
+				t.Fatalf("protocol = %x, want %x", proto, testProtocolEvent)
+			}
+			if !bytes.Equal(buf[:n], payload) {
+				t.Fatalf("payload = %q, want %q", buf[:n], payload)
+			}
+		})
+	}
+}
+
 func TestListenerPeerMissingReturnsFalse(t *testing.T) {
 	key, err := giznet.GenerateKeyPair()
 	if err != nil {

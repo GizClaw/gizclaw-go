@@ -177,6 +177,87 @@ func TestNewAEAD(t *testing.T) {
 	}
 }
 
+func TestProtocolNameCipherModes(t *testing.T) {
+	tests := []struct {
+		mode CipherMode
+		want string
+	}{
+		{CipherModeChaChaPoly, "Noise_IK_25519_ChaChaPoly_BLAKE2s"},
+		{CipherModeAES256GCM, "Noise_IK_25519_AESGCM_BLAKE2s"},
+		{CipherModePlaintext, "Noise_IK_25519_Plaintext_BLAKE2s"},
+		{"", "Noise_IK_25519_ChaChaPoly_BLAKE2s"},
+	}
+	for _, tt := range tests {
+		got, err := ProtocolName("IK", tt.mode)
+		if err != nil {
+			t.Fatalf("ProtocolName(%q) error = %v", tt.mode, err)
+		}
+		if got != tt.want {
+			t.Fatalf("ProtocolName(%q) = %q, want %q", tt.mode, got, tt.want)
+		}
+	}
+
+	if _, err := ProtocolName("IK", CipherMode("bad")); err == nil {
+		t.Fatal("ProtocolName should reject unknown cipher mode")
+	}
+}
+
+func TestEncryptDecryptCipherModes(t *testing.T) {
+	key := make([]byte, 32)
+	for i := range key {
+		key[i] = byte(i)
+	}
+	plaintext := []byte("hello, cipher modes")
+	ad := []byte("additional data")
+
+	for _, mode := range []CipherMode{CipherModeChaChaPoly, CipherModeAES256GCM, CipherModePlaintext} {
+		t.Run(string(mode), func(t *testing.T) {
+			ciphertext, err := EncryptWithMode(mode, key, 7, plaintext, ad)
+			if err != nil {
+				t.Fatalf("EncryptWithMode() error = %v", err)
+			}
+			if len(ciphertext) != len(plaintext)+TagSize {
+				t.Fatalf("ciphertext length = %d, want %d", len(ciphertext), len(plaintext)+TagSize)
+			}
+
+			decrypted, err := DecryptWithMode(mode, key, 7, ciphertext, ad)
+			if err != nil {
+				t.Fatalf("DecryptWithMode() error = %v", err)
+			}
+			if !bytes.Equal(decrypted, plaintext) {
+				t.Fatalf("decrypted = %q, want %q", decrypted, plaintext)
+			}
+
+			if mode == CipherModePlaintext {
+				if !bytes.Equal(ciphertext[:len(plaintext)], plaintext) {
+					t.Fatalf("plaintext ciphertext prefix = %q, want %q", ciphertext[:len(plaintext)], plaintext)
+				}
+				if !bytes.Equal(ciphertext[len(plaintext):], make([]byte, TagSize)) {
+					t.Fatalf("plaintext tag suffix = %x, want zero tag", ciphertext[len(plaintext):])
+				}
+			}
+		})
+	}
+}
+
+func TestAuthenticatedCipherModesRejectTamper(t *testing.T) {
+	key := make([]byte, 32)
+	plaintext := []byte("secret")
+
+	for _, mode := range []CipherMode{CipherModeChaChaPoly, CipherModeAES256GCM} {
+		t.Run(string(mode), func(t *testing.T) {
+			ciphertext, err := EncryptWithMode(mode, key, 1, plaintext, nil)
+			if err != nil {
+				t.Fatalf("EncryptWithMode() error = %v", err)
+			}
+			ciphertext[0] ^= 0xff
+			if _, err := DecryptWithMode(mode, key, 1, ciphertext, nil); err == nil {
+				t.Fatal("DecryptWithMode should reject tampered ciphertext")
+			}
+		})
+	}
+}
+
 func TestEncryptDecrypt(t *testing.T) {
 	key := make([]byte, 32)
 	for i := range key {

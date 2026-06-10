@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/GizClaw/gizclaw-go/cmd/internal/identity"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
 
@@ -24,7 +25,9 @@ func testKeyText(fill byte) string {
 func TestStoreCreateAndLoad(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
 
-	if err := s.Create("local", "127.0.0.1:9820", testServerPublicKey); err != nil {
+	if err := s.CreateWithOptions("local", "127.0.0.1:9820", testServerPublicKey, CreateOptions{
+		CipherMode: giznet.CipherModeAES256GCM,
+	}); err != nil {
 		t.Fatalf("Create err=%v", err)
 	}
 
@@ -41,8 +44,21 @@ func TestStoreCreateAndLoad(t *testing.T) {
 	if cliCtx.Config.Server.PublicKey.String() != testServerPublicKey {
 		t.Fatalf("PublicKey=%q", cliCtx.Config.Server.PublicKey.String())
 	}
+	if cliCtx.Config.Server.CipherMode != giznet.CipherModeAES256GCM {
+		t.Fatalf("CipherMode=%q, want %q", cliCtx.Config.Server.CipherMode, giznet.CipherModeAES256GCM)
+	}
 	if cliCtx.KeyPair == nil || cliCtx.KeyPair.Public.IsZero() {
 		t.Fatal("KeyPair not loaded")
+	}
+}
+
+func TestStoreCreateRejectsInvalidCipherMode(t *testing.T) {
+	s := &Store{Root: t.TempDir()}
+	err := s.CreateWithOptions("local", "127.0.0.1:9820", testServerPublicKey, CreateOptions{
+		CipherMode: giznet.CipherMode("bad"),
+	})
+	if err == nil {
+		t.Fatal("CreateWithOptions should reject invalid cipher mode")
 	}
 }
 
@@ -256,6 +272,25 @@ func TestLoadBadYAML(t *testing.T) {
 	}
 	if _, err := Load(dir); err == nil {
 		t.Fatal("Load(bad yaml) should fail")
+	}
+}
+
+func TestLoadRejectsInvalidCipherMode(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "config.yaml"), []byte(`
+server:
+  address: 127.0.0.1:9820
+  public-key: `+testServerPublicKey+`
+  cipher-mode: bad
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := identity.LoadOrGenerate(filepath.Join(dir, "identity.key")); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := Load(dir); err == nil {
+		t.Fatal("Load should reject invalid cipher mode")
 	}
 }
 

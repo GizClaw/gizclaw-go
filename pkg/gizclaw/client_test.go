@@ -54,6 +54,17 @@ func TestClientDialValidation(t *testing.T) {
 			t.Fatalf("Dial(already started) err = %v", err)
 		}
 	})
+
+	t.Run("invalid cipher mode", func(t *testing.T) {
+		keyPair, err := giznet.GenerateKeyPair()
+		if err != nil {
+			t.Fatalf("GenerateKeyPair error = %v", err)
+		}
+		client := &Client{KeyPair: keyPair, CipherMode: giznet.CipherMode("bad")}
+		if err := client.Dial(giznet.PublicKey{1}, "127.0.0.1:1"); err == nil || !strings.Contains(err.Error(), "unsupported cipher mode") {
+			t.Fatalf("Dial(invalid cipher mode) err = %v", err)
+		}
+	})
 }
 
 func TestClientProxyHandlerValidation(t *testing.T) {

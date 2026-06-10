@@ -1,6 +1,21 @@
 package giznet
 
-import "github.com/GizClaw/gizclaw-go/pkg/giznet/internal/core"
+import (
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/internal/core"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/internal/noise"
+)
+
+// CipherMode selects the low-level Noise cipher mode used by giznet.
+type CipherMode string
+
+const (
+	// CipherModeChaChaPoly uses ChaCha20-Poly1305 and is the default.
+	CipherModeChaChaPoly CipherMode = "chacha_poly"
+	// CipherModeAES256GCM uses AES-256-GCM.
+	CipherModeAES256GCM CipherMode = "aes_256_gcm"
+	// CipherModePlaintext disables encryption for diagnostics while preserving wire overhead.
+	CipherModePlaintext CipherMode = "plaintext"
+)
 
 type SecurityPolicy interface {
 	AllowPeer(PublicKey) bool
@@ -27,6 +42,10 @@ type ListenConfig struct {
 	// PeerEventHandler is called synchronously from the Noise peer event path.
 	// The handler must not block.
 	PeerEventHandler PeerEventHandler
+
+	// CipherMode selects the low-level Noise cipher mode.
+	// If empty, ChaCha20-Poly1305 is used for backwards compatibility.
+	CipherMode CipherMode
 }
 
 func Listen(key *KeyPair) (*Listener, error) {
@@ -69,6 +88,9 @@ func (c *ListenConfig) options() []core.Option {
 		opts = append(opts, core.WithServiceMuxConfig(core.ServiceMuxConfig{
 			OnNewService: c.SecurityPolicy.AllowService,
 		}))
+	}
+	if c.CipherMode != "" {
+		opts = append(opts, core.WithCipherMode(noise.CipherMode(c.CipherMode)))
 	}
 	return opts
 }

@@ -60,6 +60,7 @@ func New(cfg Config) (srv *CmdServer, err error) {
 	gizServer := &gizclaw.Server{
 		LocalStatic: *cfg.KeyPair,
 		ListenAddr:  cfg.ListenAddr,
+		CipherMode:  cfg.CipherMode,
 		PeerStore:   gearsKV,
 		BuildCommit: BuildCommit,
 	}

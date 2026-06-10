@@ -64,6 +64,17 @@ func TestIntegrationRPCDialAndPing(t *testing.T) {
 	}
 }
 
+func TestIntegrationRPCDialWithConfiguredCipherMode(t *testing.T) {
+	ts := startTestServerWithCipherMode(t, giznet.CipherModePlaintext)
+	client := newTestClient(t, ts)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := getServerInfo(ctx, client); err != nil {
+		t.Fatalf("GetServerInfo with configured cipher mode error = %v", err)
+	}
+}
+
 func TestIntegrationSameClientKeyReconnectsAfterClose(t *testing.T) {
 	ts := startTestServer(t)
 	keyPair, err := giznet.GenerateKeyPair()

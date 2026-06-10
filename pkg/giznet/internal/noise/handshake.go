@@ -72,6 +72,7 @@ type Config struct {
 	RemoteStatic *Key     // Remote static public key (required for IK initiator)
 	Prologue     []byte   // Optional prologue data
 	PresharedKey *Key     // Optional PSK (for psk patterns)
+	CipherMode   CipherMode
 }
 
 // HandshakeState manages the state of a Noise handshake.
@@ -103,12 +104,20 @@ func NewHandshakeState(config Config) (*HandshakeState, error) {
 		return nil, err
 	}
 
-	// Build protocol name
-	protocolName := fmt.Sprintf("Noise_%s_25519_ChaChaPoly_BLAKE2s", config.Pattern.Name)
+	mode, err := NormalizeCipherMode(config.CipherMode)
+	if err != nil {
+		return nil, err
+	}
+	config.CipherMode = mode
+
+	ss, err := NewSymmetricStateWithMode(config.Pattern.Name, mode)
+	if err != nil {
+		return nil, err
+	}
 
 	hs := &HandshakeState{
 		config: config,
-		ss:     NewSymmetricState(protocolName),
+		ss:     ss,
 	}
 
 	// Mix in prologue
