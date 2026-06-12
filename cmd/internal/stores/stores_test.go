@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"io"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	physicalstorage "github.com/GizClaw/gizclaw-go/cmd/internal/storage"
@@ -524,6 +526,113 @@ stores:
 	}
 	if _, err := reg.SQL("kv"); err == nil {
 		t.Fatal("expected error for wrong kind lookup")
+	}
+}
+
+// --- ObjectStore ---
+
+func TestObjectStoreWithStoragePrefix(t *testing.T) {
+	physical, err := physicalstorage.New(map[string]physicalstorage.Config{
+		"assets": {Kind: physicalstorage.KindObjectStore, FS: &physicalstorage.FSConfig{Dir: t.TempDir()}},
+	})
+	if err != nil {
+		t.Fatalf("storage.New: %v", err)
+	}
+	defer physical.Close()
+
+	reg, err := NewWithStorage(physical, map[string]Config{
+		"firmware-assets": {Kind: KindObjectStore, Storage: "assets", Prefix: "firmware"},
+	})
+	if err != nil {
+		t.Fatalf("NewWithStorage: %v", err)
+	}
+	defer reg.Close()
+
+	objects, err := reg.ObjectStore("firmware-assets")
+	if err != nil {
+		t.Fatalf("ObjectStore(firmware-assets): %v", err)
+	}
+	if err := objects.Put("stable.bin", strings.NewReader("stable")); err != nil {
+		t.Fatalf("Put: %v", err)
+	}
+
+	base, err := physical.ObjectStore("assets")
+	if err != nil {
+		t.Fatalf("storage ObjectStore(assets): %v", err)
+	}
+	r, err := base.Get("firmware/stable.bin")
+	if err != nil {
+		t.Fatalf("base Get: %v", err)
+	}
+	got, err := io.ReadAll(r)
+	if closeErr := r.Close(); closeErr != nil && err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if string(got) != "stable" {
+		t.Fatalf("base object = %q, want stable", got)
+	}
+
+	items, err := objects.List("")
+	if err != nil {
+		t.Fatalf("List: %v", err)
+	}
+	if len(items) != 1 || items[0].Name != "stable.bin" {
+		t.Fatalf("List = %#v, want stable.bin", items)
+	}
+}
+
+func TestObjectStoreNotFound(t *testing.T) {
+	physical, err := physicalstorage.New(map[string]physicalstorage.Config{
+		"assets": {Kind: physicalstorage.KindObjectStore, FS: &physicalstorage.FSConfig{Dir: t.TempDir()}},
+	})
+	if err != nil {
+		t.Fatalf("storage.New: %v", err)
+	}
+	defer physical.Close()
+
+	reg, err := NewWithStorage(physical, map[string]Config{
+		"assets": {Kind: KindObjectStore, Storage: "assets"},
+	})
+	if err != nil {
+		t.Fatalf("NewWithStorage: %v", err)
+	}
+	defer reg.Close()
+
+	if _, err := reg.ObjectStore("missing"); err == nil {
+		t.Fatal("expected error for missing store")
+	}
+	if _, err := reg.ObjectStore("assets"); err != nil {
+		t.Fatalf("ObjectStore(assets): %v", err)
+	}
+}
+
+func TestNewObjectStoreBadStorageReference(t *testing.T) {
+	physical, err := physicalstorage.New(map[string]physicalstorage.Config{
+		"kv":     {Kind: physicalstorage.KindKeyValue, Memory: &physicalstorage.MemoryConfig{}},
+		"assets": {Kind: physicalstorage.KindObjectStore, FS: &physicalstorage.FSConfig{Dir: t.TempDir()}},
+	})
+	if err != nil {
+		t.Fatalf("storage.New: %v", err)
+	}
+	defer physical.Close()
+
+	if _, err := NewWithStorage(physical, map[string]Config{
+		"objects": {Kind: KindObjectStore, Storage: "kv"},
+	}); err == nil {
+		t.Fatal("expected error for objectstore referencing keyvalue storage")
+	}
+	if _, err := NewWithStorage(physical, map[string]Config{
+		"objects": {Kind: KindObjectStore, Storage: "missing"},
+	}); err == nil {
+		t.Fatal("expected error for missing objectstore storage")
+	}
+	if _, err := NewWithStorage(physical, map[string]Config{
+		"objects": {Kind: KindObjectStore, Storage: "assets", Prefix: "../bad"},
+	}); err == nil {
+		t.Fatal("expected error for invalid objectstore prefix")
 	}
 }
 

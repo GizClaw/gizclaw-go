@@ -38,14 +38,15 @@ func isPlannedServerMethod(method rpcapi.RPCMethod) bool {
 		rpcapi.RPCMethodServerCredentialDelete,
 		rpcapi.RPCMethodServerPetList,
 		rpcapi.RPCMethodServerPetGet,
-		rpcapi.RPCMethodServerPetCreate,
+		rpcapi.RPCMethodServerPetAdopt,
 		rpcapi.RPCMethodServerPetPut,
 		rpcapi.RPCMethodServerPetDelete,
 		rpcapi.RPCMethodServerPetFeed,
+		rpcapi.RPCMethodServerPetWash,
 		rpcapi.RPCMethodServerPetPlay,
-		rpcapi.RPCMethodServerPetLevelUp,
 		rpcapi.RPCMethodServerWalletGet,
 		rpcapi.RPCMethodServerWalletTransactionsList,
+		rpcapi.RPCMethodServerWalletTransactionsGet,
 		rpcapi.RPCMethodServerContactList,
 		rpcapi.RPCMethodServerContactGet,
 		rpcapi.RPCMethodServerContactCreate,
@@ -75,10 +76,8 @@ func isPlannedServerMethod(method rpcapi.RPCMethod) bool {
 		rpcapi.RPCMethodServerCallAnswer,
 		rpcapi.RPCMethodServerCallReject,
 		rpcapi.RPCMethodServerCallEnd,
-		rpcapi.RPCMethodServerGameResultsCreate,
 		rpcapi.RPCMethodServerRewardList,
 		rpcapi.RPCMethodServerRewardGet,
-		rpcapi.RPCMethodServerRewardCreate,
 		rpcapi.RPCMethodServerRewardClaim:
 		return true
 	default:

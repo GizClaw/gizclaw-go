@@ -139,7 +139,7 @@
                 "$ref": "./rpc/server.json#/components/schemas/PetGetRequest"
               },
               {
-                "$ref": "./rpc/server.json#/components/schemas/PetCreateRequest"
+                "$ref": "./rpc/server.json#/components/schemas/PetAdoptRequest"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/PetPutRequest"
@@ -151,16 +151,19 @@
                 "$ref": "./rpc/server.json#/components/schemas/PetFeedRequest"
               },
               {
-                "$ref": "./rpc/server.json#/components/schemas/PetPlayRequest"
+                "$ref": "./rpc/server.json#/components/schemas/PetWashRequest"
               },
               {
-                "$ref": "./rpc/server.json#/components/schemas/PetLevelUpRequest"
+                "$ref": "./rpc/server.json#/components/schemas/PetPlayRequest"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/WalletGetRequest"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/WalletTransactionsListRequest"
+              },
+              {
+                "$ref": "./rpc/server.json#/components/schemas/WalletTransactionsGetRequest"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/ContactListRequest"
@@ -250,16 +253,10 @@
                 "$ref": "./rpc/server.json#/components/schemas/CallEndRequest"
               },
               {
-                "$ref": "./rpc/server.json#/components/schemas/GameResultCreateRequest"
-              },
-              {
                 "$ref": "./rpc/server.json#/components/schemas/RewardListRequest"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/RewardGetRequest"
-              },
-              {
-                "$ref": "./rpc/server.json#/components/schemas/RewardCreateRequest"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/RewardClaimRequest"
@@ -395,7 +392,7 @@
                 "$ref": "./rpc/server.json#/components/schemas/PetGetResponse"
               },
               {
-                "$ref": "./rpc/server.json#/components/schemas/PetCreateResponse"
+                "$ref": "./rpc/server.json#/components/schemas/PetAdoptResponse"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/PetPutResponse"
@@ -407,16 +404,19 @@
                 "$ref": "./rpc/server.json#/components/schemas/PetFeedResponse"
               },
               {
-                "$ref": "./rpc/server.json#/components/schemas/PetPlayResponse"
+                "$ref": "./rpc/server.json#/components/schemas/PetWashResponse"
               },
               {
-                "$ref": "./rpc/server.json#/components/schemas/PetLevelUpResponse"
+                "$ref": "./rpc/server.json#/components/schemas/PetPlayResponse"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/WalletGetResponse"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/WalletTransactionsListResponse"
+              },
+              {
+                "$ref": "./rpc/server.json#/components/schemas/WalletTransactionsGetResponse"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/ContactListResponse"
@@ -506,16 +506,10 @@
                 "$ref": "./rpc/server.json#/components/schemas/CallEndResponse"
               },
               {
-                "$ref": "./rpc/server.json#/components/schemas/GameResultCreateResponse"
-              },
-              {
                 "$ref": "./rpc/server.json#/components/schemas/RewardListResponse"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/RewardGetResponse"
-              },
-              {
-                "$ref": "./rpc/server.json#/components/schemas/RewardCreateResponse"
               },
               {
                 "$ref": "./rpc/server.json#/components/schemas/RewardClaimResponse"
@@ -567,14 +561,15 @@
           "server.credential.delete",
           "server.pet.list",
           "server.pet.get",
-          "server.pet.create",
+          "server.pet.adopt",
           "server.pet.put",
           "server.pet.delete",
           "server.pet.feed",
+          "server.pet.wash",
           "server.pet.play",
-          "server.pet.level-up",
           "server.wallet.get",
           "server.wallet.transactions.list",
+          "server.wallet.transactions.get",
           "server.contact.list",
           "server.contact.get",
           "server.contact.create",
@@ -604,10 +599,8 @@
           "server.call.answer",
           "server.call.reject",
           "server.call.end",
-          "server.game.results.create",
           "server.reward.list",
           "server.reward.get",
-          "server.reward.create",
           "server.reward.claim"
         ]
       },

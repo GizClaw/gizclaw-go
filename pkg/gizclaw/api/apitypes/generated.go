@@ -13,6 +13,9 @@ import (
 
 // Defines values for ACLPermission.
 const (
+	ACLPermissionBadgeAdmin         ACLPermission = "badge.admin"
+	ACLPermissionBadgeRead          ACLPermission = "badge.read"
+	ACLPermissionBadgeUse           ACLPermission = "badge.use"
 	ACLPermissionCallAdmin          ACLPermission = "call.admin"
 	ACLPermissionCallRead           ACLPermission = "call.read"
 	ACLPermissionCallUse            ACLPermission = "call.use"
@@ -29,9 +32,6 @@ const (
 	ACLPermissionFriendRequestRead  ACLPermission = "friend_request.read"
 	ACLPermissionFriendRequestUse   ACLPermission = "friend_request.use"
 	ACLPermissionFriendUse          ACLPermission = "friend.use"
-	ACLPermissionGameResultAdmin    ACLPermission = "game_result.admin"
-	ACLPermissionGameResultRead     ACLPermission = "game_result.read"
-	ACLPermissionGameResultUse      ACLPermission = "game_result.use"
 	ACLPermissionGroupAdmin         ACLPermission = "group.admin"
 	ACLPermissionGroupRead          ACLPermission = "group.read"
 	ACLPermissionGroupUse           ACLPermission = "group.use"
@@ -39,12 +39,9 @@ const (
 	ACLPermissionModelRead          ACLPermission = "model.read"
 	ACLPermissionModelUse           ACLPermission = "model.use"
 	ACLPermissionOwner              ACLPermission = "owner"
-	ACLPermissionPetAdmin           ACLPermission = "pet.admin"
-	ACLPermissionPetRead            ACLPermission = "pet.read"
-	ACLPermissionPetUse             ACLPermission = "pet.use"
-	ACLPermissionRewardAdmin        ACLPermission = "reward.admin"
-	ACLPermissionRewardRead         ACLPermission = "reward.read"
-	ACLPermissionRewardUse          ACLPermission = "reward.use"
+	ACLPermissionPetSpeciesAdmin    ACLPermission = "pet_species.admin"
+	ACLPermissionPetSpeciesRead     ACLPermission = "pet_species.read"
+	ACLPermissionPetSpeciesUse      ACLPermission = "pet_species.use"
 	ACLPermissionViewAdmin          ACLPermission = "view.admin"
 	ACLPermissionViewRead           ACLPermission = "view.read"
 	ACLPermissionViewUse            ACLPermission = "view.use"
@@ -52,9 +49,6 @@ const (
 	ACLPermissionVoiceAdmin         ACLPermission = "voice.admin"
 	ACLPermissionVoiceRead          ACLPermission = "voice.read"
 	ACLPermissionVoiceUse           ACLPermission = "voice.use"
-	ACLPermissionWalletAdmin        ACLPermission = "wallet.admin"
-	ACLPermissionWalletRead         ACLPermission = "wallet.read"
-	ACLPermissionWalletUse          ACLPermission = "wallet.use"
 	ACLPermissionWorkflowAdmin      ACLPermission = "workflow.admin"
 	ACLPermissionWorkflowRead       ACLPermission = "workflow.read"
 	ACLPermissionWorkflowUse        ACLPermission = "workflow.use"
@@ -66,6 +60,12 @@ const (
 // Valid indicates whether the value is a known member of the ACLPermission enum.
 func (e ACLPermission) Valid() bool {
 	switch e {
+	case ACLPermissionBadgeAdmin:
+		return true
+	case ACLPermissionBadgeRead:
+		return true
+	case ACLPermissionBadgeUse:
+		return true
 	case ACLPermissionCallAdmin:
 		return true
 	case ACLPermissionCallRead:
@@ -98,12 +98,6 @@ func (e ACLPermission) Valid() bool {
 		return true
 	case ACLPermissionFriendUse:
 		return true
-	case ACLPermissionGameResultAdmin:
-		return true
-	case ACLPermissionGameResultRead:
-		return true
-	case ACLPermissionGameResultUse:
-		return true
 	case ACLPermissionGroupAdmin:
 		return true
 	case ACLPermissionGroupRead:
@@ -118,17 +112,11 @@ func (e ACLPermission) Valid() bool {
 		return true
 	case ACLPermissionOwner:
 		return true
-	case ACLPermissionPetAdmin:
+	case ACLPermissionPetSpeciesAdmin:
 		return true
-	case ACLPermissionPetRead:
+	case ACLPermissionPetSpeciesRead:
 		return true
-	case ACLPermissionPetUse:
-		return true
-	case ACLPermissionRewardAdmin:
-		return true
-	case ACLPermissionRewardRead:
-		return true
-	case ACLPermissionRewardUse:
+	case ACLPermissionPetSpeciesUse:
 		return true
 	case ACLPermissionViewAdmin:
 		return true
@@ -143,12 +131,6 @@ func (e ACLPermission) Valid() bool {
 	case ACLPermissionVoiceRead:
 		return true
 	case ACLPermissionVoiceUse:
-		return true
-	case ACLPermissionWalletAdmin:
-		return true
-	case ACLPermissionWalletRead:
-		return true
-	case ACLPermissionWalletUse:
 		return true
 	case ACLPermissionWorkflowAdmin:
 		return true
@@ -184,19 +166,17 @@ func (e ACLPolicyBindingResourceKind) Valid() bool {
 
 // Defines values for ACLResourceKind.
 const (
+	ACLResourceKindBadge         ACLResourceKind = "badge"
 	ACLResourceKindCall          ACLResourceKind = "call"
 	ACLResourceKindContact       ACLResourceKind = "contact"
 	ACLResourceKindCredential    ACLResourceKind = "credential"
 	ACLResourceKindFriend        ACLResourceKind = "friend"
 	ACLResourceKindFriendRequest ACLResourceKind = "friend_request"
-	ACLResourceKindGameResult    ACLResourceKind = "game_result"
 	ACLResourceKindGroup         ACLResourceKind = "group"
 	ACLResourceKindModel         ACLResourceKind = "model"
-	ACLResourceKindPet           ACLResourceKind = "pet"
-	ACLResourceKindReward        ACLResourceKind = "reward"
+	ACLResourceKindPetSpecies    ACLResourceKind = "pet_species"
 	ACLResourceKindView          ACLResourceKind = "view"
 	ACLResourceKindVoice         ACLResourceKind = "voice"
-	ACLResourceKindWallet        ACLResourceKind = "wallet"
 	ACLResourceKindWorkflow      ACLResourceKind = "workflow"
 	ACLResourceKindWorkspace     ACLResourceKind = "workspace"
 )
@@ -204,6 +184,8 @@ const (
 // Valid indicates whether the value is a known member of the ACLResourceKind enum.
 func (e ACLResourceKind) Valid() bool {
 	switch e {
+	case ACLResourceKindBadge:
+		return true
 	case ACLResourceKindCall:
 		return true
 	case ACLResourceKindContact:
@@ -214,21 +196,15 @@ func (e ACLResourceKind) Valid() bool {
 		return true
 	case ACLResourceKindFriendRequest:
 		return true
-	case ACLResourceKindGameResult:
-		return true
 	case ACLResourceKindGroup:
 		return true
 	case ACLResourceKindModel:
 		return true
-	case ACLResourceKindPet:
-		return true
-	case ACLResourceKindReward:
+	case ACLResourceKindPetSpecies:
 		return true
 	case ACLResourceKindView:
 		return true
 	case ACLResourceKindVoice:
-		return true
-	case ACLResourceKindWallet:
 		return true
 	case ACLResourceKindWorkflow:
 		return true
@@ -308,6 +284,21 @@ func (e ApplyAction) Valid() bool {
 	case ApplyActionUnchanged:
 		return true
 	case ApplyActionUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BadgeResourceKind.
+const (
+	BadgeResourceKindBadge BadgeResourceKind = "Badge"
+)
+
+// Valid indicates whether the value is a known member of the BadgeResourceKind enum.
+func (e BadgeResourceKind) Valid() bool {
+	switch e {
+	case BadgeResourceKindBadge:
 		return true
 	default:
 		return false
@@ -677,6 +668,21 @@ func (e PeerRunStatusState) Valid() bool {
 	}
 }
 
+// Defines values for PetSpeciesResourceKind.
+const (
+	PetSpeciesResourceKindPetSpecies PetSpeciesResourceKind = "PetSpecies"
+)
+
+// Valid indicates whether the value is a known member of the PetSpeciesResourceKind enum.
+func (e PetSpeciesResourceKind) Valid() bool {
+	switch e {
+	case PetSpeciesResourceKindPetSpecies:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ProviderKind.
 const (
 	ProviderKindDashscopeTenant ProviderKind = "dashscope-tenant"
@@ -724,6 +730,7 @@ const (
 	ResourceKindACLPolicyBinding ResourceKind = "ACLPolicyBinding"
 	ResourceKindACLRole          ResourceKind = "ACLRole"
 	ResourceKindACLView          ResourceKind = "ACLView"
+	ResourceKindBadge            ResourceKind = "Badge"
 	ResourceKindCredential       ResourceKind = "Credential"
 	ResourceKindDashScopeTenant  ResourceKind = "DashScopeTenant"
 	ResourceKindFirmware         ResourceKind = "Firmware"
@@ -732,6 +739,7 @@ const (
 	ResourceKindModel            ResourceKind = "Model"
 	ResourceKindOpenAITenant     ResourceKind = "OpenAITenant"
 	ResourceKindPeerConfig       ResourceKind = "PeerConfig"
+	ResourceKindPetSpecies       ResourceKind = "PetSpecies"
 	ResourceKindResourceList     ResourceKind = "ResourceList"
 	ResourceKindVoice            ResourceKind = "Voice"
 	ResourceKindVolcTenant       ResourceKind = "VolcTenant"
@@ -748,6 +756,8 @@ func (e ResourceKind) Valid() bool {
 		return true
 	case ResourceKindACLView:
 		return true
+	case ResourceKindBadge:
+		return true
 	case ResourceKindCredential:
 		return true
 	case ResourceKindDashScopeTenant:
@@ -763,6 +773,8 @@ func (e ResourceKind) Valid() bool {
 	case ResourceKindOpenAITenant:
 		return true
 	case ResourceKindPeerConfig:
+		return true
+	case ResourceKindPetSpecies:
 		return true
 	case ResourceKindResourceList:
 		return true
@@ -1058,6 +1070,35 @@ type ApplyResult struct {
 	Kind    ResourceKind `json:"kind"`
 	Message *string      `json:"message,omitempty"`
 	Name    string       `json:"name"`
+}
+
+// Badge defines model for Badge.
+type Badge struct {
+	CreatedAt   time.Time `json:"created_at"`
+	Description string    `json:"description"`
+	IconPath    string    `json:"icon_path"`
+	Id          string    `json:"id"`
+	Name        string    `json:"name"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// BadgeResource defines model for BadgeResource.
+type BadgeResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion `json:"apiVersion"`
+	Kind       BadgeResourceKind  `json:"kind"`
+	Metadata   ResourceMetadata   `json:"metadata"`
+	Spec       BadgeSpec          `json:"spec"`
+}
+
+// BadgeResourceKind defines model for BadgeResource.Kind.
+type BadgeResourceKind string
+
+// BadgeSpec defines model for BadgeSpec.
+type BadgeSpec struct {
+	Description string  `json:"description"`
+	IconPath    *string `json:"icon_path,omitempty"`
+	Name        string  `json:"name"`
 }
 
 // Configuration defines model for Configuration.
@@ -1582,6 +1623,34 @@ type PeerStatus struct {
 	Volume         *int                    `json:"volume,omitempty"`
 }
 
+// PetSpecies defines model for PetSpecies.
+type PetSpecies struct {
+	CreatedAt    time.Time    `json:"created_at"`
+	Id           string       `json:"id"`
+	Name         string       `json:"name"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+	ZpetMetadata ZpetMetadata `json:"zpet_metadata"`
+	ZpetPath     string       `json:"zpet_path"`
+}
+
+// PetSpeciesResource defines model for PetSpeciesResource.
+type PetSpeciesResource struct {
+	// ApiVersion API version for declarative GizClaw resources.
+	ApiVersion ResourceAPIVersion     `json:"apiVersion"`
+	Kind       PetSpeciesResourceKind `json:"kind"`
+	Metadata   ResourceMetadata       `json:"metadata"`
+	Spec       PetSpeciesSpec         `json:"spec"`
+}
+
+// PetSpeciesResourceKind defines model for PetSpeciesResource.Kind.
+type PetSpeciesResourceKind string
+
+// PetSpeciesSpec defines model for PetSpeciesSpec.
+type PetSpeciesSpec struct {
+	Name     string  `json:"name"`
+	ZpetPath *string `json:"zpet_path,omitempty"`
+}
+
 // Provider defines model for Provider.
 type Provider struct {
 	// Kind Provider resource kind, such as openai-tenant, minimax-tenant, or volc-tenant.
@@ -1828,6 +1897,16 @@ type WorkspaceResourceKind string
 type WorkspaceSpec struct {
 	Parameters   *map[string]interface{} `json:"parameters,omitempty"`
 	WorkflowName string                  `json:"workflow_name"`
+}
+
+// ZpetMetadata defines model for ZpetMetadata.
+type ZpetMetadata struct {
+	CanvasHeight int      `json:"canvas_height"`
+	CanvasWidth  int      `json:"canvas_width"`
+	ClipIds      []string `json:"clip_ids"`
+	Format       string   `json:"format"`
+	SpeciesId    string   `json:"species_id"`
+	Version      int      `json:"version"`
 }
 
 // AsACLPolicyBindingResource returns the union data inside the Resource as a ACLPolicyBindingResource
@@ -2250,6 +2329,62 @@ func (t *Resource) MergePeerConfigResource(v PeerConfigResource) error {
 	return err
 }
 
+// AsPetSpeciesResource returns the union data inside the Resource as a PetSpeciesResource
+func (t Resource) AsPetSpeciesResource() (PetSpeciesResource, error) {
+	var body PetSpeciesResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPetSpeciesResource overwrites any union data inside the Resource as the provided PetSpeciesResource
+func (t *Resource) FromPetSpeciesResource(v PetSpeciesResource) error {
+	v.Kind = "PetSpeciesResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePetSpeciesResource performs a merge with any union data inside the Resource, using the provided PetSpeciesResource
+func (t *Resource) MergePetSpeciesResource(v PetSpeciesResource) error {
+	v.Kind = "PetSpeciesResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsBadgeResource returns the union data inside the Resource as a BadgeResource
+func (t Resource) AsBadgeResource() (BadgeResource, error) {
+	var body BadgeResource
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromBadgeResource overwrites any union data inside the Resource as the provided BadgeResource
+func (t *Resource) FromBadgeResource(v BadgeResource) error {
+	v.Kind = "BadgeResource"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeBadgeResource performs a merge with any union data inside the Resource, using the provided BadgeResource
+func (t *Resource) MergeBadgeResource(v BadgeResource) error {
+	v.Kind = "BadgeResource"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 // AsResourceListResource returns the union data inside the Resource as a ResourceListResource
 func (t Resource) AsResourceListResource() (ResourceListResource, error) {
 	var body ResourceListResource
@@ -2298,6 +2433,8 @@ func (t Resource) ValueByDiscriminator() (interface{}, error) {
 		return t.AsACLRoleResource()
 	case "ACLViewResource":
 		return t.AsACLViewResource()
+	case "BadgeResource":
+		return t.AsBadgeResource()
 	case "CredentialResource":
 		return t.AsCredentialResource()
 	case "DashScopeTenantResource":
@@ -2314,6 +2451,8 @@ func (t Resource) ValueByDiscriminator() (interface{}, error) {
 		return t.AsOpenAITenantResource()
 	case "PeerConfigResource":
 		return t.AsPeerConfigResource()
+	case "PetSpeciesResource":
+		return t.AsPetSpeciesResource()
 	case "ResourceListResource":
 		return t.AsResourceListResource()
 	case "VoiceResource":

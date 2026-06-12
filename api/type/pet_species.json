@@ -1,0 +1,80 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PetSpecies Type",
+    "description": "PetSpecies schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ZpetMetadata": {
+        "type": "object",
+        "required": [
+          "version",
+          "species_id",
+          "canvas_width",
+          "canvas_height",
+          "format",
+          "clip_ids"
+        ],
+        "properties": {
+          "version": {
+            "type": "integer"
+          },
+          "species_id": {
+            "type": "string"
+          },
+          "canvas_width": {
+            "type": "integer"
+          },
+          "canvas_height": {
+            "type": "integer"
+          },
+          "format": {
+            "type": "string"
+          },
+          "clip_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "PetSpecies": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "zpet_path",
+          "zpet_metadata",
+          "created_at",
+          "updated_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "zpet_path": {
+            "type": "string"
+          },
+          "zpet_metadata": {
+            "$ref": "#/components/schemas/ZpetMetadata"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    }
+  }
+}

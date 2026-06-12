@@ -220,7 +220,6 @@ const (
 	RPCMethodServerFriendRequestsCreate   RPCMethod = "server.friend.requests.create"
 	RPCMethodServerFriendRequestsList     RPCMethod = "server.friend.requests.list"
 	RPCMethodServerFriendRequestsReject   RPCMethod = "server.friend.requests.reject"
-	RPCMethodServerGameResultsCreate      RPCMethod = "server.game.results.create"
 	RPCMethodServerGroupCreate            RPCMethod = "server.group.create"
 	RPCMethodServerGroupDelete            RPCMethod = "server.group.delete"
 	RPCMethodServerGroupGet               RPCMethod = "server.group.get"
@@ -238,16 +237,15 @@ const (
 	RPCMethodServerModelGet               RPCMethod = "server.model.get"
 	RPCMethodServerModelList              RPCMethod = "server.model.list"
 	RPCMethodServerModelPut               RPCMethod = "server.model.put"
-	RPCMethodServerPetCreate              RPCMethod = "server.pet.create"
+	RPCMethodServerPetAdopt               RPCMethod = "server.pet.adopt"
 	RPCMethodServerPetDelete              RPCMethod = "server.pet.delete"
 	RPCMethodServerPetFeed                RPCMethod = "server.pet.feed"
 	RPCMethodServerPetGet                 RPCMethod = "server.pet.get"
-	RPCMethodServerPetLevelUp             RPCMethod = "server.pet.level-up"
 	RPCMethodServerPetList                RPCMethod = "server.pet.list"
 	RPCMethodServerPetPlay                RPCMethod = "server.pet.play"
 	RPCMethodServerPetPut                 RPCMethod = "server.pet.put"
+	RPCMethodServerPetWash                RPCMethod = "server.pet.wash"
 	RPCMethodServerRewardClaim            RPCMethod = "server.reward.claim"
-	RPCMethodServerRewardCreate           RPCMethod = "server.reward.create"
 	RPCMethodServerRewardGet              RPCMethod = "server.reward.get"
 	RPCMethodServerRewardList             RPCMethod = "server.reward.list"
 	RPCMethodServerRunAgentGet            RPCMethod = "server.run.agent.get"
@@ -260,6 +258,7 @@ const (
 	RPCMethodServerStatusGet              RPCMethod = "server.status.get"
 	RPCMethodServerStatusPut              RPCMethod = "server.status.put"
 	RPCMethodServerWalletGet              RPCMethod = "server.wallet.get"
+	RPCMethodServerWalletTransactionsGet  RPCMethod = "server.wallet.transactions.get"
 	RPCMethodServerWalletTransactionsList RPCMethod = "server.wallet.transactions.list"
 	RPCMethodServerWorkflowCreate         RPCMethod = "server.workflow.create"
 	RPCMethodServerWorkflowDelete         RPCMethod = "server.workflow.delete"
@@ -332,8 +331,6 @@ func (e RPCMethod) Valid() bool {
 		return true
 	case RPCMethodServerFriendRequestsReject:
 		return true
-	case RPCMethodServerGameResultsCreate:
-		return true
 	case RPCMethodServerGroupCreate:
 		return true
 	case RPCMethodServerGroupDelete:
@@ -368,7 +365,7 @@ func (e RPCMethod) Valid() bool {
 		return true
 	case RPCMethodServerModelPut:
 		return true
-	case RPCMethodServerPetCreate:
+	case RPCMethodServerPetAdopt:
 		return true
 	case RPCMethodServerPetDelete:
 		return true
@@ -376,17 +373,15 @@ func (e RPCMethod) Valid() bool {
 		return true
 	case RPCMethodServerPetGet:
 		return true
-	case RPCMethodServerPetLevelUp:
-		return true
 	case RPCMethodServerPetList:
 		return true
 	case RPCMethodServerPetPlay:
 		return true
 	case RPCMethodServerPetPut:
 		return true
-	case RPCMethodServerRewardClaim:
+	case RPCMethodServerPetWash:
 		return true
-	case RPCMethodServerRewardCreate:
+	case RPCMethodServerRewardClaim:
 		return true
 	case RPCMethodServerRewardGet:
 		return true
@@ -411,6 +406,8 @@ func (e RPCMethod) Valid() bool {
 	case RPCMethodServerStatusPut:
 		return true
 	case RPCMethodServerWalletGet:
+		return true
+	case RPCMethodServerWalletTransactionsGet:
 		return true
 	case RPCMethodServerWalletTransactionsList:
 		return true
@@ -448,6 +445,33 @@ const (
 func (e RPCVersion) Valid() bool {
 	switch e {
 	case RPCVersionV1:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WalletTransactionObjectReason.
+const (
+	WalletTransactionObjectReasonPetAdopt    WalletTransactionObjectReason = "pet_adopt"
+	WalletTransactionObjectReasonPetFeed     WalletTransactionObjectReason = "pet_feed"
+	WalletTransactionObjectReasonPetPlay     WalletTransactionObjectReason = "pet_play"
+	WalletTransactionObjectReasonPetWash     WalletTransactionObjectReason = "pet_wash"
+	WalletTransactionObjectReasonRewardClaim WalletTransactionObjectReason = "reward_claim"
+)
+
+// Valid indicates whether the value is a known member of the WalletTransactionObjectReason enum.
+func (e WalletTransactionObjectReason) Valid() bool {
+	switch e {
+	case WalletTransactionObjectReasonPetAdopt:
+		return true
+	case WalletTransactionObjectReasonPetFeed:
+		return true
+	case WalletTransactionObjectReasonPetPlay:
+		return true
+	case WalletTransactionObjectReasonPetWash:
+		return true
+	case WalletTransactionObjectReasonRewardClaim:
 		return true
 	default:
 		return false
@@ -784,22 +808,6 @@ type FriendRequestRejectRequest struct {
 // FriendRequestRejectResponse defines model for FriendRequestRejectResponse.
 type FriendRequestRejectResponse = FriendRequestObject
 
-// GameResultCreateRequest defines model for GameResultCreateRequest.
-type GameResultCreateRequest struct {
-	Body map[string]interface{} `json:"body"`
-}
-
-// GameResultCreateResponse defines model for GameResultCreateResponse.
-type GameResultCreateResponse = GameResultObject
-
-// GameResultObject defines model for GameResultObject.
-type GameResultObject struct {
-	Body      *map[string]interface{} `json:"body,omitempty"`
-	CreatedAt *time.Time              `json:"created_at,omitempty"`
-	Id        *string                 `json:"id,omitempty"`
-	UpdatedAt *time.Time              `json:"updated_at,omitempty"`
-}
-
 // GeminiTenantModelProviderData defines model for GeminiTenantModelProviderData.
 type GeminiTenantModelProviderData struct {
 	UpstreamModel *string `json:"upstream_model,omitempty"`
@@ -1097,13 +1105,37 @@ type PeerStatus struct {
 	Volume         *int                    `json:"volume,omitempty"`
 }
 
-// PetCreateRequest defines model for PetCreateRequest.
-type PetCreateRequest struct {
-	Body map[string]interface{} `json:"body"`
+// PetAbilityStats defines model for PetAbilityStats.
+type PetAbilityStats struct {
+	Charm        int   `json:"charm"`
+	Exp          int64 `json:"exp"`
+	Intelligence int   `json:"intelligence"`
+	Level        int   `json:"level"`
+	Luck         int   `json:"luck"`
+	Stamina      int   `json:"stamina"`
 }
 
-// PetCreateResponse defines model for PetCreateResponse.
-type PetCreateResponse = PetObject
+// PetActionDecision defines model for PetActionDecision.
+type PetActionDecision struct {
+	AbilityDelta PetAbilityStats `json:"ability_delta"`
+	LifeDelta    PetLifeStats    `json:"life_delta"`
+	PointDelta   int64           `json:"point_delta"`
+}
+
+// PetActionRequest defines model for PetActionRequest.
+type PetActionRequest struct {
+	PetId  string `json:"pet_id"`
+	Prompt string `json:"prompt"`
+}
+
+// PetAdoptRequest defines model for PetAdoptRequest.
+type PetAdoptRequest struct {
+	Id   *string `json:"id,omitempty"`
+	Name string  `json:"name"`
+}
+
+// PetAdoptResponse defines model for PetAdoptResponse.
+type PetAdoptResponse = PetObject
 
 // PetDeleteRequest defines model for PetDeleteRequest.
 type PetDeleteRequest struct {
@@ -1114,9 +1146,7 @@ type PetDeleteRequest struct {
 type PetDeleteResponse = PetObject
 
 // PetFeedRequest defines model for PetFeedRequest.
-type PetFeedRequest struct {
-	Id string `json:"id"`
-}
+type PetFeedRequest = PetActionRequest
 
 // PetFeedResponse defines model for PetFeedResponse.
 type PetFeedResponse = PetObject
@@ -1129,18 +1159,19 @@ type PetGetRequest struct {
 // PetGetResponse defines model for PetGetResponse.
 type PetGetResponse = PetObject
 
-// PetLevelUpRequest defines model for PetLevelUpRequest.
-type PetLevelUpRequest struct {
-	Id string `json:"id"`
+// PetLifeStats defines model for PetLifeStats.
+type PetLifeStats struct {
+	Cleanliness int `json:"cleanliness"`
+	Energy      int `json:"energy"`
+	Health      int `json:"health"`
+	Mood        int `json:"mood"`
+	Satiety     int `json:"satiety"`
 }
-
-// PetLevelUpResponse defines model for PetLevelUpResponse.
-type PetLevelUpResponse = PetObject
 
 // PetListRequest defines model for PetListRequest.
 type PetListRequest struct {
 	Cursor *string `json:"cursor,omitempty"`
-	Limit  *int    `json:"limit,omitempty"`
+	Limit  int     `json:"limit,omitempty"`
 }
 
 // PetListResponse defines model for PetListResponse.
@@ -1152,28 +1183,36 @@ type PetListResponse struct {
 
 // PetObject defines model for PetObject.
 type PetObject struct {
-	Body      *map[string]interface{} `json:"body,omitempty"`
-	CreatedAt *time.Time              `json:"created_at,omitempty"`
-	Id        *string                 `json:"id,omitempty"`
-	UpdatedAt *time.Time              `json:"updated_at,omitempty"`
+	Ability   PetAbilityStats `json:"ability"`
+	CreatedAt time.Time       `json:"created_at"`
+	Id        string          `json:"id"`
+	Life      PetLifeStats    `json:"life"`
+	Name      string          `json:"name"`
+	SpeciesId string          `json:"species_id"`
+	UpdatedAt time.Time       `json:"updated_at"`
+	VoiceId   string          `json:"voice_id"`
 }
 
 // PetPlayRequest defines model for PetPlayRequest.
-type PetPlayRequest struct {
-	Id string `json:"id"`
-}
+type PetPlayRequest = PetActionRequest
 
 // PetPlayResponse defines model for PetPlayResponse.
 type PetPlayResponse = PetObject
 
 // PetPutRequest defines model for PetPutRequest.
 type PetPutRequest struct {
-	Body map[string]interface{} `json:"body"`
-	Id   string                 `json:"id"`
+	Id   string `json:"id"`
+	Name string `json:"name"`
 }
 
 // PetPutResponse defines model for PetPutResponse.
 type PetPutResponse = PetObject
+
+// PetWashRequest defines model for PetWashRequest.
+type PetWashRequest = PetActionRequest
+
+// PetWashResponse defines model for PetWashResponse.
+type PetWashResponse = PetObject
 
 // PingRequest defines model for PingRequest.
 type PingRequest struct {
@@ -1243,19 +1282,17 @@ type RefreshInfo struct {
 
 // RewardClaimRequest defines model for RewardClaimRequest.
 type RewardClaimRequest struct {
-	Id string `json:"id"`
+	Prompt string `json:"prompt"`
 }
 
 // RewardClaimResponse defines model for RewardClaimResponse.
 type RewardClaimResponse = RewardObject
 
-// RewardCreateRequest defines model for RewardCreateRequest.
-type RewardCreateRequest struct {
-	Body map[string]interface{} `json:"body"`
+// RewardDecision defines model for RewardDecision.
+type RewardDecision struct {
+	BadgeId     string `json:"badge_id"`
+	PointAmount int64  `json:"point_amount"`
 }
-
-// RewardCreateResponse defines model for RewardCreateResponse.
-type RewardCreateResponse = RewardObject
 
 // RewardGetRequest defines model for RewardGetRequest.
 type RewardGetRequest struct {
@@ -1268,7 +1305,7 @@ type RewardGetResponse = RewardObject
 // RewardListRequest defines model for RewardListRequest.
 type RewardListRequest struct {
 	Cursor *string `json:"cursor,omitempty"`
-	Limit  *int    `json:"limit,omitempty"`
+	Limit  int     `json:"limit,omitempty"`
 }
 
 // RewardListResponse defines model for RewardListResponse.
@@ -1280,10 +1317,11 @@ type RewardListResponse struct {
 
 // RewardObject defines model for RewardObject.
 type RewardObject struct {
-	Body      *map[string]interface{} `json:"body,omitempty"`
-	CreatedAt *time.Time              `json:"created_at,omitempty"`
-	Id        *string                 `json:"id,omitempty"`
-	UpdatedAt *time.Time              `json:"updated_at,omitempty"`
+	BadgeId     string    `json:"badge_id"`
+	CreatedAt   time.Time `json:"created_at"`
+	Id          string    `json:"id"`
+	PointAmount int64     `json:"point_amount"`
+	Prompt      string    `json:"prompt"`
 }
 
 // Runtime defines model for Runtime.
@@ -1388,24 +1426,37 @@ type WalletGetResponse = WalletObject
 
 // WalletObject defines model for WalletObject.
 type WalletObject struct {
-	Balance   *int64     `json:"balance,omitempty"`
-	PublicKey *string    `json:"public_key,omitempty"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	Id           string    `json:"id"`
+	PointBalance int64     `json:"point_balance"`
+	TokenBalance int64     `json:"token_balance"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 // WalletTransactionObject defines model for WalletTransactionObject.
 type WalletTransactionObject struct {
-	Amount    *int64                  `json:"amount,omitempty"`
-	Body      *map[string]interface{} `json:"body,omitempty"`
-	CreatedAt *time.Time              `json:"created_at,omitempty"`
-	Id        *string                 `json:"id,omitempty"`
-	Reason    *string                 `json:"reason,omitempty"`
+	CreatedAt  time.Time                     `json:"created_at"`
+	Id         string                        `json:"id"`
+	PointDelta int64                         `json:"point_delta"`
+	Reason     WalletTransactionObjectReason `json:"reason"`
+	TokenDelta int64                         `json:"token_delta"`
 }
+
+// WalletTransactionObjectReason defines model for WalletTransactionObject.Reason.
+type WalletTransactionObjectReason string
+
+// WalletTransactionsGetRequest defines model for WalletTransactionsGetRequest.
+type WalletTransactionsGetRequest struct {
+	Id string `json:"id"`
+}
+
+// WalletTransactionsGetResponse defines model for WalletTransactionsGetResponse.
+type WalletTransactionsGetResponse = WalletTransactionObject
 
 // WalletTransactionsListRequest defines model for WalletTransactionsListRequest.
 type WalletTransactionsListRequest struct {
 	Cursor *string `json:"cursor,omitempty"`
-	Limit  *int    `json:"limit,omitempty"`
+	Limit  int     `json:"limit,omitempty"`
 }
 
 // WalletTransactionsListResponse defines model for WalletTransactionsListResponse.
@@ -2486,22 +2537,22 @@ func (t *RPCRequest_Params) MergePetGetRequest(v PetGetRequest) error {
 	return err
 }
 
-// AsPetCreateRequest returns the union data inside the RPCRequest_Params as a PetCreateRequest
-func (t RPCRequest_Params) AsPetCreateRequest() (PetCreateRequest, error) {
-	var body PetCreateRequest
+// AsPetAdoptRequest returns the union data inside the RPCRequest_Params as a PetAdoptRequest
+func (t RPCRequest_Params) AsPetAdoptRequest() (PetAdoptRequest, error) {
+	var body PetAdoptRequest
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromPetCreateRequest overwrites any union data inside the RPCRequest_Params as the provided PetCreateRequest
-func (t *RPCRequest_Params) FromPetCreateRequest(v PetCreateRequest) error {
+// FromPetAdoptRequest overwrites any union data inside the RPCRequest_Params as the provided PetAdoptRequest
+func (t *RPCRequest_Params) FromPetAdoptRequest(v PetAdoptRequest) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergePetCreateRequest performs a merge with any union data inside the RPCRequest_Params, using the provided PetCreateRequest
-func (t *RPCRequest_Params) MergePetCreateRequest(v PetCreateRequest) error {
+// MergePetAdoptRequest performs a merge with any union data inside the RPCRequest_Params, using the provided PetAdoptRequest
+func (t *RPCRequest_Params) MergePetAdoptRequest(v PetAdoptRequest) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -2590,6 +2641,32 @@ func (t *RPCRequest_Params) MergePetFeedRequest(v PetFeedRequest) error {
 	return err
 }
 
+// AsPetWashRequest returns the union data inside the RPCRequest_Params as a PetWashRequest
+func (t RPCRequest_Params) AsPetWashRequest() (PetWashRequest, error) {
+	var body PetWashRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPetWashRequest overwrites any union data inside the RPCRequest_Params as the provided PetWashRequest
+func (t *RPCRequest_Params) FromPetWashRequest(v PetWashRequest) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePetWashRequest performs a merge with any union data inside the RPCRequest_Params, using the provided PetWashRequest
+func (t *RPCRequest_Params) MergePetWashRequest(v PetWashRequest) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 // AsPetPlayRequest returns the union data inside the RPCRequest_Params as a PetPlayRequest
 func (t RPCRequest_Params) AsPetPlayRequest() (PetPlayRequest, error) {
 	var body PetPlayRequest
@@ -2606,32 +2683,6 @@ func (t *RPCRequest_Params) FromPetPlayRequest(v PetPlayRequest) error {
 
 // MergePetPlayRequest performs a merge with any union data inside the RPCRequest_Params, using the provided PetPlayRequest
 func (t *RPCRequest_Params) MergePetPlayRequest(v PetPlayRequest) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsPetLevelUpRequest returns the union data inside the RPCRequest_Params as a PetLevelUpRequest
-func (t RPCRequest_Params) AsPetLevelUpRequest() (PetLevelUpRequest, error) {
-	var body PetLevelUpRequest
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromPetLevelUpRequest overwrites any union data inside the RPCRequest_Params as the provided PetLevelUpRequest
-func (t *RPCRequest_Params) FromPetLevelUpRequest(v PetLevelUpRequest) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergePetLevelUpRequest performs a merge with any union data inside the RPCRequest_Params, using the provided PetLevelUpRequest
-func (t *RPCRequest_Params) MergePetLevelUpRequest(v PetLevelUpRequest) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -2684,6 +2735,32 @@ func (t *RPCRequest_Params) FromWalletTransactionsListRequest(v WalletTransactio
 
 // MergeWalletTransactionsListRequest performs a merge with any union data inside the RPCRequest_Params, using the provided WalletTransactionsListRequest
 func (t *RPCRequest_Params) MergeWalletTransactionsListRequest(v WalletTransactionsListRequest) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsWalletTransactionsGetRequest returns the union data inside the RPCRequest_Params as a WalletTransactionsGetRequest
+func (t RPCRequest_Params) AsWalletTransactionsGetRequest() (WalletTransactionsGetRequest, error) {
+	var body WalletTransactionsGetRequest
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromWalletTransactionsGetRequest overwrites any union data inside the RPCRequest_Params as the provided WalletTransactionsGetRequest
+func (t *RPCRequest_Params) FromWalletTransactionsGetRequest(v WalletTransactionsGetRequest) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeWalletTransactionsGetRequest performs a merge with any union data inside the RPCRequest_Params, using the provided WalletTransactionsGetRequest
+func (t *RPCRequest_Params) MergeWalletTransactionsGetRequest(v WalletTransactionsGetRequest) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -3448,32 +3525,6 @@ func (t *RPCRequest_Params) MergeCallEndRequest(v CallEndRequest) error {
 	return err
 }
 
-// AsGameResultCreateRequest returns the union data inside the RPCRequest_Params as a GameResultCreateRequest
-func (t RPCRequest_Params) AsGameResultCreateRequest() (GameResultCreateRequest, error) {
-	var body GameResultCreateRequest
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromGameResultCreateRequest overwrites any union data inside the RPCRequest_Params as the provided GameResultCreateRequest
-func (t *RPCRequest_Params) FromGameResultCreateRequest(v GameResultCreateRequest) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeGameResultCreateRequest performs a merge with any union data inside the RPCRequest_Params, using the provided GameResultCreateRequest
-func (t *RPCRequest_Params) MergeGameResultCreateRequest(v GameResultCreateRequest) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsRewardListRequest returns the union data inside the RPCRequest_Params as a RewardListRequest
 func (t RPCRequest_Params) AsRewardListRequest() (RewardListRequest, error) {
 	var body RewardListRequest
@@ -3516,32 +3567,6 @@ func (t *RPCRequest_Params) FromRewardGetRequest(v RewardGetRequest) error {
 
 // MergeRewardGetRequest performs a merge with any union data inside the RPCRequest_Params, using the provided RewardGetRequest
 func (t *RPCRequest_Params) MergeRewardGetRequest(v RewardGetRequest) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsRewardCreateRequest returns the union data inside the RPCRequest_Params as a RewardCreateRequest
-func (t RPCRequest_Params) AsRewardCreateRequest() (RewardCreateRequest, error) {
-	var body RewardCreateRequest
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromRewardCreateRequest overwrites any union data inside the RPCRequest_Params as the provided RewardCreateRequest
-func (t *RPCRequest_Params) FromRewardCreateRequest(v RewardCreateRequest) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeRewardCreateRequest performs a merge with any union data inside the RPCRequest_Params, using the provided RewardCreateRequest
-func (t *RPCRequest_Params) MergeRewardCreateRequest(v RewardCreateRequest) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -4550,22 +4575,22 @@ func (t *RPCResponse_Result) MergePetGetResponse(v PetGetResponse) error {
 	return err
 }
 
-// AsPetCreateResponse returns the union data inside the RPCResponse_Result as a PetCreateResponse
-func (t RPCResponse_Result) AsPetCreateResponse() (PetCreateResponse, error) {
-	var body PetCreateResponse
+// AsPetAdoptResponse returns the union data inside the RPCResponse_Result as a PetAdoptResponse
+func (t RPCResponse_Result) AsPetAdoptResponse() (PetAdoptResponse, error) {
+	var body PetAdoptResponse
 	err := json.Unmarshal(t.union, &body)
 	return body, err
 }
 
-// FromPetCreateResponse overwrites any union data inside the RPCResponse_Result as the provided PetCreateResponse
-func (t *RPCResponse_Result) FromPetCreateResponse(v PetCreateResponse) error {
+// FromPetAdoptResponse overwrites any union data inside the RPCResponse_Result as the provided PetAdoptResponse
+func (t *RPCResponse_Result) FromPetAdoptResponse(v PetAdoptResponse) error {
 	b, err := json.Marshal(v)
 	t.union = b
 	return err
 }
 
-// MergePetCreateResponse performs a merge with any union data inside the RPCResponse_Result, using the provided PetCreateResponse
-func (t *RPCResponse_Result) MergePetCreateResponse(v PetCreateResponse) error {
+// MergePetAdoptResponse performs a merge with any union data inside the RPCResponse_Result, using the provided PetAdoptResponse
+func (t *RPCResponse_Result) MergePetAdoptResponse(v PetAdoptResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -4654,6 +4679,32 @@ func (t *RPCResponse_Result) MergePetFeedResponse(v PetFeedResponse) error {
 	return err
 }
 
+// AsPetWashResponse returns the union data inside the RPCResponse_Result as a PetWashResponse
+func (t RPCResponse_Result) AsPetWashResponse() (PetWashResponse, error) {
+	var body PetWashResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromPetWashResponse overwrites any union data inside the RPCResponse_Result as the provided PetWashResponse
+func (t *RPCResponse_Result) FromPetWashResponse(v PetWashResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergePetWashResponse performs a merge with any union data inside the RPCResponse_Result, using the provided PetWashResponse
+func (t *RPCResponse_Result) MergePetWashResponse(v PetWashResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 // AsPetPlayResponse returns the union data inside the RPCResponse_Result as a PetPlayResponse
 func (t RPCResponse_Result) AsPetPlayResponse() (PetPlayResponse, error) {
 	var body PetPlayResponse
@@ -4670,32 +4721,6 @@ func (t *RPCResponse_Result) FromPetPlayResponse(v PetPlayResponse) error {
 
 // MergePetPlayResponse performs a merge with any union data inside the RPCResponse_Result, using the provided PetPlayResponse
 func (t *RPCResponse_Result) MergePetPlayResponse(v PetPlayResponse) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsPetLevelUpResponse returns the union data inside the RPCResponse_Result as a PetLevelUpResponse
-func (t RPCResponse_Result) AsPetLevelUpResponse() (PetLevelUpResponse, error) {
-	var body PetLevelUpResponse
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromPetLevelUpResponse overwrites any union data inside the RPCResponse_Result as the provided PetLevelUpResponse
-func (t *RPCResponse_Result) FromPetLevelUpResponse(v PetLevelUpResponse) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergePetLevelUpResponse performs a merge with any union data inside the RPCResponse_Result, using the provided PetLevelUpResponse
-func (t *RPCResponse_Result) MergePetLevelUpResponse(v PetLevelUpResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -4748,6 +4773,32 @@ func (t *RPCResponse_Result) FromWalletTransactionsListResponse(v WalletTransact
 
 // MergeWalletTransactionsListResponse performs a merge with any union data inside the RPCResponse_Result, using the provided WalletTransactionsListResponse
 func (t *RPCResponse_Result) MergeWalletTransactionsListResponse(v WalletTransactionsListResponse) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsWalletTransactionsGetResponse returns the union data inside the RPCResponse_Result as a WalletTransactionsGetResponse
+func (t RPCResponse_Result) AsWalletTransactionsGetResponse() (WalletTransactionsGetResponse, error) {
+	var body WalletTransactionsGetResponse
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromWalletTransactionsGetResponse overwrites any union data inside the RPCResponse_Result as the provided WalletTransactionsGetResponse
+func (t *RPCResponse_Result) FromWalletTransactionsGetResponse(v WalletTransactionsGetResponse) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeWalletTransactionsGetResponse performs a merge with any union data inside the RPCResponse_Result, using the provided WalletTransactionsGetResponse
+func (t *RPCResponse_Result) MergeWalletTransactionsGetResponse(v WalletTransactionsGetResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err
@@ -5512,32 +5563,6 @@ func (t *RPCResponse_Result) MergeCallEndResponse(v CallEndResponse) error {
 	return err
 }
 
-// AsGameResultCreateResponse returns the union data inside the RPCResponse_Result as a GameResultCreateResponse
-func (t RPCResponse_Result) AsGameResultCreateResponse() (GameResultCreateResponse, error) {
-	var body GameResultCreateResponse
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromGameResultCreateResponse overwrites any union data inside the RPCResponse_Result as the provided GameResultCreateResponse
-func (t *RPCResponse_Result) FromGameResultCreateResponse(v GameResultCreateResponse) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeGameResultCreateResponse performs a merge with any union data inside the RPCResponse_Result, using the provided GameResultCreateResponse
-func (t *RPCResponse_Result) MergeGameResultCreateResponse(v GameResultCreateResponse) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
 // AsRewardListResponse returns the union data inside the RPCResponse_Result as a RewardListResponse
 func (t RPCResponse_Result) AsRewardListResponse() (RewardListResponse, error) {
 	var body RewardListResponse
@@ -5580,32 +5605,6 @@ func (t *RPCResponse_Result) FromRewardGetResponse(v RewardGetResponse) error {
 
 // MergeRewardGetResponse performs a merge with any union data inside the RPCResponse_Result, using the provided RewardGetResponse
 func (t *RPCResponse_Result) MergeRewardGetResponse(v RewardGetResponse) error {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	merged, err := runtime.JSONMerge(t.union, b)
-	t.union = merged
-	return err
-}
-
-// AsRewardCreateResponse returns the union data inside the RPCResponse_Result as a RewardCreateResponse
-func (t RPCResponse_Result) AsRewardCreateResponse() (RewardCreateResponse, error) {
-	var body RewardCreateResponse
-	err := json.Unmarshal(t.union, &body)
-	return body, err
-}
-
-// FromRewardCreateResponse overwrites any union data inside the RPCResponse_Result as the provided RewardCreateResponse
-func (t *RPCResponse_Result) FromRewardCreateResponse(v RewardCreateResponse) error {
-	b, err := json.Marshal(v)
-	t.union = b
-	return err
-}
-
-// MergeRewardCreateResponse performs a merge with any union data inside the RPCResponse_Result, using the provided RewardCreateResponse
-func (t *RPCResponse_Result) MergeRewardCreateResponse(v RewardCreateResponse) error {
 	b, err := json.Marshal(v)
 	if err != nil {
 		return err

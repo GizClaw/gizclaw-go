@@ -27,6 +27,7 @@ import (
 type DoubaoTTSSeedV2 struct {
 	client      *doubaospeech.Client
 	speaker     string
+	resourceID  string
 	format      string
 	sampleRate  int
 	bitRate     int
@@ -98,6 +99,13 @@ func WithDoubaoTTSSeedV2Language(language string) DoubaoTTSSeedV2Option {
 	}
 }
 
+// WithDoubaoTTSSeedV2ResourceID sets the Volcengine speech resource ID.
+func WithDoubaoTTSSeedV2ResourceID(resourceID string) DoubaoTTSSeedV2Option {
+	return func(t *DoubaoTTSSeedV2) {
+		t.resourceID = strings.TrimSpace(resourceID)
+	}
+}
+
 // NewDoubaoTTSSeedV2 creates a new DoubaoTTSSeedV2 transformer.
 //
 // Parameters:
@@ -108,6 +116,7 @@ func NewDoubaoTTSSeedV2(client *doubaospeech.Client, speaker string, opts ...Dou
 	t := &DoubaoTTSSeedV2{
 		client:      client,
 		speaker:     speaker,
+		resourceID:  doubaospeech.ResourceTTSV2,
 		format:      "ogg_opus",
 		sampleRate:  24000,
 		speedRatio:  1.0,
@@ -229,7 +238,7 @@ func (t *DoubaoTTSSeedV2) synthesize(ctx context.Context, text string, lastChunk
 	req := &doubaospeech.TTSV2Request{
 		Text:       text,
 		Speaker:    t.speaker,
-		ResourceID: doubaospeech.ResourceTTSV2,
+		ResourceID: t.resourceID,
 		Format:     doubaospeech.AudioFormat(format),
 		SampleRate: doubaospeech.SampleRate(t.sampleRate),
 		BitRate:    t.bitRate,

@@ -3,6 +3,7 @@ package server
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
@@ -64,6 +65,15 @@ func New(cfg Config) (srv *CmdServer, err error) {
 		PeerStore:   peersKV,
 		BuildCommit: BuildCommit,
 	}
+	gizServer.RewardClaimGenerator = cfg.SystemTasks.RewardClaim.Generator
+	gizServer.PetActionGenerator = cfg.SystemTasks.PetAction.Generator
+	if cfg.SystemTasks.RewardClaim.Cooldown != "" {
+		cooldown, err := time.ParseDuration(cfg.SystemTasks.RewardClaim.Cooldown)
+		if err != nil {
+			return nil, fmt.Errorf("server: system_tasks.reward_claim.cooldown: %w", err)
+		}
+		gizServer.RewardClaimCooldown = cooldown
+	}
 	if !cfg.AdminPublicKey.IsZero() {
 		gizServer.SecurityPolicy = adminPublicKeySecurityPolicy{
 			PublicKey: cfg.AdminPublicKey,
@@ -93,6 +103,41 @@ func New(cfg Config) (srv *CmdServer, err error) {
 		}
 		if gizServer.ACLDB, err = ss.SQL(cfg.ACL.Store); err != nil {
 			return nil, fmt.Errorf("server: acl store: %w", err)
+		}
+		if cfg.PetSpecies.Store != "" {
+			if gizServer.PetSpeciesStore, err = ss.KV(cfg.PetSpecies.Store); err != nil {
+				return nil, fmt.Errorf("server: pet_species store: %w", err)
+			}
+		}
+		if cfg.PetSpecies.AssetsStore != "" {
+			if gizServer.PetSpeciesAssets, err = ss.ObjectStore(cfg.PetSpecies.AssetsStore); err != nil {
+				return nil, fmt.Errorf("server: pet_species assets store: %w", err)
+			}
+		}
+		if cfg.Badges.Store != "" {
+			if gizServer.BadgeStore, err = ss.KV(cfg.Badges.Store); err != nil {
+				return nil, fmt.Errorf("server: badges store: %w", err)
+			}
+		}
+		if cfg.Badges.AssetsStore != "" {
+			if gizServer.BadgeAssets, err = ss.ObjectStore(cfg.Badges.AssetsStore); err != nil {
+				return nil, fmt.Errorf("server: badges assets store: %w", err)
+			}
+		}
+		if cfg.Pets.Store != "" {
+			if gizServer.PetStore, err = ss.KV(cfg.Pets.Store); err != nil {
+				return nil, fmt.Errorf("server: pets store: %w", err)
+			}
+		}
+		if cfg.Rewards.Store != "" {
+			if gizServer.RewardStore, err = ss.KV(cfg.Rewards.Store); err != nil {
+				return nil, fmt.Errorf("server: rewards store: %w", err)
+			}
+		}
+		if cfg.Wallets.Store != "" {
+			if gizServer.WalletDB, err = ss.SQL(cfg.Wallets.Store); err != nil {
+				return nil, fmt.Errorf("server: wallets store: %w", err)
+			}
 		}
 	}
 	return &CmdServer{Server: gizServer, AdminPublicKey: cfg.AdminPublicKey, stores: ss}, nil

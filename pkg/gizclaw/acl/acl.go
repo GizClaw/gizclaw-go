@@ -19,15 +19,13 @@ const (
 	ResourceKindCredential = apitypes.ACLResourceKindCredential
 	ResourceKindModel      = apitypes.ACLResourceKindModel
 	ResourceKindView       = apitypes.ACLResourceKindView
-	ResourceKindPet        = apitypes.ACLResourceKindPet
-	ResourceKindWallet     = apitypes.ACLResourceKindWallet
+	ResourceKindPetSpecies = apitypes.ACLResourceKindPetSpecies
+	ResourceKindBadge      = apitypes.ACLResourceKindBadge
 	ResourceKindContact    = apitypes.ACLResourceKindContact
 	ResourceKindFriend     = apitypes.ACLResourceKindFriend
 	ResourceKindFriendReq  = apitypes.ACLResourceKindFriendRequest
 	ResourceKindGroup      = apitypes.ACLResourceKindGroup
 	ResourceKindCall       = apitypes.ACLResourceKindCall
-	ResourceKindGameResult = apitypes.ACLResourceKindGameResult
-	ResourceKindReward     = apitypes.ACLResourceKindReward
 )
 
 var ErrDenied = errors.New("acl: denied")
@@ -67,9 +65,6 @@ func CanonicalResource(resource apitypes.ACLResource) (string, error) {
 	}
 	if strings.Contains(kind, ":") {
 		return "", fmt.Errorf("acl: resource kind %q must not contain ':'", kind)
-	}
-	if strings.Contains(id, ":") {
-		return "", fmt.Errorf("acl: resource id %q must not contain ':'", id)
 	}
 	if !resource.Kind.Valid() {
 		return "", fmt.Errorf("acl: unsupported resource kind %q", kind)
@@ -121,6 +116,27 @@ func CredentialResource(name string) apitypes.ACLResource {
 func ModelResource(id string) apitypes.ACLResource {
 	return apitypes.ACLResource{
 		Kind: ResourceKindModel,
+		Id:   id,
+	}
+}
+
+func VoiceResource(id string) apitypes.ACLResource {
+	return apitypes.ACLResource{
+		Kind: ResourceKindVoice,
+		Id:   id,
+	}
+}
+
+func PetSpeciesResource(id string) apitypes.ACLResource {
+	return apitypes.ACLResource{
+		Kind: ResourceKindPetSpecies,
+		Id:   id,
+	}
+}
+
+func BadgeResource(id string) apitypes.ACLResource {
+	return apitypes.ACLResource{
+		Kind: ResourceKindBadge,
 		Id:   id,
 	}
 }

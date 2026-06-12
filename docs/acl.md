@@ -3,9 +3,9 @@
 This file lists the target ACL-managed subjects, resources, permissions, and
 business actions for Server Service and Admin Service.
 
-The current ACL schema already supports `workspace`, `workflow`, `model`,
-`credential`, `voice`, and `view`. The other resource kinds below are planned
-business extensions and must be added to the ACL schema before implementation.
+The current ACL schema supports admin/runtime shared resources. Peer-owned
+wallet, pet, and reward state is scoped by the authenticated peer context and is
+not modeled as ACL resources.
 
 ## Target ACL-Controlled Resource Kinds
 
@@ -16,15 +16,13 @@ model
 credential
 voice
 view
-pet
-wallet
+pet_species
+badge
 contact
 friend
 friend_request
 group
 call
-game_result
-reward
 ```
 
 ## Subjects
@@ -45,15 +43,13 @@ reward
 | `credential` | credential name | peer or admin | `credential.{read,use,admin}` | `server.credential.{list,get,create,put,delete}`, `server.run.reload`, `server.run.say` | `/credentials/{name}` |
 | `voice` | voice id | admin | `voice.{read,use,admin}` | `server.run.say`, voice selection, and runtime use | `/voices/{id}` |
 | `view` | view name | admin | `view.{read,use,admin}` | read/use resources exposed by a view | `/acl/views/{name}` |
-| `pet` | pet id | peer | `pet.{read,use,admin}` | `server.pet.{list,get,create,put,delete}`, `server.pet.feed`, `server.pet.play`, `server.pet.level-up` | `/peers/{publicKey}/pets/{id}` |
-| `wallet` | peer public key | peer | `wallet.{read,use,admin}` | `server.wallet.get`, `server.wallet.transactions.list` | `/peers/{publicKey}/wallet` |
+| `pet_species` | species id | admin | `pet_species.{read,use,admin}` | pet adoption species selection | `/pet-species/{id}`, `/pet-species/{id}/zpet` |
+| `badge` | badge id | admin | `badge.{read,use,admin}` | reward badge grant validation | `/badges/{id}`, `/badges/{id}/icon` |
 | `contact` | contact id | peer | `contact.{read,use,admin}` | `server.contact.{list,get,create,put,delete}`, `server.contact.block`, `server.contact.unblock` | `/peers/{publicKey}/contacts/{id}` |
 | `friend` | friend relation id | peer pair | `friend.{read,use,admin}` | `server.friend.{list,delete}` | `/peers/{publicKey}/friends/{id}` |
 | `friend_request` | request id | peer pair | `friend_request.{read,use,admin}` | `server.friend.requests.{list,create}`, `server.friend.requests.accept`, `server.friend.requests.reject` | `/peers/{publicKey}/friend-requests/{id}` |
 | `group` | group id | peer or admin | `group.{read,use,admin}` | `server.group.{list,get,create,put,delete}`, `server.group.members.{list,add,delete}` | `/groups/{id}` |
 | `call` | call id | peer pair or group | `call.{read,use,admin}` | `server.call.{list,get,create}`, `server.call.answer`, `server.call.reject`, `server.call.end` | `/calls/{id}` |
-| `game_result` | result id | peer | `game_result.{read,use,admin}` | `server.game.results.create` | `/game-results/{id}` |
-| `reward` | reward id | peer or system | `reward.{read,use,admin}` | `server.reward.{list,get,create}`, `server.reward.claim` | `/rewards/{id}` |
 
 ## Permission Mapping
 
@@ -72,7 +68,8 @@ reward
 | `server.run.say` | selected `voice.use`, selected TTS `model.use`, referenced `credential.use` |
 | `server.group.messages.list` | `group.read` |
 | `server.group.messages.send` | `group.use` |
-| reward settlement into wallet | `reward.use`, target `wallet.use` |
+| `server.pet.adopt` | selected `pet_species.use` |
+| reward badge grant | generated `badge.use` |
 
 ## Default Ownership Rules
 
@@ -82,13 +79,8 @@ reward
 | Peer creates workflow | `pk:{peerPublicKey}` | `workflow:{name}` | workflow owner/admin |
 | Peer creates model | `pk:{peerPublicKey}` | `model:{id}` | model owner/admin |
 | Peer creates credential | `pk:{peerPublicKey}` | `credential:{name}` | credential owner/admin |
-| Peer creates pet | `pk:{peerPublicKey}` | `pet:{id}` | pet owner/admin |
-| Peer starts wallet | `pk:{peerPublicKey}` | `wallet:{peerPublicKey}` | wallet owner/admin |
 | Peer creates contact | `pk:{peerPublicKey}` | `contact:{id}` | contact owner/admin |
 | Peer creates group | `pk:{peerPublicKey}` | `group:{id}` | group owner/admin |
-| Peer creates game result | `pk:{peerPublicKey}` | `game_result:{id}` | game result owner/admin |
-| Peer creates reward | `pk:{peerPublicKey}` | `reward:{id}` | reward owner/admin |
-| System creates reward for peer | `pk:{peerPublicKey}` | `reward:{id}` | reward owner/user |
 
 ## Shared Resource Rules
 
@@ -99,3 +91,5 @@ reward
 | Shared credential for one peer | `pk:{peerPublicKey}` | `credential:{name}` | credential user |
 | Shared credential for a group | `view:{name}` | `credential:{name}` | credential user |
 | Shared voice for everyone | `all_peers` | `voice:{id}` | voice reader/user |
+| Shared pet species for everyone | `all_peers` | `pet_species:{id}` | pet species user |
+| Shared badge grant for everyone | `all_peers` | `badge:{id}` | badge user |

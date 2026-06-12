@@ -132,6 +132,48 @@ func TestNewWithLayeredStorageReportsStoreErrors(t *testing.T) {
 		t.Fatalf("New(missing acl store) = %v", err)
 	}
 
+	missingPetSpeciesCfg := validLayeredConfig(dir)
+	missingPetSpeciesCfg.PetSpecies.Store = "missing"
+	if _, err := New(missingPetSpeciesCfg); err == nil || !strings.Contains(err.Error(), "server: pet_species store:") {
+		t.Fatalf("New(missing pet species store) = %v", err)
+	}
+
+	missingPetSpeciesAssetsCfg := validLayeredConfig(dir)
+	missingPetSpeciesAssetsCfg.PetSpecies.AssetsStore = "missing"
+	if _, err := New(missingPetSpeciesAssetsCfg); err == nil || !strings.Contains(err.Error(), "server: pet_species assets store:") {
+		t.Fatalf("New(missing pet species assets store) = %v", err)
+	}
+
+	missingBadgesCfg := validLayeredConfig(dir)
+	missingBadgesCfg.Badges.Store = "missing"
+	if _, err := New(missingBadgesCfg); err == nil || !strings.Contains(err.Error(), "server: badges store:") {
+		t.Fatalf("New(missing badges store) = %v", err)
+	}
+
+	missingBadgeAssetsCfg := validLayeredConfig(dir)
+	missingBadgeAssetsCfg.Badges.AssetsStore = "missing"
+	if _, err := New(missingBadgeAssetsCfg); err == nil || !strings.Contains(err.Error(), "server: badges assets store:") {
+		t.Fatalf("New(missing badge assets store) = %v", err)
+	}
+
+	missingPetsCfg := validLayeredConfig(dir)
+	missingPetsCfg.Pets.Store = "missing"
+	if _, err := New(missingPetsCfg); err == nil || !strings.Contains(err.Error(), "server: pets store:") {
+		t.Fatalf("New(missing pets store) = %v", err)
+	}
+
+	missingRewardsCfg := validLayeredConfig(dir)
+	missingRewardsCfg.Rewards.Store = "missing"
+	if _, err := New(missingRewardsCfg); err == nil || !strings.Contains(err.Error(), "server: rewards store:") {
+		t.Fatalf("New(missing rewards store) = %v", err)
+	}
+
+	missingWalletsCfg := validLayeredConfig(dir)
+	missingWalletsCfg.Wallets.Store = "missing"
+	if _, err := New(missingWalletsCfg); err == nil || !strings.Contains(err.Error(), "server: wallets store:") {
+		t.Fatalf("New(missing wallets store) = %v", err)
+	}
+
 }
 
 func TestNewWithPreparedConfig(t *testing.T) {
@@ -292,6 +334,15 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		Workspaces: WorkspacesConfig{Store: "runtime-workspaces"},
 		Workflows:  WorkflowsConfig{Store: "runtime-workflows"},
 		ACL:        ACLConfig{Store: "runtime-acl"},
+		PetSpecies: AssetResourceConfig{Store: "runtime-pet-species", AssetsStore: "runtime-pet-species-assets"},
+		Badges:     AssetResourceConfig{Store: "runtime-badges", AssetsStore: "runtime-badge-assets"},
+		Pets:       StoreConfig{Store: "runtime-pets"},
+		Rewards:    StoreConfig{Store: "runtime-rewards"},
+		Wallets:    StoreConfig{Store: "runtime-wallets"},
+		SystemTasks: SystemTasksConfig{
+			RewardClaim: RewardClaimTaskConfig{Generator: "model/runtime-reward", Cooldown: "5m"},
+			PetAction:   GeneratorTaskConfig{Generator: "model/runtime-pet"},
+		},
 	}
 	fileCfg := ConfigFile{
 		ListenAddr:     ":1234",
@@ -316,6 +367,15 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		Workspaces: WorkspacesConfig{Store: "file-workspaces"},
 		Workflows:  WorkflowsConfig{Store: "file-workflows"},
 		ACL:        ACLConfig{Store: "file-acl"},
+		PetSpecies: AssetResourceConfig{Store: "file-pet-species", AssetsStore: "file-pet-species-assets"},
+		Badges:     AssetResourceConfig{Store: "file-badges", AssetsStore: "file-badge-assets"},
+		Pets:       StoreConfig{Store: "file-pets"},
+		Rewards:    StoreConfig{Store: "file-rewards"},
+		Wallets:    StoreConfig{Store: "file-wallets"},
+		SystemTasks: SystemTasksConfig{
+			RewardClaim: RewardClaimTaskConfig{Generator: "model/file-reward", Cooldown: "30m"},
+			PetAction:   GeneratorTaskConfig{Generator: "model/file-pet"},
+		},
 	}
 
 	merged, err := mergeFileConfig(runtimeCfg, fileCfg)
@@ -357,6 +417,18 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	}
 	if merged.ACL.Store != "runtime-acl" {
 		t.Fatalf("ACL.Store = %q", merged.ACL.Store)
+	}
+	if merged.PetSpecies.Store != "runtime-pet-species" || merged.PetSpecies.AssetsStore != "runtime-pet-species-assets" {
+		t.Fatalf("PetSpecies = %+v", merged.PetSpecies)
+	}
+	if merged.Badges.Store != "runtime-badges" || merged.Badges.AssetsStore != "runtime-badge-assets" {
+		t.Fatalf("Badges = %+v", merged.Badges)
+	}
+	if merged.Pets.Store != "runtime-pets" || merged.Rewards.Store != "runtime-rewards" || merged.Wallets.Store != "runtime-wallets" {
+		t.Fatalf("business stores = pets:%+v rewards:%+v wallets:%+v", merged.Pets, merged.Rewards, merged.Wallets)
+	}
+	if merged.SystemTasks.RewardClaim.Generator != "model/runtime-reward" || merged.SystemTasks.RewardClaim.Cooldown != "5m" || merged.SystemTasks.PetAction.Generator != "model/runtime-pet" {
+		t.Fatalf("SystemTasks = %+v", merged.SystemTasks)
 	}
 }
 
@@ -408,6 +480,11 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 		Workspaces:  WorkspacesConfig{Store: "workspaces"},
 		Workflows:   WorkflowsConfig{Store: "workflows"},
 		ACL:         ACLConfig{Store: "acl"},
+		PetSpecies:  AssetResourceConfig{Store: "pet-species", AssetsStore: "pet-species-assets"},
+		Badges:      AssetResourceConfig{Store: "badges", AssetsStore: "badge-assets"},
+		Pets:        StoreConfig{Store: "pets"},
+		Rewards:     StoreConfig{Store: "rewards"},
+		Wallets:     StoreConfig{Store: "wallets"},
 	}
 	tests := []struct {
 		name string
@@ -422,6 +499,9 @@ func TestValidateReportsLayeredStorageMissingFields(t *testing.T) {
 		{"missing workspaces", func(c *Config) { c.Workspaces.Store = "" }, "server: workspaces.store is required"},
 		{"missing workflows", func(c *Config) { c.Workflows.Store = "" }, "server: workflows.store is required"},
 		{"missing acl", func(c *Config) { c.ACL.Store = "" }, "server: acl.store is required"},
+		{"bad reward generator", func(c *Config) { c.SystemTasks.RewardClaim.Generator = "voice/main" }, "server: system_tasks.reward_claim.generator must match model/<id>"},
+		{"bad pet generator", func(c *Config) { c.SystemTasks.PetAction.Generator = "voice/main" }, "server: system_tasks.pet_action.generator must match model/<id>"},
+		{"bad cooldown", func(c *Config) { c.SystemTasks.RewardClaim.Cooldown = "soon" }, "server: system_tasks.reward_claim.cooldown: time: invalid duration \"soon\""},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -480,18 +560,26 @@ func validLayeredConfig(dir string) Config {
 		ListenAddr: ":1234",
 		Storage: map[string]storage.Config{
 			"memory":      {Kind: storage.KindKeyValue, Memory: &storage.MemoryConfig{}},
-			"local-files": {Kind: storage.KindFilesystem, FS: &storage.FSConfig{Dir: dir}},
+			"local-files": {Kind: storage.KindObjectStore, FS: &storage.FSConfig{Dir: dir}},
 			"acl-db":      {Kind: storage.KindSQL, SQLite: &storage.SQLConfig{Dir: filepath.Join(dir, "acl.sqlite")}},
+			"wallet-db":   {Kind: storage.KindSQL, SQLite: &storage.SQLConfig{Dir: filepath.Join(dir, "wallet.sqlite")}},
 		},
 		Stores: map[string]stores.Config{
-			"peers":           {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "peers"},
-			"credentials":     {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "credentials"},
-			"firmwares":       {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "firmwares"},
-			"minimax-tenants": {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "minimax-tenants"},
-			"voices":          {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "voices"},
-			"workspaces":      {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workspaces"},
-			"workflows":       {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workflows"},
-			"acl":             {Kind: stores.KindSQL, Storage: "acl-db"},
+			"peers":              {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "peers"},
+			"credentials":        {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "credentials"},
+			"firmwares":          {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "firmwares"},
+			"minimax-tenants":    {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "minimax-tenants"},
+			"voices":             {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "voices"},
+			"workspaces":         {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workspaces"},
+			"workflows":          {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "workflows"},
+			"pet-species":        {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "pet-species"},
+			"badges":             {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "badges"},
+			"pets":               {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "pets"},
+			"rewards":            {Kind: stores.KindKeyValue, Storage: "memory", Prefix: "rewards"},
+			"pet-species-assets": {Kind: stores.KindObjectStore, Storage: "local-files", Prefix: "pet-species"},
+			"badge-assets":       {Kind: stores.KindObjectStore, Storage: "local-files", Prefix: "badges"},
+			"wallets":            {Kind: stores.KindSQL, Storage: "wallet-db"},
+			"acl":                {Kind: stores.KindSQL, Storage: "acl-db"},
 		},
 		Peers:       PeersConfig{Store: "peers"},
 		Credentials: CredentialsConfig{Store: "credentials"},
@@ -504,5 +592,14 @@ func validLayeredConfig(dir string) Config {
 		Workspaces: WorkspacesConfig{Store: "workspaces"},
 		Workflows:  WorkflowsConfig{Store: "workflows"},
 		ACL:        ACLConfig{Store: "acl"},
+		PetSpecies: AssetResourceConfig{Store: "pet-species", AssetsStore: "pet-species-assets"},
+		Badges:     AssetResourceConfig{Store: "badges", AssetsStore: "badge-assets"},
+		Pets:       StoreConfig{Store: "pets"},
+		Rewards:    StoreConfig{Store: "rewards"},
+		Wallets:    StoreConfig{Store: "wallets"},
+		SystemTasks: SystemTasksConfig{
+			RewardClaim: RewardClaimTaskConfig{Generator: "model/reward-claim", Cooldown: "30m"},
+			PetAction:   GeneratorTaskConfig{Generator: "model/pet-action"},
+		},
 	}
 }

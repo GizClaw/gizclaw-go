@@ -355,6 +355,27 @@
       },
       "PeerStatus": {
         "$ref": "./type/peer_status.json#/components/schemas/PeerStatus"
+      },
+      "Badge": {
+        "$ref": "./type/badge.json#/components/schemas/Badge"
+      },
+      "BadgeSpec": {
+        "$ref": "./type/badge_spec.json#/components/schemas/BadgeSpec"
+      },
+      "BadgeResource": {
+        "$ref": "./resource/badge.json#/components/schemas/BadgeResource"
+      },
+      "PetSpecies": {
+        "$ref": "./type/pet_species.json#/components/schemas/PetSpecies"
+      },
+      "PetSpeciesSpec": {
+        "$ref": "./type/pet_species_spec.json#/components/schemas/PetSpeciesSpec"
+      },
+      "PetSpeciesResource": {
+        "$ref": "./resource/pet_species.json#/components/schemas/PetSpeciesResource"
+      },
+      "ZpetMetadata": {
+        "$ref": "./type/pet_species.json#/components/schemas/ZpetMetadata"
       }
     }
   }

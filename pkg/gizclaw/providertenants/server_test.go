@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/volcengine/volcengine-go-sdk/service/speechsaasprod"
-
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -939,11 +937,12 @@ func TestServerVolcTenantsCRUDAndSyncVoices(t *testing.T) {
 		UpdatedAt: srv.now(),
 	})
 	fakeClient := &fakeVolcSpeakerClient{
-		timbres: []volcPublicTimbre{
+		speakers: []volcSpeaker{
 			{
-				SpeakerID: "zh_female_public",
-				Name:      "Public Female",
-				Raw:       map[string]interface{}{"SpeakerID": "zh_female_public"},
+				VoiceType:  "zh_female_public",
+				Name:       "Public Female",
+				ResourceID: "seed-tts-2.0",
+				Raw:        map[string]interface{}{"VoiceType": "zh_female_public", "ResourceID": "seed-tts-2.0"},
 			},
 		},
 		pages: []*volcMegaTTSTrainStatusPage{{
@@ -1029,8 +1028,8 @@ func TestServerVolcTenantsCRUDAndSyncVoices(t *testing.T) {
 		if voice.Provider.Kind != volcProviderKind || voice.Provider.Name != "tenant-a" {
 			t.Fatalf("GetVoice(%s) provider = %#v", id, voice.Provider)
 		}
-		if id == "volc-tenant:tenant-a:zh_female_public" && voiceProviderDataString(apitypes.Voice(voice), "resource_id") != string(volcPublicResourceID) {
-			t.Fatalf("GetVoice(%s) resource_id = %q, want %s", id, voiceProviderDataString(apitypes.Voice(voice), "resource_id"), volcPublicResourceID)
+		if id == "volc-tenant:tenant-a:zh_female_public" && voiceProviderDataString(apitypes.Voice(voice), "resource_id") != "seed-tts-2.0" {
+			t.Fatalf("GetVoice(%s) resource_id = %q, want seed-tts-2.0", id, voiceProviderDataString(apitypes.Voice(voice), "resource_id"))
 		}
 		for _, removedKey := range []string{"source", "source_api", "speaker_id_prefix"} {
 			if value := voiceProviderDataString(apitypes.Voice(voice), removedKey); value != "" {
@@ -1039,11 +1038,12 @@ func TestServerVolcTenantsCRUDAndSyncVoices(t *testing.T) {
 		}
 	}
 
-	fakeClient.timbres = []volcPublicTimbre{
+	fakeClient.speakers = []volcSpeaker{
 		{
-			SpeakerID: "zh_female_public",
-			Name:      "Public Female Updated",
-			Raw:       map[string]interface{}{"SpeakerID": "zh_female_public", "version": "2"},
+			VoiceType:  "zh_female_public",
+			Name:       "Public Female Updated",
+			ResourceID: "seed-tts-2.0",
+			Raw:        map[string]interface{}{"VoiceType": "zh_female_public", "ResourceID": "seed-tts-2.0", "version": "2"},
 		},
 	}
 	fakeClient.pages = []*volcMegaTTSTrainStatusPage{{
@@ -1211,7 +1211,7 @@ func TestServerVolcTenantErrorResponses(t *testing.T) {
 	}
 
 	srv.VolcSpeakerClientFactory = func(context.Context, apitypes.Credential, apitypes.VolcTenant) (VolcSpeakerClient, error) {
-		return &fakeVolcSpeakerClient{timbresErr: errors.New("upstream unavailable")}, nil
+		return &fakeVolcSpeakerClient{speakersErr: errors.New("speakers unavailable"), timbresErr: errors.New("timbres unavailable")}, nil
 	}
 	if resp, err := srv.SyncVolcTenantVoices(ctx, adminservice.SyncVolcTenantVoicesRequestObject{Name: "tenant-a"}); err != nil {
 		t.Fatalf("SyncVolcTenantVoices(upstream error) error = %v", err)
@@ -1263,9 +1263,9 @@ func TestServerVolcSyncPublicOnlySkipsTrainStatusAPI(t *testing.T) {
 		UpdatedAt: srv.now(),
 	})
 	fakeClient := &fakeVolcSpeakerClient{
-		timbres: []volcPublicTimbre{
-			{SpeakerID: "public-a", Name: "Public A", Raw: map[string]interface{}{"SpeakerID": "public-a"}},
-			{SpeakerID: "public-b", Name: "Public B", Raw: map[string]interface{}{"SpeakerID": "public-b"}},
+		speakers: []volcSpeaker{
+			{VoiceType: "public-a", Name: "Public A", ResourceID: "seed-tts-2.0", Raw: map[string]interface{}{"VoiceType": "public-a", "ResourceID": "seed-tts-2.0"}},
+			{VoiceType: "public-b", Name: "Public B", ResourceID: "seed-icl-2.0", Raw: map[string]interface{}{"VoiceType": "public-b", "ResourceID": "seed-icl-2.0"}},
 		},
 	}
 	srv.VolcSpeakerClientFactory = func(context.Context, apitypes.Credential, apitypes.VolcTenant) (VolcSpeakerClient, error) {
@@ -1295,8 +1295,58 @@ func TestServerVolcSyncPublicOnlySkipsTrainStatusAPI(t *testing.T) {
 		t.Fatalf("BatchListMegaTTSTrainStatus requests = %#v, want none", fakeClient.requestedResourceIDs)
 	}
 	voice := requireStoredVoice(t, srv, ctx, "volc-tenant:tenant-a:public-a")
-	if voiceProviderDataString(voice, "resource_id") != string(volcPublicResourceID) {
-		t.Fatalf("resource_id = %q, want %s", voiceProviderDataString(voice, "resource_id"), volcPublicResourceID)
+	if voiceProviderDataString(voice, "resource_id") != "seed-tts-2.0" {
+		t.Fatalf("resource_id = %q, want seed-tts-2.0", voiceProviderDataString(voice, "resource_id"))
+	}
+}
+
+func TestServerVolcSyncTimbreFallbackMapsICLResourceID(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	ctx := context.Background()
+	seedCredential(t, srv, apitypes.Credential{
+		Name:      "volc-main",
+		Provider:  "volcengine",
+		Method:    apitypes.CredentialMethodApiKey,
+		Body:      apitypes.CredentialBody{"access_key_id": "ak", "secret_access_key": "sk"},
+		CreatedAt: srv.now(),
+		UpdatedAt: srv.now(),
+	})
+	fakeClient := &fakeVolcSpeakerClient{
+		speakersErr: errors.New("ListSpeakers unsupported"),
+		timbres: []volcPublicTimbre{
+			{SpeakerID: "ICL_en_female_cc_cm_v1_tob", Name: "Charlie", Raw: map[string]interface{}{"SpeakerID": "ICL_en_female_cc_cm_v1_tob"}},
+			{SpeakerID: "zh_female_vv_uranus_bigtts", Name: "VV", Raw: map[string]interface{}{"SpeakerID": "zh_female_vv_uranus_bigtts"}},
+		},
+	}
+	srv.VolcSpeakerClientFactory = func(context.Context, apitypes.Credential, apitypes.VolcTenant) (VolcSpeakerClient, error) {
+		return fakeClient, nil
+	}
+	resourceIDs := []string{"seed-tts-1.0", "seed-tts-2.0", "seed-icl-2.0"}
+	createBody := adminservice.VolcTenantUpsert{
+		AppId:          "app-1",
+		Name:           "tenant-a",
+		CredentialName: "volc-main",
+		ResourceIds:    &resourceIDs,
+	}
+	if _, err := srv.CreateVolcTenant(ctx, adminservice.CreateVolcTenantRequestObject{Body: &createBody}); err != nil {
+		t.Fatalf("CreateVolcTenant() error = %v", err)
+	}
+	syncResp, err := srv.SyncVolcTenantVoices(ctx, adminservice.SyncVolcTenantVoicesRequestObject{Name: "tenant-a"})
+	if err != nil {
+		t.Fatalf("SyncVolcTenantVoices() error = %v", err)
+	}
+	if synced, ok := syncResp.(adminservice.SyncVolcTenantVoices200JSONResponse); !ok || synced.CreatedCount != 2 {
+		t.Fatalf("SyncVolcTenantVoices() response = %#v", syncResp)
+	}
+	icl := requireStoredVoice(t, srv, ctx, "volc-tenant:tenant-a:ICL_en_female_cc_cm_v1_tob")
+	if got := voiceProviderDataString(icl, "resource_id"); got != "seed-tts-1.0" {
+		t.Fatalf("ICL resource_id = %q, want seed-tts-1.0", got)
+	}
+	tts := requireStoredVoice(t, srv, ctx, "volc-tenant:tenant-a:zh_female_vv_uranus_bigtts")
+	if got := voiceProviderDataString(tts, "resource_id"); got != "seed-tts-2.0" {
+		t.Fatalf("TTS resource_id = %q, want seed-tts-2.0", got)
 	}
 }
 
@@ -1406,17 +1456,11 @@ func TestVolcCredentialAndResourceHelpers(t *testing.T) {
 	if region != "cn-shanghai" {
 		t.Fatalf("volcRegion() = %q", region)
 	}
-	if got := firstVolcTimbreSpeakerName([]*speechsaasprod.TimbreInfoForListBigModelTTSTimbresOutput{{SpeakerName: stringPtr(" first ")}}); got != "first" {
-		t.Fatalf("firstVolcTimbreSpeakerName() = %q", got)
-	}
 	if got := stringValue(nil); got != "" {
 		t.Fatalf("stringValue(nil) = %q", got)
 	}
 	if volcRegion(apitypes.VolcTenant{}) != defaultVolcRegion {
 		t.Fatalf("volcRegion(empty) = %q", volcRegion(apitypes.VolcTenant{}))
-	}
-	if got := firstVolcTimbreSpeakerName([]*speechsaasprod.TimbreInfoForListBigModelTTSTimbresOutput{nil, {SpeakerName: stringPtr("  ")}}); got != "" {
-		t.Fatalf("firstVolcTimbreSpeakerName(empty) = %q", got)
 	}
 	raw := rawStructToMap(struct {
 		SpeakerID string
@@ -1550,11 +1594,28 @@ func TestVolcMegaTTSTrainStatusPagePreservesRawStatus(t *testing.T) {
 }
 
 type fakeVolcSpeakerClient struct {
+	speakers             []volcSpeaker
+	speakersErr          error
 	timbres              []volcPublicTimbre
 	timbresErr           error
 	pages                []*volcMegaTTSTrainStatusPage
 	trainStatusErr       error
 	requestedResourceIDs [][]string
+}
+
+func (f *fakeVolcSpeakerClient) ListSpeakersWithContext(_ context.Context, _ []string, pageNumber, pageSize int32) (*volcSpeakersPage, error) {
+	if f.speakersErr != nil {
+		return nil, f.speakersErr
+	}
+	if pageNumber > 1 {
+		return &volcSpeakersPage{PageNumber: pageNumber, PageSize: pageSize, Total: int32(len(f.speakers))}, nil
+	}
+	return &volcSpeakersPage{
+		PageNumber: pageNumber,
+		PageSize:   pageSize,
+		Speakers:   append([]volcSpeaker(nil), f.speakers...),
+		Total:      int32(len(f.speakers)),
+	}, nil
 }
 
 func (f *fakeVolcSpeakerClient) ListBigModelTTSTimbresWithContext(context.Context) ([]volcPublicTimbre, error) {

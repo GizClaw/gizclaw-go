@@ -18,8 +18,11 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/model"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peerrun"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/pet"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/providertenants"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/reward"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/voice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/wallet"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -45,6 +48,9 @@ type Manager struct {
 	Models      model.ModelAdminService
 	Credentials credential.CredentialAdminService
 	Voices      voice.VoiceAdminService
+	Pets        *pet.Server
+	Wallets     *wallet.Server
+	Rewards     *reward.Server
 
 	ProviderTenants providertenants.ProviderTenantsAdminService
 

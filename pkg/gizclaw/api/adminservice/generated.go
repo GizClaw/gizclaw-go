@@ -715,6 +715,12 @@ type ClientInterface interface {
 
 	PutACLView(ctx context.Context, name string, body PutACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// DownloadBadgeIcon request
+	DownloadBadgeIcon(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UploadBadgeIconWithBody request with any body
+	UploadBadgeIconWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// ListCredentials request
 	ListCredentials(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -901,6 +907,12 @@ type ClientInterface interface {
 
 	// GetPeerRuntime request
 	GetPeerRuntime(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DownloadPetSpeciesZpet request
+	DownloadPetSpeciesZpet(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UploadPetSpeciesZpetWithBody request with any body
+	UploadPetSpeciesZpetWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteResource request
 	DeleteResource(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -1259,6 +1271,30 @@ func (c *Client) PutACLViewWithBody(ctx context.Context, name string, contentTyp
 
 func (c *Client) PutACLView(ctx context.Context, name string, body PutACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutACLViewRequest(c.Server, name, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DownloadBadgeIcon(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDownloadBadgeIconRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UploadBadgeIconWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUploadBadgeIconRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -2075,6 +2111,30 @@ func (c *Client) PutPeerInfo(ctx context.Context, publicKey string, body PutPeer
 
 func (c *Client) GetPeerRuntime(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetPeerRuntimeRequest(c.Server, publicKey)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DownloadPetSpeciesZpet(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDownloadPetSpeciesZpetRequest(c.Server, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UploadPetSpeciesZpetWithBody(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUploadPetSpeciesZpetRequestWithBody(c.Server, id, contentType, body)
 	if err != nil {
 		return nil, err
 	}
@@ -3274,6 +3334,76 @@ func NewPutACLViewRequestWithBody(server string, name string, contentType string
 	}
 
 	operationPath := fmt.Sprintf("/acl/views/%s", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDownloadBadgeIconRequest generates requests for DownloadBadgeIcon
+func NewDownloadBadgeIconRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/badges/%s/icon", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUploadBadgeIconRequestWithBody generates requests for UploadBadgeIcon with any type of body
+func NewUploadBadgeIconRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/badges/%s/icon", pathParam0)
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -5518,6 +5648,76 @@ func NewGetPeerRuntimeRequest(server string, publicKey string) (*http.Request, e
 	return req, nil
 }
 
+// NewDownloadPetSpeciesZpetRequest generates requests for DownloadPetSpeciesZpet
+func NewDownloadPetSpeciesZpetRequest(server string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/pet-species/%s/zpet", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUploadPetSpeciesZpetRequestWithBody generates requests for UploadPetSpeciesZpet with any type of body
+func NewUploadPetSpeciesZpetRequestWithBody(server string, id string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/pet-species/%s/zpet", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("PUT", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 // NewDeleteResourceRequest generates requests for DeleteResource
 func NewDeleteResourceRequest(server string, kind ResourceKind, name string) (*http.Request, error) {
 	var err error
@@ -6721,6 +6921,12 @@ type ClientWithResponsesInterface interface {
 
 	PutACLViewWithResponse(ctx context.Context, name string, body PutACLViewJSONRequestBody, reqEditors ...RequestEditorFn) (*PutACLViewResponse, error)
 
+	// DownloadBadgeIconWithResponse request
+	DownloadBadgeIconWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DownloadBadgeIconResponse, error)
+
+	// UploadBadgeIconWithBodyWithResponse request with any body
+	UploadBadgeIconWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadBadgeIconResponse, error)
+
 	// ListCredentialsWithResponse request
 	ListCredentialsWithResponse(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*ListCredentialsResponse, error)
 
@@ -6907,6 +7113,12 @@ type ClientWithResponsesInterface interface {
 
 	// GetPeerRuntimeWithResponse request
 	GetPeerRuntimeWithResponse(ctx context.Context, publicKey string, reqEditors ...RequestEditorFn) (*GetPeerRuntimeResponse, error)
+
+	// DownloadPetSpeciesZpetWithResponse request
+	DownloadPetSpeciesZpetWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DownloadPetSpeciesZpetResponse, error)
+
+	// UploadPetSpeciesZpetWithBodyWithResponse request with any body
+	UploadPetSpeciesZpetWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadPetSpeciesZpetResponse, error)
 
 	// DeleteResourceWithResponse request
 	DeleteResourceWithResponse(ctx context.Context, kind ResourceKind, name string, reqEditors ...RequestEditorFn) (*DeleteResourceResponse, error)
@@ -7379,6 +7591,55 @@ func (r PutACLViewResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r PutACLViewResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DownloadBadgeIconResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DownloadBadgeIconResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DownloadBadgeIconResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UploadBadgeIconResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.Badge
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UploadBadgeIconResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UploadBadgeIconResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -8604,6 +8865,55 @@ func (r GetPeerRuntimeResponse) StatusCode() int {
 	return 0
 }
 
+type DownloadPetSpeciesZpetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DownloadPetSpeciesZpetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DownloadPetSpeciesZpetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UploadPetSpeciesZpetResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.PetSpecies
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r UploadPetSpeciesZpetResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UploadPetSpeciesZpetResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type DeleteResourceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -9390,6 +9700,24 @@ func (c *ClientWithResponses) PutACLViewWithResponse(ctx context.Context, name s
 	return ParsePutACLViewResponse(rsp)
 }
 
+// DownloadBadgeIconWithResponse request returning *DownloadBadgeIconResponse
+func (c *ClientWithResponses) DownloadBadgeIconWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DownloadBadgeIconResponse, error) {
+	rsp, err := c.DownloadBadgeIcon(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDownloadBadgeIconResponse(rsp)
+}
+
+// UploadBadgeIconWithBodyWithResponse request with arbitrary body returning *UploadBadgeIconResponse
+func (c *ClientWithResponses) UploadBadgeIconWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadBadgeIconResponse, error) {
+	rsp, err := c.UploadBadgeIconWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUploadBadgeIconResponse(rsp)
+}
+
 // ListCredentialsWithResponse request returning *ListCredentialsResponse
 func (c *ClientWithResponses) ListCredentialsWithResponse(ctx context.Context, params *ListCredentialsParams, reqEditors ...RequestEditorFn) (*ListCredentialsResponse, error) {
 	rsp, err := c.ListCredentials(ctx, params, reqEditors...)
@@ -9983,6 +10311,24 @@ func (c *ClientWithResponses) GetPeerRuntimeWithResponse(ctx context.Context, pu
 		return nil, err
 	}
 	return ParseGetPeerRuntimeResponse(rsp)
+}
+
+// DownloadPetSpeciesZpetWithResponse request returning *DownloadPetSpeciesZpetResponse
+func (c *ClientWithResponses) DownloadPetSpeciesZpetWithResponse(ctx context.Context, id string, reqEditors ...RequestEditorFn) (*DownloadPetSpeciesZpetResponse, error) {
+	rsp, err := c.DownloadPetSpeciesZpet(ctx, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDownloadPetSpeciesZpetResponse(rsp)
+}
+
+// UploadPetSpeciesZpetWithBodyWithResponse request with arbitrary body returning *UploadPetSpeciesZpetResponse
+func (c *ClientWithResponses) UploadPetSpeciesZpetWithBodyWithResponse(ctx context.Context, id string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UploadPetSpeciesZpetResponse, error) {
+	rsp, err := c.UploadPetSpeciesZpetWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUploadPetSpeciesZpetResponse(rsp)
 }
 
 // DeleteResourceWithResponse request returning *DeleteResourceResponse
@@ -10914,6 +11260,93 @@ func ParsePutACLViewResponse(rsp *http.Response) (*PutACLViewResponse, error) {
 			return nil, err
 		}
 		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDownloadBadgeIconResponse parses an HTTP response from a DownloadBadgeIconWithResponse call
+func ParseDownloadBadgeIconResponse(rsp *http.Response) (*DownloadBadgeIconResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DownloadBadgeIconResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUploadBadgeIconResponse parses an HTTP response from a UploadBadgeIconWithResponse call
+func ParseUploadBadgeIconResponse(rsp *http.Response) (*UploadBadgeIconResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UploadBadgeIconResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.Badge
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
 
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
 		var dest externalRef0.ErrorResponse
@@ -12932,6 +13365,93 @@ func ParseGetPeerRuntimeResponse(rsp *http.Response) (*GetPeerRuntimeResponse, e
 	return response, nil
 }
 
+// ParseDownloadPetSpeciesZpetResponse parses an HTTP response from a DownloadPetSpeciesZpetWithResponse call
+func ParseDownloadPetSpeciesZpetResponse(rsp *http.Response) (*DownloadPetSpeciesZpetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DownloadPetSpeciesZpetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUploadPetSpeciesZpetResponse parses an HTTP response from a UploadPetSpeciesZpetWithResponse call
+func ParseUploadPetSpeciesZpetResponse(rsp *http.Response) (*UploadPetSpeciesZpetResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UploadPetSpeciesZpetResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.PetSpecies
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseDeleteResourceResponse parses an HTTP response from a DeleteResourceWithResponse call
 func ParseDeleteResourceResponse(rsp *http.Response) (*DeleteResourceResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -14012,6 +14532,12 @@ type ServerInterface interface {
 	// Create or update an ACL view
 	// (PUT /acl/views/{name})
 	PutACLView(c *fiber.Ctx, name string) error
+	// Download a badge icon
+	// (GET /badges/{id}/icon)
+	DownloadBadgeIcon(c *fiber.Ctx, id string) error
+	// Upload a badge icon
+	// (PUT /badges/{id}/icon)
+	UploadBadgeIcon(c *fiber.Ctx, id string) error
 	// List stored credentials
 	// (GET /credentials)
 	ListCredentials(c *fiber.Ctx, params ListCredentialsParams) error
@@ -14165,6 +14691,12 @@ type ServerInterface interface {
 	// Get peer runtime status
 	// (GET /peers/{publicKey}/runtime)
 	GetPeerRuntime(c *fiber.Ctx, publicKey string) error
+	// Download a pet species zpet file
+	// (GET /pet-species/{id}/zpet)
+	DownloadPetSpeciesZpet(c *fiber.Ctx, id string) error
+	// Upload a pet species zpet file
+	// (PUT /pet-species/{id}/zpet)
+	UploadPetSpeciesZpet(c *fiber.Ctx, id string) error
 	// Delete an admin resource
 	// (DELETE /resources/{kind}/{name})
 	DeleteResource(c *fiber.Ctx, kind ResourceKind, name string) error
@@ -14554,6 +15086,38 @@ func (siw *ServerInterfaceWrapper) PutACLView(c *fiber.Ctx) error {
 	}
 
 	return siw.Handler.PutACLView(c, name)
+}
+
+// DownloadBadgeIcon operation middleware
+func (siw *ServerInterfaceWrapper) DownloadBadgeIcon(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.DownloadBadgeIcon(c, id)
+}
+
+// UploadBadgeIcon operation middleware
+func (siw *ServerInterfaceWrapper) UploadBadgeIcon(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.UploadBadgeIcon(c, id)
 }
 
 // ListCredentials operation middleware
@@ -15458,6 +16022,38 @@ func (siw *ServerInterfaceWrapper) GetPeerRuntime(c *fiber.Ctx) error {
 	return siw.Handler.GetPeerRuntime(c, publicKey)
 }
 
+// DownloadPetSpeciesZpet operation middleware
+func (siw *ServerInterfaceWrapper) DownloadPetSpeciesZpet(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.DownloadPetSpeciesZpet(c, id)
+}
+
+// UploadPetSpeciesZpet operation middleware
+func (siw *ServerInterfaceWrapper) UploadPetSpeciesZpet(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.UploadPetSpeciesZpet(c, id)
+}
+
 // DeleteResource operation middleware
 func (siw *ServerInterfaceWrapper) DeleteResource(c *fiber.Ctx) error {
 
@@ -15960,6 +16556,10 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 
 	router.Put(options.BaseURL+"/acl/views/:name", wrapper.PutACLView)
 
+	router.Get(options.BaseURL+"/badges/:id/icon", wrapper.DownloadBadgeIcon)
+
+	router.Put(options.BaseURL+"/badges/:id/icon", wrapper.UploadBadgeIcon)
+
 	router.Get(options.BaseURL+"/credentials", wrapper.ListCredentials)
 
 	router.Post(options.BaseURL+"/credentials", wrapper.CreateCredential)
@@ -16061,6 +16661,10 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Put(options.BaseURL+"/peers/:publicKey/info", wrapper.PutPeerInfo)
 
 	router.Get(options.BaseURL+"/peers/:publicKey/runtime", wrapper.GetPeerRuntime)
+
+	router.Get(options.BaseURL+"/pet-species/:id/zpet", wrapper.DownloadPetSpeciesZpet)
+
+	router.Put(options.BaseURL+"/pet-species/:id/zpet", wrapper.UploadPetSpeciesZpet)
 
 	router.Delete(options.BaseURL+"/resources/:kind/:name", wrapper.DeleteResource)
 
@@ -16688,6 +17292,105 @@ func (response PutACLView400JSONResponse) VisitPutACLViewResponse(ctx *fiber.Ctx
 type PutACLView500JSONResponse externalRef0.ErrorResponse
 
 func (response PutACLView500JSONResponse) VisitPutACLViewResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DownloadBadgeIconRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DownloadBadgeIconResponseObject interface {
+	VisitDownloadBadgeIconResponse(ctx *fiber.Ctx) error
+}
+
+type DownloadBadgeIcon200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response DownloadBadgeIcon200ApplicationoctetStreamResponse) VisitDownloadBadgeIconResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		ctx.Response().Header.Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	ctx.Status(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(ctx.Response().BodyWriter(), response.Body)
+	return err
+}
+
+type DownloadBadgeIcon400JSONResponse externalRef0.ErrorResponse
+
+func (response DownloadBadgeIcon400JSONResponse) VisitDownloadBadgeIconResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type DownloadBadgeIcon404JSONResponse externalRef0.ErrorResponse
+
+func (response DownloadBadgeIcon404JSONResponse) VisitDownloadBadgeIconResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DownloadBadgeIcon500JSONResponse externalRef0.ErrorResponse
+
+func (response DownloadBadgeIcon500JSONResponse) VisitDownloadBadgeIconResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type UploadBadgeIconRequestObject struct {
+	Id   string `json:"id"`
+	Body io.Reader
+}
+
+type UploadBadgeIconResponseObject interface {
+	VisitUploadBadgeIconResponse(ctx *fiber.Ctx) error
+}
+
+type UploadBadgeIcon200JSONResponse externalRef0.Badge
+
+func (response UploadBadgeIcon200JSONResponse) VisitUploadBadgeIconResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type UploadBadgeIcon400JSONResponse externalRef0.ErrorResponse
+
+func (response UploadBadgeIcon400JSONResponse) VisitUploadBadgeIconResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type UploadBadgeIcon404JSONResponse externalRef0.ErrorResponse
+
+func (response UploadBadgeIcon404JSONResponse) VisitUploadBadgeIconResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type UploadBadgeIcon500JSONResponse externalRef0.ErrorResponse
+
+func (response UploadBadgeIcon500JSONResponse) VisitUploadBadgeIconResponse(ctx *fiber.Ctx) error {
 	ctx.Response().Header.Set("Content-Type", "application/json")
 	ctx.Status(500)
 
@@ -18445,6 +19148,105 @@ func (response GetPeerRuntime200JSONResponse) VisitGetPeerRuntimeResponse(ctx *f
 	return ctx.JSON(&response)
 }
 
+type DownloadPetSpeciesZpetRequestObject struct {
+	Id string `json:"id"`
+}
+
+type DownloadPetSpeciesZpetResponseObject interface {
+	VisitDownloadPetSpeciesZpetResponse(ctx *fiber.Ctx) error
+}
+
+type DownloadPetSpeciesZpet200ApplicationoctetStreamResponse struct {
+	Body          io.Reader
+	ContentLength int64
+}
+
+func (response DownloadPetSpeciesZpet200ApplicationoctetStreamResponse) VisitDownloadPetSpeciesZpetResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/octet-stream")
+	if response.ContentLength != 0 {
+		ctx.Response().Header.Set("Content-Length", fmt.Sprint(response.ContentLength))
+	}
+	ctx.Status(200)
+
+	if closer, ok := response.Body.(io.ReadCloser); ok {
+		defer closer.Close()
+	}
+	_, err := io.Copy(ctx.Response().BodyWriter(), response.Body)
+	return err
+}
+
+type DownloadPetSpeciesZpet400JSONResponse externalRef0.ErrorResponse
+
+func (response DownloadPetSpeciesZpet400JSONResponse) VisitDownloadPetSpeciesZpetResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type DownloadPetSpeciesZpet404JSONResponse externalRef0.ErrorResponse
+
+func (response DownloadPetSpeciesZpet404JSONResponse) VisitDownloadPetSpeciesZpetResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DownloadPetSpeciesZpet500JSONResponse externalRef0.ErrorResponse
+
+func (response DownloadPetSpeciesZpet500JSONResponse) VisitDownloadPetSpeciesZpetResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type UploadPetSpeciesZpetRequestObject struct {
+	Id   string `json:"id"`
+	Body io.Reader
+}
+
+type UploadPetSpeciesZpetResponseObject interface {
+	VisitUploadPetSpeciesZpetResponse(ctx *fiber.Ctx) error
+}
+
+type UploadPetSpeciesZpet200JSONResponse externalRef0.PetSpecies
+
+func (response UploadPetSpeciesZpet200JSONResponse) VisitUploadPetSpeciesZpetResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type UploadPetSpeciesZpet400JSONResponse externalRef0.ErrorResponse
+
+func (response UploadPetSpeciesZpet400JSONResponse) VisitUploadPetSpeciesZpetResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type UploadPetSpeciesZpet404JSONResponse externalRef0.ErrorResponse
+
+func (response UploadPetSpeciesZpet404JSONResponse) VisitUploadPetSpeciesZpetResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type UploadPetSpeciesZpet500JSONResponse externalRef0.ErrorResponse
+
+func (response UploadPetSpeciesZpet500JSONResponse) VisitUploadPetSpeciesZpetResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
 type DeleteResourceRequestObject struct {
 	Kind ResourceKind `json:"kind"`
 	Name string       `json:"name"`
@@ -19434,6 +20236,12 @@ type StrictServerInterface interface {
 	// Create or update an ACL view
 	// (PUT /acl/views/{name})
 	PutACLView(ctx context.Context, request PutACLViewRequestObject) (PutACLViewResponseObject, error)
+	// Download a badge icon
+	// (GET /badges/{id}/icon)
+	DownloadBadgeIcon(ctx context.Context, request DownloadBadgeIconRequestObject) (DownloadBadgeIconResponseObject, error)
+	// Upload a badge icon
+	// (PUT /badges/{id}/icon)
+	UploadBadgeIcon(ctx context.Context, request UploadBadgeIconRequestObject) (UploadBadgeIconResponseObject, error)
 	// List stored credentials
 	// (GET /credentials)
 	ListCredentials(ctx context.Context, request ListCredentialsRequestObject) (ListCredentialsResponseObject, error)
@@ -19587,6 +20395,12 @@ type StrictServerInterface interface {
 	// Get peer runtime status
 	// (GET /peers/{publicKey}/runtime)
 	GetPeerRuntime(ctx context.Context, request GetPeerRuntimeRequestObject) (GetPeerRuntimeResponseObject, error)
+	// Download a pet species zpet file
+	// (GET /pet-species/{id}/zpet)
+	DownloadPetSpeciesZpet(ctx context.Context, request DownloadPetSpeciesZpetRequestObject) (DownloadPetSpeciesZpetResponseObject, error)
+	// Upload a pet species zpet file
+	// (PUT /pet-species/{id}/zpet)
+	UploadPetSpeciesZpet(ctx context.Context, request UploadPetSpeciesZpetRequestObject) (UploadPetSpeciesZpetResponseObject, error)
 	// Delete an admin resource
 	// (DELETE /resources/{kind}/{name})
 	DeleteResource(ctx context.Context, request DeleteResourceRequestObject) (DeleteResourceResponseObject, error)
@@ -20139,6 +20953,62 @@ func (sh *strictHandler) PutACLView(ctx *fiber.Ctx, name string) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(PutACLViewResponseObject); ok {
 		if err := validResponse.VisitPutACLViewResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DownloadBadgeIcon operation middleware
+func (sh *strictHandler) DownloadBadgeIcon(ctx *fiber.Ctx, id string) error {
+	var request DownloadBadgeIconRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DownloadBadgeIcon(ctx.UserContext(), request.(DownloadBadgeIconRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DownloadBadgeIcon")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DownloadBadgeIconResponseObject); ok {
+		if err := validResponse.VisitDownloadBadgeIconResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// UploadBadgeIcon operation middleware
+func (sh *strictHandler) UploadBadgeIcon(ctx *fiber.Ctx, id string) error {
+	var request UploadBadgeIconRequestObject
+
+	request.Id = id
+
+	request.Body = bytes.NewReader(ctx.Request().Body())
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadBadgeIcon(ctx.UserContext(), request.(UploadBadgeIconRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadBadgeIcon")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(UploadBadgeIconResponseObject); ok {
+		if err := validResponse.VisitUploadBadgeIconResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
@@ -21605,6 +22475,62 @@ func (sh *strictHandler) GetPeerRuntime(ctx *fiber.Ctx, publicKey string) error 
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(GetPeerRuntimeResponseObject); ok {
 		if err := validResponse.VisitGetPeerRuntimeResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DownloadPetSpeciesZpet operation middleware
+func (sh *strictHandler) DownloadPetSpeciesZpet(ctx *fiber.Ctx, id string) error {
+	var request DownloadPetSpeciesZpetRequestObject
+
+	request.Id = id
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DownloadPetSpeciesZpet(ctx.UserContext(), request.(DownloadPetSpeciesZpetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DownloadPetSpeciesZpet")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DownloadPetSpeciesZpetResponseObject); ok {
+		if err := validResponse.VisitDownloadPetSpeciesZpetResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// UploadPetSpeciesZpet operation middleware
+func (sh *strictHandler) UploadPetSpeciesZpet(ctx *fiber.Ctx, id string) error {
+	var request UploadPetSpeciesZpetRequestObject
+
+	request.Id = id
+
+	request.Body = bytes.NewReader(ctx.Request().Body())
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadPetSpeciesZpet(ctx.UserContext(), request.(UploadPetSpeciesZpetRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadPetSpeciesZpet")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(UploadPetSpeciesZpetResponseObject); ok {
+		if err := validResponse.VisitUploadPetSpeciesZpetResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {

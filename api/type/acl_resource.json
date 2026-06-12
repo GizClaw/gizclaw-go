@@ -18,15 +18,13 @@
           "credential",
           "model",
           "view",
-          "pet",
-          "wallet",
           "contact",
           "friend",
           "friend_request",
           "group",
           "call",
-          "game_result",
-          "reward"
+          "pet_species",
+          "badge"
         ]
       },
       "ACLResource": {

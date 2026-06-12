@@ -34,12 +34,13 @@ Server Service
 ├── server.credential.{list,get,create,put,delete}
 ├── server.run.agent.{get,set}
 ├── server.run.{reload,status,stop}
-├── server.pet.{list,get,create,put,delete}
+├── server.pet.{list,get,adopt,put,delete}
 ├── server.pet.feed
+├── server.pet.wash
 ├── server.pet.play
-├── server.pet.level-up
 ├── server.wallet.get
 ├── server.wallet.transactions.list
+├── server.wallet.transactions.get
 ├── server.contact.{list,get,create,put,delete}
 ├── server.contact.block
 ├── server.contact.unblock
@@ -54,8 +55,7 @@ Server Service
 ├── server.call.answer
 ├── server.call.reject
 ├── server.call.end
-├── server.game.results.create
-├── server.reward.{list,get,create}
+├── server.reward.{list,get}
 └── server.reward.claim
 
 Admin Service
@@ -64,6 +64,10 @@ Admin Service
 ├── /acl/views/{name} LIST, CREATE, GET, PUT, DELETE
 ├── /acl/roles/{name} LIST, CREATE, GET, PUT, DELETE
 ├── /acl/policy-bindings/{id} LIST, CREATE, GET, PUT, DELETE
+├── /pet-species/{id} LIST, CREATE, GET, PUT, DELETE
+│   └── /zpet GET, PUT
+├── /badges/{id} LIST, CREATE, GET, PUT, DELETE
+│   └── /icon GET, PUT
 ├── /workflows/{name} LIST, CREATE, GET, PUT, DELETE
 ├── /firmwares/{name} LIST, CREATE, GET, PUT, DELETE
 │   ├── @release

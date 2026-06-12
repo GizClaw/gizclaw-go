@@ -23,8 +23,9 @@ type DefaultBuilder struct {
 }
 
 const (
-	defaultTTSAudioFormat     = "pcm"
+	defaultTTSAudioFormat     = "mp3"
 	defaultTTSAudioSampleRate = 16000
+	defaultMiniMaxBaseURL     = "https://api.minimax.io"
 )
 
 func (b DefaultBuilder) BuildGenerator(ctx context.Context, cfg GeneratorConfig) (genx.Generator, error) {
@@ -180,6 +181,9 @@ func (b DefaultBuilder) buildVolcTTS(cfg TransformerConfig) (genx.Transformer, e
 	if value, ok := mapInt(data, "sample_rate"); ok {
 		opts = append(opts, transformers.WithDoubaoTTSSeedV2SampleRate(value))
 	}
+	if value := mapString(data, "resource_id"); value != "" {
+		opts = append(opts, transformers.WithDoubaoTTSSeedV2ResourceID(value))
+	}
 	client := doubaospeech.NewClient(cfg.Tenant.Volc.AppId, doubaospeech.WithBearerToken(token))
 	return transformers.NewDoubaoTTSSeedV2(client, voiceID, opts...), nil
 }
@@ -197,9 +201,9 @@ func (b DefaultBuilder) buildMiniMaxTTS(cfg TransformerConfig) (genx.Transformer
 	if voiceID == "" {
 		return nil, fmt.Errorf("%w: voice %q missing voice_id", ErrInvalid, cfg.Voice.Id)
 	}
-	clientConfig := minimax.Config{APIKey: apiKey}
-	if baseURL := firstString(cfg.Tenant.MiniMax.BaseUrl, credentialBodyString(cfg.Credential.Body, "base_url")); baseURL != "" {
-		clientConfig.BaseURL = baseURL
+	clientConfig := minimax.Config{
+		APIKey:  apiKey,
+		BaseURL: firstString(cfg.Tenant.MiniMax.BaseUrl, credentialBodyString(cfg.Credential.Body, "base_url"), defaultMiniMaxBaseURL),
 	}
 	client, err := minimax.NewClient(clientConfig)
 	if err != nil {

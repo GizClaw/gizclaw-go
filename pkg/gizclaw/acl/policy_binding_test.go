@@ -96,6 +96,29 @@ func TestCreatePolicyBindingGeneratesID(t *testing.T) {
 	}
 }
 
+func TestPolicyBindingAllowsProviderScopedResourceIDs(t *testing.T) {
+	server := migratedTestServer(t)
+	ctx := context.Background()
+	if _, err := server.CreateRole(ctx, "voice-reader", apitypes.ACLPermissionList{"voice.read"}); err != nil {
+		t.Fatalf("CreateRole() error = %v", err)
+	}
+	resource := VoiceResource("minimax-tenant:minimax-cn:Arabic_CalmWoman")
+	if _, err := server.CreatePolicyBinding(ctx, "binding-provider-voice", 0, apitypes.ACLPolicy{
+		Subject:  ViewSubject("play-openai"),
+		Resource: resource,
+		Role:     "voice-reader",
+	}); err != nil {
+		t.Fatalf("CreatePolicyBinding(provider voice) error = %v", err)
+	}
+	if err := server.Authorize(ctx, AuthorizeRequest{
+		Subject:    ViewSubject("play-openai"),
+		Resource:   resource,
+		Permission: apitypes.ACLPermissionVoiceRead,
+	}); err != nil {
+		t.Fatalf("Authorize(provider voice) error = %v", err)
+	}
+}
+
 func TestPolicyBindingListPutAndCleanupExpired(t *testing.T) {
 	now := time.Date(2026, 5, 20, 1, 2, 3, 0, time.UTC)
 	server := migratedTestServer(t)

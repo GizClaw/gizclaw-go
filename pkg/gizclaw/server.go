@@ -1,25 +1,38 @@
 package gizclaw
 
 import (
+	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/agenthost"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/badge"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/credential"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/model"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peergenx"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peerrun"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/pet"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/petspecies"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/providertenants"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/publiclogin"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/reward"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/voice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/wallet"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkg/store/objectstore"
 )
 
 // Server holds peer transport configuration. Per-stream protocol handling can be
@@ -46,6 +59,16 @@ type Server struct {
 	WorkspaceStore         kv.Store
 	WorkflowStore          kv.Store
 	PublicLoginStore       kv.Store
+	PetStore               kv.Store
+	PetSpeciesStore        kv.Store
+	PetSpeciesAssets       objectstore.ObjectStore
+	BadgeStore             kv.Store
+	BadgeAssets            objectstore.ObjectStore
+	WalletDB               *sql.DB
+	RewardStore            kv.Store
+	RewardClaimGenerator   string
+	RewardClaimCooldown    time.Duration
+	PetActionGenerator     string
 	BuildCommit            string
 	ACLDB                  *sql.DB
 
@@ -180,7 +203,17 @@ func (s *Server) init() error {
 		s.WorkspaceStore == nil &&
 		s.WorkflowStore == nil &&
 		s.PeerRunStore == nil &&
-		s.PublicLoginStore == nil
+		s.PublicLoginStore == nil &&
+		s.PetStore == nil &&
+		s.PetSpeciesStore == nil &&
+		s.PetSpeciesAssets == nil &&
+		s.BadgeStore == nil &&
+		s.BadgeAssets == nil &&
+		s.WalletDB == nil &&
+		s.RewardStore == nil &&
+		s.RewardClaimGenerator == "" &&
+		s.RewardClaimCooldown == 0 &&
+		s.PetActionGenerator == ""
 	peerStore := s.PeerStore
 	if legacySharedStore {
 		peerStore = kv.Prefixed(s.PeerStore, kv.Key{"peers"})
@@ -196,6 +229,10 @@ func (s *Server) init() error {
 	workflowStore := moduleStore(s.WorkflowStore, s.PeerStore, "workflows")
 	peerRunStore := moduleStore(s.PeerRunStore, s.PeerStore, "peer-run")
 	publicLoginStore := moduleStore(s.PublicLoginStore, s.PeerStore, "public-login")
+	petStore := moduleStore(s.PetStore, s.PeerStore, "pets")
+	petSpeciesStore := moduleStore(s.PetSpeciesStore, s.PeerStore, "pet-species")
+	badgeStore := moduleStore(s.BadgeStore, s.PeerStore, "badges")
+	rewardStore := moduleStore(s.RewardStore, s.PeerStore, "rewards")
 
 	publicLoginServer := publiclogin.NewServer(&s.LocalStatic, publicLoginStore)
 	sessions := publicLoginServer.SessionManager()
@@ -214,6 +251,28 @@ func (s *Server) init() error {
 	firmwareServer := &firmware.Server{Store: firmwareStore}
 	modelServer := &model.Server{Store: modelStore}
 	voiceServer := &voice.Server{Store: voiceStore}
+	var aclServer *acl.Server
+	if s.ACLDB != nil {
+		aclServer = &acl.Server{DB: s.ACLDB}
+	}
+	var walletServer *wallet.Server
+	if s.WalletDB != nil {
+		walletServer = &wallet.Server{DB: s.WalletDB}
+	}
+	petSpeciesServer := &petspecies.Server{Store: petSpeciesStore, Assets: s.PetSpeciesAssets}
+	badgeServer := &badge.Server{Store: badgeStore, Assets: s.BadgeAssets}
+	rewardServer := &reward.Server{
+		Store:         rewardStore,
+		Wallet:        walletServer,
+		BadgeResolver: badgeGrantResolver{Badges: badgeServer, ACL: aclServer},
+		Cooldown:      s.RewardClaimCooldown,
+	}
+	petServer := &pet.Server{
+		Store:           petStore,
+		Wallet:          walletServer,
+		SpeciesSelector: firstPetSpeciesSelector{Service: petSpeciesServer, ACL: aclServer},
+		VoiceSelector:   firstVoiceSelector{Service: voiceServer},
+	}
 	providerTenantsServer := &providertenants.Server{
 		ModelStore:      modelStore,
 		TenantStore:     miniMaxTenantStore,
@@ -221,9 +280,25 @@ func (s *Server) init() error {
 		VoiceStore:      voiceStore,
 		CredentialStore: miniMaxCredentialStore,
 	}
-	var aclServer *acl.Server
-	if s.ACLDB != nil {
-		aclServer = &acl.Server{DB: s.ACLDB}
+	systemGenerator := model.NewGenerator(peergenx.Service{
+		Peer:            systemTaskPeer(s.LocalStatic.Public),
+		Authorizer:      systemTaskAuthorizer{},
+		Models:          modelServer,
+		Voices:          voiceServer,
+		Credentials:     credentialServer,
+		ProviderTenants: providerTenantsServer,
+	})
+	if strings.TrimSpace(s.RewardClaimGenerator) != "" {
+		rewardServer.Decider = genxRewardDecider{
+			Generator: systemGenerator,
+			Pattern:   s.RewardClaimGenerator,
+		}
+	}
+	if strings.TrimSpace(s.PetActionGenerator) != "" {
+		petServer.ActionDecider = genxPetActionDecider{
+			Generator: systemGenerator,
+			Pattern:   s.PetActionGenerator,
+		}
 	}
 	manager.ACL = aclServer
 	manager.AgentHost = agenthost.New(agenthost.ServiceResolver{
@@ -235,13 +310,18 @@ func (s *Server) init() error {
 	manager.Models = modelServer
 	manager.Credentials = credentialServer
 	manager.Voices = voiceServer
+	manager.Pets = petServer
+	manager.Wallets = walletServer
+	manager.Rewards = rewardServer
 	manager.ProviderTenants = providerTenantsServer
 	resourceManager := resourcemanager.New(resourcemanager.Services{
 		ACL:             aclServer,
 		Credentials:     credentialServer,
 		Firmwares:       firmwareServer,
+		Badges:          badgeServer,
 		Peers:           peersServer,
 		Models:          modelServer,
+		PetSpecies:      petSpeciesServer,
 		ProviderTenants: providerTenantsServer,
 		Voices:          voiceServer,
 		Workspaces:      workspaceServer,
@@ -260,6 +340,8 @@ func (s *Server) init() error {
 			ProviderTenantsAdminService: providerTenantsServer,
 			WorkspaceAdminService:       workspaceServer,
 			WorkflowAdminService:        workflowServer,
+			PetSpecies:                  petSpeciesServer,
+			Badges:                      badgeServer,
 			ACL:                         aclServer,
 			ResourceManager:             resourceManager,
 		},
@@ -274,6 +356,68 @@ func (s *Server) init() error {
 	mux.HandleFunc("/api/public", redirectProxyPrefix("/api/public/"))
 	s.httpHandler = httpLabelSetHandler(mux)
 	return nil
+}
+
+type firstPetSpeciesSelector struct {
+	Service *petspecies.Server
+	ACL     aclAuthorizer
+}
+
+func (s firstPetSpeciesSelector) SelectSpecies(ctx context.Context, owner string) (string, error) {
+	if s.Service == nil {
+		return "", errors.New("pet species service not configured")
+	}
+	if s.ACL == nil {
+		return "", errors.New("acl service not configured")
+	}
+	cursor := ""
+	for {
+		items, hasNext, next, err := s.Service.List(ctx, cursor, 50)
+		if err != nil {
+			return "", err
+		}
+		for _, item := range items {
+			if err := s.ACL.Authorize(ctx, acl.AuthorizeRequest{
+				Subject:    acl.PublicKeySubject(owner),
+				Resource:   acl.PetSpeciesResource(item.Id),
+				Permission: apitypes.ACLPermissionPetSpeciesUse,
+			}); err == nil {
+				return item.Id, nil
+			} else if !errors.Is(err, acl.ErrDenied) {
+				return "", err
+			}
+		}
+		if !hasNext || next == nil {
+			break
+		}
+		cursor = *next
+	}
+	return "", errors.New("no usable pet species available")
+}
+
+type firstVoiceSelector struct {
+	Service voice.VoiceAdminService
+}
+
+func (s firstVoiceSelector) SelectVoice(ctx context.Context, owner string) (string, error) {
+	if s.Service == nil {
+		return "", errors.New("voice service not configured")
+	}
+	limit := int32(1)
+	resp, err := s.Service.ListVoices(ctx, adminservice.ListVoicesRequestObject{
+		Params: adminservice.ListVoicesParams{Limit: &limit},
+	})
+	if err != nil {
+		return "", err
+	}
+	list, ok := resp.(adminservice.ListVoices200JSONResponse)
+	if !ok {
+		return "", fmt.Errorf("voice list returned %T", resp)
+	}
+	if len(list.Items) == 0 {
+		return "", errors.New("no voices available")
+	}
+	return list.Items[0].Id, nil
 }
 
 func moduleStore(configured, fallback kv.Store, defaultPrefix string) kv.Store {

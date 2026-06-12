@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"io"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+	"github.com/goccy/go-yaml"
 )
 
 type fakeDriver struct{}
@@ -165,6 +168,11 @@ func TestNewRejectsWrongDriverBlockForKind(t *testing.T) {
 		t.Fatal("expected error for filesystem with badger driver")
 	}
 	if _, err := New(map[string]Config{
+		"bad": {Kind: KindObjectStore, Badger: &BadgerConfig{Dir: t.TempDir()}},
+	}); err == nil {
+		t.Fatal("expected error for objectstore with badger driver")
+	}
+	if _, err := New(map[string]Config{
 		"bad": {Kind: KindSQL, FS: &FSConfig{Dir: t.TempDir()}},
 	}); err == nil {
 		t.Fatal("expected error for sql with fs driver")
@@ -179,6 +187,7 @@ func TestNewRejectsMissingDriverBlock(t *testing.T) {
 		{name: "keyvalue", cfg: Config{Kind: KindKeyValue}},
 		{name: "vecstore", cfg: Config{Kind: KindVecStore}},
 		{name: "filesystem", cfg: Config{Kind: KindFilesystem}},
+		{name: "objectstore", cfg: Config{Kind: KindObjectStore}},
 		{name: "sql", cfg: Config{Kind: KindSQL}},
 	}
 	for _, tc := range tests {
@@ -320,6 +329,75 @@ func TestFSNotFound(t *testing.T) {
 		t.Fatal("expected error for missing backend")
 	}
 	if _, err := reg.FS("kv"); err == nil {
+		t.Fatal("expected error for wrong kind lookup")
+	}
+}
+
+func TestObjectStoreFilesystemDriverBlock(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "objects")
+	reg, err := New(map[string]Config{
+		"objects": {Kind: KindObjectStore, FS: &FSConfig{Dir: dir}},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer reg.Close()
+
+	objects, err := reg.ObjectStore("objects")
+	if err != nil {
+		t.Fatalf("ObjectStore(objects): %v", err)
+	}
+	if err := objects.Put("firmware/stable.bin", strings.NewReader("stable")); err != nil {
+		t.Fatalf("Put: %v", err)
+	}
+	r, err := objects.Get("firmware/stable.bin")
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	got, err := io.ReadAll(r)
+	if closeErr := r.Close(); closeErr != nil && err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		t.Fatalf("ReadAll: %v", err)
+	}
+	if string(got) != "stable" {
+		t.Fatalf("Get = %q, want stable", got)
+	}
+}
+
+func TestObjectStoreRejectsLegacyFilesystemDriverName(t *testing.T) {
+	var cfg struct {
+		Storage map[string]Config `yaml:"storage"`
+	}
+	data := []byte(`
+storage:
+  objects:
+    kind: objectstore
+    filesystem:
+      dir: objects
+`)
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	if _, err := New(cfg.Storage); err == nil {
+		t.Fatal("expected error for objectstore filesystem driver alias")
+	}
+}
+
+func TestObjectStoreNotFound(t *testing.T) {
+	reg, err := New(map[string]Config{
+		"kv": {Kind: KindKeyValue, Backend: "memory"},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer reg.Close()
+
+	if _, err := reg.ObjectStore("missing"); err == nil {
+		t.Fatal("expected error for missing backend")
+	}
+	if _, err := reg.ObjectStore("kv"); err == nil {
 		t.Fatal("expected error for wrong kind lookup")
 	}
 }

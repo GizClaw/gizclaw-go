@@ -3,6 +3,8 @@ package server
 import (
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
@@ -24,6 +26,21 @@ type Config struct {
 	Workspaces     WorkspacesConfig
 	Workflows      WorkflowsConfig
 	ACL            ACLConfig
+	PetSpecies     AssetResourceConfig
+	Badges         AssetResourceConfig
+	Pets           StoreConfig
+	Rewards        StoreConfig
+	Wallets        StoreConfig
+	SystemTasks    SystemTasksConfig
+}
+
+type StoreConfig struct {
+	Store string `yaml:"store"`
+}
+
+type AssetResourceConfig struct {
+	Store       string `yaml:"store"`
+	AssetsStore string `yaml:"assets_store"`
 }
 
 type PeersConfig struct {
@@ -56,6 +73,20 @@ type ACLConfig struct {
 	Store string `yaml:"store"`
 }
 
+type SystemTasksConfig struct {
+	RewardClaim RewardClaimTaskConfig `yaml:"reward_claim"`
+	PetAction   GeneratorTaskConfig   `yaml:"pet_action"`
+}
+
+type RewardClaimTaskConfig struct {
+	Generator string `yaml:"generator"`
+	Cooldown  string `yaml:"cooldown"`
+}
+
+type GeneratorTaskConfig struct {
+	Generator string `yaml:"generator"`
+}
+
 type ConfigFile struct {
 	ListenAddr     string                    `yaml:"listen"`
 	CipherMode     giznet.CipherMode         `yaml:"cipher-mode"`
@@ -69,6 +100,12 @@ type ConfigFile struct {
 	Workspaces     WorkspacesConfig          `yaml:"workspaces"`
 	Workflows      WorkflowsConfig           `yaml:"workflows"`
 	ACL            ACLConfig                 `yaml:"acl"`
+	PetSpecies     AssetResourceConfig       `yaml:"pet_species"`
+	Badges         AssetResourceConfig       `yaml:"badges"`
+	Pets           StoreConfig               `yaml:"pets"`
+	Rewards        StoreConfig               `yaml:"rewards"`
+	Wallets        StoreConfig               `yaml:"wallets"`
+	SystemTasks    SystemTasksConfig         `yaml:"system_tasks"`
 }
 
 func LoadConfig(path string) (ConfigFile, error) {
@@ -89,6 +126,12 @@ func LoadConfig(path string) (ConfigFile, error) {
 		Workspaces     WorkspacesConfig          `yaml:"workspaces"`
 		Workflows      WorkflowsConfig           `yaml:"workflows"`
 		ACL            ACLConfig                 `yaml:"acl"`
+		PetSpecies     AssetResourceConfig       `yaml:"pet_species"`
+		Badges         AssetResourceConfig       `yaml:"badges"`
+		Pets           StoreConfig               `yaml:"pets"`
+		Rewards        StoreConfig               `yaml:"rewards"`
+		Wallets        StoreConfig               `yaml:"wallets"`
+		SystemTasks    SystemTasksConfig         `yaml:"system_tasks"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return ConfigFile{}, err
@@ -113,6 +156,12 @@ func LoadConfig(path string) (ConfigFile, error) {
 		Workspaces:     raw.Workspaces,
 		Workflows:      raw.Workflows,
 		ACL:            raw.ACL,
+		PetSpecies:     raw.PetSpecies,
+		Badges:         raw.Badges,
+		Pets:           raw.Pets,
+		Rewards:        raw.Rewards,
+		Wallets:        raw.Wallets,
+		SystemTasks:    raw.SystemTasks,
 	}
 	return cfg, nil
 }
@@ -146,7 +195,30 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	cfg.Workspaces = mergeWorkspacesConfig(cfg.Workspaces, fileCfg.Workspaces)
 	cfg.Workflows = mergeWorkflowsConfig(cfg.Workflows, fileCfg.Workflows)
 	cfg.ACL = mergeACLConfig(cfg.ACL, fileCfg.ACL)
+	cfg.PetSpecies = mergeAssetResourceConfig(cfg.PetSpecies, fileCfg.PetSpecies)
+	cfg.Badges = mergeAssetResourceConfig(cfg.Badges, fileCfg.Badges)
+	cfg.Pets = mergeStoreConfig(cfg.Pets, fileCfg.Pets)
+	cfg.Rewards = mergeStoreConfig(cfg.Rewards, fileCfg.Rewards)
+	cfg.Wallets = mergeStoreConfig(cfg.Wallets, fileCfg.Wallets)
+	cfg.SystemTasks = mergeSystemTasksConfig(cfg.SystemTasks, fileCfg.SystemTasks)
 	return cfg, nil
+}
+
+func mergeStoreConfig(runtime StoreConfig, file StoreConfig) StoreConfig {
+	if runtime.Store == "" {
+		runtime.Store = file.Store
+	}
+	return runtime
+}
+
+func mergeAssetResourceConfig(runtime AssetResourceConfig, file AssetResourceConfig) AssetResourceConfig {
+	if runtime.Store == "" {
+		runtime.Store = file.Store
+	}
+	if runtime.AssetsStore == "" {
+		runtime.AssetsStore = file.AssetsStore
+	}
+	return runtime
 }
 
 func mergePeersConfig(runtime PeersConfig, file PeersConfig) PeersConfig {
@@ -204,6 +276,29 @@ func mergeACLConfig(runtime ACLConfig, file ACLConfig) ACLConfig {
 	return runtime
 }
 
+func mergeSystemTasksConfig(runtime SystemTasksConfig, file SystemTasksConfig) SystemTasksConfig {
+	runtime.RewardClaim = mergeRewardClaimTaskConfig(runtime.RewardClaim, file.RewardClaim)
+	runtime.PetAction = mergeGeneratorTaskConfig(runtime.PetAction, file.PetAction)
+	return runtime
+}
+
+func mergeRewardClaimTaskConfig(runtime RewardClaimTaskConfig, file RewardClaimTaskConfig) RewardClaimTaskConfig {
+	if runtime.Generator == "" {
+		runtime.Generator = file.Generator
+	}
+	if runtime.Cooldown == "" {
+		runtime.Cooldown = file.Cooldown
+	}
+	return runtime
+}
+
+func mergeGeneratorTaskConfig(runtime GeneratorTaskConfig, file GeneratorTaskConfig) GeneratorTaskConfig {
+	if runtime.Generator == "" {
+		runtime.Generator = file.Generator
+	}
+	return runtime
+}
+
 func prepareConfig(cfg Config) (Config, error) {
 	defaults := DefaultConfig()
 	if cfg.ListenAddr == "" {
@@ -256,6 +351,17 @@ func (cfg Config) validate() error {
 	if cfg.ACL.Store == "" {
 		return fmt.Errorf("server: acl.store is required")
 	}
+	if err := validateOptionalModelPattern("system_tasks.reward_claim.generator", cfg.SystemTasks.RewardClaim.Generator); err != nil {
+		return err
+	}
+	if err := validateOptionalModelPattern("system_tasks.pet_action.generator", cfg.SystemTasks.PetAction.Generator); err != nil {
+		return err
+	}
+	if cfg.SystemTasks.RewardClaim.Cooldown != "" {
+		if _, err := time.ParseDuration(cfg.SystemTasks.RewardClaim.Cooldown); err != nil {
+			return fmt.Errorf("server: system_tasks.reward_claim.cooldown: %w", err)
+		}
+	}
 	return nil
 }
 
@@ -266,4 +372,15 @@ func validateCipherMode(mode giznet.CipherMode) error {
 	default:
 		return fmt.Errorf("server: unsupported cipher-mode %q", mode)
 	}
+}
+
+func validateOptionalModelPattern(field, pattern string) error {
+	pattern = strings.TrimSpace(pattern)
+	if pattern == "" {
+		return nil
+	}
+	if !strings.HasPrefix(pattern, "model/") || strings.TrimSpace(strings.TrimPrefix(pattern, "model/")) == "" {
+		return fmt.Errorf("server: %s must match model/<id>", field)
+	}
+	return nil
 }

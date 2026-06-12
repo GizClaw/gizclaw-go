@@ -13,15 +13,17 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/pkg/store/graph"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkg/store/objectstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/vecstore"
 )
 
 // Kind constants for logical store categories.
 const (
-	KindKeyValue = storage.KindKeyValue
-	KindVecStore = storage.KindVecStore
-	KindGraph    = "graph"
-	KindSQL      = storage.KindSQL
+	KindKeyValue    = storage.KindKeyValue
+	KindVecStore    = storage.KindVecStore
+	KindGraph       = "graph"
+	KindObjectStore = storage.KindObjectStore
+	KindSQL         = storage.KindSQL
 )
 
 // Config is the YAML representation of a single logical store entry.
@@ -49,6 +51,7 @@ type Stores struct {
 	ownsStorage  bool
 	kvs          map[string]kv.Store
 	vecs         map[string]vecstore.Index
+	objects      map[string]objectstore.ObjectStore
 	graphs       map[string]graph.Graph
 	sqls         map[string]*sql.DB
 	logicClosers []io.Closer
@@ -94,6 +97,7 @@ func NewWithStorage(physical *storage.Storage, configs map[string]Config) (*Stor
 		storage: physical,
 		kvs:     make(map[string]kv.Store),
 		vecs:    make(map[string]vecstore.Index),
+		objects: make(map[string]objectstore.ObjectStore),
 		graphs:  make(map[string]graph.Graph),
 		sqls:    make(map[string]*sql.DB),
 	}
@@ -128,6 +132,12 @@ func NewWithStorage(physical *storage.Storage, configs map[string]Config) (*Stor
 				return nil, err
 			}
 			s.sqls[name] = st
+		case KindObjectStore:
+			st, err := s.newObjectStore(name, cfg)
+			if err != nil {
+				return nil, err
+			}
+			s.objects[name] = st
 		case KindGraph:
 			graphCfgs = append(graphCfgs, struct {
 				name string
@@ -183,6 +193,15 @@ func (r *Stores) SQL(name string) (*sql.DB, error) {
 	s, ok := r.sqls[name]
 	if !ok {
 		return nil, fmt.Errorf("stores: sql %q not found", name)
+	}
+	return s, nil
+}
+
+// ObjectStore returns the named objectstore.ObjectStore.
+func (r *Stores) ObjectStore(name string) (objectstore.ObjectStore, error) {
+	s, ok := r.objects[name]
+	if !ok {
+		return nil, fmt.Errorf("stores: objectstore %q not found", name)
 	}
 	return s, nil
 }
@@ -271,6 +290,24 @@ func (r *Stores) newSQL(name string, cfg Config) (*sql.DB, error) {
 	return db, nil
 }
 
+func (r *Stores) newObjectStore(name string, cfg Config) (objectstore.ObjectStore, error) {
+	if cfg.Storage == "" {
+		return nil, fmt.Errorf("stores: objectstore %q requires storage reference", name)
+	}
+	st, err := r.storage.ObjectStore(cfg.Storage)
+	if err != nil {
+		return nil, fmt.Errorf("stores: objectstore %q resolve storage %q: %w", name, cfg.Storage, err)
+	}
+	prefix, err := parseObjectPrefix(cfg.Prefix)
+	if err != nil {
+		return nil, fmt.Errorf("stores: objectstore %q prefix: %w", name, err)
+	}
+	if prefix == "" {
+		return st, nil
+	}
+	return prefixedObjectStore{base: st, prefix: prefix}, nil
+}
+
 func (r *Stores) kvByName(name string) (kv.Store, error) {
 	s, ok := r.kvs[name]
 	if !ok {
@@ -333,4 +370,59 @@ func parseKeyPrefix(path string) (kv.Key, error) {
 		key = append(key, part)
 	}
 	return key, nil
+}
+
+func parseObjectPrefix(path string) (string, error) {
+	path = strings.Trim(path, "/")
+	if path == "" {
+		return "", nil
+	}
+	parts := strings.Split(path, "/")
+	for _, part := range parts {
+		if part == "" || part == "." || part == ".." {
+			return "", fmt.Errorf("invalid segment %q in %q", part, path)
+		}
+	}
+	return strings.Join(parts, "/"), nil
+}
+
+type prefixedObjectStore struct {
+	base   objectstore.ObjectStore
+	prefix string
+}
+
+func (s prefixedObjectStore) Get(name string) (io.ReadCloser, error) {
+	return s.base.Get(s.name(name))
+}
+
+func (s prefixedObjectStore) Put(name string, r io.Reader) error {
+	return s.base.Put(s.name(name), r)
+}
+
+func (s prefixedObjectStore) Delete(name string) error {
+	return s.base.Delete(s.name(name))
+}
+
+func (s prefixedObjectStore) DeletePrefix(prefix string) error {
+	return s.base.DeletePrefix(s.name(prefix))
+}
+
+func (s prefixedObjectStore) List(prefix string) ([]objectstore.ObjectInfo, error) {
+	items, err := s.base.List(s.name(prefix))
+	if err != nil {
+		return nil, err
+	}
+	basePrefix := s.prefix + "/"
+	for i := range items {
+		items[i].Name = strings.TrimPrefix(items[i].Name, basePrefix)
+	}
+	return items, nil
+}
+
+func (s prefixedObjectStore) name(name string) string {
+	name = strings.Trim(name, "/")
+	if name == "" {
+		return s.prefix
+	}
+	return s.prefix + "/" + name
 }

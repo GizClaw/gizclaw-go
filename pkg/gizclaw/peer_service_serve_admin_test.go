@@ -13,7 +13,11 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/badge"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/petspecies"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/resourcemanager"
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkg/store/objectstore"
 )
 
 func TestAdminServiceApplyResourceRequiresBody(t *testing.T) {
@@ -165,6 +169,87 @@ func TestResource200JSONResponseSerializesResourceUnion(t *testing.T) {
 	if !strings.Contains(rec.Body.String(), `"kind":"Credential"`) {
 		t.Fatalf("body = %s", rec.Body.String())
 	}
+}
+
+func TestBusinessAssetHandlersServePetSpeciesZpet(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	service := &petspecies.Server{
+		Store:  kv.NewMemory(nil),
+		Assets: objectstore.Dir(t.TempDir()),
+	}
+	if _, err := service.Put(ctx, "rabbit", apitypes.PetSpeciesSpec{Name: "Rabbit"}); err != nil {
+		t.Fatalf("Put() error = %v", err)
+	}
+	app := fiber.New(fiber.Config{DisableStartupMessage: true})
+	adminservice.RegisterHandlers(app, adminservice.NewStrictHandler(&adminService{PetSpecies: service}, nil))
+
+	zpet := `{"magic":"zpet","version":1,"id":"rabbit","canvas":[240,240],"format":"rgba","clips":[{"id":"idle"}]}` + "\npayload"
+	rec := serveAdminAsset(app, http.MethodPut, "/pet-species/rabbit/zpet", zpet)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("PUT status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"zpet_path":"rabbit.zpet"`) || !strings.Contains(rec.Body.String(), `"species_id":"rabbit"`) {
+		t.Fatalf("PUT body = %s", rec.Body.String())
+	}
+
+	rec = serveAdminAsset(app, http.MethodGet, "/pet-species/rabbit/zpet", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec.Body.String() != zpet {
+		t.Fatalf("GET body = %q", rec.Body.String())
+	}
+
+	rec = serveAdminAsset(app, http.MethodPut, "/pet-species/missing/zpet", zpet)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("PUT missing status = %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestBusinessAssetHandlersServeBadgeIcon(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	service := &badge.Server{
+		Store:  kv.NewMemory(nil),
+		Assets: objectstore.Dir(t.TempDir()),
+	}
+	if _, err := service.Put(ctx, "founder", apitypes.BadgeSpec{Name: "Founder"}); err != nil {
+		t.Fatalf("Put() error = %v", err)
+	}
+	app := fiber.New(fiber.Config{DisableStartupMessage: true})
+	adminservice.RegisterHandlers(app, adminservice.NewStrictHandler(&adminService{Badges: service}, nil))
+
+	icon := "png-bytes"
+	rec := serveAdminAsset(app, http.MethodPut, "/badges/founder/icon", icon)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("PUT status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"icon_path":"founder/icon"`) {
+		t.Fatalf("PUT body = %s", rec.Body.String())
+	}
+
+	rec = serveAdminAsset(app, http.MethodGet, "/badges/founder/icon", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec.Body.String() != icon {
+		t.Fatalf("GET body = %q", rec.Body.String())
+	}
+
+	rec = serveAdminAsset(app, http.MethodPut, "/badges/missing/icon", icon)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("PUT missing status = %d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func serveAdminAsset(app *fiber.App, method, target, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, target, strings.NewReader(body))
+	rec := httptest.NewRecorder()
+	fiberHTTPHandler(app).ServeHTTP(rec, req)
+	return rec
 }
 
 func mustPeerServiceResource(t *testing.T, raw string) apitypes.Resource {

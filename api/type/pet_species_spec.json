@@ -1,0 +1,27 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PetSpecies Spec Type",
+    "description": "PetSpeciesSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "PetSpeciesSpec": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "zpet_path": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

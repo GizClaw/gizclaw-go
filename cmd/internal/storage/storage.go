@@ -14,6 +14,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkg/store/objectstore"
 	"github.com/GizClaw/gizclaw-go/pkg/store/vecstore"
 
 	_ "github.com/lib/pq"
@@ -22,10 +23,11 @@ import (
 
 // Kind constants for physical storage categories.
 const (
-	KindKeyValue   = "keyvalue"
-	KindVecStore   = "vecstore"
-	KindFilesystem = "filesystem"
-	KindSQL        = "sql"
+	KindKeyValue    = "keyvalue"
+	KindVecStore    = "vecstore"
+	KindFilesystem  = "filesystem"
+	KindObjectStore = "objectstore"
+	KindSQL         = "sql"
 )
 
 // Config is the YAML representation of a physical storage backend.
@@ -67,6 +69,7 @@ type SQLConfig struct {
 type Storage struct {
 	kvs     map[string]kv.Store
 	vecs    map[string]vecstore.Index
+	objects map[string]objectstore.ObjectStore
 	sqls    map[string]*sql.DB
 	fss     map[string]depotstore.Dir
 	closers []io.Closer
@@ -76,10 +79,11 @@ type Storage struct {
 // physical backend. Dir fields are used as provided by the caller.
 func New(configs map[string]Config) (*Storage, error) {
 	s := &Storage{
-		kvs:  make(map[string]kv.Store),
-		vecs: make(map[string]vecstore.Index),
-		sqls: make(map[string]*sql.DB),
-		fss:  make(map[string]depotstore.Dir),
+		kvs:     make(map[string]kv.Store),
+		vecs:    make(map[string]vecstore.Index),
+		objects: make(map[string]objectstore.ObjectStore),
+		sqls:    make(map[string]*sql.DB),
+		fss:     make(map[string]depotstore.Dir),
 	}
 	ok := false
 	defer func() {
@@ -122,6 +126,15 @@ func (s *Storage) SQL(name string) (*sql.DB, error) {
 	st, ok := s.sqls[name]
 	if !ok {
 		return nil, fmt.Errorf("storage: sql %q not found", name)
+	}
+	return st, nil
+}
+
+// ObjectStore returns the named physical object store backend.
+func (s *Storage) ObjectStore(name string) (objectstore.ObjectStore, error) {
+	st, ok := s.objects[name]
+	if !ok {
+		return nil, fmt.Errorf("storage: objectstore %q not found", name)
 	}
 	return st, nil
 }
@@ -192,6 +205,12 @@ func (s *Storage) build(name string, configs map[string]Config, states map[strin
 		st, err = newFilesystem(name, cfg)
 		if err == nil {
 			s.fss[name] = st
+		}
+	case KindObjectStore:
+		var st objectstore.ObjectStore
+		st, err = newObjectStore(name, cfg)
+		if err == nil {
+			s.objects[name] = st
 		}
 	case KindSQL:
 		var st *sql.DB
@@ -271,6 +290,24 @@ func newFilesystem(name string, cfg Config) (depotstore.Dir, error) {
 		return "", fmt.Errorf("storage: filesystem %q requires fs driver", name)
 	}
 	return newFilesystemDir(name, cfg.FS.Dir)
+}
+
+func newObjectStore(name string, cfg Config) (objectstore.ObjectStore, error) {
+	if blocks := driverBlocks(cfg); len(blocks) > 0 {
+		if err := validateDriverBlocks(name, KindObjectStore, blocks, "fs"); err != nil {
+			return nil, err
+		}
+	}
+	if cfg.FS == nil {
+		return nil, fmt.Errorf("storage: objectstore %q requires fs driver", name)
+	}
+	if cfg.FS.Dir == "" {
+		return nil, fmt.Errorf("storage: objectstore %q (fs) requires dir", name)
+	}
+	if err := os.MkdirAll(cfg.FS.Dir, 0o755); err != nil {
+		return nil, fmt.Errorf("storage: objectstore %q mkdir: %w", name, err)
+	}
+	return objectstore.Dir(cfg.FS.Dir), nil
 }
 
 func newFilesystemDir(name, dir string) (depotstore.Dir, error) {

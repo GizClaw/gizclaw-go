@@ -7,10 +7,12 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/badge"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/credential"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/firmware"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/model"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peer"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/petspecies"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/providertenants"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/voice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
@@ -24,6 +26,8 @@ type Services struct {
 	Firmwares       firmware.FirmwareAdminService
 	Peers           peer.PeerAdminService
 	Models          model.ModelAdminService
+	Badges          *badge.Server
+	PetSpecies      *petspecies.Server
 	ProviderTenants providertenants.ProviderTenantsAdminService
 	Voices          voice.VoiceAdminService
 	Workspaces      workspace.WorkspaceAdminService
@@ -99,6 +103,18 @@ func (m *Manager) Get(ctx context.Context, kind apitypes.ResourceKind, name stri
 			return apitypes.Resource{}, notFound(kind, name)
 		}
 		return resourceFromFirmware(item)
+	case apitypes.ResourceKindBadge:
+		if m.services.Badges == nil {
+			return apitypes.Resource{}, missingService("badges")
+		}
+		item, exists, err := m.getBadge(ctx, name)
+		if err != nil {
+			return apitypes.Resource{}, err
+		}
+		if !exists {
+			return apitypes.Resource{}, notFound(kind, name)
+		}
+		return resourceFromBadge(item)
 	case apitypes.ResourceKindPeerConfig:
 		if m.services.Peers == nil {
 			return apitypes.Resource{}, missingService("peers")
@@ -192,6 +208,18 @@ func (m *Manager) Get(ctx context.Context, kind apitypes.ResourceKind, name stri
 			return apitypes.Resource{}, notFound(kind, name)
 		}
 		return resourceFromVoice(item)
+	case apitypes.ResourceKindPetSpecies:
+		if m.services.PetSpecies == nil {
+			return apitypes.Resource{}, missingService("pet species")
+		}
+		item, exists, err := m.getPetSpecies(ctx, name)
+		if err != nil {
+			return apitypes.Resource{}, err
+		}
+		if !exists {
+			return apitypes.Resource{}, notFound(kind, name)
+		}
+		return resourceFromPetSpecies(item)
 	case apitypes.ResourceKindWorkspace:
 		if m.services.Workspaces == nil {
 			return apitypes.Resource{}, missingService("workspaces")
@@ -278,6 +306,21 @@ func (m *Manager) Put(ctx context.Context, resource apitypes.Resource) (apitypes
 			return apitypes.Resource{}, err
 		}
 		return m.Get(ctx, apitypes.ResourceKindFirmware, item.Metadata.Name)
+	case string(apitypes.ResourceKindBadge), "BadgeResource":
+		if m.services.Badges == nil {
+			return apitypes.Resource{}, missingService("badges")
+		}
+		item, err := resource.AsBadgeResource()
+		if err != nil {
+			return apitypes.Resource{}, applyError(400, "INVALID_BADGE_RESOURCE", err.Error())
+		}
+		if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
+			return apitypes.Resource{}, err
+		}
+		if _, err := m.services.Badges.Put(ctx, item.Metadata.Name, item.Spec); err != nil {
+			return apitypes.Resource{}, err
+		}
+		return m.Get(ctx, apitypes.ResourceKindBadge, item.Metadata.Name)
 	case string(apitypes.ResourceKindPeerConfig), "PeerConfigResource":
 		if m.services.Peers == nil {
 			return apitypes.Resource{}, missingService("peers")
@@ -415,6 +458,21 @@ func (m *Manager) Put(ctx context.Context, resource apitypes.Resource) (apitypes
 			return apitypes.Resource{}, err
 		}
 		return m.Get(ctx, apitypes.ResourceKindVoice, item.Metadata.Name)
+	case string(apitypes.ResourceKindPetSpecies), "PetSpeciesResource":
+		if m.services.PetSpecies == nil {
+			return apitypes.Resource{}, missingService("pet species")
+		}
+		item, err := resource.AsPetSpeciesResource()
+		if err != nil {
+			return apitypes.Resource{}, applyError(400, "INVALID_PET_SPECIES_RESOURCE", err.Error())
+		}
+		if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
+			return apitypes.Resource{}, err
+		}
+		if _, err := m.services.PetSpecies.Put(ctx, item.Metadata.Name, item.Spec); err != nil {
+			return apitypes.Resource{}, err
+		}
+		return m.Get(ctx, apitypes.ResourceKindPetSpecies, item.Metadata.Name)
 	case string(apitypes.ResourceKindWorkspace), "WorkspaceResource":
 		if m.services.Workspaces == nil {
 			return apitypes.Resource{}, missingService("workspaces")
@@ -495,6 +553,18 @@ func (m *Manager) Delete(ctx context.Context, kind apitypes.ResourceKind, name s
 			return apitypes.Resource{}, notFound(kind, name)
 		}
 		return resourceFromFirmware(item)
+	case apitypes.ResourceKindBadge:
+		if m.services.Badges == nil {
+			return apitypes.Resource{}, missingService("badges")
+		}
+		item, exists, err := m.deleteBadge(ctx, name)
+		if err != nil {
+			return apitypes.Resource{}, err
+		}
+		if !exists {
+			return apitypes.Resource{}, notFound(kind, name)
+		}
+		return resourceFromBadge(item)
 	case apitypes.ResourceKindPeerConfig:
 		return apitypes.Resource{}, applyError(400, "UNSUPPORTED_RESOURCE_DELETE", "PeerConfig cannot be deleted independently")
 	case apitypes.ResourceKindModel:
@@ -581,6 +651,18 @@ func (m *Manager) Delete(ctx context.Context, kind apitypes.ResourceKind, name s
 			return apitypes.Resource{}, notFound(kind, name)
 		}
 		return resourceFromVoice(item)
+	case apitypes.ResourceKindPetSpecies:
+		if m.services.PetSpecies == nil {
+			return apitypes.Resource{}, missingService("pet species")
+		}
+		item, exists, err := m.deletePetSpecies(ctx, name)
+		if err != nil {
+			return apitypes.Resource{}, err
+		}
+		if !exists {
+			return apitypes.Resource{}, notFound(kind, name)
+		}
+		return resourceFromPetSpecies(item)
 	case apitypes.ResourceKindWorkspace:
 		if m.services.Workspaces == nil {
 			return apitypes.Resource{}, missingService("workspaces")
@@ -628,6 +710,8 @@ func (m *Manager) Apply(ctx context.Context, resource apitypes.Resource) (apityp
 		return m.applyCredential(ctx, resource)
 	case string(apitypes.ResourceKindFirmware), "FirmwareResource":
 		return m.applyFirmware(ctx, resource)
+	case string(apitypes.ResourceKindBadge), "BadgeResource":
+		return m.applyBadge(ctx, resource)
 	case string(apitypes.ResourceKindPeerConfig), "PeerConfigResource":
 		return m.applyPeerConfig(ctx, resource)
 	case string(apitypes.ResourceKindDashScopeTenant), "DashScopeTenantResource":
@@ -646,6 +730,8 @@ func (m *Manager) Apply(ctx context.Context, resource apitypes.Resource) (apityp
 		return m.applyResourceList(ctx, resource)
 	case string(apitypes.ResourceKindVoice), "VoiceResource":
 		return m.applyVoice(ctx, resource)
+	case string(apitypes.ResourceKindPetSpecies), "PetSpeciesResource":
+		return m.applyPetSpecies(ctx, resource)
 	case string(apitypes.ResourceKindWorkspace), "WorkspaceResource":
 		return m.applyWorkspace(ctx, resource)
 	case string(apitypes.ResourceKindWorkflow), "WorkflowResource":

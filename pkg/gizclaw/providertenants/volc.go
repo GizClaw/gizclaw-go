@@ -25,12 +25,15 @@ import (
 var volcTenantsRoot = kv.Key{"volc-by-name"}
 
 const (
-	defaultVolcRegion    = "cn-beijing"
-	volcPublicResourceID = string("seed-tts-2.0")
-	volcProviderKind     = apitypes.VoiceProviderKind("volc-tenant")
+	defaultVolcRegion         = "cn-beijing"
+	volcPublicTTSV1ResourceID = "seed-tts-1.0"
+	volcPublicTTSResourceID   = "seed-tts-2.0"
+	volcPublicICLResourceID   = "seed-icl-2.0"
+	volcProviderKind          = apitypes.VoiceProviderKind("volc-tenant")
 )
 
 type VolcSpeakerClient interface {
+	ListSpeakersWithContext(context.Context, []string, int32, int32) (*volcSpeakersPage, error)
 	ListBigModelTTSTimbresWithContext(context.Context) ([]volcPublicTimbre, error)
 	BatchListMegaTTSTrainStatusWithContext(context.Context, string, []string, int32, int32) (*volcMegaTTSTrainStatusPage, error)
 }
@@ -371,6 +374,48 @@ type volcSpeechSDKClient struct {
 	universal *universal.Universal
 }
 
+func (c volcSpeechSDKClient) ListSpeakersWithContext(ctx context.Context, resourceIDs []string, pageNumber, pageSize int32) (*volcSpeakersPage, error) {
+	input := &speechsaasprod.ListSpeakersInput{}
+	if pageNumber > 0 {
+		input.Page = &pageNumber
+	}
+	if pageSize > 0 {
+		limit := fmt.Sprint(pageSize)
+		input.Limit = &limit
+	}
+	if len(resourceIDs) > 0 {
+		input.ResourceIDs = volcResourceIDStringPtrs(resourceIDs)
+	}
+	out, err := c.speech.ListSpeakersWithContext(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	page := &volcSpeakersPage{PageNumber: pageNumber, PageSize: pageSize}
+	if out.Total != nil {
+		page.Total = *out.Total
+	}
+	page.Speakers = make([]volcSpeaker, 0, len(out.Speakers))
+	for _, speaker := range out.Speakers {
+		if speaker == nil {
+			continue
+		}
+		voiceType := strings.TrimSpace(stringValue(speaker.VoiceType))
+		resourceID := strings.TrimSpace(stringValue(speaker.ResourceID))
+		if voiceType == "" || resourceID == "" {
+			continue
+		}
+		raw := rawStructToMap(speaker)
+		page.Speakers = append(page.Speakers, volcSpeaker{
+			VoiceType:   voiceType,
+			Name:        strings.TrimSpace(stringValue(speaker.Name)),
+			Description: strings.TrimSpace(stringValue(speaker.Description)),
+			ResourceID:  resourceID,
+			Raw:         voicecatalog.RawMapValue(raw),
+		})
+	}
+	return page, nil
+}
+
 func (c volcSpeechSDKClient) ListBigModelTTSTimbresWithContext(ctx context.Context) ([]volcPublicTimbre, error) {
 	out, err := c.speech.ListBigModelTTSTimbresWithContext(ctx, &speechsaasprod.ListBigModelTTSTimbresInput{})
 	if err != nil {
@@ -457,7 +502,23 @@ type volcSpeakerRecord struct {
 	resourceID string
 	source     string
 	status     *volcSpeakerStatus
+	speaker    *volcSpeaker
 	timbre     *volcPublicTimbre
+}
+
+type volcSpeaker struct {
+	VoiceType   string
+	Name        string
+	Description string
+	ResourceID  string
+	Raw         interface{}
+}
+
+type volcSpeakersPage struct {
+	PageNumber int32
+	PageSize   int32
+	Speakers   []volcSpeaker
+	Total      int32
 }
 
 type volcPublicTimbre struct {
@@ -554,25 +615,61 @@ func listAllVolcSpeakers(ctx context.Context, client VolcSpeakerClient, tenant a
 	resourceIDs := volcTenantResourceIDs(tenant)
 	resourceFilter := volcResourceIDSet(resourceIDs)
 	byVoiceID := make(map[string]volcSpeakerRecord)
-	publicTimbres, err := client.ListBigModelTTSTimbresWithContext(ctx)
-	if err != nil {
-		return nil, err
+	const pageSize int32 = 30
+	listSpeakersFailed := false
+	for pageNumber := int32(1); ; pageNumber++ {
+		page, err := client.ListSpeakersWithContext(ctx, nil, pageNumber, pageSize)
+		if err != nil {
+			if pageNumber == 1 {
+				listSpeakersFailed = true
+				break
+			}
+			return nil, err
+		}
+		for _, speaker := range page.Speakers {
+			voiceType := strings.TrimSpace(speaker.VoiceType)
+			resourceID := strings.TrimSpace(speaker.ResourceID)
+			if voiceType == "" {
+				return nil, errors.New("Volcengine returned speaker without VoiceType")
+			}
+			if resourceID == "" {
+				return nil, fmt.Errorf("Volcengine returned speaker %q without ResourceID", voiceType)
+			}
+			if len(resourceFilter) > 0 {
+				if _, ok := resourceFilter[resourceID]; !ok {
+					continue
+				}
+			}
+			speakerCopy := speaker
+			byVoiceID[voiceType] = volcSpeakerRecord{appID: tenant.AppId, resourceID: resourceID, source: "speakers", speaker: &speakerCopy}
+		}
+		if page.Total == 0 || len(page.Speakers) == 0 || pageNumber*pageSize >= page.Total {
+			break
+		}
 	}
-	_, syncPublicTimbres := resourceFilter[string(volcPublicResourceID)]
-	if len(resourceFilter) == 0 || syncPublicTimbres {
+	if listSpeakersFailed {
+		publicTimbres, err := client.ListBigModelTTSTimbresWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
 		for _, timbre := range publicTimbres {
 			speakerID := strings.TrimSpace(timbre.SpeakerID)
 			if speakerID == "" {
 				continue
 			}
+			resourceID := volcResourceIDForPublicTimbre(speakerID)
+			if len(resourceFilter) > 0 {
+				if _, ok := resourceFilter[resourceID]; !ok {
+					continue
+				}
+			}
 			timbreCopy := timbre
-			byVoiceID[speakerID] = volcSpeakerRecord{appID: tenant.AppId, resourceID: volcPublicResourceID, source: "public", timbre: &timbreCopy}
+			byVoiceID[speakerID] = volcSpeakerRecord{appID: tenant.AppId, resourceID: resourceID, source: "timbres", timbre: &timbreCopy}
 		}
 	}
 	if len(resourceIDs) == 0 {
 		return sortedVolcSpeakerRecords(byVoiceID), nil
 	}
-	const pageSize int32 = 100
 	for pageNumber := int32(1); ; pageNumber++ {
 		page, err := client.BatchListMegaTTSTrainStatusWithContext(ctx, appID, resourceIDs, pageNumber, pageSize)
 		if err != nil {
@@ -618,6 +715,9 @@ func sortedVolcSpeakerRecords(byVoiceID map[string]volcSpeakerRecord) []volcSpea
 func (r volcSpeakerRecord) providerVoiceID() string {
 	if r.status != nil {
 		return strings.TrimSpace(r.status.SpeakerID)
+	}
+	if r.speaker != nil {
+		return strings.TrimSpace(r.speaker.VoiceType)
 	}
 	if r.timbre != nil {
 		return strings.TrimSpace(r.timbre.SpeakerID)
@@ -745,6 +845,13 @@ func volcVoiceDisplay(record volcSpeakerRecord) (string, string, interface{}) {
 		}
 		return name, description, raw
 	}
+	if record.speaker != nil {
+		name := strings.TrimSpace(record.speaker.Name)
+		if name == "" {
+			name = strings.TrimSpace(record.speaker.VoiceType)
+		}
+		return name, strings.TrimSpace(record.speaker.Description), record.speaker.Raw
+	}
 	if record.timbre != nil {
 		name := strings.TrimSpace(record.timbre.Name)
 		if name == "" {
@@ -810,6 +917,28 @@ func volcResourceIDStrings(resourceIDs []string) []string {
 		out = append(out, string(resourceID))
 	}
 	return out
+}
+
+func volcResourceIDStringPtrs(resourceIDs []string) []*string {
+	strings := volcResourceIDStrings(resourceIDs)
+	out := make([]*string, 0, len(strings))
+	for _, value := range strings {
+		value := value
+		out = append(out, &value)
+	}
+	return out
+}
+
+func volcResourceIDForPublicTimbre(speakerID string) string {
+	normalized := strings.TrimSpace(speakerID)
+	lower := strings.ToLower(normalized)
+	if strings.HasPrefix(normalized, "S_") {
+		return volcPublicICLResourceID
+	}
+	if strings.Contains(lower, "_uranus_bigtts") || strings.HasPrefix(lower, "saturn_") {
+		return volcPublicTTSResourceID
+	}
+	return volcPublicTTSV1ResourceID
 }
 
 func normalizeVolcResourceIDs(in []string) []string {

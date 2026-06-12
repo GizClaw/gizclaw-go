@@ -303,7 +303,9 @@ func TestDefaultBuilderBuildsVoiceTransformers(t *testing.T) {
 		cfg            TransformerConfig
 		wantFormat     string
 		wantSampleRate int
+		wantResourceID string
 		wantModel      string
+		wantBaseURL    string
 	}{
 		{
 			name: "volc",
@@ -311,7 +313,7 @@ func TestDefaultBuilderBuildsVoiceTransformers(t *testing.T) {
 				Voice: &apitypes.Voice{
 					Id: "volc-voice",
 					ProviderData: &apitypes.VoiceProviderData{
-						"volc-tenant": map[string]string{"voice_id": "voice-id", "sample_rate": "24000"},
+						"volc-tenant": map[string]string{"voice_id": "voice-id", "resource_id": "seed-icl-2.0", "sample_rate": "24000"},
 					},
 				},
 				Tenant: Tenant{
@@ -322,6 +324,7 @@ func TestDefaultBuilderBuildsVoiceTransformers(t *testing.T) {
 			},
 			wantFormat:     defaultTTSAudioFormat,
 			wantSampleRate: defaultTTSAudioSampleRate,
+			wantResourceID: "seed-icl-2.0",
 		},
 		{
 			name: "minimax",
@@ -344,6 +347,26 @@ func TestDefaultBuilderBuildsVoiceTransformers(t *testing.T) {
 			wantFormat:     defaultTTSAudioFormat,
 			wantSampleRate: defaultTTSAudioSampleRate,
 			wantModel:      "speech-02-hd",
+			wantBaseURL:    baseURL,
+		},
+		{
+			name: "minimax default base url",
+			cfg: TransformerConfig{
+				Voice: &apitypes.Voice{
+					Id: "minimax-voice",
+					ProviderData: &apitypes.VoiceProviderData{
+						"minimax-tenant": map[string]string{"voice_id": "voice-id"},
+					},
+				},
+				Tenant: Tenant{
+					Kind:    "minimax-tenant",
+					MiniMax: &apitypes.MiniMaxTenant{Name: "main", CredentialName: "minimax-key"},
+				},
+				Credential: apitypes.Credential{Name: "minimax-key", Body: apitypes.CredentialBody{"api_key": "sk-test"}},
+			},
+			wantFormat:     defaultTTSAudioFormat,
+			wantSampleRate: defaultTTSAudioSampleRate,
+			wantBaseURL:    defaultMiniMaxBaseURL,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -363,6 +386,16 @@ func TestDefaultBuilderBuildsVoiceTransformers(t *testing.T) {
 			if tc.wantModel != "" {
 				if got := transformerStringField(t, tf, "model"); got != tc.wantModel {
 					t.Fatalf("transformer model = %q, want %q", got, tc.wantModel)
+				}
+			}
+			if tc.wantResourceID != "" {
+				if got := transformerStringField(t, tf, "resourceID"); got != tc.wantResourceID {
+					t.Fatalf("transformer resourceID = %q, want %q", got, tc.wantResourceID)
+				}
+			}
+			if tc.wantBaseURL != "" {
+				if got := transformerNestedStringField(t, tf, "client", "transport", "baseURL"); got != tc.wantBaseURL {
+					t.Fatalf("transformer minimax baseURL = %q, want %q", got, tc.wantBaseURL)
 				}
 			}
 		})
@@ -532,6 +565,24 @@ func transformerIntField(t *testing.T, tf genx.Transformer, fieldName string) in
 		t.Fatalf("transformer %T missing int field %q", tf, fieldName)
 	}
 	return int(field.Int())
+}
+
+func transformerNestedStringField(t *testing.T, tf genx.Transformer, fieldNames ...string) string {
+	t.Helper()
+	value := reflect.ValueOf(tf)
+	for _, fieldName := range fieldNames {
+		value = reflect.Indirect(value)
+		field := value.FieldByName(fieldName)
+		if !field.IsValid() {
+			t.Fatalf("transformer %T missing field %q", tf, fieldName)
+		}
+		value = field
+	}
+	value = reflect.Indirect(value)
+	if value.Kind() != reflect.String {
+		t.Fatalf("transformer %T field path %v is %s, want string", tf, fieldNames, value.Kind())
+	}
+	return value.String()
 }
 
 func TestGeneratorInvokeUsesResolvedModel(t *testing.T) {

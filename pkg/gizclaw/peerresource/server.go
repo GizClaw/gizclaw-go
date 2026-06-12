@@ -15,6 +15,10 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/credential"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/model"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/pet"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/reward"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/voice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/wallet"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
@@ -32,6 +36,10 @@ type Server struct {
 	Workflows   workflow.WorkflowAdminService
 	Models      model.ModelAdminService
 	Credentials credential.CredentialAdminService
+	Voices      voice.VoiceAdminService
+	Pets        *pet.Server
+	Wallets     *wallet.Server
+	Rewards     *reward.Server
 }
 
 func IsMethod(method rpcapi.RPCMethod) bool {
@@ -55,7 +63,21 @@ func IsMethod(method rpcapi.RPCMethod) bool {
 		rpcapi.RPCMethodServerCredentialGet,
 		rpcapi.RPCMethodServerCredentialCreate,
 		rpcapi.RPCMethodServerCredentialPut,
-		rpcapi.RPCMethodServerCredentialDelete:
+		rpcapi.RPCMethodServerCredentialDelete,
+		rpcapi.RPCMethodServerPetList,
+		rpcapi.RPCMethodServerPetGet,
+		rpcapi.RPCMethodServerPetAdopt,
+		rpcapi.RPCMethodServerPetPut,
+		rpcapi.RPCMethodServerPetDelete,
+		rpcapi.RPCMethodServerPetFeed,
+		rpcapi.RPCMethodServerPetWash,
+		rpcapi.RPCMethodServerPetPlay,
+		rpcapi.RPCMethodServerWalletGet,
+		rpcapi.RPCMethodServerWalletTransactionsList,
+		rpcapi.RPCMethodServerWalletTransactionsGet,
+		rpcapi.RPCMethodServerRewardList,
+		rpcapi.RPCMethodServerRewardGet,
+		rpcapi.RPCMethodServerRewardClaim:
 		return true
 	default:
 		return false
@@ -107,6 +129,34 @@ func (s *Server) Dispatch(ctx context.Context, req *rpcapi.RPCRequest) (*rpcapi.
 		return s.handleCredentialPut(ctx, req)
 	case rpcapi.RPCMethodServerCredentialDelete:
 		return s.handleCredentialDelete(ctx, req), true, nil
+	case rpcapi.RPCMethodServerPetList:
+		return s.handlePetList(ctx, req), true, nil
+	case rpcapi.RPCMethodServerPetGet:
+		return s.handlePetGet(ctx, req), true, nil
+	case rpcapi.RPCMethodServerPetAdopt:
+		return s.handlePetAdopt(ctx, req), true, nil
+	case rpcapi.RPCMethodServerPetPut:
+		return s.handlePetPut(ctx, req), true, nil
+	case rpcapi.RPCMethodServerPetDelete:
+		return s.handlePetDelete(ctx, req), true, nil
+	case rpcapi.RPCMethodServerPetFeed:
+		return s.handlePetFeed(ctx, req), true, nil
+	case rpcapi.RPCMethodServerPetWash:
+		return s.handlePetWash(ctx, req), true, nil
+	case rpcapi.RPCMethodServerPetPlay:
+		return s.handlePetPlay(ctx, req), true, nil
+	case rpcapi.RPCMethodServerWalletGet:
+		return s.handleWalletGet(ctx, req), true, nil
+	case rpcapi.RPCMethodServerWalletTransactionsList:
+		return s.handleWalletTransactionsList(ctx, req), true, nil
+	case rpcapi.RPCMethodServerWalletTransactionsGet:
+		return s.handleWalletTransactionsGet(ctx, req), true, nil
+	case rpcapi.RPCMethodServerRewardList:
+		return s.handleRewardList(ctx, req), true, nil
+	case rpcapi.RPCMethodServerRewardGet:
+		return s.handleRewardGet(ctx, req), true, nil
+	case rpcapi.RPCMethodServerRewardClaim:
+		return s.handleRewardClaim(ctx, req), true, nil
 	default:
 		return nil, false, nil
 	}
@@ -349,14 +399,11 @@ func (s *Server) handleWorkflowDelete(ctx context.Context, req *rpcapi.RPCReques
 }
 
 func (s *Server) handleModelList(ctx context.Context, req *rpcapi.RPCRequest) *rpcapi.RPCResponse {
-	if s.Models == nil {
-		return internalError(req.Id, "model service not configured")
-	}
 	params, ok := decodeOptionalParams(req, rpcapi.RPCRequest_Params.AsModelListRequest)
 	if !ok {
 		return invalidParams(req.Id)
 	}
-	resp, err := s.Models.ListModels(ctx, adminservice.ListModelsRequestObject{
+	resp, err := s.ListModels(ctx, adminservice.ListModelsRequestObject{
 		Params: adminservice.ListModelsParams{Cursor: params.Cursor, Limit: int32Ptr(params.Limit)},
 	})
 	if err != nil {
@@ -369,18 +416,7 @@ func (s *Server) handleModelList(ctx context.Context, req *rpcapi.RPCRequest) *r
 	if rpcResp != nil {
 		return withRequestID(req.Id, rpcResp)
 	}
-	items := make([]apitypes.Model, 0, len(list.Items))
-	for _, item := range list.Items {
-		err := s.authorizeErr(ctx, acl.ModelResource(item.Id), apitypes.ACLPermissionModelRead)
-		if errors.Is(err, acl.ErrDenied) {
-			continue
-		}
-		if err != nil {
-			return authError(req.Id, err)
-		}
-		items = append(items, item)
-	}
-	return resultResponse(req.Id, adminservice.ModelList{Items: items, HasNext: list.HasNext, NextCursor: list.NextCursor}, (*rpcapi.RPCResponse_Result).FromModelListResponse)
+	return resultResponse(req.Id, list, (*rpcapi.RPCResponse_Result).FromModelListResponse)
 }
 
 func (s *Server) handleModelGet(ctx context.Context, req *rpcapi.RPCRequest) *rpcapi.RPCResponse {
@@ -391,10 +427,7 @@ func (s *Server) handleModelGet(ctx context.Context, req *rpcapi.RPCRequest) *rp
 	if !ok {
 		return invalidParams(req.Id)
 	}
-	if resp := s.authorizeResponse(ctx, req.Id, acl.ModelResource(params.Id), apitypes.ACLPermissionModelRead); resp != nil {
-		return resp
-	}
-	adminResp, err := s.Models.GetModel(ctx, adminservice.GetModelRequestObject{Id: params.Id})
+	adminResp, err := s.GetModel(ctx, adminservice.GetModelRequestObject{Id: params.Id})
 	if err != nil {
 		return internalError(req.Id, err.Error())
 	}
@@ -506,10 +539,7 @@ func (s *Server) handleCredentialGet(ctx context.Context, req *rpcapi.RPCRequest
 	if !ok {
 		return invalidParams(req.Id)
 	}
-	if resp := s.authorizeResponse(ctx, req.Id, acl.CredentialResource(params.Name), apitypes.ACLPermissionCredentialRead); resp != nil {
-		return resp
-	}
-	adminResp, err := s.Credentials.GetCredential(ctx, adminservice.GetCredentialRequestObject{Name: params.Name})
+	adminResp, err := s.GetCredential(ctx, adminservice.GetCredentialRequestObject{Name: params.Name})
 	if err != nil {
 		return internalError(req.Id, err.Error())
 	}

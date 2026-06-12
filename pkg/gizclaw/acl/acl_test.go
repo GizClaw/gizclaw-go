@@ -63,11 +63,17 @@ func TestCanonicalResource(t *testing.T) {
 	if got != "credential:openai-main" {
 		t.Fatalf("CanonicalResource(credential) = %q, want credential:openai-main", got)
 	}
+	got, err = CanonicalResource(VoiceResource("volc-tenant:volc-main:voice-a"))
+	if err != nil {
+		t.Fatalf("CanonicalResource(voice with provider id) error = %v", err)
+	}
+	if got != "voice:volc-tenant:volc-main:voice-a" {
+		t.Fatalf("CanonicalResource(voice with provider id) = %q, want voice:volc-tenant:volc-main:voice-a", got)
+	}
 	for _, resource := range []apitypes.ACLResource{
 		{},
 		{Kind: ResourceKindWorkspace},
 		{Kind: apitypes.ACLResourceKind("bad"), Id: "id"},
-		{Kind: ResourceKindWorkspace, Id: "bad:id"},
 	} {
 		if _, err := CanonicalResource(resource); err == nil {
 			t.Fatalf("CanonicalResource(%#v) error = nil", resource)

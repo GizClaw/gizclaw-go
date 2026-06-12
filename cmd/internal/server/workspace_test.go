@@ -23,13 +23,17 @@ storage:
     kind: keyvalue
     memory: {}
   local-files:
-    kind: filesystem
+    kind: objectstore
     fs:
       dir: .
   acl-db:
     kind: sql
     sqlite:
       dir: data/acl.sqlite
+  wallet-db:
+    kind: sql
+    sqlite:
+      dir: data/wallet.sqlite
 stores:
   peers:
     kind: keyvalue
@@ -59,6 +63,33 @@ stores:
     kind: keyvalue
     storage: memory
     prefix: workflows
+  pet-species:
+    kind: keyvalue
+    storage: memory
+    prefix: pet-species
+  badges:
+    kind: keyvalue
+    storage: memory
+    prefix: badges
+  pets:
+    kind: keyvalue
+    storage: memory
+    prefix: pets
+  rewards:
+    kind: keyvalue
+    storage: memory
+    prefix: rewards
+  pet-species-assets:
+    kind: objectstore
+    storage: local-files
+    prefix: pet-species
+  badge-assets:
+    kind: objectstore
+    storage: local-files
+    prefix: badges
+  wallets:
+    kind: sql
+    storage: wallet-db
   acl:
     kind: sql
     storage: acl-db
@@ -78,6 +109,24 @@ workflows:
   store: workflows
 acl:
   store: acl
+pet_species:
+  store: pet-species
+  assets_store: pet-species-assets
+badges:
+  store: badges
+  assets_store: badge-assets
+pets:
+  store: pets
+rewards:
+  store: rewards
+wallets:
+  store: wallets
+system_tasks:
+  reward_claim:
+    generator: model/reward-claim
+    cooldown: 30m
+  pet_action:
+    generator: model/pet-action
 `, testPublicKeyText(0xab))), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
@@ -144,41 +193,73 @@ storage:
     kind: keyvalue
     memory: {}
   fw-files:
-    kind: filesystem
+    kind: objectstore
     fs:
       dir: .
   acl-db:
     kind: sql
     sqlite:
       dir: data/acl.sqlite
+  wallet-db:
+    kind: sql
+    sqlite:
+      dir: data/wallet.sqlite
 stores:
   fw-meta:
     kind: keyvalue
     storage: memory
     prefix: files-meta
-  fw:
-    kind: filesystem
-    backend: filesystem
-    dir: .
+  fw-assets:
+    kind: objectstore
+    storage: fw-files
+    prefix: firmware
+  pet-species-assets:
+    kind: objectstore
+    storage: fw-files
+    prefix: pet-species
+  badge-assets:
+    kind: objectstore
+    storage: fw-files
+    prefix: badges
+  wallets:
+    kind: sql
+    storage: wallet-db
   acl:
     kind: sql
     storage: acl-db
 peers:
-  store: fw
+  store: fw-meta
 credentials:
-  store: fw
+  store: fw-meta
 firmwares:
-  store: fw
+  store: fw-meta
 minimax:
-  tenants-store: fw
-  voices-store: fw
-  credentials-store: fw
+  tenants-store: fw-meta
+  voices-store: fw-meta
+  credentials-store: fw-meta
 workspaces:
-  store: fw
+  store: fw-meta
 workflows:
-  store: fw
+  store: fw-meta
 acl:
   store: acl
+pet_species:
+  store: fw-meta
+  assets_store: pet-species-assets
+badges:
+  store: fw-meta
+  assets_store: badge-assets
+pets:
+  store: fw-meta
+rewards:
+  store: fw-meta
+wallets:
+  store: wallets
+system_tasks:
+  reward_claim:
+    generator: model/reward-claim
+  pet_action:
+    generator: model/pet-action
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
@@ -190,8 +271,8 @@ acl:
 	if got := cfg.Storage["fw-files"].FS.Dir; got != workspace {
 		t.Fatalf("fw dir = %q", got)
 	}
-	if got := cfg.Stores["fw"].Dir; got != workspace {
-		t.Fatalf("fw store dir = %q", got)
+	if got := cfg.Stores["fw-assets"].Prefix; got != "firmware" {
+		t.Fatalf("fw-assets prefix = %q", got)
 	}
 }
 
@@ -223,7 +304,7 @@ func TestResolveWorkspaceStoreConfigsPreservesAbsoluteDirs(t *testing.T) {
 
 	gotStorage := resolveWorkspaceStorageConfigs(root, map[string]storage.Config{
 		"fw": {
-			Kind: storage.KindFilesystem,
+			Kind: storage.KindObjectStore,
 			FS:   &storage.FSConfig{Dir: absoluteDir},
 		},
 	})
@@ -285,13 +366,17 @@ storage:
     badger:
       dir: data/kv
   local-files:
-    kind: filesystem
+    kind: objectstore
     fs:
       dir: .
   acl-db:
     kind: sql
     sqlite:
       dir: data/acl.sqlite
+  wallet-db:
+    kind: sql
+    sqlite:
+      dir: data/wallet.sqlite
 stores:
   peers:
     kind: keyvalue
@@ -321,6 +406,33 @@ stores:
     kind: keyvalue
     storage: main-kv
     prefix: workflows
+  pet-species:
+    kind: keyvalue
+    storage: main-kv
+    prefix: pet-species
+  badges:
+    kind: keyvalue
+    storage: main-kv
+    prefix: badges
+  pets:
+    kind: keyvalue
+    storage: main-kv
+    prefix: pets
+  rewards:
+    kind: keyvalue
+    storage: main-kv
+    prefix: rewards
+  pet-species-assets:
+    kind: objectstore
+    storage: local-files
+    prefix: pet-species
+  badge-assets:
+    kind: objectstore
+    storage: local-files
+    prefix: badges
+  wallets:
+    kind: sql
+    storage: wallet-db
   acl:
     kind: sql
     storage: acl-db
@@ -340,6 +452,24 @@ workflows:
   store: workflows
 acl:
   store: acl
+pet_species:
+  store: pet-species
+  assets_store: pet-species-assets
+badges:
+  store: badges
+  assets_store: badge-assets
+pets:
+  store: pets
+rewards:
+  store: rewards
+wallets:
+  store: wallets
+system_tasks:
+  reward_claim:
+    generator: model/reward-claim
+    cooldown: 30m
+  pet_action:
+    generator: model/pet-action
 `), 0o644); err != nil {
 		t.Fatalf("WriteFile config error = %v", err)
 	}

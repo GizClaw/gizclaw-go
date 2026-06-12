@@ -164,16 +164,7 @@ func (h *PeerConn) initRPC() {
 		h.rpc.peerRun = h.Service.manager.PeerRun
 		h.rpc.peerRunRuntime = h.agentHost
 		h.rpc.serverGenX = h.serverGenX
-		if h.Conn != nil {
-			h.rpc.serverResources = &peerresource.Server{
-				Caller:      h.Conn.PublicKey(),
-				ACL:         h.Service.manager.ACL,
-				Workspaces:  h.Service.manager.Workspaces,
-				Workflows:   h.Service.manager.Workflows,
-				Models:      h.Service.manager.Models,
-				Credentials: h.Service.manager.Credentials,
-			}
-		}
+		h.rpc.serverResources = h.peerResources()
 	}
 	if h.Conn != nil {
 		h.rpc.callerPublicKey = h.Conn.PublicKey()
@@ -228,17 +219,49 @@ func (h *PeerConn) initPeerGenX() {
 	if manager.ACL == nil || manager.Models == nil || manager.Voices == nil || manager.Credentials == nil || manager.ProviderTenants == nil {
 		return
 	}
+	resources := h.peerResources()
 	h.serverGenX = peergenx.New(peergenx.Service{
 		Peer:            h.Conn,
-		Authorizer:      manager.ACL,
-		Models:          manager.Models,
-		Voices:          manager.Voices,
-		Credentials:     manager.Credentials,
+		Authorizer:      h.peerAuthorizer(),
+		Models:          resources,
+		Voices:          resources,
+		Credentials:     resources,
 		ProviderTenants: manager.ProviderTenants,
 		AudioOutput:     agenthost.MixerOutput{Tracks: h},
 	})
 	if h.rpc != nil {
 		h.rpc.serverGenX = h.serverGenX
+	}
+}
+
+func (h *PeerConn) peerResources() *peerresource.Server {
+	if h == nil || h.Conn == nil || h.Service == nil || h.Service.manager == nil {
+		return nil
+	}
+	manager := h.Service.manager
+	return &peerresource.Server{
+		Caller:      h.Conn.PublicKey(),
+		ACL:         h.peerAuthorizer(),
+		Workspaces:  manager.Workspaces,
+		Workflows:   manager.Workflows,
+		Models:      manager.Models,
+		Credentials: manager.Credentials,
+		Voices:      manager.Voices,
+		Pets:        manager.Pets,
+		Wallets:     manager.Wallets,
+		Rewards:     manager.Rewards,
+	}
+}
+
+func (h *PeerConn) peerAuthorizer() aclAuthorizer {
+	if h == nil || h.Conn == nil || h.Service == nil || h.Service.manager == nil {
+		return nil
+	}
+	manager := h.Service.manager
+	return peerAuthorizer{
+		ACL:       manager.ACL,
+		Peers:     manager.Peers,
+		PublicKey: h.Conn.PublicKey(),
 	}
 }
 
