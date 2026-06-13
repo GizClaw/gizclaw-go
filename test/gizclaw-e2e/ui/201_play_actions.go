@@ -1,5 +1,5 @@
-// User story: As a Play UI user, I can switch the video-call shell between
-// supported visual themes.
+// User story: As a Play UI user, I can switch between OpenAI gateway resource
+// views.
 package ui_test
 
 import (
@@ -11,10 +11,19 @@ func playActionsStories() []Story {
 		Name: "201-play-actions",
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoPlay("/")
-			page.ClickRole("button", "Dark")
-			page.ExpectText("Start Video Call")
-			page.ClickRole("button", "Light")
-			page.ExpectText("Start Video Call")
+			page.ClickRoleLike("button", "Models")
+			page.ExpectText(SeedModelID)
+			page.ClickRoleLike("button", "Voices")
+			page.ExpectText(SeedVoiceID)
+			page.ExpectText("Seeded UI Voice")
+			page.ClickRoleLike("button", "Pets")
+			page.ExpectText("Seeded Pet")
+			page.ClickRoleLike("button", "Transactions")
+			page.ExpectText("pet_adopt")
+			page.ClickRoleLike("button", "Rewards")
+			page.ExpectText("Seeded reward")
+			page.ClickRoleLike("button", "Models")
+			page.ExpectText(SeedModelID)
 		},
 	}}
 }

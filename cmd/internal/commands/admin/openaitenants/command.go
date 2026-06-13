@@ -4,7 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/adminapi"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/connection"
 	"github.com/spf13/cobra"
 )
 
@@ -27,12 +28,12 @@ func newListCmd(ctxName *string) *cobra.Command {
 		Use:   "list",
 		Short: "List OpenAI-compatible tenants",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			items, err := client.ListOpenAITenants(context.Background(), c)
+			items, err := adminapi.ListOpenAITenants(context.Background(), c)
 			if err != nil {
 				return err
 			}
@@ -47,12 +48,12 @@ func newGetCmd(ctxName *string) *cobra.Command {
 		Short: "Get an OpenAI-compatible tenant",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			item, err := client.GetOpenAITenant(context.Background(), c, args[0])
+			item, err := adminapi.GetOpenAITenant(context.Background(), c, args[0])
 			if err != nil {
 				return err
 			}

@@ -6,9 +6,9 @@ interfaces, and shared API types under `pkg/gizclaw/api/`.
 
 ## Layout
 
-- `admin_service.json`, `openai_service.json`, `server_public.json`,
-  and `rpc.json` define API surfaces or shared
-  protocol documents.
+- `admin_service.json`, `client_service.json`, `server_public.json`, and
+  `rpc.json` define GizClaw API surfaces or shared protocol documents.
+- `openai-compat/v1/service.json` defines the OpenAI-compatible HTTP surface.
 - `types.json` collects shared schemas and exposes them through
   `#/components/schemas`.
 - `type/*.json` contains reusable shared schema definitions.
@@ -22,21 +22,36 @@ Generated Go code lives outside this directory:
 
 - `pkg/gizclaw/api/adminservice/generated.go`
 - `pkg/gizclaw/api/apitypes/generated.go`
+- `pkg/gizclaw/api/clientservice/generated.go`
 - `pkg/gizclaw/api/openaiservice/generated.go`
 - `pkg/gizclaw/api/rpcapi/generated.go`
 - `pkg/gizclaw/api/serverpublic/generated.go`
 
+Generated TypeScript SDK packages live under `js/packages/`:
+
+- `js/packages/adminservice`
+- `js/packages/clientservice`
+- `js/packages/openaiservice`
+- `js/packages/serverpublic`
+
 Do not edit generated files by hand. Change the source schema in `api/`, then
-regenerate the corresponding Go package.
+regenerate the corresponding Go and/or TypeScript package.
 
 Common commands:
 
 ```sh
 go generate ./pkg/gizclaw/api/adminservice
 go generate ./pkg/gizclaw/api/apitypes
+go generate ./pkg/gizclaw/api/clientservice
 go generate ./pkg/gizclaw/api/openaiservice
 go generate ./pkg/gizclaw/api/rpcapi
 go generate ./pkg/gizclaw/api/serverpublic
+```
+
+Regenerate TypeScript SDK packages with:
+
+```sh
+npm --prefix js run gen:sdk
 ```
 
 When in doubt, regenerate all API packages:

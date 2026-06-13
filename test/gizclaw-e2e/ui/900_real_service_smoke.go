@@ -14,14 +14,12 @@ func realServiceSmokeStories() []Story {
 			page.ExpectText("Dashboard")
 
 			page.GotoPlay("/")
-			page.ClickRole("button", "Start Video Call")
-			page.ClickRole("button", "Logs")
-			page.ExpectText("rpc.response")
-			page.ExpectText("all.ping")
-			page.ClickRole("button", "Close RPC logs")
-			page.ClickRole("button", "Get Info")
-			page.ClickRole("button", "Logs")
-			page.ExpectText("Seeded UI Device")
+			page.ExpectText("OpenAI Gateway")
+			page.ClickRoleLike("button", "Models")
+			page.ExpectText(SeedModelID)
+			page.ClickRoleLike("button", "Voices")
+			page.ExpectText(SeedVoiceID)
+			page.ExpectText("Test Chat")
 		},
 	}}
 }

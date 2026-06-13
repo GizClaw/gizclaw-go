@@ -1,5 +1,5 @@
-// User story: As a Play UI user, I can open the video-call shell and see the
-// current call controls.
+// User story: As a Play UI user, I can open the OpenAI gateway shell and see
+// model resources plus the chat tester.
 package ui_test
 
 import (
@@ -11,12 +11,16 @@ func playShellStories() []Story {
 		Name: "200-play-shell",
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoPlay("/")
-			page.ExpectText("WebRTC Play")
-			page.ExpectText("Logs")
-			page.ExpectText("Controls")
-			page.ExpectText("Start Video Call")
-			page.ExpectText("Dark")
-			page.ExpectText("Light")
+			page.ExpectText("OpenAI Gateway")
+			page.ExpectText("GizClaw runtime")
+			page.ExpectText("Models")
+			page.ExpectText("Credentials")
+			page.ExpectText("Voices")
+			page.ExpectText("Test Chat")
+			page.ClickRoleLike("button", "Models")
+			page.ExpectText(SeedModelID)
+			page.ClickRoleLike("button", "Credentials")
+			page.ExpectText("ui-seed-openai-credential")
 		},
 	}}
 }

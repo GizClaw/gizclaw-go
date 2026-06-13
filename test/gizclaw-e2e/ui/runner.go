@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -207,6 +208,15 @@ func (p *Page) ClickRole(role, name string) {
 	}
 }
 
+func (p *Page) ClickRoleLike(role, name string) {
+	p.t.Helper()
+	if err := p.page.GetByRole(playwright.AriaRole(role), playwright.PageGetByRoleOptions{
+		Name: name,
+	}).Click(); err != nil {
+		p.t.Fatalf("click role=%s name~=%q: %v", role, name, err)
+	}
+}
+
 func (p *Page) ClickNavigationLink(name string) {
 	p.t.Helper()
 	err := p.page.GetByRole(playwright.AriaRole("navigation")).GetByRole(playwright.AriaRole("link"), playwright.LocatorGetByRoleOptions{
@@ -300,6 +310,7 @@ func startSeededUI(t testing.TB) Seed {
 			t.Fatalf("apply device config seed for %q: %v", publicKey, err)
 		}
 	}
+	seedPlayResourceACL(t, seedCtx, adminAPI, h.ContextPublicKey("device-a"))
 
 	return Seed{
 		AdminURL:              startTestUI(t, "admin", adminClient, adminui.FS()),
@@ -308,6 +319,52 @@ func startSeededUI(t testing.TB) Seed {
 		DevicePublicKey:       h.ContextPublicKey("device-a"),
 		ActionDevicePublicKey: h.ContextPublicKey("device-actions-a"),
 		DeleteDevicePublicKey: h.ContextPublicKey("device-delete-a"),
+	}
+}
+
+func seedPlayResourceACL(t testing.TB, ctx context.Context, api *adminservice.ClientWithResponses, publicKey string) {
+	t.Helper()
+
+	const roleName = "ui-play-openai-user"
+	roleResp, err := api.PutACLRoleWithResponse(ctx, roleName, adminservice.ACLRoleUpsert{
+		Name: roleName,
+		Permissions: apitypes.ACLPermissionList{
+			apitypes.ACLPermissionModelRead,
+			apitypes.ACLPermissionModelUse,
+			apitypes.ACLPermissionCredentialRead,
+			apitypes.ACLPermissionCredentialUse,
+			apitypes.ACLPermissionVoiceRead,
+			apitypes.ACLPermissionVoiceUse,
+		},
+	})
+	if err != nil {
+		t.Fatalf("put play ACL role: %v", err)
+	}
+	if roleResp.JSON200 == nil {
+		t.Fatalf("put play ACL role status %d: %s", roleResp.StatusCode(), strings.TrimSpace(string(roleResp.Body)))
+	}
+
+	subject := apitypes.ACLSubject{Kind: apitypes.ACLSubjectKindPk, Id: publicKey}
+	for _, resource := range []apitypes.ACLResource{
+		{Kind: apitypes.ACLResourceKindModel, Id: SeedModelID},
+		{Kind: apitypes.ACLResourceKindCredential, Id: "ui-seed-openai-credential"},
+		{Kind: apitypes.ACLResourceKindVoice, Id: SeedVoiceID},
+	} {
+		id := fmt.Sprintf("ui-play-%s-%s", resource.Kind, strings.NewReplacer(":", "-", "/", "-").Replace(resource.Id))
+		resp, err := api.PutACLPolicyBindingWithResponse(ctx, id, adminservice.ACLPolicyBindingUpsert{
+			Id: &id,
+			Policy: apitypes.ACLPolicy{
+				Subject:  subject,
+				Resource: resource,
+				Role:     roleName,
+			},
+		})
+		if err != nil {
+			t.Fatalf("put play ACL policy binding %s: %v", id, err)
+		}
+		if resp.JSON200 == nil {
+			t.Fatalf("put play ACL policy binding %s status %d: %s", id, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
+		}
 	}
 }
 
@@ -361,7 +418,11 @@ func startTestUI(t testing.TB, name string, client *gizcli.Client, uiFS fs.FS) s
 	mux := http.NewServeMux()
 	mux.Handle("/api/", client.ProxyHandler())
 	mux.Handle("/api", client.ProxyHandler())
-	registerTestPlayWebRTCRoute(mux, client)
+	mux.Handle("/v1/", client.ProxyHandler())
+	mux.Handle("/v1", client.ProxyHandler())
+	if strings.HasPrefix(name, "play") {
+		registerTestPlayRoutes(mux, client)
+	}
 	mux.Handle("/", staticWithSPAFallback(uiFS))
 
 	server := httptest.NewServer(mux)
@@ -380,15 +441,327 @@ func startErrorTestUI(t testing.TB, name string, uiFS fs.FS) string {
 	mux.HandleFunc("/api", func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
 	})
-	mux.HandleFunc("/webrtc/offer", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("/v1/", func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
 	})
+	mux.HandleFunc("/v1", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
+	})
+	registerTestPlayErrorRoutes(mux)
 	mux.Handle("/", staticWithSPAFallback(uiFS))
 
 	server := httptest.NewServer(mux)
 	t.Cleanup(server.Close)
 	t.Logf("%s test UI listening on %s", name, server.URL)
 	return server.URL
+}
+
+type testPlayVoiceListResponse struct {
+	Data       []json.RawMessage `json:"data"`
+	HasNext    bool              `json:"has_next"`
+	Items      []json.RawMessage `json:"items"`
+	NextCursor string            `json:"next_cursor"`
+}
+
+type testPlayVoiceStreamEvent struct {
+	Done  bool            `json:"done,omitempty"`
+	Error string          `json:"error,omitempty"`
+	Voice json.RawMessage `json:"voice,omitempty"`
+}
+
+func registerTestPlayRoutes(mux *http.ServeMux, client *gizcli.Client) {
+	mux.HandleFunc("/peer-resources", handleTestPlayResourceCatalog)
+	mux.HandleFunc("/peer-resources/", func(w http.ResponseWriter, r *http.Request) {
+		parts := strings.Split(strings.Trim(strings.TrimPrefix(r.URL.Path, "/peer-resources/"), "/"), "/")
+		if len(parts) != 1 || parts[0] == "" {
+			http.NotFound(w, r)
+			return
+		}
+		switch parts[0] {
+		case "models":
+			handleTestPlayModels(w, r, client)
+		case "credentials":
+			handleTestPlayCredentials(w, r, client)
+		case "voices":
+			proxyTestPlayOpenAI(w, r, client, "/v1/voices")
+		case "pets":
+			handleTestPlayPets(w, r)
+		case "wallet":
+			handleTestPlayWallet(w, r)
+		case "wallet-transactions":
+			handleTestPlayWalletTransactions(w, r)
+		case "rewards":
+			handleTestPlayRewards(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	mux.HandleFunc("/play/voices/stream", func(w http.ResponseWriter, r *http.Request) {
+		handleTestPlayVoiceStream(w, r, client)
+	})
+	registerTestPlayWebRTCRoute(mux, client)
+}
+
+func registerTestPlayErrorRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("/peer-resources", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
+	})
+	mux.HandleFunc("/peer-resources/", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
+	})
+	mux.HandleFunc("/play/voices/stream", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		writeTestPlayVoiceStreamEvent(w, testPlayVoiceStreamEvent{Error: "no gizclaw client configured for error scenario"})
+	})
+	mux.HandleFunc("/webrtc/offer", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
+	})
+}
+
+func handleTestPlayResourceCatalog(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	writeTestPlayJSON(w, map[string][]string{"resources": {"workspaces", "workflows", "models", "credentials", "voices", "pets", "wallet", "wallet-transactions", "rewards"}})
+}
+
+func handleTestPlayModels(w http.ResponseWriter, r *http.Request, client *gizcli.Client) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	result, err := client.ListModels(r.Context(), testPlayRPCID(), rpcapi.ModelListRequest{
+		Cursor: testQueryStringPtr(r, "cursor"),
+		Limit:  testQueryIntPtr(r, "limit", 20, 100),
+	})
+	writeTestPlayRPCResult(w, result, err)
+}
+
+func handleTestPlayCredentials(w http.ResponseWriter, r *http.Request, client *gizcli.Client) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	result, err := client.ListCredentials(r.Context(), testPlayRPCID(), rpcapi.CredentialListRequest{
+		Cursor: testQueryStringPtr(r, "cursor"),
+		Limit:  testQueryIntPtr(r, "limit", 20, 100),
+	})
+	if result != nil {
+		out := *result
+		out.Items = append([]rpcapi.Credential(nil), result.Items...)
+		for i := range out.Items {
+			out.Items[i].Body = nil
+		}
+		result = &out
+	}
+	writeTestPlayRPCResult(w, result, err)
+}
+
+func handleTestPlayPets(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	writeTestPlayJSON(w, map[string]any{
+		"items": []map[string]any{{
+			"id":         "ui-pet-1",
+			"name":       "Seeded Pet",
+			"species_id": "rabbit",
+			"voice_id":   SeedVoiceID,
+			"life": map[string]int{
+				"satiety":     80,
+				"cleanliness": 70,
+				"mood":        90,
+				"energy":      65,
+				"health":      95,
+			},
+			"ability": map[string]int{
+				"level":        1,
+				"exp":          10,
+				"charm":        5,
+				"intelligence": 6,
+				"stamina":      7,
+				"luck":         8,
+			},
+			"created_at": "2026-06-01T00:00:00Z",
+			"updated_at": "2026-06-01T00:01:00Z",
+		}},
+		"has_next": false,
+	})
+}
+
+func handleTestPlayWallet(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	writeTestPlayJSON(w, map[string]any{
+		"id":            "wallet-ui-seed",
+		"token_balance": 12,
+		"point_balance": 345,
+		"created_at":    "2026-06-01T00:00:00Z",
+		"updated_at":    "2026-06-01T00:02:00Z",
+	})
+}
+
+func handleTestPlayWalletTransactions(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	writeTestPlayJSON(w, map[string]any{
+		"items": []map[string]any{{
+			"id":          "ui-wallet-tx-1",
+			"token_delta": -1,
+			"point_delta": -10,
+			"reason":      "pet_adopt",
+			"created_at":  "2026-06-01T00:03:00Z",
+		}},
+		"has_next": false,
+	})
+}
+
+func handleTestPlayRewards(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	writeTestPlayJSON(w, map[string]any{
+		"items": []map[string]any{{
+			"id":           "ui-reward-1",
+			"prompt":       "Seeded reward",
+			"badge_id":     "founder",
+			"point_amount": 9,
+			"created_at":   "2026-06-01T00:04:00Z",
+		}},
+		"has_next": false,
+	})
+}
+
+func handleTestPlayVoiceStream(w http.ResponseWriter, r *http.Request, client *gizcli.Client) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	list, err := fetchTestPlayVoicePage(r, client)
+	if err != nil {
+		writeTestPlayVoiceStreamEvent(w, testPlayVoiceStreamEvent{Error: err.Error()})
+		return
+	}
+	providerKind := strings.TrimSpace(r.URL.Query().Get("provider_kind"))
+	providerName := strings.TrimSpace(r.URL.Query().Get("provider_name"))
+	for _, raw := range append(list.Data, list.Items...) {
+		if !testPlayVoiceMatches(raw, providerKind, providerName) {
+			continue
+		}
+		writeTestPlayVoiceStreamEvent(w, testPlayVoiceStreamEvent{Voice: raw})
+	}
+	writeTestPlayVoiceStreamEvent(w, testPlayVoiceStreamEvent{Done: true})
+}
+
+func fetchTestPlayVoicePage(r *http.Request, client *gizcli.Client) (testPlayVoiceListResponse, error) {
+	rec := httptest.NewRecorder()
+	proxyTestPlayOpenAI(rec, r, client, "/v1/voices")
+	if rec.Code < 200 || rec.Code >= 300 {
+		return testPlayVoiceListResponse{}, fmt.Errorf("list voices failed: HTTP %d %s", rec.Code, strings.TrimSpace(rec.Body.String()))
+	}
+	var out testPlayVoiceListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		return testPlayVoiceListResponse{}, err
+	}
+	return out, nil
+}
+
+func proxyTestPlayOpenAI(w http.ResponseWriter, r *http.Request, client *gizcli.Client, targetPath string) {
+	cloned := r.Clone(r.Context())
+	u := *cloned.URL
+	u.Path = targetPath
+	u.RawPath = ""
+	cloned.URL = &u
+	client.ProxyHandler().ServeHTTP(w, cloned)
+}
+
+func testPlayVoiceMatches(raw json.RawMessage, providerKind, providerName string) bool {
+	if providerKind == "" && providerName == "" {
+		return true
+	}
+	var view struct {
+		Provider struct {
+			Kind string `json:"kind"`
+			Name string `json:"name"`
+		} `json:"provider"`
+	}
+	if err := json.Unmarshal(raw, &view); err != nil {
+		return false
+	}
+	if providerKind != "" && view.Provider.Kind != providerKind {
+		return false
+	}
+	if providerName != "" && view.Provider.Name != providerName {
+		return false
+	}
+	return true
+}
+
+func writeTestPlayVoiceStreamEvent(w io.Writer, event testPlayVoiceStreamEvent) {
+	data, err := json.Marshal(event)
+	if err != nil {
+		data = []byte(`{"error":"encode voice stream event failed"}`)
+	}
+	_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
+}
+
+func writeTestPlayRPCResult(w http.ResponseWriter, result any, err error) {
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	writeTestPlayJSON(w, result)
+}
+
+func writeTestPlayJSON(w http.ResponseWriter, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(value); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func testPlayRPCID() string {
+	return "play-ui-" + fmt.Sprint(time.Now().UnixNano())
+}
+
+func testQueryStringPtr(r *http.Request, name string) *string {
+	value := strings.TrimSpace(r.URL.Query().Get(name))
+	if value == "" {
+		return nil
+	}
+	return &value
+}
+
+func testQueryIntPtr(r *http.Request, name string, fallback, max int) *int {
+	value := fallback
+	if raw := strings.TrimSpace(r.URL.Query().Get(name)); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			value = parsed
+		}
+	}
+	if value > max {
+		value = max
+	}
+	return &value
 }
 
 type testPlayWebRTCOfferRequest struct {

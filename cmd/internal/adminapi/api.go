@@ -1,127 +1,15 @@
-package client
+package adminapi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 )
-
-func ConnectFromContext(name string) (*gizcli.Client, error) {
-	c, serverPK, serverAddr, err := DialFromContext(name)
-	if err != nil {
-		return nil, err
-	}
-	if err := c.Dial(serverPK, serverAddr); err != nil {
-		return nil, err
-	}
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- c.Serve()
-	}()
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		select {
-		case err := <-errCh:
-			_ = c.Close()
-			if err != nil {
-				return nil, err
-			}
-			return nil, fmt.Errorf("gizclaw: client stopped before ready")
-		default:
-		}
-		if err := probeServerPublicReady(c); err == nil {
-			return c, nil
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	_ = c.Close()
-	return nil, fmt.Errorf("gizclaw: timeout waiting for client readiness")
-}
-
-func probeServerPublicReady(c *gizcli.Client) error {
-	if c == nil {
-		return fmt.Errorf("gizclaw: nil client")
-	}
-	if c.PeerConn() == nil {
-		return fmt.Errorf("gizclaw: client is not connected")
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-	_, err := GetServerInfo(ctx, c)
-	return err
-}
-
-func GetServerInfo(ctx context.Context, c *gizcli.Client) (apitypes.ServerInfo, error) {
-	api, err := c.ServerPublicClient()
-	if err != nil {
-		return apitypes.ServerInfo{}, err
-	}
-	resp, err := api.GetServerInfoWithResponse(ctx)
-	if err != nil {
-		return apitypes.ServerInfo{}, err
-	}
-	if resp.JSON200 != nil {
-		return *resp.JSON200, nil
-	}
-	return apitypes.ServerInfo{}, responseError(resp.StatusCode(), resp.Body, resp.JSON400)
-}
-
-func GetInfo(ctx context.Context, c *gizcli.Client) (apitypes.DeviceInfo, error) {
-	resp, err := c.GetServerInfo(ctx, "server.info.get")
-	if err != nil {
-		return apitypes.DeviceInfo{}, err
-	}
-	return convertClientAPIType[apitypes.DeviceInfo](*resp)
-}
-
-func PutInfo(ctx context.Context, c *gizcli.Client, info apitypes.DeviceInfo) (apitypes.DeviceInfo, error) {
-	rpcReq, err := convertClientAPIType[rpcapi.ServerPutInfoRequest](info)
-	if err != nil {
-		return apitypes.DeviceInfo{}, err
-	}
-	resp, err := c.PutServerInfo(ctx, "server.info.put", rpcReq)
-	if err != nil {
-		return apitypes.DeviceInfo{}, err
-	}
-	return convertClientAPIType[apitypes.DeviceInfo](*resp)
-}
-
-func SetName(ctx context.Context, c *gizcli.Client, name string) (apitypes.DeviceInfo, error) {
-	info, err := GetInfo(ctx, c)
-	if err != nil {
-		return apitypes.DeviceInfo{}, err
-	}
-	info.Name = &name
-	return PutInfo(ctx, c, info)
-}
-
-func GetRuntime(ctx context.Context, c *gizcli.Client) (apitypes.Runtime, error) {
-	resp, err := c.GetServerRuntime(ctx, "server.runtime.get")
-	if err != nil {
-		return apitypes.Runtime{}, err
-	}
-	return convertClientAPIType[apitypes.Runtime](*resp)
-}
-
-func convertClientAPIType[T any](value any) (T, error) {
-	var out T
-	data, err := json.Marshal(value)
-	if err != nil {
-		return out, err
-	}
-	if err := json.Unmarshal(data, &out); err != nil {
-		return out, err
-	}
-	return out, nil
-}
 
 type pagedItems[T any] struct {
 	HasNext    bool
@@ -145,6 +33,9 @@ func collectAllPages[T any](
 			return items, nil
 		}
 		next := string(*page.NextCursor)
+		if cursor != nil && next == *cursor {
+			return nil, fmt.Errorf("gizclaw: paginated list cursor did not advance: %q", next)
+		}
 		cursor = &next
 	}
 }

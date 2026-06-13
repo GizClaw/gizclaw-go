@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/connection"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/spf13/cobra"
@@ -73,7 +73,7 @@ func (r *resourceClientBridge) Close() error {
 }
 
 var openResourceClient = func(ctxName string) (resourceClient, error) {
-	c, err := client.ConnectFromContext(ctxName)
+	c, err := connection.ConnectFromContext(ctxName)
 	if err != nil {
 		return nil, err
 	}

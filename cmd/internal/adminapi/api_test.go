@@ -1,4 +1,4 @@
-package client
+package adminapi
 
 import (
 	"errors"
@@ -6,28 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 )
-
-func TestProbeServerPublicReadyNilClient(t *testing.T) {
-	err := probeServerPublicReady(nil)
-	if err == nil {
-		t.Fatal("probeServerPublicReady should fail for nil client")
-	}
-	if !strings.Contains(err.Error(), "nil client") {
-		t.Fatalf("probeServerPublicReady error = %v", err)
-	}
-}
-
-func TestProbeServerPublicReadyRequiresConnection(t *testing.T) {
-	err := probeServerPublicReady(&gizcli.Client{})
-	if err == nil {
-		t.Fatal("probeServerPublicReady should fail without connection")
-	}
-	if !strings.Contains(err.Error(), "not connected") {
-		t.Fatalf("probeServerPublicReady error = %v", err)
-	}
-}
 
 func TestCollectAllPagesAggregatesUntilDone(t *testing.T) {
 	var seen []string
@@ -82,6 +62,22 @@ func TestCollectAllPagesStopsOnMissingNextCursor(t *testing.T) {
 	}
 }
 
+func TestCollectAllPagesRejectsRepeatedCursor(t *testing.T) {
+	repeated := "same"
+	_, err := collectAllPages(func(cursor *string, limit *int32) (pagedItems[string], error) {
+		if cursor == nil {
+			return pagedItems[string]{HasNext: true, Items: []string{"a"}, NextCursor: &repeated}, nil
+		}
+		return pagedItems[string]{HasNext: true, Items: []string{"b"}, NextCursor: &repeated}, nil
+	})
+	if err == nil {
+		t.Fatal("collectAllPages succeeded with repeated cursor")
+	}
+	if !strings.Contains(err.Error(), "cursor did not advance") {
+		t.Fatalf("collectAllPages error = %v", err)
+	}
+}
+
 func TestCollectAllPagesPropagatesErrors(t *testing.T) {
 	want := errors.New("boom")
 	_, err := collectAllPages(func(cursor *string, limit *int32) (pagedItems[string], error) {
@@ -89,5 +85,35 @@ func TestCollectAllPagesPropagatesErrors(t *testing.T) {
 	})
 	if !errors.Is(err, want) {
 		t.Fatalf("error = %v, want %v", err, want)
+	}
+}
+
+func TestResponseErrorUsesStructuredError(t *testing.T) {
+	err := responseError(400, nil, &apitypes.ErrorResponse{
+		Error: apitypes.ErrorPayload{Code: "bad_request", Message: "missing field"},
+	})
+	if err == nil || err.Error() != "bad_request: missing field" {
+		t.Fatalf("responseError() = %v", err)
+	}
+}
+
+func TestResponseErrorUsesResponseBody(t *testing.T) {
+	err := responseError(502, []byte(" upstream failed \n"))
+	if err == nil || !strings.Contains(err.Error(), "unexpected status 502: upstream failed") {
+		t.Fatalf("responseError() = %v", err)
+	}
+}
+
+func TestResponseErrorUsesFallbackStatus(t *testing.T) {
+	err := responseError(500, nil)
+	if err == nil || err.Error() != "unexpected status 500" {
+		t.Fatalf("responseError() = %v", err)
+	}
+}
+
+func TestResponseErrorHandlesEmptyResponse(t *testing.T) {
+	err := responseError(0, nil)
+	if err == nil || err.Error() != "unexpected empty response" {
+		t.Fatalf("responseError() = %v", err)
 	}
 }

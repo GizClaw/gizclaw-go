@@ -3,7 +3,7 @@ package admincmd
 import (
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/cmdhttp"
 	aclcmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/acl"
 	credentialscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/credentials"
 	dashscopetenantscmd "github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/dashscopetenants"
@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var listenAndServeAdminUI = client.ListenAndServeAdminUI
+var listenAndServeAdminUI = cmdhttp.ListenAndServeAdminUI
 
 func NewCmd() *cobra.Command {
 	var ctxName string

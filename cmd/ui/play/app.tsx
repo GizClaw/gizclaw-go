@@ -1,770 +1,2541 @@
-import type { JSX, MutableRefObject } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { JSX } from "react";
 import { createRoot } from "react-dom/client";
-import { Activity, Info, MessageSquare, Mic, MicOff, Moon, Phone, PhoneOff, RadioTower, Send, Sun, Video, VideoOff, X } from "lucide-react";
+import OpenAI from "openai";
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { Bot, Brain, BriefcaseBusiness, Coins, Database, Gift, KeyRound, MessageCircle, Mic2, PawPrint, Pencil, Plus, ReceiptText, RefreshCw, SendHorizontal, Trash2, Volume2, VolumeX, Workflow } from "lucide-react";
+import { toast } from "sonner";
+import {
+  ActionBarPrimitive,
+  AssistantRuntimeProvider,
+  AuiIf,
+  BranchPickerPrimitive,
+  ComposerPrimitive,
+  MessagePrimitive,
+  ThreadPrimitive,
+  useEditComposer,
+  useLocalRuntime,
+  useMessage,
+  type ChatModelAdapter,
+  type ChatModelRunResult,
+  type EditComposerState,
+  type ExportedMessageRepository,
+  type ExportedMessageRepositoryItem,
+  type SpeechSynthesisAdapter,
+  type ThreadHistoryAdapter,
+  type ThreadMessage,
+} from "@assistant-ui/react";
+import {
+  adoptPeerPet,
+  claimPeerReward,
+  deletePeerPet,
+  feedPeerPet,
+  getPeerReward,
+  getPeerWallet,
+  getPeerWalletTransaction,
+  listClientVoices,
+  listPeerCredentials,
+  listPeerModels,
+  listPeerPets,
+  listPeerRewards,
+  listPeerVoices,
+  listPeerWalletTransactions,
+  listPeerWorkflows,
+  listPeerWorkspaces,
+  playWithPeerPet,
+  putPeerPet,
+  streamPlayableVoices as streamPlayableVoicesSDK,
+  washPeerPet,
+  type PlayVoiceStreamEvent,
+} from "@gizclaw/clientservice";
 
-import { Button } from "./components/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./components/card";
-import { cn } from "./components/utils";
+import { expectData, toMessage } from "./components/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
+import { Field as ShadField, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { Toaster } from "@/components/ui/sonner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/components/ui/utils";
 
-interface RpcRequest {
-  v: 1;
+type Section = "overview" | "workspaces" | "workflows" | "models" | "credentials" | "voices" | "pets" | "walletTransactions" | "rewards";
+
+type ModelSpec = {
+  capabilities?: ModelCapabilities;
+  created_at?: string;
+  description?: string;
   id: string;
-  method: string;
-  params?: unknown;
+  kind?: string;
+  name?: string;
+  owned_by?: string;
+  provider?: { kind: string; name: string };
+  source?: string;
+  support_json_output?: boolean;
+  support_temperature?: boolean;
+  support_text_only?: boolean;
+  support_tool_calls?: boolean;
+  support_thinking?: boolean;
+  thinking_param?: string;
+  thinking_level_param?: string;
+  thinking_levels?: string[];
+  default_thinking_level?: string;
+  updated_at?: string;
+  use_system_role?: boolean;
+};
+
+type ModelCapabilities = {
+  json_output?: boolean;
+  system_role?: boolean;
+  temperature?: boolean;
+  text_only?: boolean;
+  thinking?: {
+    default_level?: string;
+    level_param?: string;
+    levels?: string[];
+    param?: string;
+    supported: boolean;
+  };
+  tool_calls?: boolean;
+};
+
+type Voice = {
+  id: string;
+  name?: string;
+  provider: {
+    kind: string;
+    name: string;
+  };
+  source: string;
+  updated_at?: string;
+};
+
+type ResourceItem = Record<string, unknown>;
+
+type PageResponse<T> = {
+  data?: T[];
+  has_next?: boolean;
+  items?: T[];
+  next_cursor?: string;
+};
+
+type PagedState<T> = {
+  cursors: string[];
+  error: string;
+  hasNext: boolean;
+  items: T[];
+  loading: boolean;
+  nextCursor: string;
+};
+
+type WalletResource = {
+  created_at: string;
+  id: string;
+  point_balance: number;
+  token_balance: number;
+  updated_at?: string;
+};
+
+type PetStats = Record<string, number>;
+
+type PetResource = {
+  ability: PetStats;
+  created_at: string;
+  id: string;
+  life: PetStats;
+  name: string;
+  species_id: string;
+  updated_at: string;
+  voice_id: string;
+};
+
+type RewardResource = {
+  badge_id: string;
+  created_at: string;
+  id: string;
+  point_amount: number;
+  prompt: string;
+};
+
+type WalletTransactionResource = {
+  created_at: string;
+  id: string;
+  point_delta: number;
+  reason: string;
+  token_delta: number;
+};
+
+type ChatSession = {
+  createdAt: number;
+  id: string;
+  title: string;
+  updatedAt: number;
+};
+
+type ChatThinkingOptions = {
+  enabled: boolean;
+  level?: string;
+};
+
+type StoredHistory = {
+  headId?: string | null;
+  messages: Array<{
+    message: Omit<ThreadMessage, "createdAt"> & { createdAt: string };
+    parentId: string | null;
+    runConfig?: ExportedMessageRepositoryItem["runConfig"];
+  }>;
+};
+
+const sections: Array<{ icon: typeof Bot; id: Section; label: string }> = [
+  { icon: Database, id: "overview", label: "Overview" },
+  { icon: BriefcaseBusiness, id: "workspaces", label: "Workspaces" },
+  { icon: Workflow, id: "workflows", label: "Workflows" },
+  { icon: Bot, id: "models", label: "Models" },
+  { icon: KeyRound, id: "credentials", label: "Credentials" },
+  { icon: Mic2, id: "voices", label: "Voices" },
+  { icon: PawPrint, id: "pets", label: "Pets" },
+  { icon: ReceiptText, id: "walletTransactions", label: "Transactions" },
+  { icon: Gift, id: "rewards", label: "Rewards" },
+];
+
+const chatSessionsKey = "gizclaw.openai.chat.sessions";
+const openAIAPIKey = "gizclaw-play";
+
+let openAIClient: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  openAIClient ??= new OpenAI({
+    apiKey: openAIAPIKey,
+    baseURL: `${window.location.origin}/v1`,
+    dangerouslyAllowBrowser: true,
+    maxRetries: 1,
+  });
+  return openAIClient;
 }
 
-interface RpcResponse {
-  v?: 1;
-  id: string;
-  result?: unknown;
-  error?: {
-    code?: number;
-    message: string;
+function App(): JSX.Element {
+  const [section, setSection] = useState<Section>("overview");
+  const [models, setModels] = useState<ModelSpec[]>([]);
+  const [wallet, setWallet] = useState<WalletResource | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const refresh = async (): Promise<void> => {
+    setLoading(true);
+    setError("");
+    const failures: string[] = [];
+    await Promise.all([
+      listModels().then(setModels).catch((err: unknown) => failures.push(`models: ${toMessage(err)}`)),
+      getWallet().then(setWallet).catch(() => setWallet(null)),
+    ]);
+    if (failures.length > 0) {
+      setError(failures.join("\n"));
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  const counts = useMemo(
+    () => ({
+      models: models.length,
+      overview: wallet == null ? 0 : 1,
+    }),
+    [models.length, wallet],
+  );
+
+  return (
+    <>
+      <div className="min-h-screen bg-slate-50">
+      <div className="flex min-h-screen">
+        <aside className="hidden w-64 shrink-0 border-r bg-background px-4 py-5 lg:block">
+          <div className="mb-6 flex items-center gap-3 px-2">
+            <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <Database className="size-5" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold">OpenAI Gateway</div>
+              <div className="text-xs text-muted-foreground">GizClaw runtime</div>
+            </div>
+          </div>
+          <nav className="space-y-1">
+            {sections.map((item) => (
+              <button
+                className={cn(
+                  "flex h-9 w-full items-center justify-between rounded-md px-3 text-left text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  section === item.id && "bg-accent text-accent-foreground",
+                )}
+                key={item.id}
+                onClick={() => setSection(item.id)}
+                type="button"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <item.icon className="size-4" />
+                  {item.label}
+                </span>
+                {counts[item.id as keyof typeof counts] == null ? null : <Badge variant="outline">{counts[item.id as keyof typeof counts]}</Badge>}
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <main className="min-w-0 flex-1">
+          <header className="border-b bg-background px-4 py-4 sm:px-6">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase text-muted-foreground">Gateway</div>
+                <h1 className="text-2xl font-semibold tracking-tight">{sectionTitle(section)}</h1>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <div className="flex gap-1 rounded-md border bg-background p-1 lg:hidden">
+                  {sections.map((item) => (
+                    <button
+                      aria-label={item.label}
+                      className={cn("flex size-8 items-center justify-center rounded-sm text-muted-foreground", section === item.id && "bg-accent text-accent-foreground")}
+                      key={item.id}
+                      onClick={() => setSection(item.id)}
+                      type="button"
+                    >
+                      <item.icon className="size-4" />
+                    </button>
+                  ))}
+                </div>
+                <Button disabled={loading} onClick={() => void refresh()} size="sm" type="button" variant="outline">
+                  <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+                  Refresh
+                </Button>
+                <ChatTester models={models} />
+              </div>
+            </div>
+          </header>
+
+          <div className="space-y-5 p-4 sm:p-6">
+            {error !== "" ? (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : null}
+            {loading ? (
+              <LoadingGrid />
+            ) : (
+              <>
+                {section === "overview" ? <OverviewPanel modelCount={models.length} wallet={wallet} /> : null}
+                {section === "workspaces" ? <WorkspacesPanel /> : null}
+                {section === "workflows" ? <WorkflowsPanel /> : null}
+                {section === "models" ? <ModelsPanel initialModels={models} /> : null}
+                {section === "credentials" ? <CredentialsPanel /> : null}
+                {section === "voices" ? <VoicesPanel /> : null}
+                {section === "pets" ? <PetsPanel /> : null}
+                {section === "walletTransactions" ? <WalletTransactionsPanel /> : null}
+                {section === "rewards" ? <RewardsPanel /> : null}
+              </>
+            )}
+          </div>
+        </main>
+      </div>
+      </div>
+      <Toaster richColors />
+    </>
+  );
+}
+
+function ChatTester({ models }: { models: ModelSpec[] }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [sessions, setSessions] = useState<ChatSession[]>(() => loadChatSessions());
+  const [activeSessionID, setActiveSessionID] = useState(() => sessions[0]?.id ?? createChatSession().id);
+  const [selectedModel, setSelectedModel] = useState("");
+  const [selectedVoice, setSelectedVoice] = useState("");
+  const [voices, setVoices] = useState<Voice[]>([]);
+  const [voicesLoading, setVoicesLoading] = useState(false);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [temperature, setTemperature] = useState("0.7");
+  const [thinkingEnabled, setThinkingEnabled] = useState(true);
+  const [thinkingLevel, setThinkingLevel] = useState("");
+  const [chatError, setChatError] = useState("");
+  const [resetToken, setResetToken] = useState(0);
+  const selectedModelSpec = useMemo(() => models.find((model) => model.id === selectedModel), [models, selectedModel]);
+  const playableVoices = useMemo(() => voices.filter(isPlayableVoice), [voices]);
+  const thinkingLevels = useMemo(() => selectedModelSpec?.thinking_levels ?? [], [selectedModelSpec]);
+  const supportsThinking = selectedModelSpec?.support_thinking === true;
+  const supportsTemperature = selectedModelSpec?.support_temperature !== false;
+
+  const reportChatError = useCallback((message: string) => {
+    setChatError(message);
+    if (message.trim() !== "") {
+      toast.error("Chat request failed", { description: message });
+    }
+  }, []);
+
+  const setAutoSpeakEnabled = useCallback((checked: boolean) => {
+    setAutoSpeak(checked);
+  }, []);
+
+  const loadVoices = useCallback(() => {
+    if (voicesLoading || voicesLoaded) {
+      return;
+    }
+    setVoicesLoading(true);
+    void streamPlayableVoices((voice) => {
+      setVoices((current) => mergeVoices([...current, voice]));
+    })
+      .then(() => setVoicesLoaded(true))
+      .catch((err: unknown) => {
+        reportChatError(`Voices request failed: ${toMessage(err)}`);
+      })
+      .finally(() => setVoicesLoading(false));
+  }, [reportChatError, voicesLoaded, voicesLoading]);
+
+  useEffect(() => {
+    if (sessions.length === 0) {
+      const session = createChatSession();
+      setSessions([session]);
+      setActiveSessionID(session.id);
+      return;
+    }
+    saveChatSessions(sessions);
+  }, [sessions]);
+
+  useEffect(() => {
+    if (selectedModel === "" && models.length > 0) {
+      setSelectedModel(models[0].id);
+    }
+  }, [models, selectedModel]);
+
+  useEffect(() => {
+    if (open) {
+      loadVoices();
+    }
+  }, [loadVoices, open]);
+
+  useEffect(() => {
+    if (playableVoices.length === 0) {
+      setSelectedVoice("");
+      return;
+    }
+    if (!playableVoices.some((voice) => voice.id === selectedVoice)) {
+      setSelectedVoice(playableVoices[0].id);
+    }
+  }, [playableVoices, selectedVoice]);
+
+  useEffect(() => {
+    if (!supportsThinking) {
+      setThinkingLevel("");
+      return;
+    }
+    const defaultLevel = selectedModelSpec?.default_thinking_level ?? thinkingLevels[0] ?? "";
+    setThinkingLevel((current) => (current !== "" && thinkingLevels.includes(current) ? current : defaultLevel));
+  }, [selectedModelSpec, supportsThinking, thinkingLevels]);
+
+  const activeSession = sessions.find((session) => session.id === activeSessionID) ?? sessions[0];
+
+  const touchSession = useCallback((sessionID: string, _firstUserText?: string) => {
+    setSessions((current) =>
+      current.map((session) => (session.id === sessionID ? { ...session, updatedAt: Date.now() } : session)),
+    );
+  }, []);
+
+  const setSessionTitle = useCallback((sessionID: string, title: string) => {
+    setSessions((current) =>
+      current.map((session) => {
+        if (session.id !== sessionID || session.title !== "Chat") {
+          return session;
+        }
+        return { ...session, title: title.trim().slice(0, 48), updatedAt: Date.now() };
+      }),
+    );
+  }, []);
+
+  const newSession = () => {
+    const session = createChatSession();
+    setChatError("");
+    setSessions((current) => [session, ...current]);
+    setActiveSessionID(session.id);
+    setResetToken((value) => value + 1);
+  };
+
+  const clearActiveSession = () => {
+    if (activeSession == null) {
+      return;
+    }
+    setChatError("");
+    localStorage.removeItem(chatHistoryKey(activeSession.id));
+    setSessions((current) => current.map((session) => (session.id === activeSession.id ? { ...session, title: "Chat", updatedAt: Date.now() } : session)));
+    setResetToken((value) => value + 1);
+  };
+
+  const deleteActiveSession = () => {
+    if (activeSession == null) {
+      return;
+    }
+    setChatError("");
+    localStorage.removeItem(chatHistoryKey(activeSession.id));
+    setSessions((current) => {
+      const next = current.filter((session) => session.id !== activeSession.id);
+      const fallback = next[0] ?? createChatSession();
+      setActiveSessionID(fallback.id);
+      setResetToken((value) => value + 1);
+      return next.length === 0 ? [fallback] : next;
+    });
+  };
+
+  return (
+    <Sheet modal={false} open={open} onOpenChange={setOpen}>
+      <Button onClick={() => setOpen(true)} size="sm" type="button" variant="outline">
+        <MessageCircle className="size-4" />
+        Test Chat
+      </Button>
+      <SheetContent
+        className="top-32 h-[calc(100dvh-8rem)] w-[min(100vw,1120px)] gap-0 p-0 sm:top-24 sm:h-[calc(100dvh-6rem)] sm:max-w-none lg:top-20 lg:h-[calc(100dvh-5rem)]"
+        onInteractOutside={(event) => event.preventDefault()}
+        overlayClassName="pointer-events-none top-32 bg-transparent sm:top-24 lg:top-20"
+        side="right"
+      >
+        <SheetHeader className="border-b px-5 py-4">
+          <SheetTitle>Test Chat</SheetTitle>
+          <SheetDescription>Send requests to this gateway through the OpenAI-compatible chat completions endpoint.</SheetDescription>
+        </SheetHeader>
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="flex min-h-0 flex-col">
+            <div className="grid gap-3 border-b p-4 md:grid-cols-[minmax(0,1fr)_160px]">
+              <SelectField label="Model" value={selectedModel} onChange={setSelectedModel} options={models.map((model) => model.id)} />
+              {supportsTemperature ? <Field label="Temperature" value={temperature} onChange={setTemperature} /> : <div />}
+              <div className="md:col-span-2">
+                <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_160px]">
+                  <ScrollableSelectField label="Voice" loading={voicesLoading} value={selectedVoice} onChange={setSelectedVoice} onOpen={loadVoices} options={playableVoices.map((voice) => voice.id)} />
+                  <SwitchField label="Auto Speak" checked={autoSpeak} onChange={setAutoSpeakEnabled} />
+                </div>
+              </div>
+              {supportsThinking ? (
+                <div className="grid gap-3 md:col-span-2 md:grid-cols-[160px_minmax(0,1fr)]">
+                  <Toggle label="Think" checked={thinkingEnabled} onChange={setThinkingEnabled} />
+                  {thinkingLevels.length > 0 ? (
+                    <SelectField label="Think Level" value={thinkingLevel} onChange={setThinkingLevel} options={thinkingLevels} />
+                  ) : (
+                    <div className="flex items-end text-xs text-muted-foreground">
+                      <Brain className="mr-1 size-3" />
+                      This model supports a thinking on/off switch.
+                    </div>
+                  )}
+                </div>
+              ) : null}
+              <div className="md:col-span-2">
+                <TextAreaField label="System Prompt" value={systemPrompt} onChange={setSystemPrompt} placeholder="Optional system instructions for this test chat." />
+              </div>
+            </div>
+            {activeSession == null || selectedModel === "" ? (
+              <EmptyMessage description="Create a session and select an LLM model before chatting." title="No chat target" />
+            ) : (
+              <ChatRuntime
+                key={`${activeSession.id}:${resetToken}`}
+                chatError={chatError}
+                clearChatError={() => setChatError("")}
+                model={selectedModel}
+                onChatError={reportChatError}
+                autoSpeak={autoSpeak && selectedVoice !== ""}
+                sessionID={activeSession.id}
+                setSessionTitle={setSessionTitle}
+                systemPrompt={systemPrompt}
+                thinking={supportsThinking ? { enabled: thinkingEnabled, level: thinkingLevel === "" ? undefined : thinkingLevel } : undefined}
+                temperature={supportsTemperature ? Number.parseFloat(temperature) : undefined}
+                touchSession={touchSession}
+                voice={selectedVoice}
+              />
+            )}
+          </div>
+          <aside className="flex min-h-0 flex-col border-l bg-muted/30">
+            <div className="flex items-center justify-between gap-2 border-b p-3">
+              <div className="text-sm font-semibold">Sessions</div>
+              <Button onClick={newSession} size="sm" type="button">
+                <Plus className="size-4" />
+                New
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2">
+              {sessions.map((session) => (
+                <button
+                  className={cn(
+                    "mb-1 flex w-full flex-col rounded-md px-3 py-2 text-left text-sm hover:bg-accent",
+                    session.id === activeSessionID && "bg-accent text-accent-foreground",
+                  )}
+                  key={session.id}
+                  onClick={() => {
+                    setChatError("");
+                    setActiveSessionID(session.id);
+                    setResetToken((value) => value + 1);
+                  }}
+                  type="button"
+                >
+                  <span className="line-clamp-1 font-medium">{session.title}</span>
+                  <span className="text-xs text-muted-foreground">{formatDate(new Date(session.updatedAt).toISOString())}</span>
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-2 border-t p-3">
+              <Button onClick={clearActiveSession} type="button" variant="outline">
+                Clear Current
+              </Button>
+              <Button onClick={deleteActiveSession} type="button" variant="outline">
+                <Trash2 className="size-4" />
+                Delete Current
+              </Button>
+            </div>
+          </aside>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function ChatRuntime({
+  autoSpeak,
+  chatError,
+  clearChatError,
+  model,
+  onChatError,
+  sessionID,
+  setSessionTitle,
+  systemPrompt,
+  thinking,
+  temperature,
+  touchSession,
+  voice,
+}: {
+  autoSpeak: boolean;
+  chatError: string;
+  clearChatError: () => void;
+  model: string;
+  onChatError: (message: string) => void;
+  sessionID: string;
+  setSessionTitle: (sessionID: string, title: string) => void;
+  systemPrompt: string;
+  thinking?: ChatThinkingOptions;
+  temperature?: number;
+  touchSession: (sessionID: string, firstUserText?: string) => void;
+  voice: string;
+}): JSX.Element {
+  const history = useMemo(() => createThreadHistoryAdapter(sessionID, touchSession), [sessionID, touchSession]);
+  const speech = useMemo(() => (voice === "" ? undefined : createOpenAISpeechSynthesisAdapter({ onError: onChatError, voice })), [onChatError, voice]);
+  const speakText = useCallback(
+    (text: string) => {
+      if (speech == null || text.trim() === "") {
+        return;
+      }
+      void unlockBrowserAudio();
+      speech.speak(text);
+    },
+    [speech],
+  );
+  const speakResponse = useCallback(
+    (text: string) => {
+      if (!autoSpeak) {
+        return;
+      }
+      speakText(text);
+    },
+    [autoSpeak, speakText],
+  );
+  const adapter = useMemo(
+    () => createOpenAIChatAdapter({ model, onChatError, onCompleteText: speakResponse, sessionID, setSessionTitle, systemPrompt, temperature, thinking }),
+    [model, onChatError, sessionID, setSessionTitle, speakResponse, systemPrompt, temperature, thinking],
+  );
+  const runtime = useLocalRuntime(adapter, { adapters: { history, speech } });
+
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      <ThreadPrimitive.Root className="flex min-h-0 flex-1 flex-col">
+        <ThreadPrimitive.Viewport className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+          <AuiIf condition={(state) => state.thread.isEmpty}>
+            <div className="m-auto max-w-sm text-center">
+              <div className="text-sm font-medium">Ready to test {model}</div>
+              <div className="mt-1 text-sm text-muted-foreground">Send a message to call /v1/chat/completions on this example service.</div>
+            </div>
+          </AuiIf>
+          <ThreadPrimitive.Messages>{({ message }) => (message.role === "user" ? <UserChatMessage /> : <AssistantChatMessage onSpeak={speakText} />)}</ThreadPrimitive.Messages>
+          <ThreadPrimitive.ViewportFooter className="sticky bottom-0 mt-auto bg-background pt-2">
+            {chatError !== "" ? (
+              <Alert className="mb-2 border-destructive/50 bg-destructive/5 text-destructive" variant="destructive">
+                <AlertDescription className="flex items-start justify-between gap-3">
+                  <span className="min-w-0 whitespace-pre-wrap break-words text-xs">{chatError}</span>
+                  <Button aria-label="Dismiss chat error" className="h-6 shrink-0 px-2" onClick={clearChatError} size="sm" type="button" variant="ghost">
+                    Dismiss
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+            <ComposerPrimitive.Root className="rounded-lg border bg-background shadow-sm">
+              <ComposerPrimitive.Input className="max-h-40 min-h-16 w-full resize-none bg-transparent px-3 py-3 text-sm outline-none" placeholder="Type a test message..." submitMode="ctrlEnter" />
+              <div className="flex items-center justify-between border-t px-2 py-2">
+                <div className="text-xs text-muted-foreground">Ctrl+Enter sends</div>
+                <ComposerPrimitive.Send asChild>
+                  <Button size="sm" type="submit">
+                    <SendHorizontal className="size-4" />
+                    Send
+                  </Button>
+                </ComposerPrimitive.Send>
+              </div>
+            </ComposerPrimitive.Root>
+          </ThreadPrimitive.ViewportFooter>
+        </ThreadPrimitive.Viewport>
+      </ThreadPrimitive.Root>
+    </AssistantRuntimeProvider>
+  );
+}
+
+function UserChatMessage(): JSX.Element {
+  const isEditing = useEditComposer({ optional: true, selector: (state: EditComposerState) => state.isEditing }) ?? false;
+
+  return (
+    <MessagePrimitive.Root className="group flex justify-end">
+      <div className="flex max-w-[78%] flex-col items-end gap-1">
+        {isEditing ? (
+          <EditMessageComposer />
+        ) : (
+          <>
+            <div className="whitespace-pre-wrap rounded-lg bg-primary px-3 py-2 text-sm text-primary-foreground">
+              <MessagePrimitive.Parts />
+            </div>
+            <UserMessageActions />
+          </>
+        )}
+      </div>
+    </MessagePrimitive.Root>
+  );
+}
+
+function AssistantChatMessage({ onSpeak }: { onSpeak: (text: string) => void }): JSX.Element {
+  const message = useMessage();
+  const text = threadMessageText(message);
+
+  return (
+    <MessagePrimitive.Root className="group flex justify-start">
+      <div className="flex max-w-[82%] flex-col items-start gap-1">
+        <div className="whitespace-pre-wrap rounded-lg bg-muted px-3 py-2 text-sm">
+          <MessagePrimitive.Parts />
+        </div>
+        <AssistantMessageActions onSpeak={() => onSpeak(text)} speakDisabled={text.trim() === ""} />
+      </div>
+    </MessagePrimitive.Root>
+  );
+}
+
+function UserMessageActions(): JSX.Element {
+  return (
+    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <BranchPicker />
+      <ActionBarPrimitive.Root hideWhenRunning>
+        <ActionBarPrimitive.Edit asChild>
+          <Button size="xs" type="button" variant="ghost">
+            <Pencil className="size-3" />
+            Edit
+          </Button>
+        </ActionBarPrimitive.Edit>
+      </ActionBarPrimitive.Root>
+    </div>
+  );
+}
+
+function AssistantMessageActions({ onSpeak, speakDisabled }: { onSpeak: () => void; speakDisabled: boolean }): JSX.Element {
+  return (
+    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <BranchPicker />
+      <ActionBarPrimitive.Root hideWhenRunning>
+        <Button disabled={speakDisabled} onClick={onSpeak} size="xs" type="button" variant="ghost">
+          <Volume2 className="size-3" />
+          Speak
+        </Button>
+        <ActionBarPrimitive.StopSpeaking asChild>
+          <Button size="xs" type="button" variant="ghost">
+            <VolumeX className="size-3" />
+            Stop
+          </Button>
+        </ActionBarPrimitive.StopSpeaking>
+        <ActionBarPrimitive.Reload asChild>
+          <Button size="xs" type="button" variant="ghost">
+            <RefreshCw className="size-3" />
+            Regenerate
+          </Button>
+        </ActionBarPrimitive.Reload>
+      </ActionBarPrimitive.Root>
+    </div>
+  );
+}
+
+function createOpenAISpeechSynthesisAdapter({
+  onError,
+  voice,
+}: {
+  onError: (message: string) => void;
+  voice: string;
+}): SpeechSynthesisAdapter {
+  return {
+    speak(text: string): SpeechSynthesisAdapter.Utterance {
+      const subscribers = new Set<() => void>();
+      const controller = new AbortController();
+      let audio: HTMLAudioElement | null = null;
+      let objectURL = "";
+      let ended = false;
+
+      const utterance: SpeechSynthesisAdapter.Utterance = {
+        status: { type: "starting" },
+        cancel: () => {
+          controller.abort();
+          if (audio != null) {
+            audio.pause();
+            audio.removeAttribute("src");
+            audio.load();
+          }
+          finish("cancelled");
+        },
+        subscribe: (callback: () => void) => {
+          if (utterance.status.type === "ended") {
+            let cancelled = false;
+            queueMicrotask(() => {
+              if (!cancelled) {
+                callback();
+              }
+            });
+            return () => {
+              cancelled = true;
+            };
+          }
+          subscribers.add(callback);
+          return () => {
+            subscribers.delete(callback);
+          };
+        },
+      };
+
+      const notify = () => {
+        subscribers.forEach((callback) => callback());
+      };
+
+      const finish = (reason: SpeechSynthesisAdapter.Status extends infer Status ? Status extends { type: "ended"; reason: infer Reason } ? Reason : never : never, error?: unknown) => {
+        if (ended) {
+          return;
+        }
+        ended = true;
+        if (objectURL !== "") {
+          URL.revokeObjectURL(objectURL);
+          objectURL = "";
+        }
+        if (audio != null) {
+          audio.remove();
+        }
+        utterance.status = error === undefined ? { type: "ended", reason } : { type: "ended", reason, error };
+        notify();
+      };
+
+      const fail = (message: string, error?: unknown) => {
+        console.error(message, error);
+        onError(message);
+        finish("error", error ?? new Error(message));
+      };
+
+      void (async () => {
+        try {
+          toast.info("Speech request started");
+          const blob = await fetchSpeechAudioBlob({ input: text, signal: controller.signal, voice });
+          toast.info(`Speech audio received (${blob.size} bytes)`);
+          if (controller.signal.aborted) {
+            finish("cancelled");
+            return;
+          }
+          objectURL = URL.createObjectURL(blob);
+          audio = new Audio(objectURL);
+          audio.preload = "auto";
+          audio.muted = false;
+          audio.volume = 1;
+          audio.setAttribute("playsinline", "true");
+          audio.style.display = "none";
+          document.body.append(audio);
+          audio.addEventListener("ended", () => finish("finished"), { once: true });
+          audio.addEventListener("error", () => fail("Speech playback failed", audio?.error ?? undefined), { once: true });
+          utterance.status = { type: "running" };
+          notify();
+          await playAudioWithTimeout(audio);
+          toast.success("Speech playback started");
+        } catch (err) {
+          if (isAbortError(err)) {
+            finish("cancelled");
+            return;
+          }
+          fail(`Speech playback failed: ${errorToMessage(err)}`, err);
+        }
+      })();
+
+      return utterance;
+    },
   };
 }
 
-interface RpcLogEntry {
-  id: string;
-  event: string;
-  detail: string;
-}
+let audioUnlockPromise: Promise<void> | null = null;
 
-interface SignalDescription {
-  sdp: string;
-  type: RTCSdpType;
-}
-
-type CallStatus = "Idle" | "Starting" | "Connected" | "RPC failed" | "Ended";
-type Theme = "dark" | "light";
-
-interface NerdStats {
-  downlinkKbps: number;
-  inboundBytes: number;
-  outboundBytes: number;
-  packetsLost: number;
-  rttMs?: number;
-  uplinkKbps: number;
-}
-
-interface RpcCommand {
-  label: string;
-  method: string;
-  description: string;
-  params: () => unknown;
-}
-
-const RPC_COMMANDS: RpcCommand[] = [
-  {
-    label: "Ping",
-    method: "all.ping",
-    description: "Check the RPC stream and round-trip timing.",
-    params: () => ({ client_send_time: Date.now() }),
-  },
-  {
-    label: "Get Info",
-    method: "server.info.get",
-    description: "Read device identity and hardware metadata.",
-    params: () => ({}),
-  },
-  {
-    label: "Get Runtime",
-    method: "server.runtime.get",
-    description: "Read online state and transport counters.",
-    params: () => ({}),
-  },
-];
-
-function App(): JSX.Element {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [status, setStatus] = useState<CallStatus>("Idle");
-  const [logs, setLogs] = useState<RpcLogEntry[]>([]);
-  const [rpcSent, setRpcSent] = useState(0);
-  const [rpcReceived, setRpcReceived] = useState(0);
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [logDrawerOpen, setLogDrawerOpen] = useState(false);
-  const [expandedLogID, setExpandedLogID] = useState<string | null>(null);
-  const [nerdStats, setNerdStats] = useState<NerdStats>({
-    downlinkKbps: 0,
-    inboundBytes: 0,
-    outboundBytes: 0,
-    packetsLost: 0,
-    uplinkKbps: 0,
+function unlockBrowserAudio(): Promise<void> {
+  if (audioUnlockPromise != null) {
+    return audioUnlockPromise;
+  }
+  audioUnlockPromise = (async () => {
+    const AudioContextCtor = window.AudioContext ?? (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextCtor != null) {
+      const ctx = new AudioContextCtor();
+      if (ctx.state === "suspended") {
+        await ctx.resume();
+      }
+      const source = ctx.createBufferSource();
+      source.buffer = ctx.createBuffer(1, 1, 48000);
+      source.connect(ctx.destination);
+      source.start();
+      setTimeout(() => void ctx.close(), 100);
+    }
+  })().catch((err: unknown) => {
+    audioUnlockPromise = null;
+    console.warn("Browser audio unlock failed", err);
   });
-  const peerRef = useRef<RTCPeerConnection | null>(null);
-  const localVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
-  const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
-  const remoteStreamRef = useRef<MediaStream | null>(null);
-  const lastStatsSampleRef = useRef<{ bytesReceived: number; bytesSent: number; timestamp: number } | null>(null);
-  const pendingRPCRef = useRef<Map<string, string>>(new Map());
-  const initialRPCSentRef = useRef(false);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [micEnabled, setMicEnabled] = useState(true);
+  return audioUnlockPromise;
+}
 
-  const appendLog = useCallback((event: string, detail: unknown) => {
-    setLogs((current) => [
-      {
-        id: `${Date.now()}-${current.length + 1}`,
-        event,
-        detail: formatLogDetail(detail),
-      },
-      ...current,
-    ].slice(0, 100));
-  }, []);
+function playAudioWithTimeout(audio: HTMLAudioElement): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error("audio.play() timed out"));
+    }, 10000);
+    audio
+      .play()
+      .then(() => {
+        window.clearTimeout(timer);
+        resolve();
+      })
+      .catch((err: unknown) => {
+        window.clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
 
-  const closeCall = useCallback(() => {
-    peerRef.current?.close();
-    localStreamRef.current?.getTracks().forEach((track) => track.stop());
-    peerRef.current = null;
-    localStreamRef.current = null;
-    remoteStreamRef.current = null;
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = null;
+async function fetchSpeechAudioBlob({ input, signal, voice }: { input: string; signal: AbortSignal; voice: string }): Promise<Blob> {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await getOpenAIClient().audio.speech.create(
+        {
+          input,
+          model: "tts",
+          response_format: "mp3",
+          stream_format: "sse",
+          voice,
+        },
+        {
+          signal,
+        },
+      );
+      if (response.ok) {
+        toast.info("Speech stream response received");
+        return readSpeechStreamAudioBlob(response);
+      }
+      const message = await responseErrorMessage(response);
+      if (attempt === 0 && isTransientSpeechProxyError(message)) {
+        toast.info("Speech request retrying");
+        continue;
+      }
+      throw new Error(`Speech request failed: ${message}`);
+    } catch (err) {
+      if (isAbortError(err)) {
+        throw err;
+      }
+      const message = errorToMessage(err);
+      if (attempt === 0 && isTransientSpeechProxyError(message)) {
+        toast.info("Speech request retrying");
+        continue;
+      }
+      throw err;
     }
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null;
-    }
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null;
-    }
-    pendingRPCRef.current.clear();
-    initialRPCSentRef.current = false;
-    lastStatsSampleRef.current = null;
-    setCameraEnabled(true);
-    setMicEnabled(true);
-    setStatus("Ended");
-    appendLog("call.closed", "WebRTC call closed");
-  }, [appendLog]);
+  }
+  throw new Error("Speech request failed");
+}
 
-  const playRemoteAudio = useCallback(() => {
-    const audio = remoteAudioRef.current;
-    if (!audio) {
+async function responseErrorMessage(response: Response): Promise<string> {
+  const status = `HTTP ${response.status}${response.statusText === "" ? "" : ` ${response.statusText}`}`;
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    try {
+      const payload = (await response.json()) as unknown;
+      const message = openAIErrorPayloadMessage(payload);
+      return message === "" ? status : `${status}\n${message}`;
+    } catch {
+      return status;
+    }
+  }
+  const body = (await response.text().catch(() => "")).trim();
+  return body === "" ? status : `${status}\n${body}`;
+}
+
+async function readSpeechStreamAudioBlob(response: Response): Promise<Blob> {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.startsWith("text/event-stream")) {
+    return response.blob();
+  }
+  if (response.body == null) {
+    throw new Error("Speech stream response has no body");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: BlobPart[] = [];
+  let pending = "";
+  let doneEvent = false;
+
+  const processLine = (line: string) => {
+    const trimmed = line.trim();
+    if (trimmed === "" || !trimmed.startsWith("data:")) {
       return;
     }
-    void audio.play().catch((error: unknown) => {
-      appendLog("audio.play.error", error instanceof Error ? error.message : String(error));
-    });
-  }, [appendLog]);
+    const data = trimmed.slice("data:".length).trim();
+    const event = JSON.parse(data) as { audio?: string; done?: boolean; type?: string };
+    switch (event.type) {
+      case "speech.audio.delta":
+        if (event.audio == null || event.audio === "") {
+          throw new Error("Speech stream audio delta is empty");
+        }
+        chunks.push(base64ToArrayBuffer(event.audio));
+        return;
+      case "speech.audio.done":
+        doneEvent = true;
+        return;
+      default:
+        throw new Error(`Unexpected speech stream event: ${event.type ?? "unknown"}`);
+    }
+  };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    pending += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+    for (;;) {
+      const newline = pending.indexOf("\n");
+      if (newline < 0) {
+        break;
+      }
+      const line = pending.slice(0, newline);
+      pending = pending.slice(newline + 1);
+      processLine(line);
+    }
+    if (done) {
+      break;
+    }
+  }
+  if (pending.trim() !== "") {
+    processLine(pending);
+  }
+  if (chunks.length === 0) {
+    throw new Error("Speech stream returned no audio chunks");
+  }
+  if (!doneEvent) {
+    throw new Error("Speech stream ended without done event");
+  }
+  return new Blob(chunks, { type: "audio/mpeg" });
+}
+
+function base64ToArrayBuffer(value: string): ArrayBuffer {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+}
+
+function BranchPicker(): JSX.Element {
+  return (
+    <MessagePrimitive.If hasBranches>
+      <BranchPickerPrimitive.Root className="flex h-6 items-center gap-1 rounded-md border bg-background px-1 text-xs text-muted-foreground">
+        <BranchPickerPrimitive.Previous asChild>
+          <Button aria-label="Previous branch" size="icon-xs" type="button" variant="ghost">
+            <span aria-hidden="true">&lt;</span>
+          </Button>
+        </BranchPickerPrimitive.Previous>
+        <span className="min-w-8 text-center">
+          <BranchPickerPrimitive.Number />/<BranchPickerPrimitive.Count />
+        </span>
+        <BranchPickerPrimitive.Next asChild>
+          <Button aria-label="Next branch" size="icon-xs" type="button" variant="ghost">
+            <span aria-hidden="true">&gt;</span>
+          </Button>
+        </BranchPickerPrimitive.Next>
+      </BranchPickerPrimitive.Root>
+    </MessagePrimitive.If>
+  );
+}
+
+function EditMessageComposer(): JSX.Element {
+  return (
+    <ComposerPrimitive.Root className="w-[min(560px,78vw)] rounded-lg border bg-background shadow-sm">
+      <ComposerPrimitive.Input className="max-h-40 min-h-20 w-full resize-none bg-transparent px-3 py-3 text-sm outline-none" submitMode="ctrlEnter" />
+      <div className="flex items-center justify-end gap-2 border-t px-2 py-2">
+        <ComposerPrimitive.Cancel asChild>
+          <Button size="sm" type="button" variant="outline">
+            Cancel
+          </Button>
+        </ComposerPrimitive.Cancel>
+        <ComposerPrimitive.Send asChild>
+          <Button size="sm" type="submit">
+            <SendHorizontal className="size-4" />
+            Save & Send
+          </Button>
+        </ComposerPrimitive.Send>
+      </div>
+    </ComposerPrimitive.Root>
+  );
+}
+
+function usePagedList<T>(loadPage: (cursor: string) => Promise<PageResponse<T>>): {
+  error: string;
+  next: () => void;
+  page: PagedState<T>;
+  previous: () => void;
+  refresh: () => void;
+} {
+  const [page, setPage] = useState<PagedState<T>>({
+    cursors: [""],
+    error: "",
+    hasNext: false,
+    items: [],
+    loading: true,
+    nextCursor: "",
+  });
+
+  const load = useCallback(
+    async (cursor: string, cursors: string[]) => {
+      setPage((current) => ({ ...current, error: "", loading: true }));
+      try {
+        const response = await loadPage(cursor);
+        setPage({
+          cursors,
+          error: "",
+          hasNext: response.has_next === true && response.next_cursor != null && response.next_cursor !== "",
+          items: response.items ?? response.data ?? [],
+          loading: false,
+          nextCursor: response.next_cursor ?? "",
+        });
+      } catch (err) {
+        setPage((current) => ({ ...current, error: toMessage(err), loading: false }));
+      }
+    },
+    [loadPage],
+  );
 
   useEffect(() => {
-    const peer = peerRef.current;
-    if (!peer || status === "Idle" || status === "Ended") {
-      lastStatsSampleRef.current = null;
-      return;
-    }
-    const interval = window.setInterval(() => {
-      const current = peerRef.current;
-      if (!current || current.connectionState === "closed") {
+    void load("", [""]);
+  }, [load]);
+
+  return {
+    error: page.error,
+    next: () => {
+      if (!page.hasNext || page.nextCursor === "") {
         return;
       }
-      void samplePeerStats(current, lastStatsSampleRef, setNerdStats);
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [status]);
-
-  const sendRPC = useCallback((command: RpcCommand) => {
-    const peer = peerRef.current;
-    if (!peer || (peer.connectionState !== "connected" && peer.connectionState !== "connecting")) {
-      setStatus("RPC failed");
-      appendLog("rpc.error", "WebRTC connection is not ready for RPC yet");
-      return;
-    }
-    const request: RpcRequest = {
-      v: 1,
-      id: crypto.randomUUID(),
-      method: command.method,
-      params: command.params(),
-    };
-    pendingRPCRef.current.set(request.id, command.method);
-    setRpcSent((current) => current + 1);
-    appendLog("rpc.send", request.method);
-
-    const channel = peer.createDataChannel(`rpc:${request.id}`, { ordered: true });
-    channel.onopen = () => {
-      channel.send(JSON.stringify(request));
-    };
-    channel.onmessage = (message) => {
-      try {
-        const response = JSON.parse(String(message.data)) as RpcResponse;
-        const method = pendingRPCRef.current.get(response.id) ?? command.method;
-        pendingRPCRef.current.delete(response.id);
-        setRpcReceived((current) => current + 1);
-        if (response.error) {
-          setStatus("RPC failed");
-          appendLog("rpc.error", `${method}: ${response.error.message}`);
-          return;
-        }
-        appendLog("rpc.response", { method, result: response.result ?? {} });
-      } catch (error) {
-        setStatus("RPC failed");
-        appendLog("rpc.error", error instanceof Error ? error.message : String(error));
-      }
-    };
-    channel.onerror = () => {
-      setStatus("RPC failed");
-      appendLog("rpc.error", `${command.method}: data channel error`);
-    };
-    channel.onclose = () => appendLog("rpc.close", command.method);
-  }, [appendLog]);
-
-  const startCall = useCallback(async () => {
-    if (status === "Starting") {
-      return;
-    }
-    closeCall();
-    setStatus("Starting");
-    setLogs([]);
-    setRpcSent(0);
-    setRpcReceived(0);
-    initialRPCSentRef.current = false;
-
-    const uiPeer = new RTCPeerConnection({ iceServers: [] });
-    peerRef.current = uiPeer;
-
-    const remoteStream = new MediaStream();
-    remoteStreamRef.current = remoteStream;
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = remoteStream;
-    }
-
-    uiPeer.onconnectionstatechange = () => {
-      appendLog("webrtc.state", uiPeer.connectionState);
-      if (peerRef.current !== uiPeer) {
+      void load(page.nextCursor, [...page.cursors, page.nextCursor]);
+    },
+    page,
+    previous: () => {
+      if (page.cursors.length <= 1) {
         return;
       }
-      if (uiPeer.connectionState === "connected") {
-        setStatus("Connected");
-        if (!initialRPCSentRef.current) {
-          initialRPCSentRef.current = true;
-          sendRPC(RPC_COMMANDS[0]);
-        }
-      }
-      if (uiPeer.connectionState === "failed" || uiPeer.connectionState === "disconnected") {
-        setStatus("RPC failed");
-      }
-      if (uiPeer.connectionState === "closed") {
-        setStatus("Ended");
-      }
-    };
-    uiPeer.ontrack = (event) => {
-      if (peerRef.current !== uiPeer) {
-        return;
-      }
-      for (const track of event.streams[0]?.getTracks() ?? [event.track]) {
-        if (!remoteStream.getTracks().some((current) => current.id === track.id)) {
-          remoteStream.addTrack(track);
-          appendLog("webrtc.track", track.kind);
-        }
-      }
-      playRemoteAudio();
-    };
+      const cursors = page.cursors.slice(0, -1);
+      void load(cursors[cursors.length - 1] ?? "", cursors);
+    },
+    refresh: () => {
+      const cursor = page.cursors[page.cursors.length - 1] ?? "";
+      void load(cursor, page.cursors);
+    },
+  };
+}
 
-    const bootstrapChannel = uiPeer.createDataChannel("rpc-bootstrap");
-    bootstrapChannel.onopen = () => bootstrapChannel.close();
-
-    try {
-      const localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          autoGainControl: false,
-          echoCancellation: false,
-          noiseSuppression: false,
-        },
-        video: true,
-      });
-      localStreamRef.current = localStream;
-      const audioSettings = localStream.getAudioTracks()[0]?.getSettings();
-      appendLog("media.audio", audioSettings ?? "no audio track");
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = localStream;
-      }
-      for (const track of localStream.getTracks()) {
-        uiPeer.addTrack(track, localStream);
-      }
-      appendLog("media.open", "Camera and microphone tracks attached");
-    } catch (error) {
-      appendLog("media.error", error instanceof Error ? error.message : String(error));
-    }
-
-    try {
-      const offer = await uiPeer.createOffer();
-      await uiPeer.setLocalDescription(offer);
-      await waitForIceGathering(uiPeer);
-
-      const localDescription = uiPeer.localDescription;
-      if (!localDescription) {
-        throw new Error("missing local WebRTC offer");
-      }
-      const response = await fetch("/webrtc/offer", {
-        body: JSON.stringify({
-          sdp: localDescription.sdp,
-          type: localDescription.type,
-        } satisfies SignalDescription),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
-      if (!response.ok) {
-        const detail = await response.text();
-        throw new Error(`signaling failed: ${response.status} ${response.statusText}${detail === "" ? "" : `: ${detail.trim()}`}`);
-      }
-      const answer = await response.json() as SignalDescription;
-      await uiPeer.setRemoteDescription(answer);
-    } catch (error) {
-      closeCall();
-      setStatus("RPC failed");
-      appendLog("webrtc.error", error instanceof Error ? error.message : String(error));
-    }
-  }, [appendLog, closeCall, playRemoteAudio, sendRPC, status]);
-
-  const toggleMic = useCallback(() => {
-    const next = !micEnabled;
-    localStreamRef.current?.getAudioTracks().forEach((track) => {
-      track.enabled = next;
-    });
-    setMicEnabled(next);
-  }, [micEnabled]);
-
-  const toggleCamera = useCallback(() => {
-    const next = !cameraEnabled;
-    localStreamRef.current?.getVideoTracks().forEach((track) => {
-      track.enabled = next;
-    });
-    setCameraEnabled(next);
-  }, [cameraEnabled]);
-
-  const light = theme === "light";
-  const peerState = peerRef.current?.connectionState ?? "closed";
-  const rpcReady = status === "Connected" || peerState === "connected" || peerState === "connecting";
-  const panelClass = light ? "border-slate-200 bg-white text-slate-950 shadow-xl shadow-slate-300/30" : "border-white/10 bg-white/[0.06] text-slate-50";
-  const actionButtonClass = (active: boolean): string => cn(
-    "rounded-full border px-3 transition",
-    light
-      ? "border-slate-200 bg-white text-slate-700 shadow-sm hover:bg-slate-100"
-      : "border-white/10 bg-black/30 text-slate-200 hover:bg-white/10",
-    active && (light ? "bg-slate-950 text-white hover:bg-slate-800" : "bg-white text-slate-950 hover:bg-slate-200"),
-  );
-
+function PageAction({ canNext, canPrevious, loading, onNext, onPrevious, onRefresh, pageIndex }: { canNext: boolean; canPrevious: boolean; loading: boolean; onNext: () => void; onPrevious: () => void; onRefresh: () => void; pageIndex: number }): JSX.Element {
   return (
-    <main className={cn("min-h-screen transition-colors", light ? "bg-slate-100 text-slate-950" : "bg-slate-950 text-slate-50")}>
-      <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-4 p-4 lg:p-6">
-        <header
-          className={cn(
-            "flex flex-wrap items-center justify-between gap-4 rounded-3xl border px-4 py-3 shadow-2xl transition-colors",
-            light ? "border-slate-200 bg-white shadow-slate-300/30" : "border-white/10 bg-white/[0.05] shadow-black/20",
-          )}
-        >
-          <div>
-            <div className="text-xl font-semibold tracking-tight">GizClaw Play</div>
-            <div className={cn("text-sm", light ? "text-slate-500" : "text-slate-400")}>WebRTC Play surface with RPC data-channel controls</div>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <ThemeSelector onThemeChange={setTheme} theme={theme} />
-            <Button aria-label="Toggle call stats" className={actionButtonClass(statsOpen)} onClick={() => setStatsOpen((open) => !open)} type="button" variant="ghost">
-              <Info className="size-4" />
-              Info
-            </Button>
-            <Button aria-label="Logs" className={actionButtonClass(logDrawerOpen)} onClick={() => setLogDrawerOpen((open) => !open)} type="button" variant="ghost">
-              <MessageSquare className="size-4" />
-              Logs
-              <span className={cn("rounded-full px-2 py-0.5 text-xs", light ? "bg-slate-100" : "bg-white/10")}>{logs.length}</span>
-            </Button>
-          </div>
-        </header>
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-muted-foreground">Page {pageIndex}</span>
+      <Button disabled={loading} onClick={onRefresh} size="sm" type="button" variant="outline">
+        <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+      </Button>
+      <Button disabled={loading || !canPrevious} onClick={onPrevious} size="sm" type="button" variant="outline">
+        Prev
+      </Button>
+      <Button disabled={loading || !canNext} onClick={onNext} size="sm" type="button" variant="outline">
+        Next
+      </Button>
+    </div>
+  );
+}
 
-        <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_23rem]">
-          <section className="flex min-h-0 flex-col gap-4">
-            <div
-              className={cn(
-                "relative aspect-video min-h-[22rem] overflow-hidden rounded-3xl border bg-black shadow-2xl",
-                light ? "border-slate-200 shadow-slate-300/60" : "border-white/25 shadow-black/50 ring-1 ring-white/10",
-              )}
-            >
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,rgba(34,211,238,0.26),transparent_34%),radial-gradient(circle_at_75%_70%,rgba(16,185,129,0.18),transparent_30%),linear-gradient(135deg,#020617,#0f172a_50%,#020617)]" />
-              <video autoPlay className="absolute inset-0 h-full w-full bg-black object-cover" playsInline ref={remoteVideoRef} />
-              <audio autoPlay ref={remoteAudioRef} />
-              <div className="absolute right-4 top-16 w-28 overflow-hidden rounded-2xl border border-white/15 bg-black shadow-2xl shadow-black/50 sm:w-36">
-                <div className="aspect-square">
-                  <video autoPlay className={cn("h-full w-full bg-black object-cover", !cameraEnabled && "opacity-20")} muted playsInline ref={localVideoRef} />
+function PagedSimpleTable<T>({
+  columns,
+  empty,
+  loadPage,
+  row,
+  title,
+}: {
+  columns: string[];
+  empty: string;
+  loadPage: (cursor: string) => Promise<PageResponse<T>>;
+  row: (item: T) => string[];
+  title: string;
+}): JSX.Element {
+  const pager = usePagedList(loadPage);
+  return (
+    <div className="space-y-3">
+      {pager.error !== "" ? (
+        <Alert variant="destructive">
+          <AlertDescription>{pager.error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <SimpleTable
+        action={<PageAction canNext={pager.page.hasNext} canPrevious={pager.page.cursors.length > 1} loading={pager.page.loading} onNext={pager.next} onPrevious={pager.previous} onRefresh={pager.refresh} pageIndex={pager.page.cursors.length} />}
+        columns={columns}
+        empty={pager.page.loading ? "Loading" : empty}
+        rows={pager.page.items.map(row)}
+        title={title}
+      />
+    </div>
+  );
+}
+
+function WorkspacesPanel(): JSX.Element {
+  const loadPage = useCallback((cursor: string) => listPeerResourcePage("workspaces", cursor), []);
+  return (
+    <PagedSimpleTable
+      columns={["Name", "Workflow", "Updated"]}
+      empty="No workspaces"
+      loadPage={loadPage}
+      row={(item) => [stringField(item, "name"), stringField(item, "workflow_name"), formatDate(stringField(item, "updated_at"))]}
+      title="Workspaces"
+    />
+  );
+}
+
+function WorkflowsPanel(): JSX.Element {
+  const loadPage = useCallback((cursor: string) => listPeerResourcePage("workflows", cursor), []);
+  return (
+    <PagedSimpleTable
+      columns={["Name", "Kind", "API Version"]}
+      empty="No workflows"
+      loadPage={loadPage}
+      row={(item) => {
+        const metadata = objectField(item, "metadata");
+        return [stringField(metadata, "name"), stringField(item, "kind"), stringField(item, "apiVersion")];
+      }}
+      title="Workflows"
+    />
+  );
+}
+
+function CredentialsPanel(): JSX.Element {
+  const loadPage = useCallback((cursor: string) => listPeerResourcePage("credentials", cursor), []);
+  return (
+    <PagedSimpleTable
+      columns={["Name", "Provider", "Method", "Description", "Updated"]}
+      empty="No credentials"
+      loadPage={loadPage}
+      row={(item) => [stringField(item, "name"), stringField(item, "provider"), stringField(item, "method"), stringField(item, "description"), formatDate(stringField(item, "updated_at"))]}
+      title="Credentials"
+    />
+  );
+}
+
+function OverviewPanel({ modelCount, wallet }: { modelCount: number; wallet: WalletResource | null }): JSX.Element {
+  return (
+    <div className="grid max-w-6xl gap-4 md:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle>Wallet</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {wallet == null ? (
+            <EmptyMessage description="No wallet is visible for this context." title="No wallet" />
+          ) : (
+            <div className="grid gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs text-muted-foreground">Points</div>
+                  <div className="text-2xl font-semibold">{wallet.point_balance}</div>
                 </div>
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-2 text-xs text-slate-200">You</div>
-              </div>
-              <div className="absolute left-4 top-4 rounded-2xl border border-white/10 bg-black/55 px-4 py-3 text-sm text-slate-100 shadow-2xl backdrop-blur">
-                <div className="font-semibold">WebRTC Play</div>
-                <div>Status: {status}</div>
-                <div>RPC up/down: {rpcSent}/{rpcReceived}</div>
-              </div>
-              {statsOpen ? (
-                <div className="absolute right-4 top-4 w-72 rounded-2xl border border-white/15 bg-black/70 p-3 text-xs text-slate-200 shadow-2xl shadow-black/50 backdrop-blur">
-                  <div className="mb-2 font-semibold text-slate-100">Stats for nerds</div>
-                  <div className="space-y-1">
-                    <StatusRow label="Call" value={peerState} />
-                    <StatusRow label="Peer" value={peerState} />
-                    <StatusRow label="Downlink" value={`${nerdStats.downlinkKbps.toFixed(1)} kbps`} />
-                    <StatusRow label="Uplink" value={`${nerdStats.uplinkKbps.toFixed(1)} kbps`} />
-                    <StatusRow label="RTT" value={nerdStats.rttMs === undefined ? "-" : `${nerdStats.rttMs.toFixed(0)} ms`} />
-                    <StatusRow label="Packets lost" value={String(nerdStats.packetsLost)} />
-                    <StatusRow label="RPC sent" value={String(rpcSent)} />
-                    <StatusRow label="RPC received" value={String(rpcReceived)} />
-                    <StatusRow label="RPC pending" value={String(pendingRPCRef.current.size)} />
-                  </div>
-                </div>
-              ) : null}
-              <div className={cn("pointer-events-none absolute inset-0 flex items-center justify-center", status === "Connected" && "hidden")}>
-                <div className="relative flex size-44 items-center justify-center rounded-full border border-cyan-300/40 bg-cyan-300/10 shadow-2xl shadow-cyan-950/50">
-                  <div className="absolute inset-4 rounded-full border border-cyan-200/20" />
-                  <RadioTower className={cn("size-16", status === "Connected" ? "text-cyan-300" : "text-slate-400")} />
+                <div>
+                  <div className="text-xs text-muted-foreground">Tokens</div>
+                  <div className="text-2xl font-semibold">{wallet.token_balance}</div>
                 </div>
               </div>
-              <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-3 bg-gradient-to-t from-black/85 to-transparent p-6">
-                <Button aria-label={micEnabled ? "Mute microphone" : "Unmute microphone"} className="size-12 rounded-full border border-white/10 bg-white/15 text-white backdrop-blur hover:bg-white/25" onClick={toggleMic} type="button" variant="ghost">
-                  {micEnabled ? <Mic className="size-5" /> : <MicOff className="size-5" />}
-                </Button>
-                <Button aria-label="Start call from video surface" className="rounded-full px-6" disabled={status === "Starting"} onClick={() => void startCall()} type="button">
-                  <Phone className="size-4" />
-                  Start Video Call
-                </Button>
-                <Button aria-label="End call from video surface" className="rounded-full border-white/10 bg-white/15 px-6 text-white hover:bg-white/25" onClick={closeCall} type="button" variant="ghost">
-                  <PhoneOff className="size-4" />
-                  End Call
-                </Button>
-                <Button aria-label={cameraEnabled ? "Turn camera off" : "Turn camera on"} className="size-12 rounded-full border border-white/10 bg-white/15 text-white backdrop-blur hover:bg-white/25" onClick={toggleCamera} type="button" variant="ghost">
-                  {cameraEnabled ? <Video className="size-5" /> : <VideoOff className="size-5" />}
-                </Button>
+              <div>
+                <div className="text-xs text-muted-foreground">Wallet ID</div>
+                <div className="break-all font-mono text-xs">{wallet.id}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Updated</div>
+                <div>{formatDate(wallet.updated_at)}</div>
               </div>
             </div>
-
-          </section>
-
-          <aside className="flex min-h-0 flex-col gap-4">
-            <Card className={panelClass}>
-              <CardHeader>
-                <CardTitle>Controls</CardTitle>
-                <CardDescription className={cn(light ? "text-slate-500" : "text-slate-300")}>Start the local WebRTC call and tunnel GizClaw RPC over the `rpc` data channel.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-3">
-                <Button className="w-full" disabled={status === "Starting"} onClick={() => void startCall()} type="button">
-                  <Phone className="size-4" />
-                  Start Video Call
-                </Button>
-                <Button
-                  className={cn(
-                    "w-full",
-                    light ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-100" : "border-white/10 bg-white/10 text-slate-100 hover:bg-white/20",
-                  )}
-                  onClick={closeCall}
-                  type="button"
-                  variant="outline"
-                >
-                  <PhoneOff className="size-4" />
-                  End Call
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className={panelClass}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Send className="size-4" />
-                  RPC Commands
-                </CardTitle>
-                <CardDescription className={cn(light ? "text-slate-500" : "text-slate-300")}>Send peer RPC methods through the active data channel.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-2">
-                {RPC_COMMANDS.map((command) => (
-                  <Button
-                    aria-label={command.label}
-                    className={cn(
-                      "h-auto justify-start gap-3 px-3 py-2 text-left",
-                      light ? "border-slate-200 bg-white hover:bg-slate-100" : "border-white/10 bg-black/20 text-slate-100 hover:bg-white/10",
-                    )}
-                    disabled={!rpcReady}
-                    key={command.method}
-                    onClick={() => sendRPC(command)}
-                    type="button"
-                    variant="outline"
-                  >
-                    <span className="flex flex-col items-start gap-0.5">
-                      <span>{command.label}</span>
-                      <span className="font-mono text-xs text-slate-500">{command.method}</span>
-                      <span className={cn("text-xs font-normal", light ? "text-slate-500" : "text-slate-400")}>{command.description}</span>
-                    </span>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className={panelClass}>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Activity className="size-4" />
-                  Stats
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <InfoRow label="WebRTC status" light={light} value={status} />
-                <InfoRow label="Peer connection" light={light} value={peerState} />
-                <InfoRow label="RPC sent" light={light} value={String(rpcSent)} />
-                <InfoRow label="RPC received" light={light} value={String(rpcReceived)} />
-              </CardContent>
-            </Card>
-          </aside>
-        </div>
-
-        <RPCLogDrawer
-          expandedID={expandedLogID}
-          logs={logs}
-          onClose={() => {
-            setLogDrawerOpen(false);
-            setExpandedLogID(null);
-          }}
-          onToggleExpanded={setExpandedLogID}
-          open={logDrawerOpen}
-          theme={theme}
-        />
-      </div>
-    </main>
-  );
-}
-
-function InfoRow({ label, light, value }: { label: string; light?: boolean; value: string }): JSX.Element {
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className={light ? "text-slate-500" : "text-slate-300"}>{label}</span>
-      <span className={cn("text-right font-medium", light ? "text-slate-950" : "text-slate-50")}>{value}</span>
-    </div>
-  );
-}
-
-function ThemeSelector({ onThemeChange, theme }: { onThemeChange: (theme: Theme) => void; theme: Theme }): JSX.Element {
-  const light = theme === "light";
-  return (
-    <div aria-label="Theme selector" className={cn("flex rounded-full border p-1 text-sm", light ? "border-slate-200 bg-white shadow-sm" : "border-white/10 bg-black/30")}>
-      <button
-        className={cn(
-          "flex items-center gap-1 rounded-full px-3 py-1.5 transition",
-          theme === "dark" ? "bg-slate-950 text-white" : "text-slate-600 hover:bg-slate-100",
-        )}
-        onClick={() => onThemeChange("dark")}
-        type="button"
-      >
-        <Moon className="size-4" />
-        Dark
-      </button>
-      <button
-        className={cn(
-          "flex items-center gap-1 rounded-full px-3 py-1.5 transition",
-          theme === "light" ? "bg-slate-950 text-white" : "text-slate-300 hover:bg-white/10",
-        )}
-        onClick={() => onThemeChange("light")}
-        type="button"
-      >
-        <Sun className="size-4" />
-        Light
-      </button>
-    </div>
-  );
-}
-
-function RPCLogTable({
-  expandedID,
-  logs,
-  onToggleExpanded,
-  theme,
-}: {
-  expandedID: string | null;
-  logs: RpcLogEntry[];
-  onToggleExpanded: (id: string | null) => void;
-  theme: Theme;
-}): JSX.Element {
-  const light = theme === "light";
-  return (
-    <div className={cn("h-[min(72vh,42rem)] overflow-auto rounded-xl border text-sm", light ? "border-slate-200 bg-white" : "border-white/10 bg-slate-950/95")}>
-      <div className={cn("sticky top-0 z-10 grid grid-cols-[11rem_minmax(0,1fr)] gap-x-6 border-b px-4 py-2 text-xs font-semibold uppercase tracking-wide", light ? "border-slate-200 bg-white text-slate-500" : "border-white/10 bg-slate-950 text-slate-400")}>
-        <div>Event</div>
-        <div>Summary</div>
-      </div>
-      {logs.length === 0 ? (
-        <div className="px-4 py-4 text-slate-500">No RPC events yet.</div>
-      ) : (
-        <div className={cn("divide-y", light ? "divide-slate-100" : "divide-white/10")}>
-          {logs.map((entry) => {
-            const expanded = expandedID === entry.id;
-            return (
-              <div className={cn("transition", light ? "hover:bg-slate-50" : "hover:bg-white/[0.04]")} key={entry.id}>
-                <button className="block w-full px-4 py-3 text-left" onClick={() => onToggleExpanded(expanded ? null : entry.id)} type="button">
-                  <div className="grid grid-cols-[11rem_minmax(0,1fr)] gap-x-6">
-                    <div className={cn("break-words font-semibold", light ? "text-slate-800" : "text-slate-100")}>{entry.event}</div>
-                    <div className={cn("min-w-0 truncate font-mono text-xs", light ? "text-slate-700" : "text-slate-200")} title={entry.detail}>
-                      {entry.detail}
-                    </div>
-                  </div>
-                </button>
-                {expanded ? (
-                  <div className="px-4 pb-4">
-                    <div className={cn("ml-[calc(11rem+1.5rem)] rounded-lg border p-3", light ? "border-slate-200 bg-slate-50" : "border-white/10 bg-black/35")}>
-                      <div className={cn("mb-2 text-xs font-semibold uppercase tracking-wide", light ? "text-slate-500" : "text-slate-400")}>Detail</div>
-                      <pre className={cn("whitespace-pre-wrap break-words font-mono text-xs leading-5", light ? "text-slate-800" : "text-slate-100")}>
-                        {formatExpandedLogDetail(entry.detail)}
-                      </pre>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RPCLogDrawer({
-  expandedID,
-  logs,
-  onClose,
-  onToggleExpanded,
-  open,
-  theme,
-}: {
-  expandedID: string | null;
-  logs: RpcLogEntry[];
-  onClose: () => void;
-  onToggleExpanded: (id: string | null) => void;
-  open: boolean;
-  theme: Theme;
-}): JSX.Element | null {
-  if (!open) {
-    return null;
-  }
-  const light = theme === "light";
-  return (
-    <div className="fixed bottom-4 left-1/2 z-50 w-[min(88rem,calc(100vw-2rem))] -translate-x-1/2">
-      <div className={cn("rounded-2xl border p-3 shadow-2xl", light ? "border-slate-200 bg-white shadow-slate-400/30" : "border-white/10 bg-slate-950 shadow-black/70")}>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold">RPC Log</div>
-            <div className="text-xs text-slate-500">Click a row to expand full WebRTC data-channel details</div>
+          )}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Gateway</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground">Models</div>
+              <div className="text-2xl font-semibold">{modelCount}</div>
+            </div>
+            <div className="text-muted-foreground">ACL-controlled resources are listed in the resource sections. Peer-owned singleton state is shown here.</div>
           </div>
-          <button
-            aria-label="Close RPC logs"
-            className={cn(
-              "flex size-8 items-center justify-center rounded-full border transition",
-              light ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-100" : "border-white/10 bg-black/30 text-slate-200 hover:bg-white/10",
-            )}
-            onClick={onClose}
-            type="button"
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function WalletTransactionsPanel(): JSX.Element {
+  const loadPage = useCallback((cursor: string) => listWalletTransactionsPage(cursor), []);
+  const pager = usePagedList(loadPage);
+  const inspect = async (id: string): Promise<void> => {
+    const tx = await getWalletTransaction(id);
+    toast.success("Transaction loaded", { description: `${tx.reason}: points ${signedNumber(tx.point_delta)}, tokens ${signedNumber(tx.token_delta)}` });
+  };
+  return (
+    <div className="flex max-w-6xl flex-col gap-3">
+      {pager.error !== "" ? (
+        <Alert variant="destructive">
+          <AlertDescription>{pager.error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Wallet Transactions</CardTitle>
+          <PageAction canNext={pager.page.hasNext} canPrevious={pager.page.cursors.length > 1} loading={pager.page.loading} onNext={pager.next} onPrevious={pager.previous} onRefresh={pager.refresh} pageIndex={pager.page.cursors.length} />
+        </CardHeader>
+        <CardContent>
+          {pager.page.items.length === 0 ? (
+            <EmptyMessage description="No wallet transactions are visible for this context." title="No transactions" />
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead>Tokens</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="w-24 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pager.page.items.map((tx) => (
+                    <TableRow key={tx.id}>
+                      <TableCell className="font-mono text-xs">{tx.id}</TableCell>
+                      <TableCell>{signedNumber(tx.point_delta)}</TableCell>
+                      <TableCell>{signedNumber(tx.token_delta)}</TableCell>
+                      <TableCell>{tx.reason}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(tx.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          onClick={() => {
+                            void inspect(tx.id).catch((err: unknown) => toast.error("Transaction request failed", { description: toMessage(err) }));
+                          }}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          Inspect
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function PetsPanel(): JSX.Element {
+  const loadPage = useCallback((cursor: string) => listPetsPage(cursor), []);
+  const pager = usePagedList(loadPage);
+  const [dialog, setDialog] = useState<PetDialogState | null>(null);
+  const refreshAfter = async (message: string): Promise<void> => {
+    toast.success(message);
+    await pager.refresh();
+  };
+  return (
+    <div className="flex max-w-6xl flex-col gap-3">
+      {pager.error !== "" ? (
+        <Alert variant="destructive">
+          <AlertDescription>{pager.error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Pets</CardTitle>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setDialog({ kind: "adopt" })} size="sm" type="button">
+              <Plus data-icon="inline-start" />
+              Adopt
+            </Button>
+            <PageAction canNext={pager.page.hasNext} canPrevious={pager.page.cursors.length > 1} loading={pager.page.loading} onNext={pager.next} onPrevious={pager.previous} onRefresh={pager.refresh} pageIndex={pager.page.cursors.length} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {pager.page.items.length === 0 ? (
+            <EmptyMessage description="No pets are visible for this context." title="No pets" />
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Life</TableHead>
+                    <TableHead>Ability</TableHead>
+                    <TableHead>Updated</TableHead>
+                    <TableHead className="w-[320px] text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pager.page.items.map((pet) => (
+                    <TableRow key={pet.id}>
+                      <TableCell>
+                        <div className="font-medium">{pet.name}</div>
+                        <div className="font-mono text-xs text-muted-foreground">{pet.id}</div>
+                      </TableCell>
+                      <TableCell>{statsSummary(pet.life, ["mood", "health", "energy"])}</TableCell>
+                      <TableCell>{statsSummary(pet.ability, ["level", "exp", "stamina"])}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(pet.updated_at)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button onClick={() => setDialog({ kind: "rename", pet })} size="sm" type="button" variant="outline">
+                            <Pencil data-icon="inline-start" />
+                            Rename
+                          </Button>
+                          <Button onClick={() => setDialog({ kind: "feed", pet })} size="sm" type="button" variant="outline">
+                            Feed
+                          </Button>
+                          <Button onClick={() => setDialog({ kind: "wash", pet })} size="sm" type="button" variant="outline">
+                            Wash
+                          </Button>
+                          <Button onClick={() => setDialog({ kind: "play", pet })} size="sm" type="button" variant="outline">
+                            Play
+                          </Button>
+                          <PetDeleteAction
+                            onDelete={async () => {
+                              await deletePet(pet.id);
+                              await refreshAfter("Pet deleted");
+                            }}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <PetDialog
+        onClose={() => setDialog(null)}
+        onSubmit={(state, value) =>
+          submitPetDialog(state, value)
+            .then(() => refreshAfter(petDialogSuccess(state.kind)))
+            .then(() => setDialog(null))
+        }
+        state={dialog}
+      />
+    </div>
+  );
+}
+
+function RewardsPanel(): JSX.Element {
+  const loadPage = useCallback((cursor: string) => listRewardsPage(cursor), []);
+  const pager = usePagedList(loadPage);
+  const [claimOpen, setClaimOpen] = useState(false);
+  const inspect = async (id: string): Promise<void> => {
+    const reward = await getReward(id);
+    toast.success("Reward loaded", { description: `${reward.point_amount} points for ${reward.badge_id}` });
+  };
+  return (
+    <div className="flex max-w-6xl flex-col gap-3">
+      {pager.error !== "" ? (
+        <Alert variant="destructive">
+          <AlertDescription>{pager.error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Rewards</CardTitle>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setClaimOpen(true)} size="sm" type="button">
+              <Gift data-icon="inline-start" />
+              Claim
+            </Button>
+            <PageAction canNext={pager.page.hasNext} canPrevious={pager.page.cursors.length > 1} loading={pager.page.loading} onNext={pager.next} onPrevious={pager.previous} onRefresh={pager.refresh} pageIndex={pager.page.cursors.length} />
+          </div>
+        </CardHeader>
+        <CardContent>
+          {pager.page.items.length === 0 ? (
+            <EmptyMessage description="No rewards are visible for this context." title="No rewards" />
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Prompt</TableHead>
+                    <TableHead>Badge</TableHead>
+                    <TableHead>Points</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="w-24 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pager.page.items.map((reward) => (
+                    <TableRow key={reward.id}>
+                      <TableCell className="font-mono text-xs">{reward.id}</TableCell>
+                      <TableCell className="max-w-sm truncate">{reward.prompt}</TableCell>
+                      <TableCell>{reward.badge_id}</TableCell>
+                      <TableCell>{reward.point_amount}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(reward.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          onClick={() => {
+                            void inspect(reward.id).catch((err: unknown) => toast.error("Reward request failed", { description: toMessage(err) }));
+                          }}
+                          size="sm"
+                          type="button"
+                          variant="outline"
+                        >
+                          Inspect
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      <PromptDialog
+        description="Submit a reward prompt through the current peer context."
+        label="Prompt"
+        onClose={() => setClaimOpen(false)}
+        onSubmit={(prompt) =>
+          claimReward(prompt)
+            .then(() => {
+              toast.success("Reward claimed");
+              return pager.refresh();
+            })
+            .then(() => setClaimOpen(false))
+        }
+        open={claimOpen}
+        submitLabel="Claim"
+        title="Claim Reward"
+      />
+    </div>
+  );
+}
+
+type PetDialogState =
+  | { kind: "adopt" }
+  | { kind: "feed"; pet: PetResource }
+  | { kind: "play"; pet: PetResource }
+  | { kind: "rename"; pet: PetResource }
+  | { kind: "wash"; pet: PetResource };
+
+function PetDialog({ onClose, onSubmit, state }: { onClose: () => void; onSubmit: (state: PetDialogState, value: string) => Promise<void>; state: PetDialogState | null }): JSX.Element {
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+  const open = state != null;
+
+  useEffect(() => {
+    if (state == null) {
+      setValue("");
+      return;
+    }
+    setValue(state.kind === "rename" ? state.pet.name : "");
+  }, [state]);
+
+  if (state == null) {
+    return <Dialog open={false} />;
+  }
+
+  const title = petDialogTitle(state);
+  const label = state.kind === "adopt" || state.kind === "rename" ? "Name" : "Prompt";
+  const submitLabel = state.kind === "adopt" ? "Adopt" : state.kind === "rename" ? "Save" : title;
+  const multiline = state.kind === "feed" || state.kind === "wash" || state.kind === "play";
+
+  const submit = async (): Promise<void> => {
+    setSaving(true);
+    try {
+      await onSubmit(state, value);
+    } catch (err) {
+      toast.error(`${title} failed`, { description: toMessage(err) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => (!next ? onClose() : undefined)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{petDialogDescription(state)}</DialogDescription>
+        </DialogHeader>
+        <FieldGroup>
+          <ShadField>
+            <FieldLabel htmlFor="pet-dialog-value">{label}</FieldLabel>
+            {multiline ? <Textarea id="pet-dialog-value" onChange={(event) => setValue(event.target.value)} rows={4} value={value} /> : <Input id="pet-dialog-value" onChange={(event) => setValue(event.target.value)} value={value} />}
+          </ShadField>
+        </FieldGroup>
+        <DialogFooter>
+          <Button disabled={saving} onClick={onClose} type="button" variant="outline">
+            Cancel
+          </Button>
+          <Button disabled={saving || value.trim() === ""} onClick={() => void submit()} type="button">
+            {submitLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PromptDialog({
+  description,
+  label,
+  onClose,
+  onSubmit,
+  open,
+  submitLabel,
+  title,
+}: {
+  description: string;
+  label: string;
+  onClose: () => void;
+  onSubmit: (value: string) => Promise<void>;
+  open: boolean;
+  submitLabel: string;
+  title: string;
+}): JSX.Element {
+  const [value, setValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setValue("");
+    }
+  }, [open]);
+
+  const submit = async (): Promise<void> => {
+    setSaving(true);
+    try {
+      await onSubmit(value);
+    } catch (err) {
+      toast.error(`${title} failed`, { description: toMessage(err) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => (!next ? onClose() : undefined)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
+        </DialogHeader>
+        <FieldGroup>
+          <ShadField>
+            <FieldLabel htmlFor="prompt-dialog-value">{label}</FieldLabel>
+            <Textarea id="prompt-dialog-value" onChange={(event) => setValue(event.target.value)} rows={4} value={value} />
+          </ShadField>
+        </FieldGroup>
+        <DialogFooter>
+          <Button disabled={saving} onClick={onClose} type="button" variant="outline">
+            Cancel
+          </Button>
+          <Button disabled={saving || value.trim() === ""} onClick={() => void submit()} type="button">
+            {submitLabel}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PetDeleteAction({ onDelete }: { onDelete: () => Promise<void> }): JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const confirm = async (): Promise<void> => {
+    setSaving(true);
+    try {
+      await onDelete();
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <Button onClick={() => setOpen(true)} size="sm" type="button" variant="destructive">
+        <Trash2 data-icon="inline-start" />
+        Delete
+      </Button>
+      <AlertDialogContent size="sm">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Pet</AlertDialogTitle>
+          <AlertDialogDescription>This removes the pet owned by the current peer.</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={saving}>Cancel</AlertDialogCancel>
+          <AlertDialogAction disabled={saving} onClick={(event) => {
+            event.preventDefault();
+            void confirm().catch((err: unknown) => toast.error("Pet delete failed", { description: toMessage(err) }));
+          }} variant="destructive">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function petDialogTitle(state: PetDialogState): string {
+  switch (state.kind) {
+    case "adopt":
+      return "Adopt Pet";
+    case "feed":
+      return "Feed Pet";
+    case "play":
+      return "Play With Pet";
+    case "rename":
+      return "Rename Pet";
+    case "wash":
+      return "Wash Pet";
+  }
+}
+
+function petDialogDescription(state: PetDialogState): string {
+  switch (state.kind) {
+    case "adopt":
+      return "Create a pet for the current peer.";
+    case "rename":
+      return `Update ${state.pet.name}.`;
+    default:
+      return `Send an action prompt for ${state.pet.name}.`;
+  }
+}
+
+function petDialogSuccess(kind: PetDialogState["kind"]): string {
+  switch (kind) {
+    case "adopt":
+      return "Pet adopted";
+    case "feed":
+      return "Pet fed";
+    case "play":
+      return "Pet played";
+    case "rename":
+      return "Pet renamed";
+    case "wash":
+      return "Pet washed";
+  }
+}
+
+function submitPetDialog(state: PetDialogState, value: string): Promise<PetResource> {
+  const trimmed = value.trim();
+  switch (state.kind) {
+    case "adopt":
+      return adoptPet(trimmed);
+    case "feed":
+      return runPetAction(state.pet.id, "feed", trimmed);
+    case "play":
+      return runPetAction(state.pet.id, "play", trimmed);
+    case "rename":
+      return updatePet(state.pet.id, trimmed);
+    case "wash":
+      return runPetAction(state.pet.id, "wash", trimmed);
+  }
+}
+
+function statsSummary(stats: PetStats, keys: string[]): string {
+  return keys.map((key) => `${key}: ${stats[key] ?? 0}`).join(" / ");
+}
+
+function signedNumber(value: number): string {
+  return value > 0 ? `+${value}` : String(value);
+}
+
+function ModelsPanel({ initialModels }: { initialModels: ModelSpec[] }): JSX.Element {
+  const loadPage = useCallback((cursor: string) => listModelsPage(cursor), []);
+  const pager = usePagedList(loadPage);
+  const models = pager.page.items.length === 0 && pager.page.loading ? initialModels : pager.page.items;
+  return (
+    <div className="max-w-6xl space-y-3">
+      {pager.error !== "" ? (
+        <Alert variant="destructive">
+          <AlertDescription>{pager.error}</AlertDescription>
+        </Alert>
+      ) : null}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle>Models</CardTitle>
+          <PageAction canNext={pager.page.hasNext} canPrevious={pager.page.cursors.length > 1} loading={pager.page.loading} onNext={pager.next} onPrevious={pager.previous} onRefresh={pager.refresh} pageIndex={pager.page.cursors.length} />
+        </CardHeader>
+        <CardContent>
+          {models.length === 0 ? (
+            <EmptyMessage description="No model resources are visible for this context." title="No models" />
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Kind</TableHead>
+                    <TableHead>Provider</TableHead>
+                    <TableHead>Think</TableHead>
+                    <TableHead>Source</TableHead>
+                    <TableHead>Updated</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {models.map((model) => (
+                    <TableRow key={model.id}>
+                      <TableCell className="font-mono text-xs font-medium">{model.id}</TableCell>
+                      <TableCell>{model.kind ?? "-"}</TableCell>
+                      <TableCell>{model.provider == null ? "-" : `${model.provider.kind}/${model.provider.name}`}</TableCell>
+                      <TableCell>{model.support_thinking === true ? <Badge variant="outline">{model.thinking_param || "on"}</Badge> : "-"}</TableCell>
+                      <TableCell>{model.source ?? "-"}</TableCell>
+                      <TableCell className="text-muted-foreground">{formatDate(model.updated_at)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function VoicesPanel(): JSX.Element {
+  const loadPage = useCallback((cursor: string) => listVoicesPage(cursor), []);
+  const pager = usePagedList(loadPage);
+
+  return (
+    <SimpleTable
+      action={<PageAction canNext={pager.page.hasNext} canPrevious={pager.page.cursors.length > 1} loading={pager.page.loading} onNext={pager.next} onPrevious={pager.previous} onRefresh={pager.refresh} pageIndex={pager.page.cursors.length} />}
+      columns={["ID", "Provider", "Name", "Source", "Updated"]}
+      empty={pager.page.loading ? "Loading" : pager.error || "No voices"}
+      rows={pager.page.items.map((item) => [compactID(item.id), `${item.provider.kind}/${item.provider.name}`, item.name ?? "", item.source, formatDate(item.updated_at)])}
+      title="Voices"
+    />
+  );
+}
+
+function SimpleTable({
+  action,
+  columns,
+  empty,
+  rows,
+  title,
+}: {
+  action?: JSX.Element;
+  columns: string[];
+  empty: string;
+  rows: string[][];
+  title: string;
+}): JSX.Element {
+  return (
+    <Card className="max-w-6xl">
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <CardTitle>{title}</CardTitle>
+        {action}
+      </CardHeader>
+      <CardContent>
+        {rows.length === 0 ? (
+          <EmptyMessage description={empty} title={empty} />
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {columns.map((column) => (
+                    <TableHead key={column}>{column}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.join(":")}>
+                    {row.map((cell, index) => (
+                      <TableCell className={index === 0 ? "font-medium" : "text-muted-foreground"} key={`${index}:${cell}`}>
+                        {cell || "-"}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyMessage({ description, title }: { description: string; title: string }): JSX.Element {
+  return (
+    <Empty className="min-h-56 border">
+      <EmptyHeader>
+        <EmptyTitle>{title}</EmptyTitle>
+        <EmptyDescription>{description}</EmptyDescription>
+      </EmptyHeader>
+    </Empty>
+  );
+}
+
+function Field({ label, onChange, type = "text", value }: { label: string; onChange: (value: string) => void; type?: string; value: string }): JSX.Element {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <Input onChange={(event) => onChange(event.target.value)} type={type} value={value} />
+    </div>
+  );
+}
+
+function TextAreaField({ label, onChange, placeholder, value }: { label: string; onChange: (value: string) => void; placeholder?: string; value: string }): JSX.Element {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <Textarea className="min-h-20 resize-y" onChange={(event) => onChange(event.target.value)} placeholder={placeholder} value={value} />
+    </div>
+  );
+}
+
+function SelectField({ label, onChange, options, value }: { label: string; onChange: (value: string) => void; options: string[]; value: string }): JSX.Element {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <Select onValueChange={onChange} value={value}>
+        <SelectTrigger>
+          <SelectValue placeholder="-" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {options.map((option) => (
+              <SelectItem key={option || "none"} value={option}>
+                {option || "-"}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function ScrollableSelectField({ label, loading = false, onChange, onOpen, options, value }: { label: string; loading?: boolean; onChange: (value: string) => void; onOpen?: () => void; options: string[]; value: string }): JSX.Element {
+  const id = `scroll-select-${label.toLowerCase().replaceAll(/\s+/g, "-")}`;
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (nextOpen) {
+            onOpen?.();
+          }
+        }}
+      >
+        <PopoverTrigger asChild>
+          <Button aria-expanded={open} className="h-9 w-full justify-between px-3 font-normal" id={id} role="combobox" type="button" variant="outline">
+            <span className="min-w-0 truncate text-left">{value || "-"}</span>
+            <span className="text-xs text-muted-foreground">Select</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+          <div
+            className="max-h-72 overflow-y-auto overscroll-contain p-1"
+            data-slot="voice-options-scroll"
+            onWheelCapture={(event) => {
+              event.currentTarget.scrollTop += event.deltaY;
+              event.stopPropagation();
+            }}
           >
-            <X className="size-4" />
-          </button>
-        </div>
-        <RPCLogTable expandedID={expandedID} logs={logs} onToggleExpanded={onToggleExpanded} theme={theme} />
+            {options.length === 0 ? (
+              <div className="px-2 py-6 text-center text-sm text-muted-foreground">{loading ? "Loading" : "No options"}</div>
+            ) : (
+              options.map((option) => (
+                <button
+                  aria-selected={option === value}
+                  className={cn("flex w-full items-center rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground", option === value && "bg-accent text-accent-foreground")}
+                  key={option || "none"}
+                  onClick={() => {
+                    onChange(option);
+                    setOpen(false);
+                  }}
+                  role="option"
+                  title={option}
+                  type="button"
+                >
+                  <span className="min-w-0 truncate">{option || "-"}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+function Toggle({ checked, label, onChange }: { checked: boolean; label: string; onChange: (checked: boolean) => void }): JSX.Element {
+  return (
+    <label className="flex h-9 items-center gap-2 rounded-md border px-3 text-sm">
+      <input checked={checked} onChange={(event) => onChange(event.target.checked)} type="checkbox" />
+      {label}
+    </label>
+  );
+}
+
+function SwitchField({ checked, label, onChange }: { checked: boolean; label: string; onChange: (checked: boolean) => void }): JSX.Element {
+  const id = `switch-${label.toLowerCase().replaceAll(/\s+/g, "-")}`;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <div className="flex h-9 items-center justify-between gap-3 rounded-md border px-3">
+        <span className="text-sm text-muted-foreground">{checked ? "Enabled" : "Disabled"}</span>
+        <Switch checked={checked} id={id} onCheckedChange={onChange} />
       </div>
     </div>
   );
 }
 
-function StatusRow({ label, value }: { label: string; value: string }): JSX.Element {
+function LoadingGrid(): JSX.Element {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/25 px-3 py-2">
-      <span className="text-slate-400">{label}</span>
-      <span className="font-medium text-slate-100">{value}</span>
+    <div className="max-w-6xl">
+      <Skeleton className="h-96 w-full" />
     </div>
   );
 }
 
-function formatLogDetail(detail: unknown): string {
-  if (typeof detail === "string") {
-    return detail;
-  }
-  const encoded = JSON.stringify(detail);
-  return encoded === undefined ? String(detail) : encoded;
+async function listModels(): Promise<ModelSpec[]> {
+  const response = await listModelsPage("");
+  return response.items ?? [];
 }
 
-function formatExpandedLogDetail(detail: string): string {
+function listModelsPage(cursor: string): Promise<PageResponse<ModelSpec>> {
+  return expectData(listPeerModels({ query: pageQuery(cursor) })) as Promise<PageResponse<ModelSpec>>;
+}
+
+function listVoicesPage(cursor: string): Promise<PageResponse<Voice>> {
+  return expectData(listClientVoices({ query: pageQuery(cursor) })) as Promise<PageResponse<Voice>>;
+}
+
+function listPetsPage(cursor: string): Promise<PageResponse<PetResource>> {
+  return expectData(listPeerPets({ query: pageQuery(cursor) })) as Promise<PageResponse<PetResource>>;
+}
+
+function adoptPet(name: string): Promise<PetResource> {
+  return expectData(adoptPeerPet({ body: { name } })) as Promise<PetResource>;
+}
+
+function updatePet(id: string, name: string): Promise<PetResource> {
+  return expectData(putPeerPet({ body: { id, name }, path: { id } })) as Promise<PetResource>;
+}
+
+function deletePet(id: string): Promise<PetResource> {
+  return expectData(deletePeerPet({ path: { id } })) as Promise<PetResource>;
+}
+
+function runPetAction(id: string, action: "feed" | "play" | "wash", prompt: string): Promise<PetResource> {
+  const options = { body: { pet_id: id, prompt }, path: { id } };
+  switch (action) {
+    case "feed":
+      return expectData(feedPeerPet(options)) as Promise<PetResource>;
+    case "play":
+      return expectData(playWithPeerPet(options)) as Promise<PetResource>;
+    case "wash":
+      return expectData(washPeerPet(options)) as Promise<PetResource>;
+  }
+}
+
+function listRewardsPage(cursor: string): Promise<PageResponse<RewardResource>> {
+  return expectData(listPeerRewards({ query: pageQuery(cursor) })) as Promise<PageResponse<RewardResource>>;
+}
+
+function getReward(id: string): Promise<RewardResource> {
+  return expectData(getPeerReward({ path: { id } })) as Promise<RewardResource>;
+}
+
+function claimReward(prompt: string): Promise<RewardResource> {
+  return expectData(claimPeerReward({ body: { prompt } })) as Promise<RewardResource>;
+}
+
+function listWalletTransactionsPage(cursor: string): Promise<PageResponse<WalletTransactionResource>> {
+  return expectData(listPeerWalletTransactions({ query: pageQuery(cursor) })) as Promise<PageResponse<WalletTransactionResource>>;
+}
+
+function getWalletTransaction(id: string): Promise<WalletTransactionResource> {
+  return expectData(getPeerWalletTransaction({ path: { id } })) as Promise<WalletTransactionResource>;
+}
+
+async function streamPlayableVoices(onVoice: (voice: Voice) => void): Promise<void> {
+  const result = await streamPlayableVoicesSDK({ query: { limit: 100, provider_kind: "volc-tenant" }, sseMaxRetryAttempts: 0 });
+  for await (const payload of result.stream as AsyncIterable<PlayVoiceStreamEvent>) {
+    if (payload.error != null && payload.error !== "") {
+      throw new Error(payload.error);
+    }
+    if (payload.voice != null) {
+      onVoice(payload.voice as Voice);
+    }
+    if (payload.done === true) {
+      break;
+    }
+  }
+}
+
+function mergeVoices(voices: Voice[]): Voice[] {
+  const seen = new Set<string>();
+  const out: Voice[] = [];
+  for (const voice of voices) {
+    if (seen.has(voice.id)) {
+      continue;
+    }
+    seen.add(voice.id);
+    out.push(voice);
+  }
+  return out;
+}
+
+function isPlayableVoice(voice: Voice): boolean {
+  return voice.provider.kind === "volc-tenant";
+}
+
+async function listPeerResourcePage(name: string, cursor: string): Promise<PageResponse<ResourceItem>> {
+  const query = pageQuery(cursor);
+  switch (name) {
+    case "credentials":
+      return expectData(listPeerCredentials({ query })) as Promise<PageResponse<ResourceItem>>;
+    case "models":
+      return expectData(listPeerModels({ query })) as Promise<PageResponse<ResourceItem>>;
+    case "voices":
+      return expectData(listPeerVoices({ query })) as Promise<PageResponse<ResourceItem>>;
+    case "workflows":
+      return expectData(listPeerWorkflows({ query })) as Promise<PageResponse<ResourceItem>>;
+    case "workspaces":
+      return expectData(listPeerWorkspaces({ query })) as Promise<PageResponse<ResourceItem>>;
+    default:
+      throw new Error(`Unsupported peer resource: ${name}`);
+  }
+}
+
+function getWallet(): Promise<WalletResource> {
+  return expectData(getPeerWallet()) as Promise<WalletResource>;
+}
+
+function pageQuery(cursor: string): { cursor?: string; limit: number } {
+  return cursor === "" ? { limit: 50 } : { cursor, limit: 50 };
+}
+
+function sectionTitle(section: Section): string {
+  return sections.find((item) => item.id === section)?.label ?? "OpenAI Gateway";
+}
+
+function objectField(item: ResourceItem, key: string): ResourceItem {
+  const value = item[key];
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as ResourceItem) : {};
+}
+
+function stringField(item: ResourceItem, key: string): string {
+  const value = item[key];
+  if (value == null) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return jsonSummary(value);
+}
+
+function summaryField(item: ResourceItem, key: string): string {
+  const value = item[key];
+  return value == null ? "" : jsonSummary(value);
+}
+
+function jsonSummary(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  const text = JSON.stringify(value);
+  if (text == null) {
+    return "";
+  }
+  return text.length > 96 ? `${text.slice(0, 93)}...` : text;
+}
+
+function loadChatSessions(): ChatSession[] {
   try {
-    return JSON.stringify(JSON.parse(detail), null, 2);
+    const raw = localStorage.getItem(chatSessionsKey);
+    if (raw != null) {
+      const parsed = JSON.parse(raw) as ChatSession[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
   } catch {
-    return detail;
+    // Ignore malformed local chat metadata.
+  }
+  return [createChatSession()];
+}
+
+function saveChatSessions(sessions: ChatSession[]): void {
+  localStorage.setItem(chatSessionsKey, JSON.stringify(sessions));
+}
+
+function createChatSession(): ChatSession {
+  const now = Date.now();
+  return {
+    createdAt: now,
+    id: `chat-${now}-${Math.random().toString(36).slice(2, 8)}`,
+    title: "Chat",
+    updatedAt: now,
+  };
+}
+
+function chatHistoryKey(sessionID: string): string {
+  return `gizclaw.openai.chat.history.${sessionID}`;
+}
+
+function createThreadHistoryAdapter(sessionID: string, touchSession: (sessionID: string, firstUserText?: string) => void): ThreadHistoryAdapter {
+  return {
+    async load() {
+      return loadThreadHistory(sessionID);
+    },
+    async append(item) {
+      upsertThreadHistoryItem(sessionID, item);
+      if (item.message.role === "user") {
+        touchSession(sessionID, threadMessageText(item.message));
+      } else {
+        touchSession(sessionID);
+      }
+    },
+  };
+}
+
+function loadThreadHistory(sessionID: string): ExportedMessageRepository {
+  try {
+    const raw = localStorage.getItem(chatHistoryKey(sessionID));
+    if (raw == null) {
+      return { headId: null, messages: [] };
+    }
+    const stored = JSON.parse(raw) as StoredHistory;
+    return {
+      headId: stored.headId ?? null,
+      messages: (stored.messages ?? []).map((item) => ({
+        ...item,
+        message: {
+          ...item.message,
+          createdAt: new Date(item.message.createdAt),
+        } as ThreadMessage,
+      })),
+    };
+  } catch {
+    return { headId: null, messages: [] };
   }
 }
 
-async function samplePeerStats(
-  peer: RTCPeerConnection,
-  lastSampleRef: MutableRefObject<{ bytesReceived: number; bytesSent: number; timestamp: number } | null>,
-  setStats: (stats: NerdStats) => void,
-): Promise<void> {
-  const report = await peer.getStats();
-  let bytesReceived = 0;
-  let bytesSent = 0;
-  let packetsLost = 0;
-  let rttMs: number | undefined;
-
-  report.forEach((raw) => {
-    const item = raw as RTCStats & {
-      bytesReceived?: number;
-      bytesSent?: number;
-      currentRoundTripTime?: number;
-      packetsLost?: number;
-      selected?: boolean;
-      state?: string;
-    };
-    if (item.type === "inbound-rtp") {
-      bytesReceived += item.bytesReceived ?? 0;
-      packetsLost += item.packetsLost ?? 0;
-    }
-    if (item.type === "outbound-rtp") {
-      bytesSent += item.bytesSent ?? 0;
-    }
-    if (item.type === "candidate-pair" && (item.selected === true || item.state === "succeeded")) {
-      if (typeof item.currentRoundTripTime === "number") {
-        rttMs = item.currentRoundTripTime * 1000;
-      }
-    }
-  });
-
-  const now = performance.now();
-  const previous = lastSampleRef.current;
-  let downlinkKbps = 0;
-  let uplinkKbps = 0;
-  if (previous && now > previous.timestamp) {
-    const seconds = (now - previous.timestamp) / 1000;
-    downlinkKbps = ((bytesReceived - previous.bytesReceived) * 8) / seconds / 1000;
-    uplinkKbps = ((bytesSent - previous.bytesSent) * 8) / seconds / 1000;
-  }
-  lastSampleRef.current = { bytesReceived, bytesSent, timestamp: now };
-  setStats({
-    downlinkKbps: Math.max(0, downlinkKbps),
-    inboundBytes: bytesReceived,
-    outboundBytes: bytesSent,
-    packetsLost,
-    rttMs,
-    uplinkKbps: Math.max(0, uplinkKbps),
-  });
+function saveThreadHistory(sessionID: string, repository: ExportedMessageRepository): void {
+  const stored: StoredHistory = {
+    headId: repository.headId ?? null,
+    messages: repository.messages.map((item) => ({
+      ...item,
+      message: {
+        ...item.message,
+        createdAt: normalizeDate(item.message.createdAt).toISOString(),
+      },
+    })),
+  };
+  localStorage.setItem(chatHistoryKey(sessionID), JSON.stringify(stored));
 }
 
-async function waitForIceGathering(peer: RTCPeerConnection): Promise<void> {
-  if (peer.iceGatheringState === "complete") {
-    return;
+function upsertThreadHistoryItem(sessionID: string, item: ExportedMessageRepositoryItem, localMessageID?: string): void {
+  const repository = loadThreadHistory(sessionID);
+  const index = repository.messages.findIndex((entry) => entry.message.id === item.message.id || (localMessageID != null && entry.message.id === localMessageID));
+  const nextItem = { ...item, message: { ...item.message, createdAt: normalizeDate(item.message.createdAt) } };
+  const messages = [...repository.messages];
+  if (index >= 0) {
+    messages[index] = nextItem;
+  } else {
+    messages.push(nextItem);
   }
-  await new Promise<void>((resolve) => {
-    const handleStateChange = (): void => {
-      if (peer.iceGatheringState === "complete") {
-        peer.removeEventListener("icegatheringstatechange", handleStateChange);
-        resolve();
+  saveThreadHistory(sessionID, { headId: item.message.id, messages });
+}
+
+function normalizeDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+function createOpenAIChatAdapter({
+  model,
+  onChatError,
+  onCompleteText,
+  sessionID,
+  setSessionTitle,
+  systemPrompt,
+  temperature,
+  thinking,
+}: {
+  model: string;
+  onChatError: (message: string) => void;
+  onCompleteText?: (text: string) => void;
+  sessionID: string;
+  setSessionTitle: (sessionID: string, title: string) => void;
+  systemPrompt: string;
+  temperature?: number;
+  thinking?: ChatThinkingOptions;
+}): ChatModelAdapter {
+  return {
+    async *run({ abortSignal, messages }): AsyncGenerator<ChatModelRunResult, void> {
+      onChatError("");
+      const chatMessages = toChatCompletionMessages(messages, systemPrompt);
+      const shouldGenerateTitle = chatMessages.filter((message) => message.role === "user").length === 1;
+      const body = {
+        messages: chatMessages,
+        model,
+        stream: true,
+        ...(Number.isFinite(temperature) ? { temperature } : {}),
+        ...(thinking == null ? {} : { thinking }),
+      } satisfies OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming & { thinking?: ChatThinkingOptions };
+      let stream: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
+      try {
+        stream = await getOpenAIClient().chat.completions.create(body, { signal: abortSignal });
+      } catch (err) {
+        if (isAbortError(err)) {
+          return;
+        }
+        const errorText = chatRequestErrorText(model, errorToMessage(err));
+        onChatError(errorText);
+        yield chatErrorResult(errorText);
+        return;
       }
-    };
-    peer.addEventListener("icegatheringstatechange", handleStateChange);
-  });
+
+      if (shouldGenerateTitle) {
+        void generateChatTitle(model, chatMessages, abortSignal, Number.isFinite(temperature) ? 0.2 : undefined)
+          .then((title) => {
+            if (title !== "") {
+              setSessionTitle(sessionID, title);
+            }
+          })
+          .catch(() => {
+            // Keep the default title if title generation fails.
+          });
+      }
+
+      let text = "";
+      try {
+        for await (const chunk of stream) {
+          const delta = chunk.choices[0]?.delta?.content ?? "";
+          if (delta !== "") {
+            text += delta;
+            yield { content: [{ type: "text", text }] };
+          }
+        }
+      } catch (err) {
+        if (isAbortError(err)) {
+          return;
+        }
+        const errorText = chatRequestErrorText(model, errorToMessage(err));
+        onChatError(errorText);
+        yield chatErrorResult(errorText, text);
+        return;
+      }
+      onCompleteText?.(text);
+      yield { content: [{ type: "text", text }], status: { type: "complete", reason: "stop" } };
+    },
+  };
+}
+
+function isTransientSpeechProxyError(message: string): boolean {
+  return message.includes("kcp: conn closed: local") || message.includes("gizhttp: read response: kcp: timeout");
+}
+
+function chatErrorResult(errorText: string, partialText = ""): ChatModelRunResult {
+  const text = partialText === "" ? errorText : `${partialText}\n\n${errorText}`;
+  return {
+    content: [{ type: "text", text }],
+    status: { type: "incomplete", reason: "error", error: errorText },
+  };
+}
+
+function chatRequestErrorText(model: string, detail: string): string {
+  const trimmed = detail.trim();
+  const message = trimmed === "" ? "No error detail was returned by the gateway or upstream provider. Check the server logs for this request." : trimmed;
+  return `Chat request failed for ${model}.\n\n${message}`;
+}
+
+function openAIErrorPayloadMessage(payload: unknown): string {
+  if (typeof payload !== "object" || payload == null) {
+    return typeof payload === "string" ? payload : "";
+  }
+  const record = payload as Record<string, unknown>;
+  const error = record.error;
+  if (typeof error === "string") {
+    return error;
+  }
+  if (typeof error === "object" && error != null) {
+    const errorRecord = error as Record<string, unknown>;
+    const message = typeof errorRecord.message === "string" ? errorRecord.message : "";
+    const code = typeof errorRecord.code === "string" ? errorRecord.code : "";
+    const kind = typeof errorRecord.type === "string" ? errorRecord.type : "";
+    const suffix = [code, kind].filter(Boolean).join(" / ");
+    if (message !== "") {
+      return suffix === "" ? message : `${message}\n${suffix}`;
+    }
+    return suffix === "" ? JSON.stringify(error) : suffix;
+  }
+  if (typeof record.message === "string") {
+    return record.message;
+  }
+  return JSON.stringify(payload);
+}
+
+function errorToMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return JSON.stringify(error);
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function generateChatTitle(model: string, messages: ChatCompletionMessageParam[], abortSignal: AbortSignal, temperature?: number): Promise<string> {
+  const firstUserContent = messages.find((message) => message.role === "user")?.content;
+  const firstUserMessage = typeof firstUserContent === "string" ? firstUserContent.trim() : "";
+  if (firstUserMessage === "") {
+    return "";
+  }
+  const response = await getOpenAIClient().chat.completions.create(
+    {
+      messages: [
+        {
+          role: "system",
+          content: "Generate a concise chat title. Return only the title, no quotes, no punctuation suffix. Use the user's language. Keep it under 8 words.",
+        },
+        {
+          role: "user",
+          content: firstUserMessage,
+        },
+      ],
+      model,
+      ...(Number.isFinite(temperature) ? { temperature } : {}),
+    },
+    { signal: abortSignal },
+  );
+  return cleanChatTitle(response.choices[0]?.message?.content ?? "");
+}
+
+function cleanChatTitle(value: string): string {
+  return value
+    .trim()
+    .replace(/^["'“”‘’]+|["'“”‘’]+$/g, "")
+    .replace(/[。.!！?？]+$/g, "")
+    .slice(0, 48);
+}
+
+function toChatCompletionMessages(messages: readonly ThreadMessage[], systemPrompt: string): ChatCompletionMessageParam[] {
+  const result: ChatCompletionMessageParam[] = [];
+  if (systemPrompt.trim() !== "") {
+    result.push({ role: "system", content: systemPrompt.trim() });
+  }
+  for (const message of messages) {
+    if (message.role !== "user" && message.role !== "assistant" && message.role !== "system") {
+      continue;
+    }
+    const content = threadMessageText(message);
+    if (content.trim() !== "") {
+      result.push({ role: message.role, content });
+    }
+  }
+  return result;
+}
+
+function threadMessageText(message: ThreadMessage): string {
+  return message.content
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .filter(Boolean)
+    .join("\n");
+}
+
+function formatDate(value: number | string | undefined | null): string {
+  if (value == null || value === "") {
+    return "-";
+  }
+  const date = typeof value === "number" ? new Date(value * 1000) : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+  return date.toLocaleString();
+}
+
+function compactID(value: string): string {
+  if (value.length <= 36) {
+    return value;
+  }
+  return `${value.slice(0, 20)}...${value.slice(-8)}`;
 }
 
 const root = document.querySelector<HTMLElement>("#app");
-
 if (root === null) {
   throw new Error("missing #app root");
 }
 
-createRoot(root).render(<App />);
+createRoot(root).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);

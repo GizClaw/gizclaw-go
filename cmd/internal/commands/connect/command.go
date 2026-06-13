@@ -8,7 +8,9 @@ import (
 	"strings"
 	"time"
 
-	cmdclient "github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/connection"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/deviceapi"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/publicapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 	"github.com/spf13/cobra"
@@ -44,7 +46,7 @@ func newPingCmd() *cobra.Command {
 		Short: "Ping the server",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := cmdclient.ConnectFromContext(ctxName)
+			c, err := connection.ConnectFromContext(ctxName)
 			if err != nil {
 				return err
 			}
@@ -83,12 +85,12 @@ func newServerInfoCmd() *cobra.Command {
 		Short: "Show server information",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := cmdclient.ConnectFromContext(ctxName)
+			c, err := connection.ConnectFromContext(ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			info, err := cmdclient.GetServerInfo(context.Background(), c)
+			info, err := publicapi.GetServerInfo(context.Background(), c)
 			if err != nil {
 				return err
 			}
@@ -114,12 +116,12 @@ func newSetNameCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := cmdclient.ConnectFromContext(ctxName)
+			c, err := connection.ConnectFromContext(ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			info, err := cmdclient.SetName(context.Background(), c, args[0])
+			info, err := deviceapi.SetName(context.Background(), c, args[0])
 			if err != nil {
 				return err
 			}
@@ -172,7 +174,7 @@ func newSayCmd() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := cmdclient.ConnectFromContext(ctxName)
+			c, err := connection.ConnectFromContext(ctxName)
 			if err != nil {
 				return err
 			}
@@ -207,7 +209,7 @@ func newTestSpeedCmd() *cobra.Command {
 		Short: "Measure concurrent upload and download throughput",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := cmdclient.ConnectFromContext(ctxName)
+			c, err := connection.ConnectFromContext(ctxName)
 			if err != nil {
 				return err
 			}
@@ -251,7 +253,7 @@ func (o *connectRPCOptions) addFlags(cmd *cobra.Command) {
 }
 
 func runConnectJSON(cmd *cobra.Command, opts connectRPCOptions, run func(context.Context, *gizcli.Client) (any, error)) error {
-	c, err := cmdclient.ConnectFromContext(opts.contextName)
+	c, err := connection.ConnectFromContext(opts.contextName)
 	if err != nil {
 		return err
 	}

@@ -8,8 +8,9 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 
-	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/adminapi"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/cmdutil"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/connection"
 	"github.com/spf13/cobra"
 )
 
@@ -44,19 +45,19 @@ var openPeerConfigClient = func(ctxName string) (peerConfigClient, error) {
 }
 
 var (
-	connectFromContext = client.ConnectFromContext
-	listPeers          = client.ListPeers
-	getPeer            = client.GetPeer
-	findPubKeyBySN     = client.FindPubKeyBySN
-	findPubKeyByIMEI   = client.FindPubKeyByIMEI
-	approvePeer        = client.ApprovePeer
-	blockPeer          = client.BlockPeer
-	getPeerInfo        = client.GetPeerInfo
-	getPeerConfig      = client.GetPeerConfig
-	putPeerConfig      = client.PutPeerConfig
-	getPeerRuntime     = client.GetPeerRuntime
-	deletePeer         = client.DeletePeer
-	refreshPeer        = client.RefreshPeer
+	connectFromContext = connection.ConnectFromContext
+	listPeers          = adminapi.ListPeers
+	getPeer            = adminapi.GetPeer
+	findPubKeyBySN     = adminapi.FindPubKeyBySN
+	findPubKeyByIMEI   = adminapi.FindPubKeyByIMEI
+	approvePeer        = adminapi.ApprovePeer
+	blockPeer          = adminapi.BlockPeer
+	getPeerInfo        = adminapi.GetPeerInfo
+	getPeerConfig      = adminapi.GetPeerConfig
+	putPeerConfig      = adminapi.PutPeerConfig
+	getPeerRuntime     = adminapi.GetPeerRuntime
+	deletePeer         = adminapi.DeletePeer
+	refreshPeer        = adminapi.RefreshPeer
 )
 
 func NewCmd() *cobra.Command {

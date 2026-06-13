@@ -1,5 +1,5 @@
-// User story: As a Play UI user, I can start a WebRTC call, open the RPC data
-// channel, and run peer RPC commands through the local proxy.
+// User story: As a Play UI user, I can refresh OpenAI gateway resources and
+// open the example-style chat tester sheet.
 package ui_test
 
 import (
@@ -11,22 +11,12 @@ func playAllActionsStories() []Story {
 		Name: "202-play-all-actions",
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoPlay("/")
-			page.ClickRole("button", "Start Video Call")
-			page.ExpectText("Connected")
-			page.ClickRole("button", "Logs")
-			page.ExpectText("webrtc.state")
-			page.ExpectText("all.ping")
-			page.ExpectText("rpc.response")
-			page.ClickRole("button", "Close RPC logs")
-			page.ClickRole("button", "Get Info")
-			page.ClickRole("button", "Logs")
-			page.ExpectText("server.info.get")
-			page.ExpectText("Seeded UI Device")
-			page.ClickRole("button", "Close RPC logs")
-			page.ClickRole("button", "Get Runtime")
-			page.ClickRole("button", "Logs")
-			page.ExpectText("server.runtime.get")
-			page.ExpectText("online")
+			page.ClickRoleLike("button", "Models")
+			page.ClickRole("button", "Refresh")
+			page.ExpectText(SeedModelID)
+			page.ClickRole("button", "Test Chat")
+			page.ExpectText("Ready to test")
+			page.ExpectText("/v1/chat/completions")
 		},
 	}}
 }

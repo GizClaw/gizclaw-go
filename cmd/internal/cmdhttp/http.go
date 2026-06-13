@@ -1,45 +1,47 @@
-package client
+package cmdhttp
 
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/fs"
-	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
-	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
 
+	"github.com/GizClaw/gizclaw-go/cmd/internal/clientapi"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/connection"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/publicapi"
 	adminui "github.com/GizClaw/gizclaw-go/cmd/ui/admin"
 	playui "github.com/GizClaw/gizclaw-go/cmd/ui/play"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
-	"github.com/pion/webrtc/v4"
 )
 
 const uiAPIProxyTimeout = 30 * time.Second
 
 func ListenAndServeAdminUI(ctxName, addr string, out io.Writer) error {
-	return listenAndServeUI(ctxName, addr, "GizClaw Admin UI", adminui.FS(), out, nil, registerAdminUIRoutes)
+	return listenAndServeUI(ctxName, addr, "GizClaw Admin UI", adminui.Handler(), out, nil, registerAdminUIAPIProxyRoutes, func(mux *http.ServeMux, _ clientapi.ClientProvider, _ clientapi.ClientInvalidator) {
+		registerAdminUIRoutes(mux)
+	})
 }
 
 func ListenAndServePlayUI(ctxName, addr string, out io.Writer) error {
-	return listenAndServeUI(ctxName, addr, "GizClaw Play UI", playui.FS(), out, ensurePlayReady, registerPlayUIRoutes(ctxName))
+	return listenAndServeUI(ctxName, addr, "GizClaw Play UI", playui.Handler(), out, ensurePlayReady, registerPlayUIAPIProxyRoutes, registerPlayUIRoutes)
 }
 
 func listenAndServeUI(
 	ctxName, addr, title string,
-	uiFS fs.FS,
+	uiHandler http.Handler,
 	out io.Writer,
 	beforeServe func(context.Context, *gizcli.Client) error,
-	registerRoutes func(*http.ServeMux),
+	registerProxyRoutes func(*http.ServeMux, http.Handler),
+	registerRoutes func(*http.ServeMux, clientapi.ClientProvider, clientapi.ClientInvalidator),
 ) error {
 	if strings.TrimSpace(addr) == "" {
 		return fmt.Errorf("gizclaw: empty listen addr")
@@ -49,13 +51,13 @@ func listenAndServeUI(
 		return fmt.Errorf("gizclaw: listen ui: %w", err)
 	}
 
-	c, err := ConnectFromContext(ctxName)
+	c, err := connection.ConnectFromContext(ctxName)
 	if err != nil {
 		_ = listener.Close()
 		return err
 	}
 	apiProxy := newUIAPIProxy(func() (uiAPIProxyClient, error) {
-		return ConnectFromContext(ctxName)
+		return connection.ConnectFromContext(ctxName)
 	}, uiAPIProxyTimeout)
 	apiProxy.set(c)
 	defer apiProxy.Close()
@@ -70,12 +72,11 @@ func listenAndServeUI(
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/api/", apiProxy)
-	mux.Handle("/api", apiProxy)
+	registerProxyRoutes(mux, apiProxy)
 	if registerRoutes != nil {
-		registerRoutes(mux)
+		registerRoutes(mux, apiProxy.gizCLIClient, apiProxy.invalidateGizCLIClient)
 	}
-	mux.Handle("/", staticWithSPAFallback(uiFS))
+	mux.Handle("/", uiHandler)
 
 	server := &http.Server{
 		Handler: mux,
@@ -100,6 +101,23 @@ func listenAndServeUI(
 		return nil
 	}
 	return err
+}
+
+func registerAdminUIAPIProxyRoutes(mux *http.ServeMux, apiProxy http.Handler) {
+	mux.Handle("/api/", apiProxy)
+	mux.Handle("/api", apiProxy)
+	registerOpenAIAPIProxyRoutes(mux, apiProxy)
+}
+
+func registerPlayUIAPIProxyRoutes(mux *http.ServeMux, apiProxy http.Handler) {
+	mux.HandleFunc("/api/", http.NotFound)
+	mux.HandleFunc("/api", http.NotFound)
+	registerOpenAIAPIProxyRoutes(mux, apiProxy)
+}
+
+func registerOpenAIAPIProxyRoutes(mux *http.ServeMux, apiProxy http.Handler) {
+	mux.Handle("/v1/", apiProxy)
+	mux.Handle("/v1", apiProxy)
 }
 
 type uiAPIProxyClient interface {
@@ -190,6 +208,25 @@ func (p *uiAPIProxy) get() (uiAPIProxyClient, error) {
 	return client, nil
 }
 
+func (p *uiAPIProxy) gizCLIClient() (*gizcli.Client, error) {
+	client, err := p.get()
+	if err != nil {
+		return nil, err
+	}
+	c, ok := client.(*gizcli.Client)
+	if !ok {
+		return nil, fmt.Errorf("gizclaw: unexpected ui client %T", client)
+	}
+	return c, nil
+}
+
+func (p *uiAPIProxy) invalidateGizCLIClient(c *gizcli.Client) {
+	if c == nil {
+		return
+	}
+	p.invalidate(c)
+}
+
 func (p *uiAPIProxy) invalidate(stale uiAPIProxyClient) {
 	p.mu.Lock()
 	if p.client != stale {
@@ -265,30 +302,95 @@ func (r *bufferedHTTPResponse) writeTo(w http.ResponseWriter) {
 }
 
 func ensurePlayReady(ctx context.Context, c *gizcli.Client) error {
-	_, err := GetServerInfo(ctx, c)
+	_, err := publicapi.GetServerInfo(ctx, c)
 	return err
 }
 
-type playWebRTCOfferRequest struct {
-	SDP  string `json:"sdp"`
-	Type string `json:"type"`
+func registerPlayUIRoutes(mux *http.ServeMux, client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) {
+	mux.HandleFunc("/v1/audio/speech", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		playOpenAIBufferedProxy(client, invalidate, w, r, "/v1/audio/speech")
+	})
+	handler := clientapi.Handler(client, invalidate)
+	for _, pattern := range []string{
+		"/peer-resources",
+		"/peer-resources/",
+		"/play/voices/stream",
+		"/v1/voices",
+		"/webrtc/offer",
+	} {
+		mux.Handle(pattern, handler)
+	}
 }
 
-type playWebRTCAnswerResponse struct {
-	SDP  string `json:"sdp"`
-	Type string `json:"type"`
-}
-
-func registerPlayUIRoutes(ctxName string) func(*http.ServeMux) {
-	return func(mux *http.ServeMux) {
-		mux.HandleFunc("/webrtc/offer", func(w http.ResponseWriter, r *http.Request) {
-			if r.Method != http.MethodPost {
-				w.Header().Set("Allow", http.MethodPost)
-				http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
-				return
+func playOpenAIBufferedProxy(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator, w http.ResponseWriter, r *http.Request, targetPath string) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	var lastErr error
+	for attempt := 0; attempt < 2; attempt++ {
+		c, err := client()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+			return
+		}
+		respHeader, statusCode, respBody, err := doPlayOpenAIRequest(c, r, targetPath, body)
+		if err != nil {
+			lastErr = err
+			if invalidate != nil {
+				invalidate(c)
 			}
-			handlePlayWebRTCOffer(w, r, ctxName)
-		})
+			continue
+		}
+		if statusCode == http.StatusBadGateway && attempt == 0 {
+			lastErr = fmt.Errorf("bad gateway")
+			if invalidate != nil {
+				invalidate(c)
+			}
+			continue
+		}
+		copyHTTPHeaders(w.Header(), respHeader)
+		w.Header().Set("Content-Length", strconv.Itoa(len(respBody)))
+		w.WriteHeader(statusCode)
+		_, _ = w.Write(respBody)
+		return
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("bad gateway")
+	}
+	http.Error(w, lastErr.Error(), http.StatusBadGateway)
+}
+
+func doPlayOpenAIRequest(c *gizcli.Client, r *http.Request, targetPath string, body []byte) (http.Header, int, []byte, error) {
+	req, err := http.NewRequestWithContext(r.Context(), r.Method, "http://gizclaw"+targetPath, bytes.NewReader(body))
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	req.URL.RawQuery = r.URL.RawQuery
+	copyHTTPHeaders(req.Header, r.Header)
+	resp, err := c.HTTPClient(gizcli.ServiceOpenAI).Do(req)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	defer resp.Body.Close()
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+	return resp.Header.Clone(), resp.StatusCode, respBody, nil
+}
+
+func copyHTTPHeaders(dst, src http.Header) {
+	for key, values := range src {
+		for _, value := range values {
+			dst.Add(key, value)
+		}
 	}
 }
 
@@ -300,119 +402,6 @@ func registerAdminUIRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/workspace-templates/", redirectWorkflows)
 	mux.HandleFunc("/ai/workspace-templates", redirectWorkflows)
 	mux.HandleFunc("/ai/workspace-templates/", redirectWorkflows)
-}
-
-func handlePlayWebRTCOffer(w http.ResponseWriter, r *http.Request, ctxName string) {
-	var req playWebRTCOfferRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
-		http.Error(w, "invalid offer json", http.StatusBadRequest)
-		return
-	}
-	if req.Type != webrtc.SDPTypeOffer.String() || strings.TrimSpace(req.SDP) == "" {
-		http.Error(w, "invalid webrtc offer", http.StatusBadRequest)
-		return
-	}
-	c, err := ConnectFromContext(ctxName)
-	if err != nil {
-		playWebRTCError(w, "connect client failed", err, http.StatusServiceUnavailable)
-		return
-	}
-	var closeClientOnce sync.Once
-	closeClient := func() {
-		closeClientOnce.Do(func() {
-			_ = c.Close()
-		})
-	}
-
-	pc, err := webrtc.NewPeerConnection(webrtc.Configuration{})
-	if err != nil {
-		closeClient()
-		playWebRTCError(w, "create peer connection failed", err, http.StatusInternalServerError)
-		return
-	}
-	registration, err := c.RegisterTo(pc)
-	if err != nil {
-		_ = pc.Close()
-		closeClient()
-		playWebRTCError(w, "register peer connection failed", err, http.StatusInternalServerError)
-		return
-	}
-	closeWebRTC := func() {
-		_ = registration.Close()
-		_ = pc.Close()
-		closeClient()
-	}
-	pc.OnConnectionStateChange(func(state webrtc.PeerConnectionState) {
-		switch state {
-		case webrtc.PeerConnectionStateFailed,
-			webrtc.PeerConnectionStateDisconnected,
-			webrtc.PeerConnectionStateClosed:
-			closeWebRTC()
-		}
-	})
-
-	if err := pc.SetRemoteDescription(webrtc.SessionDescription{Type: webrtc.SDPTypeOffer, SDP: req.SDP}); err != nil {
-		closeWebRTC()
-		playWebRTCError(w, "set remote description failed", err, http.StatusBadRequest)
-		return
-	}
-	answer, err := pc.CreateAnswer(nil)
-	if err != nil {
-		closeWebRTC()
-		playWebRTCError(w, "create answer failed", err, http.StatusInternalServerError)
-		return
-	}
-
-	gatherComplete := webrtc.GatheringCompletePromise(pc)
-	if err := pc.SetLocalDescription(answer); err != nil {
-		closeWebRTC()
-		playWebRTCError(w, "set local description failed", err, http.StatusInternalServerError)
-		return
-	}
-	select {
-	case <-gatherComplete:
-	case <-r.Context().Done():
-		closeWebRTC()
-		return
-	}
-
-	local := pc.LocalDescription()
-	if local == nil {
-		closeWebRTC()
-		playWebRTCError(w, "missing local description", fmt.Errorf("local description is nil"), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(playWebRTCAnswerResponse{SDP: local.SDP, Type: local.Type.String()}); err != nil {
-		closeWebRTC()
-	}
-}
-
-func playWebRTCError(w http.ResponseWriter, message string, err error, status int) {
-	slog.Error("gizclaw: play webrtc signaling failed", "message", message, "error", err, "status", status)
-	http.Error(w, fmt.Sprintf("%s: %v", message, err), status)
-}
-
-// staticWithSPAFallback serves embedded UI assets and falls back to index.html
-// for client-side routes (e.g. /peers/...) so BrowserRouter deep links work.
-func staticWithSPAFallback(uiFS fs.FS) http.Handler {
-	fileServer := http.FileServer(http.FS(uiFS))
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		clean := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
-		if clean != "" {
-			if _, err := fs.Stat(uiFS, clean); err == nil {
-				fileServer.ServeHTTP(w, r)
-				return
-			}
-		}
-		r2 := r.Clone(r.Context())
-		r2.URL = r.URL
-		u := *r.URL
-		u.Path = "/"
-		r2.URL = &u
-		fileServer.ServeHTTP(w, r2)
-	})
 }
 
 func normalizeListenAddr(addr string) string {

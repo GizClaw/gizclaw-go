@@ -3,11 +3,11 @@ package playcmd
 import (
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/cmdhttp"
 	"github.com/spf13/cobra"
 )
 
-var listenAndServePlayUI = client.ListenAndServePlayUI
+var listenAndServePlayUI = cmdhttp.ListenAndServePlayUI
 
 func NewCmd() *cobra.Command {
 	var ctxName string

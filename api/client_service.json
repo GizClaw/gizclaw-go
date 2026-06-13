@@ -1,0 +1,807 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "GizClaw Client API",
+    "version": "0.1.0",
+    "description": "Local HTTP API exposed by GizClaw client commands such as the Play UI."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/peer-resources": {
+      "get": {
+        "operationId": "listPeerResourceNames",
+        "summary": "List resource names exposed to the current peer",
+        "responses": {
+          "200": {
+            "description": "The available peer resource names.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerResourceNamesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/workspaces": {
+      "get": {
+        "operationId": "listPeerWorkspaces",
+        "summary": "List workspaces readable by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of workspaces.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/WorkspaceListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/workflows": {
+      "get": {
+        "operationId": "listPeerWorkflows",
+        "summary": "List workflows readable by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of workflows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/WorkflowListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/models": {
+      "get": {
+        "operationId": "listPeerModels",
+        "summary": "List models readable by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of models.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/ModelListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/credentials": {
+      "get": {
+        "operationId": "listPeerCredentials",
+        "summary": "List credentials readable by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of sanitized credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/CredentialListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/voices": {
+      "get": {
+        "operationId": "listPeerVoices",
+        "summary": "List voices readable by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/VoiceSource"
+          },
+          {
+            "$ref": "#/components/parameters/VoiceProviderKind"
+          },
+          {
+            "$ref": "#/components/parameters/VoiceProviderName"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of voices.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientVoiceListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/pets": {
+      "get": {
+        "operationId": "listPeerPets",
+        "summary": "List pets owned by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of pets.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/PetListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "adoptPeerPet",
+        "summary": "Adopt a pet for the current peer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./rpc/server.json#/components/schemas/PetAdoptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The adopted pet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/PetAdoptResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/pets/{id}": {
+      "get": {
+        "operationId": "getPeerPet",
+        "summary": "Get a pet owned by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The pet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/PetGetResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putPeerPet",
+        "summary": "Update a pet owned by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PetId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./rpc/server.json#/components/schemas/PetPutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated pet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/PetPutResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deletePeerPet",
+        "summary": "Delete a pet owned by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PetId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The deleted pet.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/PetDeleteResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/pets/{id}/@feed": {
+      "post": {
+        "operationId": "feedPeerPet",
+        "summary": "Feed a pet owned by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PetId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./rpc/server.json#/components/schemas/PetFeedRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The pet after feeding.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/PetFeedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/pets/{id}/@wash": {
+      "post": {
+        "operationId": "washPeerPet",
+        "summary": "Wash a pet owned by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PetId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./rpc/server.json#/components/schemas/PetWashRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The pet after washing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/PetWashResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/pets/{id}/@play": {
+      "post": {
+        "operationId": "playWithPeerPet",
+        "summary": "Play with a pet owned by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PetId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./rpc/server.json#/components/schemas/PetPlayRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The pet after playing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/PetPlayResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/wallet": {
+      "get": {
+        "operationId": "getPeerWallet",
+        "summary": "Get the current peer wallet",
+        "responses": {
+          "200": {
+            "description": "The wallet for the current peer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/WalletObject"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/wallet-transactions": {
+      "get": {
+        "operationId": "listPeerWalletTransactions",
+        "summary": "List wallet transactions for the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of wallet transactions.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/WalletTransactionsListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/wallet-transactions/{id}": {
+      "get": {
+        "operationId": "getPeerWalletTransaction",
+        "summary": "Get a wallet transaction for the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WalletTransactionId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The wallet transaction.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/WalletTransactionsGetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/rewards": {
+      "get": {
+        "operationId": "listPeerRewards",
+        "summary": "List rewards for the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of rewards.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/RewardListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/rewards/{id}": {
+      "get": {
+        "operationId": "getPeerReward",
+        "summary": "Get a reward for the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RewardId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The reward.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/RewardGetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peer-resources/rewards/@claim": {
+      "post": {
+        "operationId": "claimPeerReward",
+        "summary": "Claim a reward for the current peer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "./rpc/server.json#/components/schemas/RewardClaimRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The claimed reward.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/RewardClaimResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/play/voices/stream": {
+      "get": {
+        "operationId": "streamPlayableVoices",
+        "summary": "Stream playable voices as server-sent events",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/VoiceProviderKind"
+          },
+          {
+            "$ref": "#/components/parameters/VoiceProviderName"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-sent voice events. Each event data field is a PlayVoiceStreamEvent JSON object.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayVoiceStreamEvent"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/voices": {
+      "get": {
+        "operationId": "listClientVoices",
+        "summary": "List OpenAI-compatible voices readable by the current peer",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/VoiceSource"
+          },
+          {
+            "$ref": "#/components/parameters/VoiceProviderKind"
+          },
+          {
+            "$ref": "#/components/parameters/VoiceProviderName"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of voices exposed through the local OpenAI-compatible proxy.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientVoiceListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/webrtc/offer": {
+      "post": {
+        "operationId": "createWebRTCOffer",
+        "summary": "Create a WebRTC answer for a browser offer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebRTCSessionDescription"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A WebRTC answer.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebRTCSessionDescription"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Limit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "PetId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "RewardId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "WalletTransactionId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "VoiceSource": {
+        "name": "source",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "./type/voice_source.json#/components/schemas/VoiceSource"
+        }
+      },
+      "VoiceProviderKind": {
+        "name": "provider_kind",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "$ref": "./type/voice_provider_kind.json#/components/schemas/VoiceProviderKind"
+        }
+      },
+      "VoiceProviderName": {
+        "name": "provider_name",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "schemas": {
+      "PeerResourceName": {
+        "type": "string",
+        "enum": [
+          "workspaces",
+          "workflows",
+          "models",
+          "credentials",
+          "voices",
+          "pets",
+          "wallet",
+          "wallet-transactions",
+          "rewards"
+        ]
+      },
+      "PeerResourceNamesResponse": {
+        "type": "object",
+        "required": [
+          "resources"
+        ],
+        "properties": {
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PeerResourceName"
+            }
+          }
+        }
+      },
+      "ClientVoiceListResponse": {
+        "type": "object",
+        "required": [
+          "object",
+          "data",
+          "has_next"
+        ],
+        "properties": {
+          "object": {
+            "type": "string",
+            "enum": [
+              "list"
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "./type/voice.json#/components/schemas/Voice"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "./type/voice.json#/components/schemas/Voice"
+            }
+          },
+          "has_next": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": "string"
+          }
+        }
+      },
+      "PlayVoiceStreamEvent": {
+        "type": "object",
+        "properties": {
+          "done": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "string"
+          },
+          "voice": {
+            "$ref": "./type/voice.json#/components/schemas/Voice"
+          }
+        }
+      },
+      "WebRTCSessionDescription": {
+        "type": "object",
+        "required": [
+          "sdp",
+          "type"
+        ],
+        "properties": {
+          "sdp": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "offer",
+              "answer",
+              "pranswer",
+              "rollback"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

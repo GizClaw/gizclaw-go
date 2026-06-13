@@ -8,7 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/cmd/internal/client"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/adminapi"
+	"github.com/GizClaw/gizclaw-go/cmd/internal/connection"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/spf13/cobra"
 )
@@ -37,12 +38,12 @@ func newListCmd(ctxName *string) *cobra.Command {
 		Use:   "list",
 		Short: "List firmwares",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			items, err := client.ListFirmwares(context.Background(), c)
+			items, err := adminapi.ListFirmwares(context.Background(), c)
 			if err != nil {
 				return err
 			}
@@ -62,12 +63,12 @@ func newCreateCmd(ctxName *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			item, err := client.CreateFirmware(context.Background(), c, req)
+			item, err := adminapi.CreateFirmware(context.Background(), c, req)
 			if err != nil {
 				return err
 			}
@@ -84,12 +85,12 @@ func newGetCmd(ctxName *string) *cobra.Command {
 		Short: "Get a firmware",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			item, err := client.GetFirmware(context.Background(), c, args[0])
+			item, err := adminapi.GetFirmware(context.Background(), c, args[0])
 			if err != nil {
 				return err
 			}
@@ -109,12 +110,12 @@ func newPutCmd(ctxName *string) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			item, err := client.PutFirmware(context.Background(), c, args[0], req)
+			item, err := adminapi.PutFirmware(context.Background(), c, args[0], req)
 			if err != nil {
 				return err
 			}
@@ -131,12 +132,12 @@ func newDeleteCmd(ctxName *string) *cobra.Command {
 		Short: "Delete a firmware",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			item, err := client.DeleteFirmware(context.Background(), c, args[0])
+			item, err := adminapi.DeleteFirmware(context.Background(), c, args[0])
 			if err != nil {
 				return err
 			}
@@ -151,12 +152,12 @@ func newReleaseCmd(ctxName *string) *cobra.Command {
 		Short: "Promote firmware slots",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			item, err := client.ReleaseFirmware(context.Background(), c, args[0])
+			item, err := adminapi.ReleaseFirmware(context.Background(), c, args[0])
 			if err != nil {
 				return err
 			}
@@ -171,12 +172,12 @@ func newRollbackCmd(ctxName *string) *cobra.Command {
 		Short: "Rollback firmware stable slot",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := client.ConnectFromContext(*ctxName)
+			c, err := connection.ConnectFromContext(*ctxName)
 			if err != nil {
 				return err
 			}
 			defer c.Close()
-			item, err := client.RollbackFirmware(context.Background(), c, args[0])
+			item, err := adminapi.RollbackFirmware(context.Background(), c, args[0])
 			if err != nil {
 				return err
 			}
