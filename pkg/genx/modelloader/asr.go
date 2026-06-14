@@ -2,6 +2,7 @@ package modelloader
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/GizClaw/doubao-speech-go"
@@ -32,9 +33,6 @@ func registerDoubaoASR(cfg ConfigFile) ([]string, error) {
 		return nil, fmt.Errorf("token is required for doubao ASR")
 	}
 
-	// Create Doubao client
-	client := doubaospeech.NewClient(cfg.AppID, doubaospeech.WithBearerToken(cfg.Token))
-
 	// Extract default params
 	var opts []transformers.DoubaoASRSAUCOption
 	if cfg.DefaultParams != nil {
@@ -62,9 +60,19 @@ func registerDoubaoASR(cfg ConfigFile) ([]string, error) {
 		if m.Name == "" {
 			return nil, fmt.Errorf("asr model entry missing name")
 		}
+		resourceID := m.ResourceID
+		if resourceID == "" {
+			resourceID = doubaospeech.ResourceASRStream
+		}
 
 		// Create ASR transformer with the resource options
-		asr := transformers.NewDoubaoASRSAUC(client, opts...)
+		client := doubaospeech.NewClient(
+			cfg.AppID,
+			doubaospeech.WithBearerToken(cfg.Token),
+			doubaospeech.WithResourceID(resourceID),
+		)
+		modelOpts := append(slices.Clone(opts), transformers.WithDoubaoASRSAUCResourceID(resourceID))
+		asr := transformers.NewDoubaoASRSAUC(client, modelOpts...)
 		// Register to both ASRMux and DefaultMux for compatibility
 		transformers.HandleASR(m.Name, asr)
 		transformers.Handle(m.Name, asr)

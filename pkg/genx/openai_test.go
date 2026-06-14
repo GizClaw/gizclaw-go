@@ -359,6 +359,50 @@ func TestOpenAIInvokeAndGenerateStreamWithHTTP(t *testing.T) {
 		}
 	})
 
+	t.Run("invoke_json_output_falls_back_to_tool_calls_when_response_format_unsupported", func(t *testing.T) {
+		var requests int
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests++
+			w.Header().Set("Content-Type", "application/json")
+			if requests == 1 {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = io.WriteString(w, `{"message":"This response_format type is unavailable now","type":"invalid_request_error","param":null,"code":"invalid_request_error"}`)
+				return
+			}
+			_, _ = io.WriteString(w, mkResp(map[string]any{
+				"index":         0,
+				"finish_reason": "tool_calls",
+				"logprobs":      map[string]any{"content": []any{}, "refusal": []any{}},
+				"message": map[string]any{
+					"role": "assistant",
+					"tool_calls": []any{map[string]any{
+						"id":   "call_1",
+						"type": "function",
+						"function": map[string]any{
+							"name":      "fn",
+							"arguments": `{"a":1}`,
+						},
+					}},
+				},
+			}))
+		}))
+		defer srv.Close()
+
+		client := openai.NewClient(option.WithAPIKey("test"), option.WithBaseURL(srv.URL+"/"))
+		g := &OpenAIGenerator{Client: &client, Model: "gpt-test", SupportJSONOutput: true, SupportToolCalls: true, InvokeWithToolName: true}
+
+		_, call, err := g.Invoke(context.Background(), "", testOpenAIContext(true), fn)
+		if err != nil {
+			t.Fatalf("invoke fallback failed: %v", err)
+		}
+		if requests != 2 {
+			t.Fatalf("requests = %d, want 2", requests)
+		}
+		if call == nil || !strings.Contains(call.Arguments, "\"a\":1") {
+			t.Fatalf("unexpected fallback result: %#v", call)
+		}
+	})
+
 	t.Run("invoke_tool_calls_with_stop_finish_reason", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

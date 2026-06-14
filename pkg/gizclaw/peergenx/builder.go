@@ -130,13 +130,28 @@ func (b DefaultBuilder) buildVolcASR(cfg TransformerConfig) (genx.Transformer, e
 	if cfg.Tenant.Volc == nil || cfg.Model == nil {
 		return nil, fmt.Errorf("%w: volc tenant and model are required", ErrInvalid)
 	}
-	token := credentialString(cfg.Credential, "token", "api_key", "bearer_token")
-	if token == "" {
-		return nil, fmt.Errorf("%w: credential %q missing token", ErrInvalid, cfg.Credential.Name)
-	}
 	var data map[string]any
 	if err := decodeProviderData(cfg.Model.ProviderData, string(apitypes.VoiceProviderKindVolcTenant), &data); err != nil {
 		return nil, err
+	}
+	clientOpts := []doubaospeech.Option{}
+	resourceID := mapString(data, "resource_id")
+	if resourceID == "" {
+		resourceID = doubaospeech.ResourceASRStream
+	}
+	clientOpts = append(clientOpts, doubaospeech.WithResourceID(resourceID))
+	if mapString(data, "auth_mode", "auth") == "x-api-key" {
+		apiKey := credentialString(cfg.Credential, "api_key", "x_api_key")
+		if apiKey == "" {
+			return nil, fmt.Errorf("%w: credential %q missing api_key for x-api-key auth", ErrInvalid, cfg.Credential.Name)
+		}
+		clientOpts = append(clientOpts, doubaospeech.WithAPIKey(apiKey))
+	} else if accessKey := credentialString(cfg.Credential, "sauc_access_key", "api_key", "access_token", "token", "bearer_token"); accessKey != "" {
+		clientOpts = append(clientOpts, doubaospeech.WithV2APIKey(accessKey, cfg.Tenant.Volc.AppId))
+	} else if accessKey := credentialString(cfg.Credential, "access_key", "access_key_id"); accessKey != "" {
+		clientOpts = append(clientOpts, doubaospeech.WithV2APIKey(accessKey, cfg.Tenant.Volc.AppId))
+	} else {
+		return nil, fmt.Errorf("%w: credential %q missing speech api_key/token/access_token", ErrInvalid, cfg.Credential.Name)
 	}
 	opts := []transformers.DoubaoASRSAUCOption{}
 	if value := mapString(data, "format"); value != "" {
@@ -154,7 +169,11 @@ func (b DefaultBuilder) buildVolcASR(cfg TransformerConfig) (genx.Transformer, e
 	if value := mapString(data, "language"); value != "" {
 		opts = append(opts, transformers.WithDoubaoASRSAUCLanguage(value))
 	}
-	client := doubaospeech.NewClient(cfg.Tenant.Volc.AppId, doubaospeech.WithBearerToken(token))
+	if value := mapString(data, "result_type"); value != "" {
+		opts = append(opts, transformers.WithDoubaoASRSAUCResultType(value))
+	}
+	opts = append(opts, transformers.WithDoubaoASRSAUCResourceID(resourceID))
+	client := doubaospeech.NewClient(cfg.Tenant.Volc.AppId, clientOpts...)
 	return transformers.NewDoubaoASRSAUC(client, opts...), nil
 }
 

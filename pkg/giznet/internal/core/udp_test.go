@@ -789,26 +789,16 @@ func TestUDPReadFromClosed(t *testing.T) {
 
 func TestReadPacket_SkipsErroredPacketsAndReturnsNext(t *testing.T) {
 	u := &UDP{
-		outputChan: make(chan *packet, 2),
-		closeChan:  make(chan struct{}),
+		readChan:  make(chan readPacket, 1),
+		closeChan: make(chan struct{}),
 	}
 
-	skipped := acquirePacket()
-	skipped.err = ErrNoData
-	skipped.refs.Store(1)
-	close(skipped.ready)
-	u.outputChan <- skipped
-
 	wantPK := noise.PublicKey{9, 9, 9}
-	okPkt := acquirePacket()
-	copy(okPkt.data, []byte("payload"))
-	okPkt.pk = wantPK
-	okPkt.protocol = testDirectProtoA
-	okPkt.payload = okPkt.data[:7]
-	okPkt.payloadN = 7
-	okPkt.refs.Store(1)
-	close(okPkt.ready)
-	u.outputChan <- okPkt
+	u.readChan <- readPacket{
+		pk:       wantPK,
+		protocol: testDirectProtoA,
+		payload:  []byte("payload"),
+	}
 
 	buf := make([]byte, 16)
 	pk, proto, n, err := u.ReadPacket(buf)
@@ -828,13 +818,10 @@ func TestReadPacket_SkipsErroredPacketsAndReturnsNext(t *testing.T) {
 
 func TestReadPacket_ReturnsClosedWhileWaitingForReady(t *testing.T) {
 	u := &UDP{
-		outputChan: make(chan *packet, 1),
-		closeChan:  make(chan struct{}),
+		readChan:  make(chan readPacket),
+		closeChan: make(chan struct{}),
 	}
 
-	pkt := acquirePacket()
-	pkt.refs.Store(1)
-	u.outputChan <- pkt
 	close(u.closeChan)
 
 	buf := make([]byte, 8)
@@ -987,6 +974,9 @@ func TestInboundServiceDataReestablishesOfflinePeer(t *testing.T) {
 	}
 
 	u.decryptTransport(pkt, wire, from)
+	pkt.refs.Store(1)
+	close(pkt.ready)
+	u.deliverInbound(pkt)
 
 	if pkt.err != nil {
 		t.Fatalf("pkt.err=%v, want nil", pkt.err)
@@ -1053,9 +1043,12 @@ func TestCloseControlMarksPeerOfflineWithoutRemovingPeer(t *testing.T) {
 	defer releasePacket(pkt)
 
 	u.decryptTransport(pkt, wire, from)
+	pkt.refs.Store(1)
+	close(pkt.ready)
+	u.deliverInbound(pkt)
 
-	if pkt.err != ErrNoData {
-		t.Fatalf("pkt.err=%v, want %v", pkt.err, ErrNoData)
+	if pkt.err != nil {
+		t.Fatalf("pkt.err=%v, want nil", pkt.err)
 	}
 	if info := u.PeerInfo(peerKey.Public); info == nil || info.State != PeerStateOffline {
 		t.Fatalf("PeerInfo after close control = %+v, want offline peer", info)
@@ -1146,9 +1139,12 @@ func TestCloseControlFromPreviousSessionDoesNotCloseCurrentServiceMux(t *testing
 	defer releasePacket(pkt)
 
 	u.decryptTransport(pkt, wire, from)
+	pkt.refs.Store(1)
+	close(pkt.ready)
+	u.deliverInbound(pkt)
 
-	if pkt.err != ErrNoData {
-		t.Fatalf("pkt.err=%v, want %v", pkt.err, ErrNoData)
+	if pkt.err != nil {
+		t.Fatalf("pkt.err=%v, want nil", pkt.err)
 	}
 	peer.mu.RLock()
 	gotMux := peer.serviceMux
@@ -1358,6 +1354,162 @@ func TestPeerServiceMuxAndSendDirectWrapper(t *testing.T) {
 	}
 	if string(payload) != "wrapper-path" {
 		t.Fatalf("server got payload=%q, want %q", string(payload), "wrapper-path")
+	}
+}
+
+func TestSendPayloadPreservesOrderWhenEncryptionCompletesOutOfOrder(t *testing.T) {
+	server, client, serverKey, clientKey := createConnectedPair(t, WithDecryptWorkers(1))
+	defer server.Close()
+	defer client.Close()
+
+	client.mu.RLock()
+	peer := client.peers[serverKey.Public]
+	client.mu.RUnlock()
+	if peer == nil {
+		t.Fatal("peer not found in client map")
+	}
+
+	firstEncrypting := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	var firstOnce sync.Once
+	var releaseOnce sync.Once
+	release := func() {
+		releaseOnce.Do(func() {
+			close(releaseFirst)
+		})
+	}
+
+	oldHook := afterOutboundEncryptHook
+	afterOutboundEncryptHook = func(pkt *outboundPacket) {
+		if string(pkt.payload) != "first" {
+			return
+		}
+		firstOnce.Do(func() {
+			close(firstEncrypting)
+			<-releaseFirst
+		})
+	}
+	t.Cleanup(func() {
+		release()
+		afterOutboundEncryptHook = oldHook
+	})
+
+	firstDone := make(chan error, 1)
+	go func() {
+		firstDone <- client.sendPayload(peer, testDirectProtoA, []byte("first"))
+	}()
+
+	select {
+	case <-firstEncrypting:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for first packet to enter outbound encrypt hook")
+	}
+
+	secondDone := make(chan error, 1)
+	go func() {
+		secondDone <- client.sendPayload(peer, testDirectProtoA, []byte("second"))
+	}()
+
+	select {
+	case err := <-secondDone:
+		t.Fatalf("second send completed before first packet was ready: %v", err)
+	case <-time.After(50 * time.Millisecond):
+	}
+
+	release()
+
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first send failed: %v", err)
+	}
+	if err := <-secondDone; err != nil {
+		t.Fatalf("second send failed: %v", err)
+	}
+
+	proto, payload := readPeerWithTimeout(t, server, clientKey.Public, 3*time.Second)
+	if proto != testDirectProtoA || string(payload) != "first" {
+		t.Fatalf("first received packet proto=%d payload=%q, want proto=%d payload=%q", proto, string(payload), testDirectProtoA, "first")
+	}
+	proto, payload = readPeerWithTimeout(t, server, clientKey.Public, 3*time.Second)
+	if proto != testDirectProtoA || string(payload) != "second" {
+		t.Fatalf("second received packet proto=%d payload=%q, want proto=%d payload=%q", proto, string(payload), testDirectProtoA, "second")
+	}
+}
+
+func TestInboundDeliveryPreservesOrderWhenDecryptionCompletesOutOfOrder(t *testing.T) {
+	server, client, serverKey, clientKey := createConnectedPair(t, WithDecryptWorkers(2))
+	defer server.Close()
+	defer client.Close()
+
+	client.mu.RLock()
+	peer := client.peers[serverKey.Public]
+	client.mu.RUnlock()
+	if peer == nil {
+		t.Fatal("peer not found in client map")
+	}
+
+	firstDecoding := make(chan struct{})
+	releaseFirst := make(chan struct{})
+	var firstOnce sync.Once
+	var releaseOnce sync.Once
+	release := func() {
+		releaseOnce.Do(func() {
+			close(releaseFirst)
+		})
+	}
+
+	oldHook := afterInboundDecodeHook
+	afterInboundDecodeHook = func(pkt *packet) {
+		if string(pkt.payload[:pkt.payloadN]) != "first" {
+			return
+		}
+		firstOnce.Do(func() {
+			close(firstDecoding)
+			<-releaseFirst
+		})
+	}
+	t.Cleanup(func() {
+		release()
+		afterInboundDecodeHook = oldHook
+	})
+
+	firstDone := make(chan error, 1)
+	go func() {
+		firstDone <- client.sendPayload(peer, testDirectProtoA, []byte("first"))
+	}()
+
+	select {
+	case <-firstDecoding:
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for first packet to enter inbound decode hook")
+	}
+
+	secondDone := make(chan error, 1)
+	go func() {
+		secondDone <- client.sendPayload(peer, testDirectProtoA, []byte("second"))
+	}()
+
+	select {
+	case err := <-secondDone:
+		if err != nil {
+			t.Fatalf("second send failed: %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for second send")
+	}
+
+	release()
+
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first send failed: %v", err)
+	}
+
+	proto, payload := readPeerWithTimeout(t, server, clientKey.Public, 3*time.Second)
+	if proto != testDirectProtoA || string(payload) != "first" {
+		t.Fatalf("first received packet proto=%d payload=%q, want proto=%d payload=%q", proto, string(payload), testDirectProtoA, "first")
+	}
+	proto, payload = readPeerWithTimeout(t, server, clientKey.Public, 3*time.Second)
+	if proto != testDirectProtoA || string(payload) != "second" {
+		t.Fatalf("second received packet proto=%d payload=%q, want proto=%d payload=%q", proto, string(payload), testDirectProtoA, "second")
 	}
 }
 

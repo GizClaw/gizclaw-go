@@ -97,6 +97,13 @@ type protoPacket struct {
 	payload  []byte
 }
 
+// readPacket represents a legacy UDP.ReadPacket/ReadFrom delivery.
+type readPacket struct {
+	pk       noise.PublicKey
+	protocol byte
+	payload  []byte
+}
+
 // packet represents a packet in the processing pipeline.
 // It carries raw data and gets decrypted in parallel by workers.
 // Consumers wait on the ready channel before accessing decrypted data.
@@ -108,10 +115,12 @@ type packet struct {
 
 	// Output (set by decryptWorker)
 	pk       noise.PublicKey // sender's public key (after decrypt)
+	peer     *peerState      // sender peer state (after decrypt)
 	protocol byte            // protocol byte
 	payload  []byte          // decrypted payload (slice into data or copy)
 	payloadN int             // payload length
 	err      error           // decrypt error (if any)
+	current  bool            // true when decrypted with the current session
 
 	// Reference count for packet ownership.
 	// +1: decrypt path ownership (always)
@@ -125,6 +134,24 @@ type packet struct {
 
 	// Synchronization
 	ready chan struct{} // closed when decryption is complete
+}
+
+// outboundPacket represents a packet in the outbound encryption pipeline.
+// It is queued to sendChan in write order and encrypted in parallel by workers.
+// The ordered send loop waits on ready before writing to UDP.
+type outboundPacket struct {
+	peer     *peerState
+	session  *noise.Session
+	endpoint *net.UDPAddr
+
+	protocol byte
+	payload  []byte
+
+	msg []byte
+	err error
+
+	ready chan struct{}
+	done  chan error
 }
 
 // outstandingPackets tracks the number of packets currently acquired from the pool
@@ -148,6 +175,8 @@ var packetPool = sync.Pool{
 }
 
 var afterDecryptTransportDecryptHook func()
+var afterInboundDecodeHook func(*packet)
+var afterOutboundEncryptHook func(*outboundPacket)
 
 // acquirePacket gets a packet from the pool and resets it.
 func acquirePacket() *packet {
@@ -156,10 +185,12 @@ func acquirePacket() *packet {
 	p.data = bufferPool.Get().([]byte)
 	p.n = 0
 	p.pk = noise.PublicKey{}
+	p.peer = nil
 	p.protocol = 0
 	p.payload = nil
 	p.payloadN = 0
 	p.err = nil
+	p.current = false
 	p.refs.Store(0)
 	p.released.Store(false)
 	p.ready = make(chan struct{})
@@ -209,8 +240,11 @@ type UDP struct {
 	pending map[uint32]*pendingHandshake
 
 	// Pipeline channels for async I/O processing
-	decryptChan chan *packet   // ioLoop -> decryptWorkers
-	outputChan  chan *packet   // ioLoop -> ReadFrom (same packet, wait for ready)
+	decryptChan chan *packet // ioLoop -> decryptWorkers
+	outputChan  chan *packet // ioLoop -> orderedReceiveLoop (same packet, wait for ready)
+	readChan    chan readPacket
+	encryptChan chan *outboundPacket
+	sendChan    chan *outboundPacket
 	closeChan   chan struct{}  // signal to stop goroutines
 	wg          sync.WaitGroup // tracks running goroutines
 
@@ -402,6 +436,9 @@ func NewUDP(key *noise.KeyPair, opts ...Option) (*UDP, error) {
 		pending:          make(map[uint32]*pendingHandshake),
 		decryptChan:      make(chan *packet, rawSize),
 		outputChan:       make(chan *packet, decryptedSize),
+		readChan:         make(chan readPacket, decryptedSize),
+		encryptChan:      make(chan *outboundPacket, rawSize),
+		sendChan:         make(chan *outboundPacket, rawSize),
 		onPeerEvent:      o.onPeerEvent,
 		closeChan:        make(chan struct{}),
 	}
@@ -413,8 +450,12 @@ func NewUDP(key *noise.KeyPair, opts ...Option) (*UDP, error) {
 		workers = runtime.NumCPU()
 	}
 
-	// Start pipeline goroutines
-	u.wg.Add(1 + workers)
+	// Start pipeline goroutines.
+	// Inbound uses ioLoop + decrypt workers + ordered delivery. Outbound
+	// mirrors that shape: sendPayload queues packets in order, encrypt workers
+	// fill them in parallel, and one ordered send loop writes UDP packets in
+	// queue order.
+	u.wg.Add(1 + workers + 1 + workers + 1)
 	go func() {
 		defer u.wg.Done()
 		u.ioLoop()
@@ -425,6 +466,20 @@ func NewUDP(key *noise.KeyPair, opts ...Option) (*UDP, error) {
 			u.decryptWorker()
 		}()
 	}
+	go func() {
+		defer u.wg.Done()
+		u.orderedReceiveLoop()
+	}()
+	for i := 0; i < workers; i++ {
+		go func() {
+			defer u.wg.Done()
+			u.encryptWorker()
+		}()
+	}
+	go func() {
+		defer u.wg.Done()
+		u.orderedSendLoop()
+	}()
 
 	return u, nil
 }
@@ -533,6 +588,10 @@ func (u *UDP) createServiceMux(peer *peerState) *ServiceMux {
 }
 
 func (u *UDP) sendPayload(peer *peerState, protocol byte, payload []byte) error {
+	if u.closed.Load() {
+		return ErrClosed
+	}
+
 	peer.mu.RLock()
 	session := peer.session
 	endpoint := peer.endpoint
@@ -545,23 +604,36 @@ func (u *UDP) sendPayload(peer *peerState, protocol byte, payload []byte) error 
 		return ErrNoSession
 	}
 
-	plaintext := EncodePayload(protocol, payload)
-	ciphertext, counter, err := session.Encrypt(plaintext)
-	if err != nil {
-		return err
+	pkt := &outboundPacket{
+		peer:     peer,
+		session:  session,
+		endpoint: endpoint,
+		protocol: protocol,
+		payload:  append([]byte(nil), payload...),
+		ready:    make(chan struct{}),
+		done:     make(chan error, 1),
 	}
 
-	msg := noise.BuildTransportMessage(session.RemoteIndex(), counter, ciphertext)
-	n, err := u.socket.WriteToUDP(msg, endpoint)
-	if err != nil {
-		return err
+	select {
+	case u.sendChan <- pkt:
+	case <-u.closeChan:
+		return ErrClosed
 	}
 
-	u.totalTx.Add(uint64(n))
-	peer.mu.Lock()
-	peer.txBytes += uint64(n)
-	peer.mu.Unlock()
-	return nil
+	select {
+	case u.encryptChan <- pkt:
+	case <-u.closeChan:
+		pkt.err = ErrClosed
+		close(pkt.ready)
+		return ErrClosed
+	}
+
+	select {
+	case err := <-pkt.done:
+		return err
+	case <-u.closeChan:
+		return ErrClosed
+	}
 }
 
 // sendKCP sends KCP/service-mux traffic to a peer.
@@ -721,10 +793,10 @@ func (u *UDP) ReadPacket(buf []byte) (pk noise.PublicKey, proto byte, n int, err
 			return pk, 0, 0, ErrClosed
 		}
 
-		// Get next packet from output queue
-		var pkt *packet
+		// Get next direct packet from ordered delivery.
+		var pkt readPacket
 		select {
-		case p, ok := <-u.outputChan:
+		case p, ok := <-u.readChan:
 			if !ok {
 				return pk, 0, 0, ErrClosed
 			}
@@ -733,27 +805,10 @@ func (u *UDP) ReadPacket(buf []byte) (pk noise.PublicKey, proto byte, n int, err
 			return pk, 0, 0, ErrClosed
 		}
 
-		// Wait for decryption to complete
-		select {
-		case <-pkt.ready:
-			// Decryption done
-		case <-u.closeChan:
-			// Release output ownership and return.
-			unrefPacket(pkt)
-			return pk, 0, 0, ErrClosed
-		}
-
-		// Check for errors (handshake, KCP routed internally, etc.)
-		if pkt.err != nil {
-			unrefPacket(pkt)
-			continue // Try next packet
-		}
-
 		// Copy decrypted data to caller's buffer
-		n = copy(buf, pkt.payload[:pkt.payloadN])
+		n = copy(buf, pkt.payload)
 		pk = pkt.pk
 		proto = pkt.protocol
-		unrefPacket(pkt)
 		return pk, proto, n, nil
 	}
 }
@@ -1156,12 +1211,159 @@ func (u *UDP) Close() error {
 	// Now safe to close channels (all writers have exited)
 	close(u.decryptChan)
 	close(u.outputChan)
+	close(u.readChan)
+	close(u.encryptChan)
+	close(u.sendChan)
 
 	return err
 }
 
+func (u *UDP) encryptWorker() {
+	for {
+		select {
+		case pkt := <-u.encryptChan:
+			u.encryptOutbound(pkt)
+		case <-u.closeChan:
+			return
+		}
+	}
+}
+
+func (u *UDP) encryptOutbound(pkt *outboundPacket) {
+	defer close(pkt.ready)
+
+	plaintext := EncodePayload(pkt.protocol, pkt.payload)
+	ciphertext, counter, err := pkt.session.Encrypt(plaintext)
+	if err != nil {
+		pkt.err = err
+		return
+	}
+	pkt.msg = noise.BuildTransportMessage(pkt.session.RemoteIndex(), counter, ciphertext)
+	if afterOutboundEncryptHook != nil {
+		afterOutboundEncryptHook(pkt)
+	}
+}
+
+func (u *UDP) orderedSendLoop() {
+	for {
+		select {
+		case pkt := <-u.sendChan:
+			u.sendOutbound(pkt)
+		case <-u.closeChan:
+			return
+		}
+	}
+}
+
+func (u *UDP) sendOutbound(pkt *outboundPacket) {
+	select {
+	case <-pkt.ready:
+	case <-u.closeChan:
+		pkt.done <- ErrClosed
+		return
+	}
+
+	if pkt.err != nil {
+		pkt.done <- pkt.err
+		return
+	}
+	if u.closed.Load() {
+		pkt.done <- ErrClosed
+		return
+	}
+
+	n, err := u.socket.WriteToUDP(pkt.msg, pkt.endpoint)
+	if err == nil {
+		u.totalTx.Add(uint64(n))
+		pkt.peer.mu.Lock()
+		pkt.peer.txBytes += uint64(n)
+		pkt.peer.mu.Unlock()
+	}
+	pkt.done <- err
+}
+
+func (u *UDP) orderedReceiveLoop() {
+	for {
+		select {
+		case pkt, ok := <-u.outputChan:
+			if !ok {
+				return
+			}
+			u.deliverInbound(pkt)
+		case <-u.closeChan:
+			return
+		}
+	}
+}
+
+func (u *UDP) deliverInbound(pkt *packet) {
+	defer unrefPacket(pkt)
+
+	select {
+	case <-pkt.ready:
+	case <-u.closeChan:
+		return
+	}
+
+	if pkt.err != nil {
+		return
+	}
+
+	peer := pkt.peer
+	if peer == nil {
+		u.droppedInboundPackets.Add(1)
+		return
+	}
+
+	payload := pkt.payload[:pkt.payloadN]
+	switch pkt.protocol {
+	case ProtocolConnCtrl:
+		if pkt.current && bytes.Equal(payload, closeCtrlPayload) {
+			u.ClosePeerServiceMux(pkt.pk)
+		}
+	case ProtocolKCP:
+		u.deliverInboundKCP(peer, payload)
+	default:
+		u.deliverInboundDirect(peer, pkt.pk, pkt.protocol, payload)
+	}
+}
+
+func (u *UDP) deliverInboundKCP(peer *peerState, payload []byte) {
+	service, n, err := DecodeVarint(payload)
+	if err != nil {
+		u.rpcRouteErrors.Add(1)
+		return
+	}
+	smux, err := u.ensureServiceMux(peer)
+	if err != nil {
+		u.rpcRouteErrors.Add(1)
+		return
+	}
+	if err := smux.InputKCP(service, payload[n:]); err != nil {
+		u.rpcRouteErrors.Add(1)
+	}
+}
+
+func (u *UDP) deliverInboundDirect(peer *peerState, pk noise.PublicKey, protocol byte, payload []byte) {
+	smux, err := u.ensureServiceMux(peer)
+	if err != nil {
+		u.droppedInboundPackets.Add(1)
+		return
+	}
+	if err := smux.InputPacket(protocol, payload); err != nil {
+		u.droppedInboundPackets.Add(1)
+	}
+
+	select {
+	case u.readChan <- readPacket{pk: pk, protocol: protocol, payload: payload}:
+	case <-u.closeChan:
+	default:
+		u.droppedOutputPackets.Add(1)
+	}
+}
+
 // ioLoop reads packets from the socket and dispatches them.
-// Each packet goes to both decryptChan (for workers) and outputChan (for ReadFrom).
+// Each packet goes to both decryptChan (for workers) and outputChan (for ordered delivery).
 // On Linux, uses recvmmsg batch reading for reduced syscall overhead.
 // This goroutine only does I/O, no decryption, to maximize throughput.
 func (u *UDP) ioLoop() {
@@ -1395,13 +1597,15 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 	peer.mu.RLock()
 	currentSession := peer.session
 	peer.mu.RUnlock()
-	smux, err := u.recordTransportActivity(peer, from, len(data), session == currentSession)
-	if err != nil {
+	current := session == currentSession
+	if err := u.recordTransportActivity(peer, from, len(data), current); err != nil {
 		pkt.err = err
 		return
 	}
 
+	pkt.peer = peer
 	pkt.pk = peer.pk
+	pkt.current = current
 
 	if len(plaintext) == 0 {
 		pkt.err = ErrNoData
@@ -1414,14 +1618,7 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 		return
 	}
 
-	if protocol == ProtocolConnCtrl {
-		if !bytes.Equal(payload, closeCtrlPayload) {
-			pkt.err = ErrNoData
-			return
-		}
-		if session == currentSession {
-			u.ClosePeerServiceMux(peer.pk)
-		}
+	if protocol == ProtocolConnCtrl && !bytes.Equal(payload, closeCtrlPayload) {
 		pkt.err = ErrNoData
 		return
 	}
@@ -1430,43 +1627,8 @@ func (u *UDP) decryptTransport(pkt *packet, data []byte, from *net.UDPAddr) {
 	pkt.payload = make([]byte, len(payload))
 	copy(pkt.payload, payload)
 	pkt.payloadN = len(payload)
-	// Stream protocols are routed through KCP streams, not the raw passthrough path.
-	// Wire format: service_varint + kcp_data
-	if protocol == ProtocolKCP {
-		service, n, err := DecodeVarint(payload)
-		if err != nil {
-			u.rpcRouteErrors.Add(1)
-			pkt.err = err
-			return
-		}
-		if smux == nil {
-			smux, err = u.ensureServiceMux(peer)
-			if err != nil {
-				u.rpcRouteErrors.Add(1)
-				pkt.err = err
-				return
-			}
-		}
-		if err := smux.InputKCP(service, payload[n:]); err != nil {
-			u.rpcRouteErrors.Add(1)
-			pkt.err = err
-			return
-		}
-		pkt.err = ErrNoData // Stream protocol data handed off to smux/KCP
-		return
-	}
-
-	// Non-KCP packets are delivered through the peer service mux.
-	if smux == nil {
-		smux, err = u.ensureServiceMux(peer)
-		if err != nil {
-			u.droppedInboundPackets.Add(1)
-			pkt.err = err
-			return
-		}
-	}
-	if err := smux.InputPacket(protocol, pkt.payload); err != nil {
-		u.droppedInboundPackets.Add(1)
+	if afterInboundDecodeHook != nil {
+		afterInboundDecodeHook(pkt)
 	}
 }
 
@@ -1492,7 +1654,7 @@ func (u *UDP) transportPeerSession(receiverIndex uint32) (*peerState, *noise.Ses
 	}
 }
 
-func (u *UDP) recordTransportActivity(peer *peerState, from *net.UDPAddr, packetLen int, updateEndpoint bool) (*ServiceMux, error) {
+func (u *UDP) recordTransportActivity(peer *peerState, from *net.UDPAddr, packetLen int, updateEndpoint bool) error {
 	peer.mu.Lock()
 	defer peer.mu.Unlock()
 
@@ -1501,7 +1663,7 @@ func (u *UDP) recordTransportActivity(peer *peerState, from *net.UDPAddr, packet
 	}
 	peer.rxBytes += uint64(packetLen)
 	peer.lastSeen = time.Now()
-	return peer.serviceMux, nil
+	return nil
 }
 
 func (u *UDP) ensureServiceMux(peer *peerState) (*ServiceMux, error) {

@@ -2,8 +2,6 @@ package transformers
 
 import (
 	"context"
-	"io"
-	"strings"
 
 	"github.com/GizClaw/doubao-speech-go"
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
@@ -133,91 +131,15 @@ func WithDoubaoTTSICLV2CtxOptions(ctx context.Context, opts DoubaoTTSICLV2CtxOpt
 // DoubaoTTSICLV2 does not require connection setup, so it returns immediately.
 // The ctx is unused (no initialization needed); the goroutine lifetime
 // is governed by the input Stream.
-func (t *DoubaoTTSICLV2) Transform(_ context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+func (t *DoubaoTTSICLV2) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	output := newBufferStream(100)
 
-	go t.transformLoop(input, output)
+	go runTTSTransform(ctx, input, output, t.mimeType(), t.synthesize)
 
 	return output, nil
 }
 
-func (t *DoubaoTTSICLV2) transformLoop(input genx.Stream, output *bufferStream) {
-	defer output.Close()
-
-	// Local cancel context tied to the loop lifecycle.
-	// When the loop exits, defer cancel() cancels any in-flight HTTP request.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	mimeType := t.mimeType()
-	var textBuilder strings.Builder
-	var lastChunk *genx.MessageChunk
-
-	for {
-		chunk, err := input.Next()
-		if err != nil {
-			if err != io.EOF {
-				output.CloseWithError(err)
-				return
-			}
-			// EOF: synthesize any remaining text
-			if textBuilder.Len() > 0 {
-				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, mimeType, output); err != nil {
-					output.CloseWithError(err)
-					return
-				}
-			}
-			return
-		}
-
-		if chunk == nil {
-			continue
-		}
-
-		lastChunk = chunk
-
-		// Check for text EoS marker
-		if chunk.IsEndOfStream() {
-			if _, ok := chunk.Part.(genx.Text); ok {
-				// Text EoS: synthesize accumulated text, emit audio, then emit audio EoS
-				if textBuilder.Len() > 0 {
-					if err := t.synthesize(ctx, textBuilder.String(), lastChunk, mimeType, output); err != nil {
-						output.CloseWithError(err)
-						return
-					}
-					textBuilder.Reset()
-				}
-				// Emit audio EoS
-				eosChunk := genx.NewEndOfStream(mimeType)
-				if lastChunk != nil {
-					eosChunk.Role = lastChunk.Role
-					eosChunk.Name = lastChunk.Name
-				}
-				if err := output.Push(eosChunk); err != nil {
-					return
-				}
-				continue
-			}
-			// Non-text EoS: pass through
-			if err := output.Push(chunk); err != nil {
-				return
-			}
-			continue
-		}
-
-		// Collect text
-		if text, ok := chunk.Part.(genx.Text); ok {
-			textBuilder.WriteString(string(text))
-		} else {
-			// Non-text chunk: pass through
-			if err := output.Push(chunk); err != nil {
-				return
-			}
-		}
-	}
-}
-
-func (t *DoubaoTTSICLV2) synthesize(ctx context.Context, text string, lastChunk *genx.MessageChunk, mimeType string, output *bufferStream) error {
+func (t *DoubaoTTSICLV2) synthesize(ctx context.Context, text string, meta ttsChunkMeta, mimeType string, output *bufferStream) error {
 	format := t.format
 	if format == "ogg" {
 		format = string(doubaospeech.FormatOGG)
@@ -237,27 +159,20 @@ func (t *DoubaoTTSICLV2) synthesize(ctx context.Context, text string, lastChunk 
 		Language:   t.language,
 	}
 
+	normalizer := newTTSAudioNormalizer(mimeType)
 	for chunk, err := range t.client.TTSV2.Stream(ctx, req) {
 		if err != nil {
 			return err
 		}
 
 		if chunk.Audio != nil && len(chunk.Audio) > 0 {
-			outChunk := &genx.MessageChunk{
-				Part: &genx.Blob{
-					MIMEType: mimeType,
-					Data:     chunk.Audio,
-				},
-			}
-			if lastChunk != nil {
-				outChunk.Role = lastChunk.Role
-				outChunk.Name = lastChunk.Name
-			}
-
-			if err := output.Push(outChunk); err != nil {
+			if err := pushTTSAudioChunk(output, meta, mimeType, normalizer.Write(chunk.Audio)); err != nil {
 				return err
 			}
 		}
+	}
+	if err := pushTTSAudioChunk(output, meta, mimeType, normalizer.Flush()); err != nil {
+		return err
 	}
 	return nil
 }

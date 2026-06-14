@@ -90,13 +90,22 @@ func (c *Client) Serve() error {
 		return fmt.Errorf("gizclaw: client is not connected")
 	}
 	var g errgroup.Group
-	g.Go(c.serveRPC)
-	g.Go(c.servePackets)
-	if err := g.Wait(); err != nil {
-		_ = c.Close()
-		return err
+	var stopOnce sync.Once
+	stop := func() {
+		stopOnce.Do(func() {
+			_ = c.Close()
+		})
 	}
-	return nil
+	defer stop()
+	g.Go(func() error {
+		defer stop()
+		return c.serveRPC()
+	})
+	g.Go(func() error {
+		defer stop()
+		return c.servePackets()
+	})
+	return g.Wait()
 }
 
 func (c *Client) init(listener *giznet.Listener, conn *giznet.Conn, serverPK giznet.PublicKey) {
@@ -288,7 +297,11 @@ func (c *Client) ServerPublicKey() giznet.PublicKey {
 }
 
 func (c *Client) serveRPC() error {
-	listener := c.conn.ListenService(ServiceRPC)
+	conn := c.PeerConn()
+	if conn == nil {
+		return nil
+	}
+	listener := conn.ListenService(ServiceRPC)
 	defer func() {
 		_ = listener.Close()
 	}()
@@ -398,8 +411,10 @@ func (c *Client) dispatchPeerPacket(protocol byte, payload []byte) {
 // ProxyHandler exposes the local reverse-proxy routes for remote server APIs.
 func (c *Client) ProxyHandler() http.Handler {
 	mux := http.NewServeMux()
+	mux.Handle("/v1/", c.proxyService(ServiceOpenAI))
 	mux.Handle("/api/admin/", http.StripPrefix("/api/admin", c.proxyService(ServiceAdmin)))
 	mux.Handle("/api/public/", http.StripPrefix("/api/public", c.proxyService(ServiceServerPublic)))
+	mux.HandleFunc("/v1", redirectProxyPrefix("/v1/"))
 	mux.HandleFunc("/api/admin", redirectProxyPrefix("/api/admin/"))
 	mux.HandleFunc("/api/public", redirectProxyPrefix("/api/public/"))
 	mux.HandleFunc("/api", redirectProxyPrefix("/api/"))
@@ -428,8 +443,12 @@ func newServiceProxy(conn *giznet.Conn, service uint64) *httputil.ReverseProxy {
 	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.Transport = gizhttp.NewRoundTripper(conn, service)
-	proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, _ error) {
-		http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+	proxy.ErrorHandler = func(w http.ResponseWriter, _ *http.Request, err error) {
+		message := http.StatusText(http.StatusBadGateway)
+		if err != nil {
+			message = fmt.Sprintf("%s: %v", message, err)
+		}
+		http.Error(w, message, http.StatusBadGateway)
 	}
 	return proxy
 }

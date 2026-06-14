@@ -2,7 +2,11 @@ package transformers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"iter"
+	"strings"
 
 	"github.com/GizClaw/doubao-speech-go"
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
@@ -31,9 +35,19 @@ type DoubaoASRSAUC struct {
 	enablePunc bool
 	hotwords   []string
 	resultType string // "single" (default) or "full"
+	resourceID string
+	chunkSize  int
+
+	newSession func(context.Context) (doubaoASRSession, error)
 }
 
 var _ genx.Transformer = (*DoubaoASRSAUC)(nil)
+
+type doubaoASRSession interface {
+	SendAudio(context.Context, []byte, bool) error
+	Recv() iter.Seq2[*doubaospeech.ASRV2Result, error]
+	Close() error
+}
 
 // DoubaoASRSAUCOption is a functional option for DoubaoASRSAUC.
 type DoubaoASRSAUCOption func(*DoubaoASRSAUC)
@@ -102,6 +116,20 @@ func WithDoubaoASRSAUCResultType(resultType string) DoubaoASRSAUCOption {
 	}
 }
 
+// WithDoubaoASRSAUCResourceID sets the ASR resource ID.
+func WithDoubaoASRSAUCResourceID(resourceID string) DoubaoASRSAUCOption {
+	return func(t *DoubaoASRSAUC) {
+		t.resourceID = resourceID
+	}
+}
+
+// WithDoubaoASRSAUCChunkSize sets the maximum audio frame size sent to Doubao.
+func WithDoubaoASRSAUCChunkSize(chunkSize int) DoubaoASRSAUCOption {
+	return func(t *DoubaoASRSAUC) {
+		t.chunkSize = chunkSize
+	}
+}
+
 // NewDoubaoASRSAUC creates a new DoubaoASRSAUC transformer.
 //
 // Parameters:
@@ -118,6 +146,7 @@ func NewDoubaoASRSAUC(client *doubaospeech.Client, opts ...DoubaoASRSAUCOption) 
 		enableITN:  true,
 		enablePunc: true,
 		resultType: "single", // only definite results
+		resourceID: doubaospeech.ResourceASRStream,
 	}
 	for _, opt := range opts {
 		opt(t)
@@ -160,22 +189,30 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 
 	// Track last chunk for metadata
 	var lastChunk *genx.MessageChunk
-	var session *doubaospeech.ASRV2Session
+	var session doubaoASRSession
 	var resultsCh chan *genx.MessageChunk
 	var resultsDone chan error
+	var resultsForwarded chan struct{}
+	var pendingAudio []byte
 
 	// Helper to start a new ASR session
 	startSession := func() error {
 		var err error
-		session, err = t.openSession(ctx)
+		openSession := t.openSession
+		if t.newSession != nil {
+			openSession = t.newSession
+		}
+		session, err = openSession(ctx)
 		if err != nil {
 			return err
 		}
 		resultsCh = make(chan *genx.MessageChunk, 100)
 		resultsDone = make(chan error, 1)
+		resultsForwarded = make(chan struct{})
 		go t.receiveResults(session, lastChunk, resultsCh, resultsDone)
 		// Forward results to output as they arrive
 		go func() {
+			defer close(resultsForwarded)
 			for chunk := range resultsCh {
 				output.Push(chunk)
 			}
@@ -188,8 +225,21 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 		if session == nil {
 			return nil
 		}
-		session.SendAudio(ctx, nil, true)
+		if len(pendingAudio) > 0 {
+			if err := session.SendAudio(ctx, pendingAudio, true); err != nil {
+				session.Close()
+				session = nil
+				pendingAudio = nil
+				return err
+			}
+			pendingAudio = nil
+		} else if err := session.SendAudio(ctx, nil, true); err != nil {
+			session.Close()
+			session = nil
+			return err
+		}
 		err := <-resultsDone
+		<-resultsForwarded
 		session.Close()
 		session = nil
 		return err
@@ -200,7 +250,7 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 
 		chunk, err := input.Next()
 		if err != nil {
-			if err != io.EOF {
+			if !errors.Is(err, genx.ErrDone) && !errors.Is(err, io.EOF) {
 				if session != nil {
 					session.Close()
 				}
@@ -253,11 +303,17 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 					return
 				}
 			}
-			// Send audio to ASR
-			if err := session.SendAudio(ctx, blob.Data, false); err != nil {
-				session.Close()
-				output.CloseWithError(err)
-				return
+			if len(blob.Data) > 0 {
+				for audio := range splitDoubaoASRAudio(blob.Data, t.audioChunkSize()) {
+					if len(pendingAudio) > 0 {
+						if err := session.SendAudio(ctx, pendingAudio, false); err != nil {
+							session.Close()
+							output.CloseWithError(err)
+							return
+						}
+					}
+					pendingAudio = audio
+				}
 			}
 		} else {
 			// Non-audio chunk: pass through
@@ -268,7 +324,7 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 	}
 }
 
-func (t *DoubaoASRSAUC) openSession(ctx context.Context) (*doubaospeech.ASRV2Session, error) {
+func (t *DoubaoASRSAUC) openSession(ctx context.Context) (doubaoASRSession, error) {
 	format := t.format
 	if format == "ogg" {
 		format = string(doubaospeech.FormatOGG)
@@ -284,23 +340,70 @@ func (t *DoubaoASRSAUC) openSession(ctx context.Context) (*doubaospeech.ASRV2Ses
 		EnablePunc: t.enablePunc,
 		Hotwords:   t.hotwords,
 		ResultType: t.resultType,
+		ResourceID: t.resourceID,
 	}
 	return t.client.ASRV2.OpenStreamSession(ctx, config)
 }
 
-func (t *DoubaoASRSAUC) receiveResults(session *doubaospeech.ASRV2Session, lastChunk *genx.MessageChunk, resultsCh chan<- *genx.MessageChunk, done chan<- error) {
+func (t *DoubaoASRSAUC) audioChunkSize() int {
+	if t.chunkSize > 0 {
+		return t.chunkSize
+	}
+	if strings.EqualFold(t.format, "pcm") {
+		bytesPerSample := t.bits / 8
+		if bytesPerSample <= 0 {
+			bytesPerSample = 2
+		}
+		channels := t.channels
+		if channels <= 0 {
+			channels = 1
+		}
+		sampleRate := t.sampleRate
+		if sampleRate <= 0 {
+			sampleRate = 16000
+		}
+		return sampleRate * bytesPerSample * channels / 10
+	}
+	return 256
+}
+
+func splitDoubaoASRAudio(data []byte, chunkSize int) iter.Seq[[]byte] {
+	return func(yield func([]byte) bool) {
+		if chunkSize <= 0 {
+			chunkSize = 256
+		}
+		for offset := 0; offset < len(data); offset += chunkSize {
+			end := min(offset+chunkSize, len(data))
+			if !yield(data[offset:end]) {
+				return
+			}
+		}
+	}
+}
+
+func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx.MessageChunk, resultsCh chan<- *genx.MessageChunk, done chan<- error) {
 	defer close(resultsCh)
 
 	// Track processed utterances by end time to avoid duplicates
 	lastEndTime := 0
+	resultCount := 0
+	textCount := 0
+	lastText := ""
+	lastUtteranceCount := 0
+	lastFinal := false
 
 	for result, err := range session.Recv() {
 		if err != nil {
 			done <- err
 			return
 		}
+		resultCount++
+		lastText = result.Text
+		lastUtteranceCount = len(result.Utterances)
+		lastFinal = result.IsFinal
 
 		// Process definite utterances from the utterances array
+		emittedResultText := false
 		if len(result.Utterances) > 0 {
 			for _, utt := range result.Utterances {
 				if utt.Definite && utt.EndTime > lastEndTime && utt.Text != "" {
@@ -313,9 +416,12 @@ func (t *DoubaoASRSAUC) receiveResults(session *doubaospeech.ASRV2Session, lastC
 					}
 					resultsCh <- outChunk
 					lastEndTime = utt.EndTime
+					textCount++
+					emittedResultText = true
 				}
 			}
-		} else if result.IsFinal && result.Text != "" {
+		}
+		if !emittedResultText && result.IsFinal && result.Text != "" {
 			outChunk := &genx.MessageChunk{
 				Part: genx.Text(result.Text),
 			}
@@ -324,7 +430,12 @@ func (t *DoubaoASRSAUC) receiveResults(session *doubaospeech.ASRV2Session, lastC
 				outChunk.Name = lastChunk.Name
 			}
 			resultsCh <- outChunk
+			textCount++
 		}
+	}
+	if textCount == 0 {
+		done <- fmt.Errorf("doubao asr returned no text: results=%d last_final=%t last_text=%q last_utterances=%d", resultCount, lastFinal, lastText, lastUtteranceCount)
+		return
 	}
 	done <- nil
 }

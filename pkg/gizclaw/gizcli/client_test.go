@@ -97,6 +97,22 @@ func TestClientProxyHandlerValidation(t *testing.T) {
 			t.Fatalf("GET /api/public/server-info status = %d body=%s", resp.StatusCode, string(body))
 		}
 	})
+
+	t.Run("openai route", func(t *testing.T) {
+		client := &Client{}
+		server := httptest.NewServer(client.ProxyHandler())
+		defer server.Close()
+
+		resp, err := http.Get(server.URL + "/v1/models")
+		if err != nil {
+			t.Fatalf("GET /v1/models error = %v", err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusServiceUnavailable {
+			t.Fatalf("GET /v1/models status = %d body=%s", resp.StatusCode, string(body))
+		}
+	})
 }
 
 func TestClientAccessorsAndConversions(t *testing.T) {
@@ -210,6 +226,78 @@ func TestClientLifecycleWithoutConnection(t *testing.T) {
 	}
 	if publicClient, err := client.ServerPublicClient(); err != nil || publicClient == nil {
 		t.Fatalf("ServerPublicClient() = %v, %v", publicClient, err)
+	}
+}
+
+func TestClientServeClearsPeerConnWhenUnderlyingConnCloses(t *testing.T) {
+	serverKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(server) error = %v", err)
+	}
+	clientKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(client) error = %v", err)
+	}
+	serverListener, err := (&giznet.ListenConfig{
+		Addr:           "127.0.0.1:0",
+		SecurityPolicy: clientSecurityPolicy{},
+	}).Listen(serverKey)
+	if err != nil {
+		t.Fatalf("Listen(server) error = %v", err)
+	}
+	defer serverListener.Close()
+
+	accepted := make(chan *giznet.Conn, 1)
+	acceptErr := make(chan error, 1)
+	go func() {
+		conn, err := serverListener.Accept()
+		if err != nil {
+			acceptErr <- err
+			return
+		}
+		accepted <- conn
+	}()
+
+	client := &Client{KeyPair: clientKey}
+	if err := client.Dial(serverKey.Public, serverListener.HostInfo().Addr.String()); err != nil {
+		t.Fatalf("Dial() error = %v", err)
+	}
+
+	select {
+	case conn := <-accepted:
+		defer conn.Close()
+	case err := <-acceptErr:
+		t.Fatalf("Accept() error = %v", err)
+	case <-time.After(3 * time.Second):
+		t.Fatal("Accept() timeout")
+	}
+
+	serveDone := make(chan error, 1)
+	go func() {
+		serveDone <- client.Serve()
+	}()
+	deadline := time.After(3 * time.Second)
+	for client.PeerConn() == nil {
+		select {
+		case <-deadline:
+			t.Fatal("client PeerConn() was never set")
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	if err := client.PeerConn().Close(); err != nil {
+		t.Fatalf("underlying Conn.Close() error = %v", err)
+	}
+	select {
+	case err := <-serveDone:
+		if err != nil {
+			t.Fatalf("Serve() error = %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Serve() did not exit after underlying Conn.Close()")
+	}
+	if client.PeerConn() != nil {
+		t.Fatal("PeerConn() after Serve exit != nil")
 	}
 }
 

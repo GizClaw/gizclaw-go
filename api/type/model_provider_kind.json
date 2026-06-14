@@ -14,7 +14,8 @@
         "enum": [
           "gemini-tenant",
           "dashscope-tenant",
-          "openai-tenant"
+          "openai-tenant",
+          "volc-tenant"
         ],
         "example": "openai-tenant"
       }

@@ -2,7 +2,10 @@ package gizclaw
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
@@ -10,9 +13,13 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/audio/pcm"
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/agenthost"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/openaiservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/openaiapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peerrun"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -100,6 +107,110 @@ func TestPeerConnHelpersAndRPCHandle(t *testing.T) {
 			t.Fatalf("dispatch(unknown) response = %+v", resp)
 		}
 	})
+
+	t.Run("openai handler routes under v1", func(t *testing.T) {
+		keyPair, err := giznet.GenerateKeyPair()
+		if err != nil {
+			t.Fatalf("GenerateKeyPair() error = %v", err)
+		}
+		var voiceRequests []adminservice.ListVoicesRequestObject
+		handler := newOpenAIHTTPHandler(&openaiapi.Server{
+			Caller: keyPair.Public,
+			Models: peerConnModelListerFunc(func(context.Context, adminservice.ListModelsRequestObject) (adminservice.ListModelsResponseObject, error) {
+				return adminservice.ListModels200JSONResponse(adminservice.ModelList{Items: []apitypes.Model{
+					{Id: "chat", Provider: apitypes.ModelProvider{Name: "main"}},
+				}}), nil
+			}),
+			Authorizer: peerConnAuthorizerFunc(func(_ context.Context, req acl.AuthorizeRequest) error {
+				if req.Subject.Id != keyPair.Public.String() {
+					t.Fatalf("subject = %q, want current peer public key", req.Subject.Id)
+				}
+				return nil
+			}),
+			Voices: peerConnVoiceListerFunc(func(_ context.Context, req adminservice.ListVoicesRequestObject) (adminservice.ListVoicesResponseObject, error) {
+				voiceRequests = append(voiceRequests, req)
+				return adminservice.ListVoices200JSONResponse(adminservice.VoiceList{Items: []apitypes.Voice{
+					{
+						Id: "voice-a",
+						Provider: apitypes.VoiceProvider{
+							Kind: apitypes.VoiceProviderKindOpenaiTenant,
+							Name: "main",
+						},
+						Source: apitypes.VoiceSourceManual,
+					},
+				}}), nil
+			}),
+		})
+
+		req := httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+		resp := httptest.NewRecorder()
+		handler.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("GET /v1/models status = %d body=%s", resp.Code, resp.Body.String())
+		}
+		var models openaiservice.ListModelsResponse
+		if err := json.Unmarshal(resp.Body.Bytes(), &models); err != nil {
+			t.Fatalf("decode /v1/models response: %v", err)
+		}
+		if len(models.Data) != 1 || models.Data[0].Id != "chat" {
+			t.Fatalf("/v1/models response = %#v", models)
+		}
+
+		req = httptest.NewRequest(http.MethodGet, "/v1/voices?source=sync&providerKind=minimax-tenant&providerName=main&limit=10", nil)
+		resp = httptest.NewRecorder()
+		handler.ServeHTTP(resp, req)
+		if resp.Code != http.StatusOK {
+			t.Fatalf("GET /v1/voices status = %d body=%s", resp.Code, resp.Body.String())
+		}
+		var voices struct {
+			Object string           `json:"object"`
+			Data   []apitypes.Voice `json:"data"`
+		}
+		if err := json.Unmarshal(resp.Body.Bytes(), &voices); err != nil {
+			t.Fatalf("decode /v1/voices response: %v", err)
+		}
+		if voices.Object != "list" || len(voices.Data) != 1 || voices.Data[0].Id != "voice-a" {
+			t.Fatalf("/v1/voices response = %#v", voices)
+		}
+		if len(voiceRequests) != 1 {
+			t.Fatalf("voice requests = %d, want 1", len(voiceRequests))
+		}
+		params := voiceRequests[0].Params
+		if params.Source == nil || *params.Source != apitypes.VoiceSourceSync {
+			t.Fatalf("voice source param = %#v", params.Source)
+		}
+		if params.ProviderKind == nil || *params.ProviderKind != apitypes.VoiceProviderKindMinimaxTenant {
+			t.Fatalf("voice providerKind param = %#v", params.ProviderKind)
+		}
+		if params.ProviderName == nil || *params.ProviderName != "main" {
+			t.Fatalf("voice providerName param = %#v", params.ProviderName)
+		}
+
+		req = httptest.NewRequest(http.MethodGet, "/models", nil)
+		resp = httptest.NewRecorder()
+		handler.ServeHTTP(resp, req)
+		if resp.Code != http.StatusNotFound {
+			t.Fatalf("GET /models status = %d, want 404", resp.Code)
+		}
+	})
+}
+
+type peerConnModelListerFunc func(context.Context, adminservice.ListModelsRequestObject) (adminservice.ListModelsResponseObject, error)
+
+func (f peerConnModelListerFunc) ListModels(ctx context.Context, req adminservice.ListModelsRequestObject) (adminservice.ListModelsResponseObject, error) {
+	return f(ctx, req)
+}
+
+type peerConnVoiceListerFunc func(context.Context, adminservice.ListVoicesRequestObject) (adminservice.ListVoicesResponseObject, error)
+
+func (f peerConnVoiceListerFunc) ListVoices(ctx context.Context, req adminservice.ListVoicesRequestObject) (adminservice.ListVoicesResponseObject, error) {
+	return f(ctx, req)
+}
+
+type peerConnAuthorizerFunc func(context.Context, acl.AuthorizeRequest) error
+
+func (f peerConnAuthorizerFunc) Authorize(ctx context.Context, req acl.AuthorizeRequest) error {
+	return f(ctx, req)
 }
 
 func TestPeerConnCloseClosesConn(t *testing.T) {

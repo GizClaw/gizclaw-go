@@ -3,7 +3,6 @@ package transformers
 import (
 	"context"
 	"io"
-	"strings"
 
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
 	"github.com/GizClaw/minimax-go"
@@ -136,125 +135,15 @@ func WithMinimaxTTSCtxOptions(ctx context.Context, opts MinimaxTTSCtxOptions) co
 // MinimaxTTS does not require connection setup, so it returns immediately.
 // The ctx is unused (no initialization needed); the goroutine lifetime
 // is governed by the input Stream.
-func (t *MinimaxTTS) Transform(_ context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+func (t *MinimaxTTS) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
 	output := newBufferStream(100)
 
-	go t.transformLoop(input, output)
+	go runTTSTransform(ctx, input, output, t.mimeType(), t.synthesize)
 
 	return output, nil
 }
 
-func (t *MinimaxTTS) transformLoop(input genx.Stream, output *bufferStream) {
-	defer output.Close()
-
-	// Local cancel context tied to the loop lifecycle.
-	// When the loop exits, defer cancel() cancels any in-flight HTTP request.
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	mimeType := t.mimeType()
-	var textBuilder strings.Builder
-	var lastChunk *genx.MessageChunk
-	var currentStreamID string
-
-	for {
-		chunk, err := input.Next()
-		if err != nil {
-			if err != io.EOF {
-				output.CloseWithError(err)
-				return
-			}
-			// EOF: synthesize any remaining text
-			if textBuilder.Len() > 0 {
-				if err := t.synthesize(ctx, textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
-					output.CloseWithError(err)
-					return
-				}
-			}
-			return
-		}
-
-		if chunk == nil {
-			continue
-		}
-
-		lastChunk = chunk
-
-		// Track StreamID from input - inherit or generate new one
-		if chunk.Ctrl != nil && chunk.Ctrl.StreamID != "" {
-			currentStreamID = chunk.Ctrl.StreamID
-		} else if currentStreamID == "" {
-			// Generate new StreamID if none provided
-			currentStreamID = genx.NewStreamID()
-		}
-
-		// Check for text EoS marker
-		if chunk.IsEndOfStream() {
-			if _, ok := chunk.Part.(genx.Text); ok {
-				// Text EoS: synthesize accumulated text, emit audio, then emit audio EoS
-				if textBuilder.Len() > 0 {
-					if err := t.synthesize(ctx, textBuilder.String(), lastChunk, currentStreamID, mimeType, output); err != nil {
-						output.CloseWithError(err)
-						return
-					}
-					textBuilder.Reset()
-				}
-				// Emit audio EoS with StreamID
-				eosChunk := &genx.MessageChunk{
-					Part: &genx.Blob{MIMEType: mimeType},
-					Ctrl: &genx.StreamCtrl{StreamID: currentStreamID, EndOfStream: true},
-				}
-				if lastChunk != nil {
-					eosChunk.Role = lastChunk.Role
-					eosChunk.Name = lastChunk.Name
-				}
-				if err := output.Push(eosChunk); err != nil {
-					return
-				}
-				// Reset StreamID for next synthesis segment
-				currentStreamID = ""
-				continue
-			}
-			// Non-text EoS: pass through with StreamID
-			if chunk.Ctrl == nil {
-				chunk.Ctrl = &genx.StreamCtrl{}
-			}
-			chunk.Ctrl.StreamID = currentStreamID
-			if err := output.Push(chunk); err != nil {
-				return
-			}
-			continue
-		}
-
-		// Collect text
-		if text, ok := chunk.Part.(genx.Text); ok {
-			textBuilder.WriteString(string(text))
-		} else {
-			// Non-text chunk: pass through with StreamID
-			if chunk.Ctrl == nil {
-				chunk.Ctrl = &genx.StreamCtrl{}
-			}
-			chunk.Ctrl.StreamID = currentStreamID
-			if err := output.Push(chunk); err != nil {
-				return
-			}
-		}
-	}
-}
-
-func (t *MinimaxTTS) synthesize(ctx context.Context, text string, lastChunk *genx.MessageChunk, streamID, mimeType string, output *bufferStream) error {
-	// Emit BOS at the start of synthesis
-	bosChunk := &genx.MessageChunk{
-		Ctrl: &genx.StreamCtrl{StreamID: streamID, BeginOfStream: true},
-	}
-	if lastChunk != nil {
-		bosChunk.Role = lastChunk.Role
-		bosChunk.Name = lastChunk.Name
-	}
-	if err := output.Push(bosChunk); err != nil {
-		return err
-	}
-
+func (t *MinimaxTTS) synthesize(ctx context.Context, text string, meta ttsChunkMeta, mimeType string, output *bufferStream) error {
 	speed := t.speed
 	vol := t.vol
 	pitch := t.pitch
@@ -272,6 +161,7 @@ func (t *MinimaxTTS) synthesize(ctx context.Context, text string, lastChunk *gen
 	}
 	defer stream.Close()
 
+	normalizer := newTTSAudioNormalizer(mimeType)
 	for {
 		chunk, err := stream.Next()
 		if err != nil {
@@ -282,19 +172,7 @@ func (t *MinimaxTTS) synthesize(ctx context.Context, text string, lastChunk *gen
 		}
 
 		if len(chunk.Audio) > 0 {
-			outChunk := &genx.MessageChunk{
-				Part: &genx.Blob{
-					MIMEType: mimeType,
-					Data:     chunk.Audio,
-				},
-				Ctrl: &genx.StreamCtrl{StreamID: streamID},
-			}
-			if lastChunk != nil {
-				outChunk.Role = lastChunk.Role
-				outChunk.Name = lastChunk.Name
-			}
-
-			if err := output.Push(outChunk); err != nil {
+			if err := pushTTSAudioChunk(output, meta, mimeType, normalizer.Write(chunk.Audio)); err != nil {
 				return err
 			}
 		}
@@ -302,6 +180,9 @@ func (t *MinimaxTTS) synthesize(ctx context.Context, text string, lastChunk *gen
 		if chunk.Done {
 			break
 		}
+	}
+	if err := pushTTSAudioChunk(output, meta, mimeType, normalizer.Flush()); err != nil {
+		return err
 	}
 	return nil
 }

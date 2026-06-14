@@ -79,6 +79,7 @@ func (h *PeerConn) serve() error {
 	g.Go(h.serveService)
 	g.Go(h.servePackets)
 	g.Go(h.serveRPC)
+	g.Go(h.serveOpenAI)
 	err := g.Wait()
 	if err != nil {
 		_ = h.close()

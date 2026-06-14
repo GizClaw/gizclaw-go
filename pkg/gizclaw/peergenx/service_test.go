@@ -265,6 +265,100 @@ func TestDefaultBuilderBuildsVolcASRTransformer(t *testing.T) {
 	}
 }
 
+func TestDefaultBuilderBuildsVolcASRTransformerPrefersSaucAccessToken(t *testing.T) {
+	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
+		Model: &apitypes.Model{
+			Id:   "asr",
+			Kind: apitypes.ModelKindAsr,
+			ProviderData: &apitypes.ModelProviderData{
+				"volc-tenant": map[string]any{"resource_id": "volc.bigasr.sauc.duration"},
+			},
+		},
+		Tenant: Tenant{
+			Kind: "volc-tenant",
+			Volc: &apitypes.VolcTenant{
+				Name:           "main",
+				AppId:          "app-id",
+				CredentialName: "volc-token",
+			},
+		},
+		Credential: apitypes.Credential{
+			Name: "volc-token",
+			Body: apitypes.CredentialBody{
+				"access_key_id": "volc-ak",
+				"bearer_token":  "old-sauc-token",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildTransformer() error = %v", err)
+	}
+	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "old-sauc-token" {
+		t.Fatalf("ASR access key = %q, want old SAUC token", got)
+	}
+	if got := transformerNestedStringField(t, tf, "client", "config", "resourceID"); got != "volc.bigasr.sauc.duration" {
+		t.Fatalf("ASR resource ID = %q, want volc.bigasr.sauc.duration", got)
+	}
+}
+
+func TestDefaultBuilderBuildsVolcASRTransformerTreatsAPIKeyAsSpeechAccessKey(t *testing.T) {
+	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
+		Model: &apitypes.Model{
+			Id:   "asr",
+			Kind: apitypes.ModelKindAsr,
+			ProviderData: &apitypes.ModelProviderData{
+				"volc-tenant": map[string]any{"resource_id": "volc.bigasr.sauc.duration"},
+			},
+		},
+		Tenant: Tenant{
+			Kind: "volc-tenant",
+			Volc: &apitypes.VolcTenant{Name: "main", AppId: "app-id"},
+		},
+		Credential: apitypes.Credential{
+			Name: "volc-token",
+			Body: apitypes.CredentialBody{"api_key": "speech-runtime-key"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildTransformer() error = %v", err)
+	}
+	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "speech-runtime-key" {
+		t.Fatalf("ASR access key = %q, want speech runtime key", got)
+	}
+	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "" {
+		t.Fatalf("ASR x-api-key = %q, want empty by default", got)
+	}
+}
+
+func TestDefaultBuilderBuildsVolcASRTransformerSupportsXAPIKeyMode(t *testing.T) {
+	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
+		Model: &apitypes.Model{
+			Id:   "asr",
+			Kind: apitypes.ModelKindAsr,
+			ProviderData: &apitypes.ModelProviderData{
+				"volc-tenant": map[string]any{"auth_mode": "x-api-key"},
+			},
+		},
+		Tenant: Tenant{
+			Kind: "volc-tenant",
+			Volc: &apitypes.VolcTenant{Name: "main", AppId: "app-id"},
+		},
+		Credential: apitypes.Credential{
+			Name: "volc-token",
+			Body: apitypes.CredentialBody{"api_key": "real-x-api-key"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildTransformer() error = %v", err)
+	}
+	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "real-x-api-key" {
+		t.Fatalf("ASR x-api-key = %q, want real x-api-key", got)
+	}
+	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "" {
+		t.Fatalf("ASR access key = %q, want empty in x-api-key mode", got)
+	}
+}
+
 func TestDefaultBuilderBuildsGeminiGenerator(t *testing.T) {
 	upstream := "gemini-test"
 	gen, err := (DefaultBuilder{}).BuildGenerator(context.Background(), GeneratorConfig{

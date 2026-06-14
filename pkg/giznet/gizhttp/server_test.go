@@ -72,6 +72,16 @@ func TestRoundTrip(t *testing.T) {
 	}
 }
 
+func TestRoundTripNilConnReturnsError(t *testing.T) {
+	req, err := http.NewRequest(http.MethodGet, "http://gizclaw/test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewRoundTripper(nil, 7).RoundTrip(req); err == nil || !strings.Contains(err.Error(), "nil conn") {
+		t.Fatalf("RoundTrip(nil conn) error = %v", err)
+	}
+}
+
 func TestListenerCloseUnblocksAccept(t *testing.T) {
 	serverKey, err := giznet.GenerateKeyPair()
 	if err != nil {

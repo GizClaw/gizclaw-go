@@ -452,6 +452,12 @@ func (m *KcpMux) closeStream(streamID uint64) error {
 	entry.mu.Unlock()
 	m.mu.Unlock()
 
+	if err := entry.conn.Drain(time.Now().Add(m.config.CloseAckTimeout)); err != nil {
+		entry.conn.closeSignal(err)
+		go entry.conn.finalizeClose()
+		m.sendClose(streamID, streamCloseReasonAbort)
+		return err
+	}
 	entry.conn.closeSignal(ErrConnClosedLocal)
 	go entry.conn.finalizeClose()
 	m.sendClose(streamID, streamCloseReasonClose)

@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/openai/openai-go"
@@ -61,7 +63,11 @@ type OpenAIGenerator struct {
 func (g *OpenAIGenerator) Invoke(ctx context.Context, _ string, mctx ModelContext, fn *FuncTool) (Usage, *FuncCall, error) {
 	switch {
 	case g.SupportJSONOutput:
-		return g.invokeJSONOutput(ctx, mctx, fn)
+		usage, call, err := g.invokeJSONOutput(ctx, mctx, fn)
+		if err != nil && g.SupportToolCalls && isResponseFormatUnsupported(err) {
+			return g.invokeToolCalls(ctx, mctx, fn)
+		}
+		return usage, call, err
 	case g.SupportToolCalls:
 		return g.invokeToolCalls(ctx, mctx, fn)
 	default:
@@ -178,6 +184,20 @@ func isToolCallFinishReason(reason string) bool {
 	default:
 		return false
 	}
+}
+
+func isResponseFormatUnsupported(err error) bool {
+	var apiErr *openai.Error
+	if !errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusBadRequest {
+		return false
+	}
+	text := strings.ToLower(apiErr.Message + " " + apiErr.Param + " " + apiErr.RawJSON())
+	if strings.TrimSpace(text) == "" {
+		return true
+	}
+	return strings.Contains(text, "response_format") ||
+		strings.Contains(text, "json_schema") ||
+		strings.Contains(text, "schema")
 }
 
 func (g *OpenAIGenerator) chatCompletion(mctx ModelContext, mp *ModelParams) (openai.ChatCompletionNewParams, error) {

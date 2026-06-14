@@ -22,6 +22,9 @@ func NewRoundTripper(conn *giznet.Conn, service uint64) *transport {
 }
 
 func (t *transport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if t == nil || t.conn == nil {
+		return nil, fmt.Errorf("gizhttp: nil conn")
+	}
 	stream, err := t.conn.Dial(t.service)
 	if err != nil {
 		return nil, fmt.Errorf("gizhttp: dial service %d: %w", t.service, err)

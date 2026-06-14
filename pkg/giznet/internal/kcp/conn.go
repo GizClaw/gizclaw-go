@@ -19,205 +19,292 @@ var (
 	ErrConnTimeout      = errors.New("kcp: timeout")
 )
 
-var bufferPool = sync.Pool{
-	New: func() any {
-		buf := make([]byte, 64*1024)
-		return &buf
-	},
-}
-
-type writeReq struct {
-	data   []byte
-	result chan writeResult
-}
-
-type writeResult struct {
-	n   int
-	err error
-}
-
-// KCPConn wraps a KCP instance as io.ReadWriteCloser + net.Conn.
-//
-// ALL KCP operations (Send, Recv, Input, Update, Flush) execute exclusively
-// in the runLoop goroutine. This eliminates any concurrency issues with the
-// KCP C library. Write() and Input() communicate with runLoop via channels.
-//
-// Supports read/write deadlines for net.Conn compatibility.
-type KCPConn struct {
-	kcp    *gokcp.KCP
-	output func([]byte)
-
-	inputCh chan []byte
-	writeCh chan writeReq
-
-	// Receive buffer: runLoop writes, Read() reads.
-	recvBuf  []byte
-	recvMu   sync.Mutex
-	recvCond *sync.Cond
-
-	// Deadlines (atomic for lock-free access from Read/Write)
-	readDeadline  atomic.Value // time.Time
-	writeDeadline atomic.Value // time.Time
-
-	closeCh   chan struct{}
-	closeOnce sync.Once
-	closed    atomic.Bool
-
-	finalizeOnce sync.Once
-	closeErrMu   sync.Mutex
-	closeErr     error
-
-	wg sync.WaitGroup
-}
-
 type kcpConnAddr string
 
 func (a kcpConnAddr) Network() string { return "kcp" }
 func (a kcpConnAddr) String() string  { return string(a) }
 
-// NewKCPConn creates a KCPConn with the given conversation ID and output function.
-// output is called when KCP wants to send a packet over the wire.
-// The internal goroutine starts immediately.
-func NewKCPConn(conv uint32, output func([]byte)) *KCPConn {
-	c := &KCPConn{
-		output:  output,
-		inputCh: make(chan []byte, 256),
-		writeCh: make(chan writeReq, 64),
-		closeCh: make(chan struct{}),
-	}
-	c.recvCond = sync.NewCond(&c.recvMu)
+type timeoutError struct{}
 
-	c.kcp = gokcp.NewKCP(conv, func(buf []byte, size int) {
-		if size <= 0 {
-			return
-		}
-		if size > len(buf) {
-			size = len(buf)
-		}
-		out := append([]byte(nil), buf[:size]...)
-		c.output(out)
-	})
-	c.kcp.NoDelay(2, 10, 2, 1)
-	c.kcp.WndSize(4096, 4096)
-	c.kcp.SetMtu(1400)
+func (timeoutError) Error() string   { return ErrConnTimeout.Error() }
+func (timeoutError) Timeout() bool   { return true }
+func (timeoutError) Temporary() bool { return true }
 
-	c.wg.Add(1)
-	go c.runLoop()
+type virtualPacketConn struct {
+	output func([]byte)
 
-	return c
+	inputCh chan []byte
+	closeCh chan struct{}
+	closed  atomic.Bool
+	once    sync.Once
+
+	mu            sync.Mutex
+	readDeadline  time.Time
+	writeDeadline time.Time
+	wakeDeadline  chan struct{}
+
+	localAddr  net.Addr
+	remoteAddr net.Addr
 }
 
-// Input feeds an incoming KCP packet from the network layer.
-// Non-blocking: data is queued to the internal goroutine via channel.
-func (c *KCPConn) Input(data []byte) error {
-	if c.closed.Load() {
-		return c.getCloseErr()
+func newVirtualPacketConn(output func([]byte)) *virtualPacketConn {
+	return &virtualPacketConn{
+		output:       output,
+		inputCh:      make(chan []byte, 4096),
+		closeCh:      make(chan struct{}),
+		wakeDeadline: make(chan struct{}),
+		localAddr:    kcpConnAddr("kcp-local"),
+		remoteAddr:   kcpConnAddr("kcp-remote"),
 	}
+}
 
+func (c *virtualPacketConn) Input(data []byte) error {
+	if c.closed.Load() {
+		return io.ErrClosedPipe
+	}
 	cp := make([]byte, len(data))
 	copy(cp, data)
-
 	select {
 	case c.inputCh <- cp:
 		return nil
 	case <-c.closeCh:
+		return io.ErrClosedPipe
+	}
+}
+
+func (c *virtualPacketConn) ReadFrom(buf []byte) (int, net.Addr, error) {
+	for {
+		if c.closed.Load() {
+			return 0, nil, io.ErrClosedPipe
+		}
+
+		deadline, wake := c.readDeadlineState()
+		timer, timeout := deadlineTimer(deadline)
+		select {
+		case data := <-c.inputCh:
+			stopTimer(timer)
+			return copy(buf, data), c.remoteAddr, nil
+		case <-c.closeCh:
+			stopTimer(timer)
+			return 0, nil, io.ErrClosedPipe
+		case <-wake:
+			stopTimer(timer)
+			continue
+		case <-timeout:
+			return 0, nil, timeoutError{}
+		}
+	}
+}
+
+func (c *virtualPacketConn) WriteTo(buf []byte, _ net.Addr) (int, error) {
+	if c.closed.Load() {
+		return 0, io.ErrClosedPipe
+	}
+	if c.output != nil {
+		c.output(buf)
+	}
+	return len(buf), nil
+}
+
+func (c *virtualPacketConn) Close() error {
+	c.once.Do(func() {
+		c.closed.Store(true)
+		close(c.closeCh)
+		c.wakeDeadlines()
+	})
+	return nil
+}
+
+func (c *virtualPacketConn) LocalAddr() net.Addr { return c.localAddr }
+
+func (c *virtualPacketConn) SetDeadline(t time.Time) error {
+	c.mu.Lock()
+	c.readDeadline = t
+	c.writeDeadline = t
+	c.resetWakeDeadlineLocked()
+	c.mu.Unlock()
+	return nil
+}
+
+func (c *virtualPacketConn) SetReadDeadline(t time.Time) error {
+	c.mu.Lock()
+	c.readDeadline = t
+	c.resetWakeDeadlineLocked()
+	c.mu.Unlock()
+	return nil
+}
+
+func (c *virtualPacketConn) SetWriteDeadline(t time.Time) error {
+	c.mu.Lock()
+	c.writeDeadline = t
+	c.resetWakeDeadlineLocked()
+	c.mu.Unlock()
+	return nil
+}
+
+func (c *virtualPacketConn) readDeadlineState() (time.Time, <-chan struct{}) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.readDeadline, c.wakeDeadline
+}
+
+func (c *virtualPacketConn) writeDeadlineExpired() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return !c.writeDeadline.IsZero() && time.Now().After(c.writeDeadline)
+}
+
+func (c *virtualPacketConn) resetWakeDeadlineLocked() {
+	close(c.wakeDeadline)
+	c.wakeDeadline = make(chan struct{})
+}
+
+func (c *virtualPacketConn) wakeDeadlines() {
+	c.mu.Lock()
+	c.resetWakeDeadlineLocked()
+	c.mu.Unlock()
+}
+
+func deadlineTimer(deadline time.Time) (*time.Timer, <-chan time.Time) {
+	if deadline.IsZero() {
+		return nil, nil
+	}
+	d := time.Until(deadline)
+	if d <= 0 {
+		timer := time.NewTimer(0)
+		return timer, timer.C
+	}
+	timer := time.NewTimer(d)
+	return timer, timer.C
+}
+
+func stopTimer(timer *time.Timer) {
+	if timer == nil {
+		return
+	}
+	if !timer.Stop() {
+		select {
+		case <-timer.C:
+		default:
+		}
+	}
+}
+
+// KCPConn wraps kcp-go UDPSession as io.ReadWriteCloser + net.Conn while using
+// giznet packets as the underlying packet transport.
+type KCPConn struct {
+	pc      *virtualPacketConn
+	session *gokcp.UDPSession
+
+	closeOnce sync.Once
+	closed    atomic.Bool
+
+	idleMu    sync.Mutex
+	idleTimer *time.Timer
+
+	deadlineMu    sync.Mutex
+	writeDeadline time.Time
+
+	closeErrMu sync.Mutex
+	closeErr   error
+}
+
+// NewKCPConn creates a KCPConn with the given conversation ID and output
+// function. output is called when KCP wants to send a packet over the wire.
+func NewKCPConn(conv uint32, output func([]byte)) *KCPConn {
+	pc := newVirtualPacketConn(output)
+	session, err := gokcp.NewConn4(conv, pc.remoteAddr, nil, 0, 0, false, pc)
+	if err != nil {
+		panic(fmt.Sprintf("kcp: create session: %v", err))
+	}
+	session.SetNoDelay(kcpNoDelay, kcpUpdateIntervalMs, kcpFastResend, kcpNoCongestionControl)
+	session.SetWindowSize(kcpSendWindow, kcpRecvWindow)
+	session.SetMtu(kcpMTU)
+	session.SetACKNoDelay(false)
+	session.SetWriteDelay(false)
+
+	c := &KCPConn{
+		pc:      pc,
+		session: session,
+	}
+	c.idleTimer = time.AfterFunc(idleTimeoutPure, func() {
+		c.closeSignal(ErrConnTimeout)
+	})
+	return c
+}
+
+// Input feeds an incoming KCP packet from the network layer.
+func (c *KCPConn) Input(data []byte) error {
+	if c.closed.Load() {
 		return c.getCloseErr()
 	}
+	if err := c.pc.Input(data); err != nil {
+		return c.mapErr(err)
+	}
+	c.touch()
+	return nil
 }
 
-// Read reads reassembled data from KCP. Blocks until data is available,
-// the deadline expires, or the conn is closed.
 func (c *KCPConn) Read(b []byte) (int, error) {
-	if len(b) == 0 {
-		return 0, nil
-	}
-
-	c.recvMu.Lock()
-	defer c.recvMu.Unlock()
-
-	for len(c.recvBuf) == 0 {
-		if c.closed.Load() {
-			return 0, c.getCloseErr()
-		}
-
-		if dl, ok := c.readDeadline.Load().(time.Time); ok && !dl.IsZero() {
-			if time.Now().After(dl) {
-				return 0, ErrConnTimeout
-			}
-			done := make(chan struct{})
-			go func() {
-				timer := time.NewTimer(time.Until(dl))
-				defer timer.Stop()
-				select {
-				case <-timer.C:
-					c.recvCond.Broadcast()
-				case <-done:
-				}
-			}()
-			c.recvCond.Wait()
-			close(done)
-			continue
-		}
-
-		c.recvCond.Wait()
-	}
-
-	n := copy(b, c.recvBuf)
-	c.recvBuf = c.recvBuf[n:]
-	return n, nil
-}
-
-// Write sends data through KCP. The data is forwarded to the runLoop
-// goroutine which exclusively owns all KCP operations.
-func (c *KCPConn) Write(b []byte) (int, error) {
-	if len(b) == 0 {
-		return 0, nil
-	}
-
 	if c.closed.Load() {
 		return 0, c.getCloseErr()
 	}
-
-	cp := make([]byte, len(b))
-	copy(cp, b)
-
-	req := writeReq{
-		data:   cp,
-		result: make(chan writeResult, 1),
+	n, err := c.session.Read(b)
+	if err != nil {
+		return n, c.mapErr(err)
 	}
-
-	// Check write deadline
-	var deadline <-chan time.Time
-	if dl, ok := c.writeDeadline.Load().(time.Time); ok && !dl.IsZero() {
-		if time.Now().After(dl) {
-			return 0, ErrConnTimeout
-		}
-		timer := time.NewTimer(time.Until(dl))
-		defer timer.Stop()
-		deadline = timer.C
+	if n > 0 {
+		c.touch()
 	}
-
-	// Send request to runLoop
-	select {
-	case c.writeCh <- req:
-	case <-c.closeCh:
-		return 0, c.getCloseErr()
-	case <-deadline:
-		return 0, ErrConnTimeout
-	}
-
-	// Wait for result
-	select {
-	case result := <-req.result:
-		return result.n, result.err
-	case <-c.closeCh:
-		return 0, c.getCloseErr()
-	case <-deadline:
-		return 0, ErrConnTimeout
-	}
+	return n, nil
 }
 
-// Close shuts down the KCPConn and its internal goroutine.
+func (c *KCPConn) Write(b []byte) (int, error) {
+	if c.closed.Load() {
+		return 0, c.getCloseErr()
+	}
+	if c.writeDeadlineExpired() {
+		return 0, ErrConnTimeout
+	}
+	n, err := c.session.Write(b)
+	if err != nil {
+		return n, c.mapErr(err)
+	}
+	if n > 0 {
+		c.touch()
+	}
+	return n, nil
+}
+
+func (c *KCPConn) WriteBuffers(buffers net.Buffers) (int64, error) {
+	if c.closed.Load() {
+		return 0, c.getCloseErr()
+	}
+	if c.writeDeadlineExpired() {
+		return 0, ErrConnTimeout
+	}
+	n, err := c.session.WriteBuffers(buffers)
+	if err != nil {
+		return int64(n), c.mapErr(err)
+	}
+	if n > 0 {
+		c.touch()
+	}
+	return int64(n), nil
+}
+
+// Drain is kept for KcpMux close sequencing. UDPSession owns KCP flushing
+// internally, so this only observes the caller's deadline and closed state.
+func (c *KCPConn) Drain(deadline time.Time) error {
+	if c.closed.Load() {
+		return c.getCloseErr()
+	}
+	if !deadline.IsZero() && time.Now().After(deadline) {
+		return ErrConnTimeout
+	}
+	return nil
+}
+
 func (c *KCPConn) Close() error {
 	c.closeSignal(ErrConnClosedLocal)
 	c.finalizeClose()
@@ -237,15 +324,35 @@ func (c *KCPConn) closeSignal(reason error) {
 		}
 		c.setCloseErr(reason)
 		c.closed.Store(true)
-		close(c.closeCh)
-		c.recvCond.Broadcast()
+		c.stopIdleTimer()
+		_ = c.session.Close()
+		_ = c.pc.Close()
 	})
 }
 
-func (c *KCPConn) finalizeClose() {
-	c.finalizeOnce.Do(func() {
-		c.wg.Wait()
-	})
+func (c *KCPConn) finalizeClose() {}
+
+func (c *KCPConn) touch() {
+	c.idleMu.Lock()
+	if c.idleTimer != nil {
+		c.idleTimer.Reset(idleTimeoutPure)
+	}
+	c.idleMu.Unlock()
+}
+
+func (c *KCPConn) stopIdleTimer() {
+	c.idleMu.Lock()
+	if c.idleTimer != nil {
+		c.idleTimer.Stop()
+		c.idleTimer = nil
+	}
+	c.idleMu.Unlock()
+}
+
+func (c *KCPConn) writeDeadlineExpired() bool {
+	c.deadlineMu.Lock()
+	defer c.deadlineMu.Unlock()
+	return !c.writeDeadline.IsZero() && time.Now().After(c.writeDeadline)
 }
 
 func (c *KCPConn) setCloseErr(err error) {
@@ -268,152 +375,59 @@ func (c *KCPConn) getCloseErr() error {
 	return ErrConnClosed
 }
 
-// SetReadDeadline sets the read deadline.
+func (c *KCPConn) mapErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, io.ErrClosedPipe) || c.closed.Load() {
+		return c.getCloseErr()
+	}
+	var netErr net.Error
+	if errors.As(err, &netErr) && netErr.Timeout() {
+		return ErrConnTimeout
+	}
+	return err
+}
+
 func (c *KCPConn) SetReadDeadline(t time.Time) error {
-	c.readDeadline.Store(t)
-	c.recvCond.Broadcast()
-	return nil
+	return c.session.SetReadDeadline(t)
 }
 
-// SetWriteDeadline sets the write deadline.
 func (c *KCPConn) SetWriteDeadline(t time.Time) error {
-	c.writeDeadline.Store(t)
+	c.deadlineMu.Lock()
+	c.writeDeadline = t
+	c.deadlineMu.Unlock()
+	if err := c.session.SetWriteDeadline(t); err != nil {
+		return err
+	}
 	return nil
 }
 
-// SetDeadline sets both read and write deadlines.
 func (c *KCPConn) SetDeadline(t time.Time) error {
-	c.SetReadDeadline(t)
-	c.SetWriteDeadline(t)
+	c.deadlineMu.Lock()
+	c.writeDeadline = t
+	c.deadlineMu.Unlock()
+	if err := c.session.SetDeadline(t); err != nil {
+		return err
+	}
 	return nil
 }
 
-// LocalAddr returns a placeholder local address for net.Conn compatibility.
-func (c *KCPConn) LocalAddr() net.Addr {
-	return kcpConnAddr("kcp-local")
-}
-
-// RemoteAddr returns a placeholder remote address for net.Conn compatibility.
-func (c *KCPConn) RemoteAddr() net.Addr {
-	return kcpConnAddr("kcp-remote")
-}
-
-// IsClosed reports whether the connection has been closed.
-func (c *KCPConn) IsClosed() bool {
-	return c.closed.Load()
-}
+func (c *KCPConn) LocalAddr() net.Addr  { return c.pc.localAddr }
+func (c *KCPConn) RemoteAddr() net.Addr { return c.pc.remoteAddr }
+func (c *KCPConn) IsClosed() bool       { return c.closed.Load() }
 
 const (
-	idleTimeout     = 15 * time.Second
-	idleTimeoutPure = 30 * time.Second
-	kcpPollInterval = 10 * time.Millisecond
+	idleTimeoutPure        = 30 * time.Second
+	kcpMTU                 = 1400
+	kcpNoDelay             = 1
+	kcpUpdateIntervalMs    = 10
+	kcpFastResend          = 2
+	kcpNoCongestionControl = 0
+	kcpSendWindow          = 512
+	kcpRecvWindow          = 512
 )
-
-// runLoop is the internal goroutine that exclusively owns all KCP operations.
-// Detects dead links (KCP retransmit exceeded) and idle timeout (no data received).
-func (c *KCPConn) runLoop() {
-	defer c.wg.Done()
-
-	lastRecv := time.Now()
-
-	for {
-		// Idle timeout (matches Rust: 15s with pending sends, 30s pure idle).
-		idle := time.Since(lastRecv)
-		if idle > idleTimeout && c.kcp.WaitSnd() > 0 {
-			c.closeInternal(ErrConnTimeout)
-			return
-		}
-		if idle > idleTimeoutPure {
-			c.closeInternal(ErrConnTimeout)
-			return
-		}
-
-		// kcp-go's low-level Check() uses an internal monotonic epoch that is
-		// not exposed publicly, so this wrapper drives Update() on a fixed poll
-		// interval instead of mixing incompatible time bases.
-		timer := time.NewTimer(kcpPollInterval)
-
-		select {
-		case data := <-c.inputCh:
-			timer.Stop()
-			c.kcp.Input(data, gokcp.IKCP_PACKET_REGULAR, false)
-			c.drainInputChAndProcess(true)
-			lastRecv = time.Now()
-
-		case req := <-c.writeCh:
-			timer.Stop()
-			ret := c.kcp.Send(req.data)
-			if ret < 0 {
-				req.result <- writeResult{0, errors.New("kcp: send failed")}
-			} else {
-				c.kcp.Update()
-				req.result <- writeResult{len(req.data), nil}
-			}
-			c.drainRecv()
-
-		case <-timer.C:
-			c.kcp.Update()
-			c.drainRecv()
-
-		case <-c.closeCh:
-			timer.Stop()
-			return
-		}
-	}
-}
-
-// closeInternal closes the connection due to dead link or idle timeout.
-func (c *KCPConn) closeInternal(reason error) {
-	c.closeSignal(reason)
-}
-
-// drainInputChAndProcess processes all queued packets in inputCh without blocking,
-// then runs one KCP update + recv drain for the entire batch.
-//
-// hasProcessedCurrent should be true when caller already fed one packet via
-// kcp.Input() before entering this function.
-func (c *KCPConn) drainInputChAndProcess(hasProcessedCurrent bool) {
-	drained := hasProcessedCurrent
-	for {
-		select {
-		case data := <-c.inputCh:
-			c.kcp.Input(data, gokcp.IKCP_PACKET_REGULAR, false)
-			drained = true
-		default:
-			if drained {
-				c.kcp.Update()
-				c.drainRecv()
-			}
-			return
-		}
-	}
-}
-
-// drainRecv moves all available data from KCP recv queue into recvBuf.
-func (c *KCPConn) drainRecv() {
-	buf := bufferPool.Get().(*[]byte)
-	defer bufferPool.Put(buf)
-
-	received := false
-	for {
-		size := c.kcp.PeekSize()
-		if size <= 0 {
-			break
-		}
-		n := c.kcp.Recv(*buf)
-		if n <= 0 {
-			break
-		}
-
-		c.recvMu.Lock()
-		c.recvBuf = append(c.recvBuf, (*buf)[:n]...)
-		c.recvMu.Unlock()
-		received = true
-	}
-	if received {
-		c.recvCond.Broadcast()
-	}
-}
 
 var _ io.ReadWriteCloser = (*KCPConn)(nil)
 var _ net.Conn = (*KCPConn)(nil)
+var _ net.PacketConn = (*virtualPacketConn)(nil)

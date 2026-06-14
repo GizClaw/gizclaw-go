@@ -63,6 +63,24 @@ func (e CreateChatCompletionStreamResponseObject) Valid() bool {
 	}
 }
 
+// Defines values for CreateSpeechRequestStreamFormat.
+const (
+	Audio CreateSpeechRequestStreamFormat = "audio"
+	Sse   CreateSpeechRequestStreamFormat = "sse"
+)
+
+// Valid indicates whether the value is a known member of the CreateSpeechRequestStreamFormat enum.
+func (e CreateSpeechRequestStreamFormat) Valid() bool {
+	switch e {
+	case Audio:
+		return true
+	case Sse:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ModelObject.
 const (
 	ModelObjectModel ModelObject = "model"
@@ -142,13 +160,17 @@ type CreateChatCompletionStreamResponseObject string
 
 // CreateSpeechRequest defines model for CreateSpeechRequest.
 type CreateSpeechRequest struct {
-	Input          string   `json:"input"`
-	Model          string   `json:"model"`
-	ResponseFormat *string  `json:"response_format,omitempty"`
-	Speed          *float32 `json:"speed,omitempty"`
-	Stream         *bool    `json:"stream,omitempty"`
-	Voice          string   `json:"voice"`
+	Input          string                           `json:"input"`
+	Model          string                           `json:"model"`
+	ResponseFormat *string                          `json:"response_format,omitempty"`
+	Speed          *float32                         `json:"speed,omitempty"`
+	Stream         *bool                            `json:"stream,omitempty"`
+	StreamFormat   *CreateSpeechRequestStreamFormat `json:"stream_format,omitempty"`
+	Voice          string                           `json:"voice"`
 }
+
+// CreateSpeechRequestStreamFormat defines model for CreateSpeechRequest.StreamFormat.
+type CreateSpeechRequestStreamFormat string
 
 // CreateSpeechResponseStreamEvent defines model for CreateSpeechResponseStreamEvent.
 type CreateSpeechResponseStreamEvent struct {

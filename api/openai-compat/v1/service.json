@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "/v1"
+      "url": "/"
     }
   ],
   "security": [
@@ -391,6 +391,10 @@
           },
           "stream": {
             "type": "boolean"
+          },
+          "stream_format": {
+            "type": "string",
+            "enum": ["sse", "audio"]
           }
         }
       },

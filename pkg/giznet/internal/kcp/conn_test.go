@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"runtime"
 	"sync"
 	"testing"
@@ -77,12 +79,70 @@ func TestKCPConn_WriteRead(t *testing.T) {
 	}
 
 	buf := make([]byte, 256)
-	n, err := b.Read(buf)
+	n, err := io.ReadFull(b, buf[:len(msg)])
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(buf[:n], msg) {
 		t.Fatalf("got %q, want %q", buf[:n], msg)
+	}
+}
+
+func TestKCPConn_LargeWriteReadChunk(t *testing.T) {
+	a, b := connPair(0)
+	defer a.Close()
+	defer b.Close()
+
+	msg := make([]byte, 32*1024)
+	for i := range msg {
+		msg[i] = byte(i)
+	}
+	if _, err := a.Write(msg); err != nil {
+		t.Fatal(err)
+	}
+
+	buf := make([]byte, 64*1024)
+	n, err := io.ReadFull(b, buf[:len(msg)])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != len(msg) {
+		t.Fatalf("first Read() got %d bytes, want %d", n, len(msg))
+	}
+	if !bytes.Equal(buf[:n], msg) {
+		t.Fatal("payload mismatch")
+	}
+}
+
+func TestKCPConn_WriteBuffersLargeReadChunk(t *testing.T) {
+	a, b := connPair(0)
+	defer a.Close()
+	defer b.Close()
+
+	header := []byte{1, 2, 3, 4}
+	payload := make([]byte, 32*1024)
+	for i := range payload {
+		payload[i] = byte(i)
+	}
+	want := append(append([]byte(nil), header...), payload...)
+	n, err := a.WriteBuffers(net.Buffers{header, payload})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != int64(len(want)) {
+		t.Fatalf("WriteBuffers() wrote %d bytes, want %d", n, len(want))
+	}
+
+	buf := make([]byte, 64*1024)
+	gotN, err := io.ReadFull(b, buf[:len(want)])
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotN != len(want) {
+		t.Fatalf("first Read() got %d bytes, want %d", gotN, len(want))
+	}
+	if !bytes.Equal(buf[:gotN], want) {
+		t.Fatal("payload mismatch")
 	}
 }
 
