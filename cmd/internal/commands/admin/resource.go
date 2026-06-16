@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/connection"
@@ -183,11 +184,90 @@ func readResourceFile(cmd *cobra.Command, path string) (apitypes.Resource, error
 		defer file.Close()
 		reader = file
 	}
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return apitypes.Resource{}, err
+	}
+	data, err = expandResourceEnv(data)
+	if err != nil {
+		return apitypes.Resource{}, err
+	}
 	var resource apitypes.Resource
-	if err := json.NewDecoder(reader).Decode(&resource); err != nil {
+	if err := json.Unmarshal(data, &resource); err != nil {
 		return apitypes.Resource{}, err
 	}
 	return resource, nil
+}
+
+var resourceEnvPattern = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)(:-([^}]*))?\}`)
+
+func expandResourceEnv(data []byte) ([]byte, error) {
+	input := string(data)
+	matches := resourceEnvPattern.FindAllStringSubmatchIndex(input, -1)
+	if len(matches) == 0 {
+		return data, nil
+	}
+	var firstErr error
+	var expanded strings.Builder
+	last := 0
+	for _, match := range matches {
+		if firstErr != nil {
+			break
+		}
+		expanded.WriteString(input[last:match[0]])
+		name := input[match[2]:match[3]]
+		replacement := ""
+		if value, ok := os.LookupEnv(name); ok && value != "" {
+			replacement = value
+		} else if match[4] != -1 {
+			replacement = input[match[6]:match[7]]
+		} else {
+			firstErr = fmt.Errorf("environment variable %s is required", name)
+			break
+		}
+		if insideJSONString(input, match[0]) {
+			replacement = escapeJSONStringFragment(replacement)
+		}
+		expanded.WriteString(replacement)
+		last = match[1]
+	}
+	if firstErr != nil {
+		return nil, firstErr
+	}
+	expanded.WriteString(input[last:])
+	return []byte(expanded.String()), nil
+}
+
+func insideJSONString(input string, offset int) bool {
+	inString := false
+	escaped := false
+	for i := 0; i < offset; i++ {
+		switch input[i] {
+		case '\\':
+			if escaped {
+				escaped = false
+			} else {
+				escaped = true
+			}
+		case '"':
+			if !escaped {
+				inString = !inString
+			}
+			escaped = false
+		default:
+			escaped = false
+		}
+	}
+	return inString
+}
+
+func escapeJSONStringFragment(value string) string {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return value
+	}
+	quoted := string(data)
+	return quoted[1 : len(quoted)-1]
 }
 
 func parseNamedResourceArgs(args []string) (apitypes.ResourceKind, string, error) {

@@ -1,0 +1,6 @@
+{
+  "model": "e2e-chat",
+  "tts_model": "e2e-tts",
+  "asr_model": "e2e-asr",
+  "timeout": "90s"
+}

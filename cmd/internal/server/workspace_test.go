@@ -270,15 +270,15 @@ func TestResolveWorkspaceStoreConfigsPreservesAbsoluteDirs(t *testing.T) {
 
 func TestServeRejectsDirectRun(t *testing.T) {
 	err := Serve(t.TempDir())
-	if err == nil || !strings.Contains(err.Error(), "direct serve is disabled") || !strings.Contains(err.Error(), "gizclaw service start") {
+	if err == nil || !strings.Contains(err.Error(), "direct serve is disabled") || !strings.Contains(err.Error(), "--force") {
 		t.Fatalf("Serve(direct) err = %v", err)
 	}
 }
 
-func TestServiceManagedServeReturnsWorkspaceLoadError(t *testing.T) {
-	err := ServeContext(context.Background(), t.TempDir(), ServeOptions{ServiceManaged: true})
-	if err == nil {
-		t.Fatal("service-managed serve should fail without config.yaml")
+func TestForceServeReturnsWorkspaceLoadError(t *testing.T) {
+	err := ServeContext(context.Background(), t.TempDir(), ServeOptions{Force: true})
+	if err == nil || !strings.Contains(err.Error(), "load config") {
+		t.Fatalf("force serve err = %v, want workspace load error", err)
 	}
 }
 
@@ -295,7 +295,7 @@ peers:
 		t.Fatalf("WriteFile error = %v", err)
 	}
 
-	err := ServeContext(context.Background(), workspace, ServeOptions{ServiceManaged: true})
+	err := ServeContext(context.Background(), workspace, ServeOptions{Force: true})
 	if err == nil {
 		t.Fatal("service-managed serve should fail when New cannot build stores")
 	}
@@ -393,7 +393,7 @@ system_tasks:
 		t.Fatalf("WriteFile pid error = %v", err)
 	}
 
-	err := ServeContext(context.Background(), workspace, ServeOptions{ServiceManaged: true})
+	err := ServeContext(context.Background(), workspace, ServeOptions{Force: true})
 	if err == nil || !strings.Contains(err.Error(), "already running") {
 		t.Fatalf("ServeContext() err = %v", err)
 	}

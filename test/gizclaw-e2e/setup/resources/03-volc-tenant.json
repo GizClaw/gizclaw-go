@@ -1,0 +1,20 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "VolcTenant",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_VOLC_TENANT:-e2e-volc-tenant}"
+  },
+  "spec": {
+    "app_id": "${GIZCLAW_E2E_VOLC_APP_ID}",
+    "credential_name": "${GIZCLAW_E2E_VOLC_CREDENTIAL:-e2e-volc-credential}",
+    "description": "E2E Volc/Doubao tenant",
+    "region": "${GIZCLAW_E2E_VOLC_REGION:-cn-beijing}",
+    "resource_ids": [
+      "seed-tts-1.0",
+      "seed-tts-2.0",
+      "seed-icl-2.0",
+      "volc.bigasr.sauc.duration",
+      "volc.speech.dialog"
+    ]
+  }
+}

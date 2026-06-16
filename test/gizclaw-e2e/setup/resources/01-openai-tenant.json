@@ -1,0 +1,14 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "OpenAITenant",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_OPENAI_TENANT:-e2e-openai-tenant}"
+  },
+  "spec": {
+    "kind": "compatible",
+    "credential_name": "${GIZCLAW_E2E_OPENAI_CREDENTIAL:-e2e-openai-credential}",
+    "base_url": "${GIZCLAW_E2E_OPENAI_BASE_URL}",
+    "api_mode": "${GIZCLAW_E2E_OPENAI_API_MODE:-chat_completions}",
+    "description": "E2E OpenAI-compatible tenant"
+  }
+}

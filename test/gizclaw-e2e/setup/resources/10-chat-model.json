@@ -1,0 +1,33 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "Model",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_CHAT_MODEL:-e2e-chat}"
+  },
+  "spec": {
+    "kind": "llm",
+    "source": "manual",
+    "provider": {
+      "kind": "openai-tenant",
+      "name": "${GIZCLAW_E2E_OPENAI_TENANT:-e2e-openai-tenant}"
+    },
+    "name": "E2E Chat",
+    "description": "E2E OpenAI-compatible chat model",
+    "capabilities": {
+      "json_output": true,
+      "system_role": true,
+      "temperature": true,
+      "text_only": true,
+      "tool_calls": true
+    },
+    "provider_data": {
+      "openai-tenant": {
+        "upstream_model": "${GIZCLAW_E2E_OPENAI_UPSTREAM_MODEL}",
+        "support_json_output": true,
+        "support_text_only": true,
+        "support_tool_calls": true,
+        "use_system_role": true
+      }
+    }
+  }
+}

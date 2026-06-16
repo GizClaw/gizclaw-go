@@ -9,8 +9,8 @@ func NewCmd() *cobra.Command {
 	var force bool
 	cmd := &cobra.Command{
 		Use:   "serve <dir>",
-		Short: "Reject direct server starts",
-		Long:  "Direct server starts are disabled. Install and start the fixed workspace through 'gizclaw service' instead.",
+		Short: "Serve a workspace",
+		Long:  "Direct foreground server starts are disabled by default. Install and start the fixed workspace through 'gizclaw service', or pass --force for explicit local/e2e foreground serve.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return server.ServeWithOptions(args[0], server.ServeOptions{
@@ -18,6 +18,6 @@ func NewCmd() *cobra.Command {
 			})
 		},
 	}
-	cmd.Flags().BoolVarP(&force, "force", "f", false, "legacy flag; direct serve still requires gizclaw service")
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "explicitly allow foreground local serve and replace stale pid files")
 	return cmd
 }

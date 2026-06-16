@@ -25,13 +25,22 @@ func TestHandlerRejectsUnexpectedFlagArgs(t *testing.T) {
 	}
 }
 
-func TestHandlerDelegatesToDirectServe(t *testing.T) {
+func TestHandlerRejectsDirectServeWithoutForce(t *testing.T) {
+	err := Handler{}.Execute(context.Background(), gizrun.CommandLine{
+		Args: []string{"serve", t.TempDir()},
+	})
+	if err == nil || !strings.Contains(err.Error(), "direct serve is disabled") {
+		t.Fatalf("Execute error = %v, want direct serve disabled error", err)
+	}
+}
+
+func TestHandlerForceAllowsServePath(t *testing.T) {
 	err := Handler{}.Execute(context.Background(), gizrun.CommandLine{
 		Args:  []string{"serve", t.TempDir()},
 		Flags: []string{"--force"},
 	})
-	if err == nil || !strings.Contains(err.Error(), "direct serve is disabled") {
-		t.Fatalf("Execute error = %v, want direct serve disabled error", err)
+	if err == nil || !strings.Contains(err.Error(), "load config") {
+		t.Fatalf("Execute error = %v, want workspace load error", err)
 	}
 }
 

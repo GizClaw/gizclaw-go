@@ -38,11 +38,11 @@ func TestServerWorkflowsCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateWorkflow() error = %v", err)
 	}
-	created, ok := createResp.(createWorkflow200Response)
+	created, ok := createResp.(adminservice.CreateWorkflow200JSONResponse)
 	if !ok {
 		t.Fatalf("CreateWorkflow() response = %#v", createResp)
 	}
-	if got := discriminatorOf(t, created.doc); got != "FlowcraftWorkflow" {
+	if got := discriminatorOf(t, apitypes.WorkflowDocument(created)); got != "FlowcraftWorkflow" {
 		t.Fatalf("CreateWorkflow() discriminator = %q", got)
 	}
 
@@ -62,11 +62,11 @@ func TestServerWorkflowsCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetWorkflow() error = %v", err)
 	}
-	gotDoc, ok := getResp.(getWorkflow200Response)
+	gotDoc, ok := getResp.(adminservice.GetWorkflow200JSONResponse)
 	if !ok {
 		t.Fatalf("GetWorkflow() response = %#v", getResp)
 	}
-	gotSingle := mustSingle(t, gotDoc.doc)
+	gotSingle := mustSingle(t, apitypes.WorkflowDocument(gotDoc))
 	if gotSingle.Metadata.Name != "demo-assistant" {
 		t.Fatalf("GetWorkflow() name = %q", gotSingle.Metadata.Name)
 	}
@@ -91,11 +91,11 @@ func TestServerWorkflowsCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PutWorkflow() error = %v", err)
 	}
-	putDoc, ok := putResp.(putWorkflow200Response)
+	putDoc, ok := putResp.(adminservice.PutWorkflow200JSONResponse)
 	if !ok {
 		t.Fatalf("PutWorkflow() response = %#v", putResp)
 	}
-	putSingle := mustSingle(t, putDoc.doc)
+	putSingle := mustSingle(t, apitypes.WorkflowDocument(putDoc))
 	if putSingle.Metadata.Description == nil || *putSingle.Metadata.Description != "updated description" {
 		t.Fatalf("PutWorkflow() description = %#v", putSingle.Metadata.Description)
 	}
@@ -104,7 +104,7 @@ func TestServerWorkflowsCRUD(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DeleteWorkflow() error = %v", err)
 	}
-	if _, ok := deleteResp.(deleteWorkflow200Response); !ok {
+	if _, ok := deleteResp.(adminservice.DeleteWorkflow200JSONResponse); !ok {
 		t.Fatalf("DeleteWorkflow() response = %#v", deleteResp)
 	}
 
@@ -158,11 +158,11 @@ func TestServerAcceptsEmptyFlowcraftSpec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateWorkflow() error = %v", err)
 	}
-	created, ok := resp.(createWorkflow200Response)
+	created, ok := resp.(adminservice.CreateWorkflow200JSONResponse)
 	if !ok {
 		t.Fatalf("CreateWorkflow() response = %#v", resp)
 	}
-	flowcraft := mustFlowcraft(t, created.doc)
+	flowcraft := mustFlowcraft(t, apitypes.WorkflowDocument(created))
 	if flowcraft.Metadata.Name != "empty-flowcraft" {
 		t.Fatalf("CreateWorkflow() name = %q", flowcraft.Metadata.Name)
 	}
@@ -228,7 +228,7 @@ func TestServerTrimsWorkflowNameBeforeStoring(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateWorkflow() error = %v", err)
 	}
-	if _, ok := resp.(createWorkflow200Response); !ok {
+	if _, ok := resp.(adminservice.CreateWorkflow200JSONResponse); !ok {
 		t.Fatalf("CreateWorkflow() response = %#v", resp)
 	}
 
@@ -236,11 +236,11 @@ func TestServerTrimsWorkflowNameBeforeStoring(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetWorkflow() error = %v", err)
 	}
-	got, ok := gotResp.(getWorkflow200Response)
+	got, ok := gotResp.(adminservice.GetWorkflow200JSONResponse)
 	if !ok {
 		t.Fatalf("GetWorkflow() response = %#v", gotResp)
 	}
-	flowcraft := mustFlowcraft(t, got.doc)
+	flowcraft := mustFlowcraft(t, apitypes.WorkflowDocument(got))
 	if flowcraft.Metadata.Name != "padded-workflow" {
 		t.Fatalf("GetWorkflow() metadata.name = %q, want padded-workflow", flowcraft.Metadata.Name)
 	}

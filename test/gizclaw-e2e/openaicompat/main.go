@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,17 +19,6 @@ import (
 	"github.com/openai/openai-go/option"
 	"github.com/openai/openai-go/shared"
 )
-
-type config struct {
-	APIKey     string
-	BaseURL    string
-	ModelID    string
-	TTSModelID string
-	ASRModelID string
-	VoiceID    string
-	OutputDir  string
-	Timeout    time.Duration
-}
 
 type opStats struct {
 	Name      string
@@ -136,59 +124,6 @@ func run(args []string) error {
 	}
 	printStats(stats)
 	return nil
-}
-
-func loadConfig(args []string) (config, error) {
-	cfg := config{
-		APIKey:  "test",
-		BaseURL: "http://127.0.0.1:8081/v1",
-		Timeout: 90 * time.Second,
-	}
-	flags := flag.NewFlagSet("openai-compat", flag.ContinueOnError)
-	flags.StringVar(&cfg.APIKey, "api-key", cfg.APIKey, "OpenAI-compatible API key")
-	flags.StringVar(&cfg.BaseURL, "base-url", cfg.BaseURL, "OpenAI-compatible API base URL")
-	flags.StringVar(&cfg.ModelID, "model", "", "chat model id")
-	flags.StringVar(&cfg.TTSModelID, "tts-model", "", "speech model id")
-	flags.StringVar(&cfg.ASRModelID, "asr-model", "", "ASR model id")
-	flags.StringVar(&cfg.VoiceID, "voice", "", "voice id; defaults to a synced Volc voice from /voices")
-	flags.StringVar(&cfg.OutputDir, "output-dir", "", "directory for generated audio files")
-	flags.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "request timeout")
-	if err := flags.Parse(args); err != nil {
-		return config{}, err
-	}
-	if cfg.Timeout <= 0 {
-		return config{}, fmt.Errorf("timeout must be positive")
-	}
-	cfg.APIKey = strings.TrimSpace(cfg.APIKey)
-	cfg.BaseURL = strings.TrimRight(strings.TrimSpace(cfg.BaseURL), "/")
-	cfg.ModelID = strings.TrimSpace(cfg.ModelID)
-	cfg.TTSModelID = strings.TrimSpace(cfg.TTSModelID)
-	cfg.ASRModelID = strings.TrimSpace(cfg.ASRModelID)
-	cfg.VoiceID = strings.TrimSpace(cfg.VoiceID)
-	cfg.OutputDir = strings.TrimSpace(cfg.OutputDir)
-	if cfg.APIKey == "" {
-		return config{}, fmt.Errorf("api key must not be empty")
-	}
-	if cfg.BaseURL == "" {
-		return config{}, fmt.Errorf("base url must not be empty")
-	}
-	if cfg.ModelID == "" {
-		return config{}, fmt.Errorf("chat model must be set with --model")
-	}
-	if cfg.TTSModelID == "" {
-		return config{}, fmt.Errorf("speech model must be set with --tts-model")
-	}
-	if cfg.ASRModelID == "" {
-		return config{}, fmt.Errorf("ASR model must be set with --asr-model")
-	}
-	if cfg.OutputDir == "" {
-		var err error
-		cfg.OutputDir, err = os.MkdirTemp("", "gizclaw-openai-compat-*")
-		if err != nil {
-			return config{}, fmt.Errorf("create output dir: %w", err)
-		}
-	}
-	return cfg, nil
 }
 
 func runChat(ctx context.Context, client openai.Client, modelID string) (string, opStats, error) {

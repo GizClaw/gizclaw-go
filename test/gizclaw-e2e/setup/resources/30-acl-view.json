@@ -1,0 +1,10 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "ACLView",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_ACL_VIEW:-e2e-client}"
+  },
+  "spec": {
+    "description": "E2E client resource view"
+  }
+}

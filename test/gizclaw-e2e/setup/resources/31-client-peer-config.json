@@ -1,0 +1,10 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "PeerConfig",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_CLIENT_PUBLIC_KEY}"
+  },
+  "spec": {
+    "view": "${GIZCLAW_E2E_ACL_VIEW:-e2e-client}"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "ACLPolicyBinding",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_CLIENT_ROLE:-e2e-client}-model-realtime"
+  },
+  "spec": {
+    "subject": {
+      "kind": "pk",
+      "id": "${GIZCLAW_E2E_CLIENT_PUBLIC_KEY}"
+    },
+    "resource": {
+      "kind": "model",
+      "id": "${GIZCLAW_E2E_REALTIME_MODEL:-e2e-realtime}"
+    },
+    "role": "${GIZCLAW_E2E_CLIENT_ROLE:-e2e-client}"
+  }
+}

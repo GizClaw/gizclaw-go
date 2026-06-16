@@ -303,8 +303,8 @@ func TestDefaultBuilderBuildsVolcASRTransformer(t *testing.T) {
 	if tf == nil {
 		t.Fatal("BuildTransformer() transformer = nil")
 	}
-	if got := transformerStringField(t, tf, "format"); got != "ogg_opus" {
-		t.Fatalf("ASR format = %q, want ogg_opus", got)
+	if got := transformerStringField(t, tf, "format"); got != "pcm" {
+		t.Fatalf("ASR format = %q, want pcm", got)
 	}
 	if got := transformerIntField(t, tf, "sampleRate"); got != 16000 {
 		t.Fatalf("ASR sampleRate = %d, want 16000", got)

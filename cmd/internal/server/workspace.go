@@ -24,8 +24,7 @@ const workspaceIdentityFile = "identity.key"
 const workspacePIDFile = "serve.pid"
 
 type ServeOptions struct {
-	Force          bool
-	ServiceManaged bool
+	Force bool
 }
 
 func resolveWorkspaceRoot(workspace string) (string, error) {
@@ -135,8 +134,8 @@ func ServeContext(ctx context.Context, workspace string, opts ServeOptions) erro
 	if err != nil {
 		return err
 	}
-	if !opts.ServiceManaged {
-		return fmt.Errorf("server: direct serve is disabled; start the server through service with 'gizclaw service install %s' and 'gizclaw service start'", root)
+	if !opts.Force {
+		return fmt.Errorf("server: direct serve is disabled; start the server through service with 'gizclaw service install %s' and 'gizclaw service start', or pass --force for explicit foreground local serve", root)
 	}
 	cfg, err := prepareWorkspaceConfig(workspace)
 	if err != nil {
@@ -243,15 +242,7 @@ func handleExistingWorkspacePID(pidPath string, force bool) error {
 	pid, err := readWorkspacePID(pidPath)
 	if err == nil {
 		if processRunning(pid) {
-			if !force {
-				return fmt.Errorf("server: already running with pid %d (use -f to restart)", pid)
-			}
-			if err := terminateProcess(pid); err != nil {
-				return err
-			}
-			if err := waitForProcessExit(pid, 5*time.Second); err != nil {
-				return err
-			}
+			return fmt.Errorf("server: already running with pid %d", pid)
 		} else if !force {
 			return fmt.Errorf("server: stale pid file %s exists (use -f to replace)", pidPath)
 		}

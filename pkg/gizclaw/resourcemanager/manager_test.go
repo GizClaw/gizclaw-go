@@ -47,6 +47,8 @@ func TestGetReturnsNotFoundByKind(t *testing.T) {
 		manager  *Manager
 		wantCode string
 	}{
+		{name: "acl policy binding", kind: apitypes.ResourceKindACLPolicyBinding, manager: newACLResourceManager(t), wantCode: "RESOURCE_NOT_FOUND"},
+		{name: "acl role", kind: apitypes.ResourceKindACLRole, manager: newACLResourceManager(t), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "credential", kind: apitypes.ResourceKindCredential, manager: New(Services{Credentials: newFakeCredentials()}), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "firmware", kind: apitypes.ResourceKindFirmware, manager: New(Services{Firmwares: &firmware.Server{Store: kv.NewMemory(nil)}}), wantCode: "RESOURCE_NOT_FOUND"},
 		{name: "badge", kind: apitypes.ResourceKindBadge, manager: New(Services{Badges: &badge.Server{Store: kv.NewMemory(nil), Assets: objectstore.Dir(t.TempDir())}}), wantCode: "RESOURCE_NOT_FOUND"},
@@ -103,6 +105,8 @@ func TestPutRejectsMissingServicesByKind(t *testing.T) {
 		name     string
 		resource string
 	}{
+		{name: "acl policy binding", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"ACLPolicyBinding","metadata":{"name":"binding"},"spec":{"subject":{"kind":"pk","id":"peer"},"resource":{"kind":"workspace","id":"workspace"},"role":"role"}}`},
+		{name: "acl role", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"ACLRole","metadata":{"name":"role"},"spec":{"permissions":["workspace.read"]}}`},
 		{name: "credential", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
 		{name: "firmware", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Firmware","metadata":{"name":"firmware"},"spec":{"slots":{"stable":{"version":"1.0.0"}}}}`},
 		{name: "badge", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Badge","metadata":{"name":"badge"},"spec":{"name":"Badge"}}`},
@@ -127,7 +131,9 @@ func TestPutRejectsMissingServicesByKind(t *testing.T) {
 }
 
 func TestPutRejectsUnsupportedVersionByKind(t *testing.T) {
+	aclManager := newACLResourceManager(t)
 	manager := New(Services{
+		ACL:             aclManager.services.ACL,
 		Credentials:     newFakeCredentials(),
 		Firmwares:       &firmware.Server{Store: kv.NewMemory(nil)},
 		Badges:          &badge.Server{Store: kv.NewMemory(nil), Assets: objectstore.Dir(t.TempDir())},
@@ -143,6 +149,8 @@ func TestPutRejectsUnsupportedVersionByKind(t *testing.T) {
 		name     string
 		resource string
 	}{
+		{name: "acl policy binding", resource: `{"apiVersion":"unsupported","kind":"ACLPolicyBinding","metadata":{"name":"binding"},"spec":{"subject":{"kind":"pk","id":"peer"},"resource":{"kind":"workspace","id":"workspace"},"role":"role"}}`},
+		{name: "acl role", resource: `{"apiVersion":"unsupported","kind":"ACLRole","metadata":{"name":"role"},"spec":{"permissions":["workspace.read"]}}`},
 		{name: "credential", resource: `{"apiVersion":"unsupported","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
 		{name: "firmware", resource: `{"apiVersion":"unsupported","kind":"Firmware","metadata":{"name":"firmware"},"spec":{"slots":{"stable":{"version":"1.0.0"}}}}`},
 		{name: "badge", resource: `{"apiVersion":"unsupported","kind":"Badge","metadata":{"name":"badge"},"spec":{"name":"Badge"}}`},
@@ -195,6 +203,8 @@ func TestDeleteRejectsMissingServicesByKind(t *testing.T) {
 		name string
 		kind apitypes.ResourceKind
 	}{
+		{name: "acl policy binding", kind: apitypes.ResourceKindACLPolicyBinding},
+		{name: "acl role", kind: apitypes.ResourceKindACLRole},
 		{name: "credential", kind: apitypes.ResourceKindCredential},
 		{name: "firmware", kind: apitypes.ResourceKindFirmware},
 		{name: "badge", kind: apitypes.ResourceKindBadge},
@@ -223,6 +233,8 @@ func TestDeleteReturnsNotFoundByKind(t *testing.T) {
 		kind    apitypes.ResourceKind
 		manager *Manager
 	}{
+		{name: "acl policy binding", kind: apitypes.ResourceKindACLPolicyBinding, manager: newACLResourceManager(t)},
+		{name: "acl role", kind: apitypes.ResourceKindACLRole, manager: newACLResourceManager(t)},
 		{name: "credential", kind: apitypes.ResourceKindCredential, manager: New(Services{Credentials: newFakeCredentials()})},
 		{name: "firmware", kind: apitypes.ResourceKindFirmware, manager: New(Services{Firmwares: &firmware.Server{Store: kv.NewMemory(nil)}})},
 		{name: "badge", kind: apitypes.ResourceKindBadge, manager: New(Services{Badges: &badge.Server{Store: kv.NewMemory(nil), Assets: objectstore.Dir(t.TempDir())}})},
@@ -325,6 +337,8 @@ func TestApplyRejectsMissingServicesByKind(t *testing.T) {
 		name     string
 		resource string
 	}{
+		{name: "acl policy binding", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"ACLPolicyBinding","metadata":{"name":"binding"},"spec":{"subject":{"kind":"pk","id":"peer"},"resource":{"kind":"workspace","id":"workspace"},"role":"role"}}`},
+		{name: "acl role", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"ACLRole","metadata":{"name":"role"},"spec":{"permissions":["workspace.read"]}}`},
 		{name: "credential", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
 		{name: "firmware", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Firmware","metadata":{"name":"firmware"},"spec":{"slots":{"stable":{"version":"1.0.0"}}}}`},
 		{name: "badge", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Badge","metadata":{"name":"badge"},"spec":{"name":"Badge"}}`},
@@ -349,7 +363,9 @@ func TestApplyRejectsMissingServicesByKind(t *testing.T) {
 }
 
 func TestApplyRejectsUnsupportedVersionByKind(t *testing.T) {
+	aclManager := newACLResourceManager(t)
 	manager := New(Services{
+		ACL:             aclManager.services.ACL,
 		Credentials:     newFakeCredentials(),
 		Firmwares:       &firmware.Server{Store: kv.NewMemory(nil)},
 		Badges:          &badge.Server{Store: kv.NewMemory(nil), Assets: objectstore.Dir(t.TempDir())},
@@ -365,6 +381,8 @@ func TestApplyRejectsUnsupportedVersionByKind(t *testing.T) {
 		name     string
 		resource string
 	}{
+		{name: "acl policy binding", resource: `{"apiVersion":"unsupported","kind":"ACLPolicyBinding","metadata":{"name":"binding"},"spec":{"subject":{"kind":"pk","id":"peer"},"resource":{"kind":"workspace","id":"workspace"},"role":"role"}}`},
+		{name: "acl role", resource: `{"apiVersion":"unsupported","kind":"ACLRole","metadata":{"name":"role"},"spec":{"permissions":["workspace.read"]}}`},
 		{name: "credential", resource: `{"apiVersion":"unsupported","kind":"Credential","metadata":{"name":"name"},"spec":{"provider":"minimax","method":"api_key","body":{"api_key":"secret"}}}`},
 		{name: "firmware", resource: `{"apiVersion":"unsupported","kind":"Firmware","metadata":{"name":"firmware"},"spec":{"slots":{"stable":{"version":"1.0.0"}}}}`},
 		{name: "badge", resource: `{"apiVersion":"unsupported","kind":"Badge","metadata":{"name":"badge"},"spec":{"name":"Badge"}}`},

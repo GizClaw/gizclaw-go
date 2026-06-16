@@ -15,8 +15,8 @@ type Handler struct{}
 func (Handler) Execute(_ context.Context, commandLine gizrun.CommandLine) error {
 	fs := flag.NewFlagSet("serve", flag.ContinueOnError)
 	var force bool
-	fs.BoolVar(&force, "force", false, "legacy flag; direct serve still requires gizclaw service")
-	fs.BoolVar(&force, "f", false, "legacy flag; direct serve still requires gizclaw service")
+	fs.BoolVar(&force, "force", false, "explicitly allow foreground local serve and replace stale pid files")
+	fs.BoolVar(&force, "f", false, "explicitly allow foreground local serve and replace stale pid files")
 	if err := fs.Parse(commandLine.Flags); err != nil {
 		return err
 	}

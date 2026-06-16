@@ -11,23 +11,18 @@ func TestServeRejectsDirectStartUserStory(t *testing.T) {
 	h := clitest.NewHarness(t, "705-serve-vs-service-managed-workspace")
 	help := h.RunCLI("serve", "--help")
 	help.MustSucceed(t)
-	for _, want := range []string{"Direct server starts are disabled", "--force", "gizclaw service"} {
+	for _, want := range []string{"Direct foreground server starts are disabled", "--force", "gizclaw service"} {
 		if !strings.Contains(help.Stdout, want) {
 			t.Fatalf("serve help missing %q:\n%s", want, help.Stdout)
 		}
 	}
 
-	for _, args := range [][]string{
-		{"serve", h.ServerWorkspace},
-		{"serve", "-f", h.ServerWorkspace},
-	} {
-		result := h.RunCLI(args...)
-		if result.Err == nil {
-			t.Fatalf("%q should fail for direct start", strings.Join(args, " "))
-		}
-		combined := result.Stderr + result.Stdout
-		if !strings.Contains(combined, "direct serve is disabled") || !strings.Contains(combined, "gizclaw service start") {
-			t.Fatalf("unexpected serve error for %q:\nstdout:\n%s\nstderr:\n%s", strings.Join(args, " "), result.Stdout, result.Stderr)
-		}
+	result := h.RunCLI("serve", h.ServerWorkspace)
+	if result.Err == nil {
+		t.Fatalf("serve should fail without --force for direct start")
+	}
+	combined := result.Stderr + result.Stdout
+	if !strings.Contains(combined, "direct serve is disabled") || !strings.Contains(combined, "--force") {
+		t.Fatalf("unexpected serve error:\nstdout:\n%s\nstderr:\n%s", result.Stdout, result.Stderr)
 	}
 }

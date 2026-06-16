@@ -15,7 +15,7 @@ func TestServiceLabelConstant(t *testing.T) {
 	}
 }
 
-func TestNewServiceConfigUsesSystemServiceInternalRunCommand(t *testing.T) {
+func TestNewServiceConfigUsesServeForceCommand(t *testing.T) {
 	spec := Spec{
 		WorkspaceRoot: "/tmp/workspace",
 		Executable:    "/usr/local/bin/gizclaw",
@@ -31,13 +31,9 @@ func TestNewServiceConfigUsesSystemServiceInternalRunCommand(t *testing.T) {
 	if cfg.WorkingDirectory != spec.WorkspaceRoot {
 		t.Fatalf("cfg.WorkingDirectory = %q", cfg.WorkingDirectory)
 	}
-	for _, want := range []string{
-		InternalRunFlag,
-		spec.WorkspaceRoot,
-	} {
-		if !contains(cfg.Arguments, want) {
-			t.Fatalf("cfg.Arguments = %#v, missing %q", cfg.Arguments, want)
-		}
+	wantArgs := []string{"serve", "--force", spec.WorkspaceRoot}
+	if !equalStrings(cfg.Arguments, wantArgs) {
+		t.Fatalf("cfg.Arguments = %#v, want %#v", cfg.Arguments, wantArgs)
 	}
 	if keepAlive, ok := cfg.Option["KeepAlive"].(bool); !ok || !keepAlive {
 		t.Fatalf("cfg.Option[KeepAlive] = %#v", cfg.Option["KeepAlive"])
@@ -47,25 +43,6 @@ func TestNewServiceConfigUsesSystemServiceInternalRunCommand(t *testing.T) {
 	}
 	if _, ok := cfg.Option["UserService"]; ok {
 		t.Fatalf("cfg.Option[UserService] = %#v, want absent for system service", cfg.Option["UserService"])
-	}
-}
-
-func TestRuntimeWorkspaceFromArgs(t *testing.T) {
-	workspace, ok, err := RuntimeWorkspaceFromArgs([]string{"--other", "value", InternalRunFlag, "/tmp/workspace"})
-	if err != nil {
-		t.Fatalf("RuntimeWorkspaceFromArgs() error = %v", err)
-	}
-	if !ok {
-		t.Fatal("RuntimeWorkspaceFromArgs() should detect internal run flag")
-	}
-	if workspace != "/tmp/workspace" {
-		t.Fatalf("RuntimeWorkspaceFromArgs() workspace = %q", workspace)
-	}
-}
-
-func TestRuntimeWorkspaceFromArgsMissingValue(t *testing.T) {
-	if _, ok, err := RuntimeWorkspaceFromArgs([]string{InternalRunFlag}); err == nil || ok {
-		t.Fatalf("RuntimeWorkspaceFromArgs() = (_, %t, %v), want error", ok, err)
 	}
 }
 
@@ -849,4 +826,16 @@ func contains(values []string, want string) bool {
 		}
 	}
 	return false
+}
+
+func equalStrings(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }

@@ -1,0 +1,32 @@
+{
+  "workspace": "doubao-realtime",
+  "agent": "doubao-realtime",
+  "models": {
+    "llm": "e2e-chat",
+    "tts": "e2e-tts",
+    "asr": "e2e-asr",
+    "realtime": "e2e-realtime"
+  },
+  "workflow": {
+    "name": "e2e-doubao-realtime",
+    "description": "Workspace e2e Doubao realtime workflow",
+    "parameters": {
+      "e2e": true
+    },
+    "session": {
+      "auth_mode": "v2",
+      "bot_name": "豆包",
+      "model": "O",
+      "resource_id": "volc.speech.dialog",
+      "system_role": "你是一个简短、自然的中文语音聊天助手。",
+      "vad_window_ms": 200
+    },
+    "output": {
+      "speaker": "zh_female_vv_jupiter_bigtts"
+    }
+  },
+  "voice": "volc-tenant:e2e-volc-tenant:zh_female_vv_uranus_bigtts",
+  "rounds": 3,
+  "timeout": "120s",
+  "persona": "You are a concise Chinese voice chat test user. Keep every utterance short and speech friendly."
+}

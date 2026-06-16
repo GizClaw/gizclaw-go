@@ -51,7 +51,6 @@ const serviceDescription = "GizClaw server bound to a fixed workspace"
 const serviceType = "system-service"
 const workspaceServiceFile = "service.json"
 const installedServiceFile = "installed-service.json"
-const InternalRunFlag = "--service-run-workspace"
 
 var userConfigDir = os.UserConfigDir
 var executablePath = os.Executable
@@ -269,7 +268,7 @@ func newServiceConfig(spec Spec) *kservice.Config {
 		DisplayName:      serviceDisplayName,
 		Description:      serviceDescription,
 		Executable:       spec.Executable,
-		Arguments:        []string{InternalRunFlag, spec.WorkspaceRoot},
+		Arguments:        []string{"serve", "--force", spec.WorkspaceRoot},
 		WorkingDirectory: spec.WorkspaceRoot,
 		Option: kservice.KeyValue{
 			"KeepAlive": true,

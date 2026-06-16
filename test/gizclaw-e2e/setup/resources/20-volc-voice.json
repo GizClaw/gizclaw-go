@@ -1,0 +1,25 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "Voice",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_VOICE_RESOURCE}"
+  },
+  "spec": {
+    "source": "manual",
+    "provider": {
+      "kind": "volc-tenant",
+      "name": "${GIZCLAW_E2E_VOLC_TENANT:-e2e-volc-tenant}"
+    },
+    "name": "E2E Voice",
+    "description": "E2E Volc voice",
+    "provider_data": {
+      "volc-tenant": {
+        "app_id": "${GIZCLAW_E2E_VOLC_APP_ID}",
+        "resource_id": "${GIZCLAW_E2E_VOLC_TTS_RESOURCE_ID:-seed-tts-2.0}",
+        "state": "Success",
+        "status": "Available",
+        "voice_id": "${GIZCLAW_E2E_VOLC_VOICE_ID}"
+      }
+    }
+  }
+}

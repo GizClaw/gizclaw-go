@@ -1,0 +1,22 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "Model",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_ASR_MODEL:-e2e-asr}"
+  },
+  "spec": {
+    "kind": "asr",
+    "source": "manual",
+    "provider": {
+      "kind": "volc-tenant",
+      "name": "${GIZCLAW_E2E_VOLC_TENANT:-e2e-volc-tenant}"
+    },
+    "name": "E2E ASR",
+    "description": "E2E Volc ASR model",
+    "provider_data": {
+      "volc-tenant": {
+        "resource_id": "${GIZCLAW_E2E_VOLC_ASR_RESOURCE_ID:-volc.bigasr.sauc.duration}"
+      }
+    }
+  }
+}

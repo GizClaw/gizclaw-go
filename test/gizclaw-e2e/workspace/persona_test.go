@@ -1,0 +1,569 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/ogg"
+	"github.com/GizClaw/gizclaw-go/pkg/genx"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
+)
+
+func TestOpusPacketsFromOggSkipsHeaders(t *testing.T) {
+	var buf bytes.Buffer
+	writer, err := ogg.NewStreamWriter(&buf, 123)
+	if err != nil {
+		t.Fatalf("NewStreamWriter: %v", err)
+	}
+	for _, packet := range [][]byte{
+		[]byte("OpusHeadxxxx"),
+		[]byte("OpusTagsyyyy"),
+		{0x11, 0x22, 0x33},
+		{0x44, 0x55},
+	} {
+		if _, err := writer.WritePacket(packet, 960, false); err != nil {
+			t.Fatalf("WritePacket: %v", err)
+		}
+	}
+	packets, err := opusPacketsFromOgg(buf.Bytes())
+	if err != nil {
+		t.Fatalf("opusPacketsFromOgg() error = %v", err)
+	}
+	if len(packets) != 2 {
+		t.Fatalf("packets len = %d, want 2", len(packets))
+	}
+	if !bytes.Equal(packets[0], []byte{0x11, 0x22, 0x33}) || !bytes.Equal(packets[1], []byte{0x44, 0x55}) {
+		t.Fatalf("packets = %#v", packets)
+	}
+}
+
+func TestOpusPacketsFromOggErrors(t *testing.T) {
+	if _, err := opusPacketsFromOgg([]byte("not ogg")); err == nil {
+		t.Fatal("invalid ogg succeeded")
+	}
+	var buf bytes.Buffer
+	writer, err := ogg.NewStreamWriter(&buf, 123)
+	if err != nil {
+		t.Fatalf("NewStreamWriter: %v", err)
+	}
+	if _, err := writer.WritePacket([]byte("OpusHeadxxxx"), 0, false); err != nil {
+		t.Fatalf("WritePacket: %v", err)
+	}
+	if _, err := writer.WritePacket([]byte("OpusTagsyyyy"), 0, false); err != nil {
+		t.Fatalf("WritePacket: %v", err)
+	}
+	if _, err := opusPacketsFromOgg(buf.Bytes()); err == nil {
+		t.Fatal("header-only ogg succeeded")
+	}
+}
+
+func TestTextHelpers(t *testing.T) {
+	if got := cleanUtterance(" “你好\n测试” "); got != "你好测试" {
+		t.Fatalf("cleanUtterance() = %q", got)
+	}
+	if got := normalizeTranscript("A-猫，12!"); got != "a猫12" {
+		t.Fatalf("normalizeTranscript() = %q", got)
+	}
+	if err := assertTextSimilar("same", "你好测试", "你好，测试。", 1); err != nil {
+		t.Fatalf("assertTextSimilar() error = %v", err)
+	}
+	if err := assertTextSimilar("different", "你好测试", "天气不错", 0.9); err == nil {
+		t.Fatal("assertTextSimilar() succeeded for unrelated text")
+	}
+	if got := eventLabel(apitypes.PeerStreamEvent{}); got != "" {
+		t.Fatalf("eventLabel(nil) = %q", got)
+	}
+	label := " Assistant "
+	if got := eventLabel(apitypes.PeerStreamEvent{Label: &label}); got != "assistant" {
+		t.Fatalf("eventLabel() = %q", got)
+	}
+	if got := runeCount("猫a"); got != 2 {
+		t.Fatalf("runeCount() = %d", got)
+	}
+	if got := mergeTranscriptText("你好能听到我说话吗", "你好，能听到我说话吗？"); got != "你好，能听到我说话吗？" {
+		t.Fatalf("mergeTranscriptText(punctuated replacement) = %q", got)
+	}
+	if got := mergeTranscriptText("嗯今天天气怎么样我想出门走走", "今天天气怎么样？我想出门走走。"); got != "今天天气怎么样？我想出门走走。" {
+		t.Fatalf("mergeTranscriptText(asr replacement) = %q", got)
+	}
+	if got := mergeTranscriptText("你好", "世界"); got != "你好世界" {
+		t.Fatalf("mergeTranscriptText(delta) = %q", got)
+	}
+	line := encodeJSONLine(map[string]string{"a": "b"})
+	if !strings.Contains(line, `"a":"b"`) {
+		t.Fatalf("encodeJSONLine() = %q", line)
+	}
+}
+
+func TestPersonaDriverRunUsesPeerTransportContract(t *testing.T) {
+	events := make(chan timedPeerEvent, 8)
+	opusPackets := make(chan timedPeerPacket, 8)
+	stream := newFakePeerStream()
+	var sentFrames [][]byte
+	roundIndex := 0
+	assistantLabel := "assistant"
+	stream.push = func(chunk *genx.MessageChunk) error {
+		blob, ok := chunk.Part.(*genx.Blob)
+		if !ok || len(blob.Data) == 0 {
+			return nil
+		}
+		sentFrames = append(sentFrames, append([]byte(nil), blob.Data...))
+		events <- timedTextEvent("transcript", "你好测试")
+		events <- timedTextEvent("assistant", "收到，继续。")
+		for j := 0; j < 4; j++ {
+			opusPackets <- newTimedPeerPacket([]byte{0x44, byte(roundIndex), byte(j)})
+		}
+		events <- newTimedPeerEvent(apitypes.PeerStreamEvent{
+			Type:  apitypes.PeerStreamEventTypeEos,
+			Label: &assistantLabel,
+		})
+		roundIndex++
+		return nil
+	}
+	driver := &personaDriver{
+		cfg: config{
+			Rounds:    2,
+			OutputDir: t.TempDir(),
+		},
+		transport: &chatTransport{
+			stream:      stream,
+			events:      events,
+			opusPackets: opusPackets,
+			errs:        make(chan error, 1),
+		},
+		generateUtterance: func(context.Context, int) (string, error) {
+			return "你好测试", nil
+		},
+		synthesizeAudio: func(context.Context, string) ([]byte, [][]byte, error) {
+			return []byte("ogg-audio"), [][]byte{{0x11, 0x22}}, nil
+		},
+		transcribeAudioFile: func(context.Context, string) (string, error) {
+			return "你好测试", nil
+		},
+	}
+
+	stats, err := driver.run(context.Background())
+	if err != nil {
+		t.Fatalf("run() error = %v", err)
+	}
+	if len(stats) != 2 || len(driver.history) != 2 {
+		t.Fatalf("stats/history len = %d/%d", len(stats), len(driver.history))
+	}
+	if len(sentFrames) != 2 {
+		t.Fatalf("sent frames = %d, want 2", len(sentFrames))
+	}
+	for i, frame := range sentFrames {
+		if !bytes.Equal(frame, []byte{0x11, 0x22}) {
+			t.Fatalf("sent frame %d = %v", i, frame)
+		}
+	}
+}
+
+func TestPersonaDriverWriteRoundAudioCreatesOutputDir(t *testing.T) {
+	driver := &personaDriver{cfg: config{OutputDir: filepath.Join(t.TempDir(), "out")}}
+	path, err := driver.writeRoundAudio(3, []byte("audio"))
+	if err != nil {
+		t.Fatalf("writeRoundAudio() error = %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read audio: %v", err)
+	}
+	if string(data) != "audio" || !strings.HasSuffix(path, "round-03-input.ogg") {
+		t.Fatalf("path/data = %q/%q", path, data)
+	}
+}
+
+func TestPersonaDriverDefaultOpenAIPaths(t *testing.T) {
+	oggAudio := testOggOpus(t, [][]byte{
+		[]byte("OpusHeadxxxx"),
+		[]byte("OpusTagsyyyy"),
+		{0x11, 0x22},
+	})
+	var sawChat, sawSpeech, sawTranscription bool
+	client := openai.NewClient(
+		option.WithAPIKey("test"),
+		option.WithBaseURL("http://gizclaw/v1"),
+		option.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			switch {
+			case strings.HasSuffix(req.URL.Path, "/chat/completions"):
+				sawChat = true
+				return jsonResponse(`{"id":"chatcmpl-test","object":"chat.completion","created":0,"model":"chat","choices":[{"index":0,"message":{"role":"assistant","content":" “你好\n测试” "},"finish_reason":"stop"}]}`), nil
+			case strings.HasSuffix(req.URL.Path, "/audio/speech"):
+				sawSpeech = true
+				return binaryResponse("audio/ogg", oggAudio), nil
+			case strings.HasSuffix(req.URL.Path, "/audio/transcriptions"):
+				sawTranscription = true
+				return jsonResponse(`{"text":"你好测试"}`), nil
+			default:
+				t.Fatalf("unexpected OpenAI path %s", req.URL.Path)
+				return nil, nil
+			}
+		})}),
+	)
+	driver := &personaDriver{
+		cfg: config{
+			Models: modelConfig{LLM: "chat", TTS: "tts", ASR: "asr"},
+			Voice:  "voice",
+		},
+		client: client,
+	}
+
+	utterance, err := driver.nextUtterance(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("nextUtterance() error = %v", err)
+	}
+	if utterance != "你好测试" {
+		t.Fatalf("utterance = %q", utterance)
+	}
+	audio, packets, err := driver.synthesizeOpus(context.Background(), "你好测试")
+	if err != nil {
+		t.Fatalf("synthesizeOpus() error = %v", err)
+	}
+	if !bytes.Equal(audio, oggAudio) || len(packets) != 1 || !bytes.Equal(packets[0], []byte{0x11, 0x22}) {
+		t.Fatalf("audio/packets = %d/%#v", len(audio), packets)
+	}
+	path := filepath.Join(t.TempDir(), "input.ogg")
+	if err := os.WriteFile(path, audio, 0o644); err != nil {
+		t.Fatalf("write audio: %v", err)
+	}
+	transcript, err := driver.transcribe(context.Background(), path)
+	if err != nil {
+		t.Fatalf("transcribe() error = %v", err)
+	}
+	if transcript != "你好测试" {
+		t.Fatalf("transcript = %q", transcript)
+	}
+	if !sawChat || !sawSpeech || !sawTranscription {
+		t.Fatalf("saw chat/speech/transcription = %t/%t/%t", sawChat, sawSpeech, sawTranscription)
+	}
+}
+
+func TestChatTransportClose(t *testing.T) {
+	closed := false
+	stream := newFakePeerStream()
+	stream.close = func() error {
+		closed = true
+		return nil
+	}
+	transport := &chatTransport{
+		stream: stream,
+	}
+	transport.close()
+	if !closed {
+		t.Fatal("transport did not close stream")
+	}
+}
+
+func TestPersonaDriverRunRoundFailsWhenResponseIsIncomplete(t *testing.T) {
+	events := make(chan timedPeerEvent, 2)
+	opusPackets := make(chan timedPeerPacket, 1)
+	var publish sync.Once
+	stream := newFakePeerStream()
+	stream.push = func(chunk *genx.MessageChunk) error {
+		if _, ok := chunk.Part.(*genx.Blob); !ok {
+			return nil
+		}
+		publish.Do(func() {
+			events <- timedTextEvent("transcript", "你好测试")
+			opusPackets <- newTimedPeerPacket([]byte{0x44})
+		})
+		return nil
+	}
+	driver := &personaDriver{
+		cfg: config{OutputDir: t.TempDir()},
+		transport: &chatTransport{
+			stream:      stream,
+			events:      events,
+			opusPackets: opusPackets,
+			errs:        make(chan error, 1),
+		},
+		generateUtterance: func(context.Context, int) (string, error) {
+			return "你好测试", nil
+		},
+		synthesizeAudio: func(context.Context, string) ([]byte, [][]byte, error) {
+			return []byte("ogg-audio"), [][]byte{{0x11}}, nil
+		},
+		transcribeAudioFile: func(context.Context, string) (string, error) {
+			return "你好测试", nil
+		},
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	_, err := driver.runRound(ctx, 1)
+	if err == nil || !strings.Contains(err.Error(), "wait response") {
+		t.Fatalf("runRound() error = %v", err)
+	}
+}
+
+func TestPersonaDriverRunRoundTranscribesAssistantAudio(t *testing.T) {
+	events := make(chan timedPeerEvent, 2)
+	label := "assistant"
+	opusPackets := make(chan timedPeerPacket, 1)
+	var publish sync.Once
+	stream := newFakePeerStream()
+	stream.push = func(chunk *genx.MessageChunk) error {
+		if _, ok := chunk.Part.(*genx.Blob); !ok {
+			return nil
+		}
+		publish.Do(func() {
+			events <- timedTextEvent("transcript", "你好测试")
+			events <- newTimedPeerEvent(apitypes.PeerStreamEvent{
+				Type:  apitypes.PeerStreamEventTypeEos,
+				Label: &label,
+			})
+			opusPackets <- newTimedPeerPacket([]byte{0x44})
+		})
+		return nil
+	}
+	driver := &personaDriver{
+		cfg: config{OutputDir: t.TempDir()},
+		transport: &chatTransport{
+			stream:      stream,
+			events:      events,
+			opusPackets: opusPackets,
+			errs:        make(chan error, 1),
+		},
+		generateUtterance: func(context.Context, int) (string, error) {
+			return "你好测试", nil
+		},
+		synthesizeAudio: func(context.Context, string) ([]byte, [][]byte, error) {
+			return []byte("ogg-audio"), [][]byte{{0x11}}, nil
+		},
+		transcribeAudioFile: func(_ context.Context, path string) (string, error) {
+			if strings.Contains(path, "assistant") {
+				return "回复文本", nil
+			}
+			return "你好测试", nil
+		},
+	}
+	stat, err := driver.runRound(context.Background(), 1)
+	if err != nil {
+		t.Fatalf("runRound() error = %v", err)
+	}
+	if stat.AssistantText != "回复文本" {
+		t.Fatalf("assistant text = %q, want 回复文本", stat.AssistantText)
+	}
+	if stat.DownlinkPackets != 1 {
+		t.Fatalf("downlink packets = %d, want 1", stat.DownlinkPackets)
+	}
+}
+
+func TestChatTransportReadEventsAndSendAudioTurn(t *testing.T) {
+	stream := newFakePeerStream()
+	packets := make(chan timedPeerPacket, 4)
+
+	transport := &chatTransport{
+		stream:      stream,
+		events:      make(chan timedPeerEvent, 4),
+		opusPackets: packets,
+		errs:        make(chan error, 1),
+	}
+	go transport.readChunks(packets)
+
+	text := "你好"
+	stream.chunks <- &genx.MessageChunk{Part: genx.Text(text), Ctrl: &genx.StreamCtrl{Label: "assistant"}}
+	got := <-transport.events
+	if got.event.Text == nil || *got.event.Text != text {
+		t.Fatalf("event = %+v", got)
+	}
+
+	stream.chunks <- &genx.MessageChunk{Part: &genx.Blob{MIMEType: "audio/opus", Data: []byte{1, 2, 3}}}
+	gotPacket := <-transport.opusPackets
+	if !bytes.Equal(gotPacket.frame, []byte{1, 2, 3}) || gotPacket.receivedAt.IsZero() {
+		t.Fatalf("forwarded packet = %+v", gotPacket)
+	}
+	if gotPacket.since(gotPacket.receivedAt.Add(-time.Millisecond)) <= 0 {
+		t.Fatalf("forwarded packet since returned non-positive duration")
+	}
+}
+
+func TestTimedPeerSinceFallsBackWhenTimestampIsZero(t *testing.T) {
+	start := time.Now().Add(-time.Millisecond)
+	if got := (timedPeerEvent{}).since(start); got <= 0 {
+		t.Fatalf("timedPeerEvent.since() = %s", got)
+	}
+	if got := (timedPeerPacket{}).since(start); got <= 0 {
+		t.Fatalf("timedPeerPacket.since() = %s", got)
+	}
+}
+
+func TestSendAudioTurnFramesEvents(t *testing.T) {
+	stream := newFakePeerStream()
+	transport := &chatTransport{
+		stream: stream,
+	}
+	if err := transport.sendAudioTurn(context.Background(), "s1", [][]byte{{1, 2, 3}}); err != nil {
+		t.Fatalf("sendAudioTurn() error = %v", err)
+	}
+	if len(stream.pushed) != 3 {
+		t.Fatalf("pushed chunks = %d, want 3", len(stream.pushed))
+	}
+	if !stream.pushed[0].IsBeginOfStream() || !stream.pushed[2].IsEndOfStream() {
+		t.Fatalf("stream boundaries = %#v / %#v", stream.pushed[0].Ctrl, stream.pushed[2].Ctrl)
+	}
+	blob := stream.pushed[1].Part.(*genx.Blob)
+	if blob.MIMEType != "audio/opus" || !bytes.Equal(blob.Data, []byte{1, 2, 3}) {
+		t.Fatalf("audio chunk = %#v", stream.pushed[1])
+	}
+}
+
+func TestSendAudioTurnErrors(t *testing.T) {
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	transport := &chatTransport{
+		stream: newFakePeerStream(),
+	}
+	if err := transport.sendAudioTurn(canceled, "s1", [][]byte{{1}}); err == nil || !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled sendAudioTurn() error = %v", err)
+	}
+	wantErr := errors.New("write packet failed")
+	stream := newFakePeerStream()
+	stream.push = func(chunk *genx.MessageChunk) error {
+		if _, ok := chunk.Part.(*genx.Blob); ok {
+			return wantErr
+		}
+		return nil
+	}
+	transport = &chatTransport{
+		stream: stream,
+	}
+	if err := transport.sendAudioTurn(context.Background(), "s1", [][]byte{{1}}); !errors.Is(err, wantErr) {
+		t.Fatalf("write error = %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	writes := 0
+	stream = newFakePeerStream()
+	stream.push = func(chunk *genx.MessageChunk) error {
+		if _, ok := chunk.Part.(*genx.Blob); ok {
+			writes++
+			cancel()
+		}
+		return nil
+	}
+	transport = &chatTransport{
+		packetInterval: time.Hour,
+		stream:         stream,
+	}
+	if err := transport.sendAudioTurn(ctx, "s1", [][]byte{{1}, {2}}); !errors.Is(err, context.Canceled) {
+		t.Fatalf("paced canceled sendAudioTurn() error = %v", err)
+	}
+	if writes != 1 {
+		t.Fatalf("paced writes = %d, want 1", writes)
+	}
+}
+
+func labeledTextEvent(label, text string) apitypes.PeerStreamEvent {
+	return apitypes.PeerStreamEvent{
+		Type:  apitypes.PeerStreamEventTypeTextDelta,
+		Label: &label,
+		Text:  &text,
+	}
+}
+
+func timedTextEvent(label, text string) timedPeerEvent {
+	return newTimedPeerEvent(labeledTextEvent(label, text))
+}
+
+type closeBuffer struct {
+	bytes.Buffer
+}
+
+func (b *closeBuffer) Close() error {
+	return nil
+}
+
+func (b *closeBuffer) CloseWithError(error) error { return nil }
+func (b *closeBuffer) Next() (*genx.MessageChunk, error) {
+	return nil, io.EOF
+}
+func (b *closeBuffer) Push(context.Context, *genx.MessageChunk) error {
+	return nil
+}
+
+type fakePeerStream struct {
+	chunks chan *genx.MessageChunk
+	pushed []*genx.MessageChunk
+	push   func(*genx.MessageChunk) error
+	close  func() error
+}
+
+func newFakePeerStream() *fakePeerStream {
+	return &fakePeerStream{chunks: make(chan *genx.MessageChunk, 16)}
+}
+
+func (s *fakePeerStream) Next() (*genx.MessageChunk, error) {
+	chunk, ok := <-s.chunks
+	if !ok {
+		return nil, io.EOF
+	}
+	return chunk, nil
+}
+
+func (s *fakePeerStream) Push(_ context.Context, chunk *genx.MessageChunk) error {
+	s.pushed = append(s.pushed, chunk)
+	if s.push != nil {
+		return s.push(chunk)
+	}
+	return nil
+}
+
+func (s *fakePeerStream) Close() error {
+	if s.close != nil {
+		return s.close()
+	}
+	return nil
+}
+
+func (s *fakePeerStream) CloseWithError(err error) error {
+	return s.Close()
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func jsonResponse(body string) *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(body)),
+	}
+}
+
+func binaryResponse(contentType string, body []byte) *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{contentType}},
+		Body:       io.NopCloser(bytes.NewReader(body)),
+	}
+}
+
+func testOggOpus(t *testing.T, packets [][]byte) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	writer, err := ogg.NewStreamWriter(&buf, 123)
+	if err != nil {
+		t.Fatalf("NewStreamWriter: %v", err)
+	}
+	for _, packet := range packets {
+		if _, err := writer.WritePacket(packet, 960, false); err != nil {
+			t.Fatalf("WritePacket: %v", err)
+		}
+	}
+	return buf.Bytes()
+}

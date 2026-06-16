@@ -1,0 +1,20 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "Model",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_TTS_MODEL:-e2e-tts}"
+  },
+  "spec": {
+    "kind": "tts",
+    "source": "manual",
+    "provider": {
+      "kind": "volc-tenant",
+      "name": "${GIZCLAW_E2E_VOLC_TENANT:-e2e-volc-tenant}"
+    },
+    "name": "E2E TTS",
+    "description": "E2E Volc TTS model",
+    "provider_data": {
+      "volc-tenant": {}
+    }
+  }
+}

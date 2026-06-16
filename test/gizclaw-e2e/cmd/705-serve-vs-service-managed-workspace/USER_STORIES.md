@@ -2,25 +2,23 @@
 
 ## User Story
 
-As an operator, I want foreground `gizclaw serve` and system service management
-to be mutually exclusive for the same workspace, so a `serve -f` command cannot
-silently interfere with a workspace installed under `gizclaw service`.
+As an operator, I want plain `gizclaw serve` to stay protected while the explicit
+foreground/server-service launch path uses one command shape:
+`gizclaw serve --force <workspace>`.
 
 ## Scenario
 
 1. Create an isolated server workspace.
 2. Read `gizclaw serve --help` and verify it describes foreground serving,
    `--force`, and the service-managed workspace boundary.
-3. Write a service-management marker into the workspace.
-4. Run `gizclaw serve <workspace>`.
-5. Run `gizclaw serve -f <workspace>`.
-6. Verify both commands fail with a message that points users back to
-   `gizclaw service`.
+3. Run `gizclaw serve <workspace>`.
+4. Verify the command fails with guidance to use `gizclaw service` or explicit
+   `--force`.
 
 ## Covered Behaviors
 
 - `serve` help distinguishes foreground serving from service management.
-- `--force` is documented as foreground-process replacement, not system service
-  control.
-- Service-managed workspaces reject plain `serve`.
-- Service-managed workspaces also reject `serve -f`.
+- `--force` is documented as the explicit foreground local serve opt-in.
+- Plain `serve` rejects direct starts.
+- System service installation uses the same `serve --force <workspace>` command
+  shape instead of a private runtime flag.

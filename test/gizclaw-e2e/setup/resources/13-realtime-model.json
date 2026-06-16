@@ -1,0 +1,20 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "Model",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_REALTIME_MODEL:-e2e-realtime}"
+  },
+  "spec": {
+    "kind": "realtime",
+    "source": "manual",
+    "provider": {
+      "kind": "volc-tenant",
+      "name": "${GIZCLAW_E2E_VOLC_TENANT:-e2e-volc-tenant}"
+    },
+    "name": "E2E Doubao Realtime",
+    "description": "E2E Doubao realtime model",
+    "provider_data": {
+      "volc-tenant": {}
+    }
+  }
+}

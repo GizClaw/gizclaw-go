@@ -146,6 +146,86 @@ func TestAdminResourceApplyReadsStdin(t *testing.T) {
 	}
 }
 
+func TestAdminResourceApplyExpandsProcessEnv(t *testing.T) {
+	t.Setenv("GIZCLAW_TEST_CREDENTIAL", "env-credential")
+	t.Setenv("GIZCLAW_TEST_SECRET", "env-\"secret\"\\line\nnext")
+	resourceFile := filepath.Join(t.TempDir(), "credential.json")
+	if err := os.WriteFile(resourceFile, []byte(`{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "Credential",
+		"metadata": {"name": "${GIZCLAW_TEST_CREDENTIAL:-fallback-credential}"},
+		"spec": {
+			"provider": "minimax",
+			"method": "api_key",
+			"body": {"api_key": "${GIZCLAW_TEST_SECRET}"}
+		}
+	}`), 0o644); err != nil {
+		t.Fatalf("write resource: %v", err)
+	}
+	fake := &fakeResourceClient{applyResult: apitypes.ApplyResult{Name: "env-credential"}}
+	restore := stubResourceClient(fake)
+	defer restore()
+
+	cmd := NewCmd()
+	cmd.SetArgs([]string{"apply", "-f", resourceFile})
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("admin apply error: %v", err)
+	}
+	if fake.appliedName != "env-credential" {
+		t.Fatalf("applied name = %q", fake.appliedName)
+	}
+	data := string(mustJSON(t, fake.appliedResource))
+	if !strings.Contains(data, `"api_key":"env-\"secret\"\\line\nnext"`) {
+		t.Fatalf("applied resource did not contain expanded secret: %s", data)
+	}
+	credential, err := fake.appliedResource.AsCredentialResource()
+	if err != nil {
+		t.Fatalf("applied resource is not credential: %v", err)
+	}
+	if got := credential.Spec.Body["api_key"]; got != "env-\"secret\"\\line\nnext" {
+		t.Fatalf("expanded secret = %#v", got)
+	}
+}
+
+func TestAdminResourceApplyRejectsMissingEnv(t *testing.T) {
+	resourceFile := filepath.Join(t.TempDir(), "credential.json")
+	if err := os.WriteFile(resourceFile, []byte(`{
+		"apiVersion": "gizclaw.admin/v1alpha1",
+		"kind": "Credential",
+		"metadata": {"name": "env-credential"},
+		"spec": {
+			"provider": "minimax",
+			"method": "api_key",
+			"body": {"api_key": "${GIZCLAW_TEST_MISSING_SECRET}"}
+		}
+	}`), 0o644); err != nil {
+		t.Fatalf("write resource: %v", err)
+	}
+
+	cmd := NewCmd()
+	cmd.SetArgs([]string{"apply", "-f", resourceFile})
+	err := cmd.Execute()
+	if err == nil || !strings.Contains(err.Error(), "GIZCLAW_TEST_MISSING_SECRET") {
+		t.Fatalf("admin apply error = %v, want missing env", err)
+	}
+}
+
+func TestExpandResourceEnvSupportsJSONDefaults(t *testing.T) {
+	data, err := expandResourceEnv([]byte(`{"resource_ids": ${GIZCLAW_TEST_IDS_JSON:-["a", "b"]}}`))
+	if err != nil {
+		t.Fatalf("expandResourceEnv() error = %v", err)
+	}
+	var decoded struct {
+		ResourceIDs []string `json:"resource_ids"`
+	}
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		t.Fatalf("expanded JSON did not decode: %v; data=%s", err, data)
+	}
+	if len(decoded.ResourceIDs) != 2 || decoded.ResourceIDs[0] != "a" || decoded.ResourceIDs[1] != "b" {
+		t.Fatalf("resource_ids = %#v", decoded.ResourceIDs)
+	}
+}
+
 func TestAdminResourceApplyRequiresFile(t *testing.T) {
 	cmd := NewCmd()
 	cmd.SetArgs([]string{"apply"})
@@ -374,12 +454,13 @@ type fakeResourceClient struct {
 	applyResult apitypes.ApplyResult
 	getResource apitypes.Resource
 
-	appliedKind apitypes.ResourceKind
-	appliedName string
-	deletedKind apitypes.ResourceKind
-	deletedName string
-	gotKind     apitypes.ResourceKind
-	gotName     string
+	appliedResource apitypes.Resource
+	appliedKind     apitypes.ResourceKind
+	appliedName     string
+	deletedKind     apitypes.ResourceKind
+	deletedName     string
+	gotKind         apitypes.ResourceKind
+	gotName         string
 }
 
 func (f *fakeResourceClient) ApplyResource(_ context.Context, resource apitypes.Resource) (apitypes.ApplyResult, error) {
@@ -387,6 +468,7 @@ func (f *fakeResourceClient) ApplyResource(_ context.Context, resource apitypes.
 	if err != nil {
 		return apitypes.ApplyResult{}, err
 	}
+	f.appliedResource = resource
 	f.appliedKind = kind
 	f.appliedName = name
 	return f.applyResult, nil

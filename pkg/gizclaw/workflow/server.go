@@ -91,7 +91,7 @@ func (s *Server) CreateWorkflow(ctx context.Context, request adminservice.Create
 	if err := s.Store.Set(ctx, key, raw); err != nil {
 		return adminservice.CreateWorkflow500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	return createWorkflow200Response{doc: doc}, nil
+	return adminservice.CreateWorkflow200JSONResponse(doc), nil
 }
 
 func (s *Server) DeleteWorkflow(ctx context.Context, request adminservice.DeleteWorkflowRequestObject) (adminservice.DeleteWorkflowResponseObject, error) {
@@ -117,7 +117,7 @@ func (s *Server) DeleteWorkflow(ctx context.Context, request adminservice.Delete
 	if err := s.Store.Delete(ctx, key); err != nil {
 		return adminservice.DeleteWorkflow500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	return deleteWorkflow200Response{doc: doc}, nil
+	return adminservice.DeleteWorkflow200JSONResponse(doc), nil
 }
 
 func (s *Server) GetWorkflow(ctx context.Context, request adminservice.GetWorkflowRequestObject) (adminservice.GetWorkflowResponseObject, error) {
@@ -139,7 +139,7 @@ func (s *Server) GetWorkflow(ctx context.Context, request adminservice.GetWorkfl
 	if err != nil {
 		return adminservice.GetWorkflow500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	return getWorkflow200Response{doc: doc}, nil
+	return adminservice.GetWorkflow200JSONResponse(doc), nil
 }
 
 func (s *Server) PutWorkflow(ctx context.Context, request adminservice.PutWorkflowRequestObject) (adminservice.PutWorkflowResponseObject, error) {
@@ -160,7 +160,7 @@ func (s *Server) PutWorkflow(ctx context.Context, request adminservice.PutWorkfl
 	if err := s.Store.Set(ctx, workflowKey(env.Metadata.Name), raw); err != nil {
 		return adminservice.PutWorkflow500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
-	return putWorkflow200Response{doc: doc}, nil
+	return adminservice.PutWorkflow200JSONResponse(doc), nil
 }
 
 func validateDocument(doc apitypes.WorkflowDocument, expectedName string) (apitypes.WorkflowDocument, documentEnvelope, []byte, error) {
