@@ -553,7 +553,7 @@ func (m *Manager) Put(ctx context.Context, resource apitypes.Resource) (apitypes
 		if err := validateResourceHeader(item.ApiVersion, item.Metadata.Name); err != nil {
 			return apitypes.Resource{}, err
 		}
-		if err := m.putWorkflow(ctx, string(pathParam(item.Metadata.Name)), item.Spec); err != nil {
+		if err := m.putWorkflow(ctx, string(pathParam(item.Metadata.Name)), workflowDocumentFromResource(item)); err != nil {
 			return apitypes.Resource{}, err
 		}
 		return m.Get(ctx, apitypes.ResourceKindWorkflow, item.Metadata.Name)

@@ -76,7 +76,9 @@
           "provider": "volc",
           "method": "api_key",
           "description": "Seeded Volcengine credential for UI CLI tests",
-          "body": {}
+          "body": {
+            "app_id": "ui-seed-volc-app"
+          }
         }
       },
       {

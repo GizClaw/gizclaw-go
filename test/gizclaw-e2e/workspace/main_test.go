@@ -155,8 +155,11 @@ func TestEnsureWorkspaceCreatesWorkflowAndWorkspace(t *testing.T) {
 	if control.createdWorkflow.Metadata.Name != "workflow-a" {
 		t.Fatalf("created workflow = %+v", control.createdWorkflow)
 	}
-	if got := control.createdWorkflow.Spec["realtime_model"]; got != "realtime" {
-		t.Fatalf("workflow realtime_model = %#v", got)
+	if control.createdWorkflow.Spec.Driver != rpcapi.WorkflowDriverDoubaoRealtime ||
+		control.createdWorkflow.Spec.DoubaoRealtime == nil ||
+		control.createdWorkflow.Spec.DoubaoRealtime.RealtimeModel == nil ||
+		*control.createdWorkflow.Spec.DoubaoRealtime.RealtimeModel != "realtime" {
+		t.Fatalf("workflow spec = %#v", control.createdWorkflow.Spec)
 	}
 	if control.createdWorkspace.Name != "workspace-a" || control.createdWorkspace.WorkflowName != "workflow-a" {
 		t.Fatalf("created workspace = %+v", control.createdWorkspace)
@@ -169,6 +172,62 @@ func TestEnsureWorkspaceCreatesWorkflowAndWorkspace(t *testing.T) {
 		t.Fatalf("decode workspace parameters: %v", err)
 	}
 	if workspaceParams.E2e == nil || !*workspaceParams.E2e {
+		t.Fatalf("workspace parameters = %#v", workspaceParams)
+	}
+}
+
+func TestEnsureWorkspaceCreatesASTTranslateWorkflowAndWorkspace(t *testing.T) {
+	control := &fakeRunControl{}
+	cfg := config{
+		Workspace: "ast-workspace",
+		Agent:     "ast-translate",
+		Workflow: workflowConfig{
+			Name:        "ast-workflow",
+			Translation: "translation",
+			Parameters: workspaceParameterConfig{
+				E2E:              boolPtr(true),
+				Input:            "push-to-talk",
+				TranslationModel: "translation",
+				LangPair:         "auto",
+			},
+			ASTTranslate: astTranslateConfig{
+				Mode:       "s2s",
+				ResourceID: "volc.service_type.10053",
+				AuthMode:   "v2",
+				Voice:      astTranslateVoiceConfig{SpeakerID: "speaker-a"},
+			},
+		},
+	}
+	if err := ensureWorkspace(context.Background(), control, cfg); err != nil {
+		t.Fatalf("ensureWorkspace() error = %v", err)
+	}
+	spec := control.createdWorkflow.Spec
+	if spec.Driver != rpcapi.WorkflowDriverAstTranslate ||
+		spec.AstTranslate == nil ||
+		spec.AstTranslate.TranslationModel != "translation" ||
+		spec.AstTranslate.Voice == nil {
+		t.Fatalf("workflow spec = %#v", spec)
+	}
+	workflowVoice, err := spec.AstTranslate.Voice.AsASTTranslateInternalSpeakerParameters()
+	if err != nil {
+		t.Fatalf("decode workflow voice: %v", err)
+	}
+	if workflowVoice.SpeakerId != "speaker-a" {
+		t.Fatalf("workflow voice = %#v", workflowVoice)
+	}
+	workspaceParams, err := control.createdWorkspace.Parameters.AsASTTranslateWorkspaceParameters()
+	if err != nil {
+		t.Fatalf("decode workspace parameters: %v", err)
+	}
+	if workspaceParams.AgentType != rpcapi.ASTTranslateWorkspaceParametersAgentTypeAstTranslate ||
+		workspaceParams.E2e == nil ||
+		!*workspaceParams.E2e ||
+		workspaceParams.Input == nil ||
+		*workspaceParams.Input != rpcapi.WorkspaceInputModePushToTalk ||
+		workspaceParams.TranslationModel == nil ||
+		*workspaceParams.TranslationModel != "translation" ||
+		workspaceParams.LangPair == nil ||
+		*workspaceParams.LangPair != "auto" {
 		t.Fatalf("workspace parameters = %#v", workspaceParams)
 	}
 }

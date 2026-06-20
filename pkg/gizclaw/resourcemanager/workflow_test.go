@@ -17,10 +17,8 @@ func TestApplyWorkflowCreatesResource(t *testing.T) {
 		"kind": "Workflow",
 		"metadata": {"name": "workflow"},
 		"spec": {
-			"apiVersion": "gizclaw.flowcraft/v1alpha1",
-			"kind": "FlowcraftWorkflow",
-			"metadata": {"name": "workflow"},
-			"spec": {"prompt": "hello"}
+			"driver": "flowcraft",
+			"flowcraft": {"prompt": "hello"}
 		}
 	}`))
 	if err != nil {
@@ -40,10 +38,11 @@ func TestApplyWorkflowCreatesResource(t *testing.T) {
 func TestGetWorkflowReturnsResource(t *testing.T) {
 	workflows := newFakeWorkflows()
 	workflows.items["workflow"] = mustWorkflowDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {"name": "workflow"},
-		"spec": {"prompt": "hello"}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {"prompt": "hello"}
+		}
 	}`)
 	manager := New(Services{Workflows: workflows})
 
@@ -69,10 +68,8 @@ func TestPutWorkflowWritesResource(t *testing.T) {
 		"kind": "Workflow",
 		"metadata": {"name": "workflow"},
 		"spec": {
-			"apiVersion": "gizclaw.flowcraft/v1alpha1",
-			"kind": "FlowcraftWorkflow",
-			"metadata": {"name": "workflow"},
-			"spec": {"prompt": "hello"}
+			"driver": "flowcraft",
+			"flowcraft": {"prompt": "hello"}
 		}
 	}`))
 	if err != nil {
@@ -86,10 +83,11 @@ func TestPutWorkflowWritesResource(t *testing.T) {
 func TestApplyWorkflowUnchangedSkipsPut(t *testing.T) {
 	workflows := newFakeWorkflows()
 	workflows.items["workflow"] = mustWorkflowDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {"name": "workflow"},
-		"spec": {"prompt": "hello"}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {"prompt": "hello"}
+		}
 	}`)
 	manager := New(Services{Workflows: workflows})
 
@@ -98,10 +96,8 @@ func TestApplyWorkflowUnchangedSkipsPut(t *testing.T) {
 		"kind": "Workflow",
 		"metadata": {"name": "workflow"},
 		"spec": {
-			"apiVersion": "gizclaw.flowcraft/v1alpha1",
-			"kind": "FlowcraftWorkflow",
-			"metadata": {"name": "workflow"},
-			"spec": {"prompt": "hello"}
+			"driver": "flowcraft",
+			"flowcraft": {"prompt": "hello"}
 		}
 	}`))
 	if err != nil {
@@ -118,10 +114,11 @@ func TestApplyWorkflowUnchangedSkipsPut(t *testing.T) {
 func TestApplyWorkflowUpdatesResource(t *testing.T) {
 	workflows := newFakeWorkflows()
 	workflows.items["workflow"] = mustWorkflowDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {"name": "workflow"},
-		"spec": {"prompt": "old"}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {"prompt": "old"}
+		}
 	}`)
 	manager := New(Services{Workflows: workflows})
 
@@ -130,10 +127,8 @@ func TestApplyWorkflowUpdatesResource(t *testing.T) {
 		"kind": "Workflow",
 		"metadata": {"name": "workflow"},
 		"spec": {
-			"apiVersion": "gizclaw.flowcraft/v1alpha1",
-			"kind": "FlowcraftWorkflow",
-			"metadata": {"name": "workflow"},
-			"spec": {"prompt": "new"}
+			"driver": "flowcraft",
+			"flowcraft": {"prompt": "new"}
 		}
 	}`))
 	if err != nil {

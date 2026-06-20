@@ -6,6 +6,7 @@ package apitypes
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/oapi-codegen/runtime"
@@ -263,6 +264,39 @@ func (e ACLViewResourceKind) Valid() bool {
 	}
 }
 
+// Defines values for ASTTranslateMode.
+const (
+	ASTTranslateModeS2s ASTTranslateMode = "s2s"
+	ASTTranslateModeS2t ASTTranslateMode = "s2t"
+)
+
+// Valid indicates whether the value is a known member of the ASTTranslateMode enum.
+func (e ASTTranslateMode) Valid() bool {
+	switch e {
+	case ASTTranslateModeS2s:
+		return true
+	case ASTTranslateModeS2t:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ASTTranslateWorkspaceParametersAgentType.
+const (
+	ASTTranslateWorkspaceParametersAgentTypeAstTranslate ASTTranslateWorkspaceParametersAgentType = "ast-translate"
+)
+
+// Valid indicates whether the value is a known member of the ASTTranslateWorkspaceParametersAgentType enum.
+func (e ASTTranslateWorkspaceParametersAgentType) Valid() bool {
+	switch e {
+	case ASTTranslateWorkspaceParametersAgentTypeAstTranslate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ApplyAction.
 const (
 	ApplyActionApplied   ApplyAction = "applied"
@@ -458,21 +492,6 @@ func (e FlowcraftConversationParametersInitiative) Valid() bool {
 	}
 }
 
-// Defines values for FlowcraftWorkflowKind.
-const (
-	FlowcraftWorkflowKindFlowcraftWorkflow FlowcraftWorkflowKind = "FlowcraftWorkflow"
-)
-
-// Valid indicates whether the value is a known member of the FlowcraftWorkflowKind enum.
-func (e FlowcraftWorkflowKind) Valid() bool {
-	switch e {
-	case FlowcraftWorkflowKindFlowcraftWorkflow:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for FlowcraftWorkspaceParametersAgentType.
 const (
 	FlowcraftWorkspaceParametersAgentTypeFlowcraft FlowcraftWorkspaceParametersAgentType = "flowcraft"
@@ -520,11 +539,12 @@ func (e MiniMaxTenantResourceKind) Valid() bool {
 
 // Defines values for ModelKind.
 const (
-	ModelKindAsr       ModelKind = "asr"
-	ModelKindEmbedding ModelKind = "embedding"
-	ModelKindLlm       ModelKind = "llm"
-	ModelKindRealtime  ModelKind = "realtime"
-	ModelKindTts       ModelKind = "tts"
+	ModelKindAsr         ModelKind = "asr"
+	ModelKindEmbedding   ModelKind = "embedding"
+	ModelKindLlm         ModelKind = "llm"
+	ModelKindRealtime    ModelKind = "realtime"
+	ModelKindTranslation ModelKind = "translation"
+	ModelKindTts         ModelKind = "tts"
 )
 
 // Valid indicates whether the value is a known member of the ModelKind enum.
@@ -537,6 +557,8 @@ func (e ModelKind) Valid() bool {
 	case ModelKindLlm:
 		return true
 	case ModelKindRealtime:
+		return true
+	case ModelKindTranslation:
 		return true
 	case ModelKindTts:
 		return true
@@ -1022,15 +1044,21 @@ func (e VolcTenantResourceKind) Valid() bool {
 	}
 }
 
-// Defines values for WorkflowAPIVersion.
+// Defines values for WorkflowDriver.
 const (
-	WorkflowAPIVersionGizclawFlowcraftv1alpha1 WorkflowAPIVersion = "gizclaw.flowcraft/v1alpha1"
+	WorkflowDriverAstTranslate   WorkflowDriver = "ast-translate"
+	WorkflowDriverDoubaoRealtime WorkflowDriver = "doubao-realtime"
+	WorkflowDriverFlowcraft      WorkflowDriver = "flowcraft"
 )
 
-// Valid indicates whether the value is a known member of the WorkflowAPIVersion enum.
-func (e WorkflowAPIVersion) Valid() bool {
+// Valid indicates whether the value is a known member of the WorkflowDriver enum.
+func (e WorkflowDriver) Valid() bool {
 	switch e {
-	case WorkflowAPIVersionGizclawFlowcraftv1alpha1:
+	case WorkflowDriverAstTranslate:
+		return true
+	case WorkflowDriverDoubaoRealtime:
+		return true
+	case WorkflowDriverFlowcraft:
 		return true
 	default:
 		return false
@@ -1202,6 +1230,76 @@ type ACLViewResourceKind string
 type ACLViewSpec struct {
 	Description *string `json:"description,omitempty"`
 }
+
+// ASTTranslateExternalVoiceParameters defines model for ASTTranslateExternalVoiceParameters.
+type ASTTranslateExternalVoiceParameters struct {
+	// TtsVoice GizClaw voice resource name used by an external TTS path.
+	TtsVoice string `json:"tts_voice"`
+}
+
+// ASTTranslateInternalSpeakerParameters defines model for ASTTranslateInternalSpeakerParameters.
+type ASTTranslateInternalSpeakerParameters struct {
+	IsCustomSpeaker *bool `json:"is_custom_speaker,omitempty"`
+
+	// SpeakerId AST s2s built-in or custom speaker id.
+	SpeakerId     string  `json:"speaker_id"`
+	SpeechRate    *int    `json:"speech_rate,omitempty"`
+	TtsResourceId *string `json:"tts_resource_id,omitempty"`
+}
+
+// ASTTranslateMode defines model for ASTTranslateMode.
+type ASTTranslateMode string
+
+// ASTTranslateVoiceParameters defines model for ASTTranslateVoiceParameters.
+type ASTTranslateVoiceParameters struct {
+	union json.RawMessage
+}
+
+// ASTTranslateWorkflowSpec defines model for ASTTranslateWorkflowSpec.
+type ASTTranslateWorkflowSpec struct {
+	// AuthMode Optional AST auth mode. Supported values are x-api-key and v2.
+	AuthMode                   *string           `json:"auth_mode,omitempty"`
+	Denoise                    *bool             `json:"denoise,omitempty"`
+	EnableSourceLanguageDetect *bool             `json:"enable_source_language_detect,omitempty"`
+	IsCustomSpeaker            *bool             `json:"is_custom_speaker,omitempty"`
+	Mode                       *ASTTranslateMode `json:"mode,omitempty"`
+	ResourceId                 *string           `json:"resource_id,omitempty"`
+
+	// SpeakerId Deprecated compatibility field. Prefer voice.speaker_id.
+	SpeakerId  *string `json:"speaker_id,omitempty"`
+	SpeechRate *int    `json:"speech_rate,omitempty"`
+
+	// TranslationModel GizClaw model resource used to resolve the Volc tenant credential for AST translate.
+	TranslationModel string                       `json:"translation_model"`
+	TtsResourceId    *string                      `json:"tts_resource_id,omitempty"`
+	Voice            *ASTTranslateVoiceParameters `json:"voice,omitempty"`
+}
+
+// ASTTranslateWorkspaceParameters defines model for ASTTranslateWorkspaceParameters.
+type ASTTranslateWorkspaceParameters struct {
+	AgentType ASTTranslateWorkspaceParametersAgentType `json:"agent_type"`
+	Denoise   *bool                                    `json:"denoise,omitempty"`
+
+	// E2e Marks seed resources used by the local e2e harness.
+	E2e                        *bool               `json:"e2e,omitempty"`
+	EnableSourceLanguageDetect *bool               `json:"enable_source_language_detect,omitempty"`
+	Input                      *WorkspaceInputMode `json:"input,omitempty"`
+	IsCustomSpeaker            *bool               `json:"is_custom_speaker,omitempty"`
+
+	// LangPair AST language pair, for example zh/en or en/zh. Use auto for automatic Chinese/English mode.
+	LangPair *string           `json:"lang_pair,omitempty"`
+	Mode     *ASTTranslateMode `json:"mode,omitempty"`
+
+	// SpeakerId Deprecated compatibility field. Prefer voice.speaker_id.
+	SpeakerId        *string                      `json:"speaker_id,omitempty"`
+	SpeechRate       *int                         `json:"speech_rate,omitempty"`
+	TranslationModel *string                      `json:"translation_model,omitempty"`
+	TtsResourceId    *string                      `json:"tts_resource_id,omitempty"`
+	Voice            *ASTTranslateVoiceParameters `json:"voice,omitempty"`
+}
+
+// ASTTranslateWorkspaceParametersAgentType defines model for ASTTranslateWorkspaceParameters.AgentType.
+type ASTTranslateWorkspaceParametersAgentType string
 
 // AgentSelection defines model for AgentSelection.
 type AgentSelection struct {
@@ -1404,6 +1502,15 @@ type DoubaoRealtimeVoiceParameters struct {
 	union json.RawMessage
 }
 
+// DoubaoRealtimeWorkflowSpec defines model for DoubaoRealtimeWorkflowSpec.
+type DoubaoRealtimeWorkflowSpec struct {
+	Model                *string                 `json:"model,omitempty"`
+	Realtime             *map[string]interface{} `json:"realtime,omitempty"`
+	RealtimeConfig       *map[string]interface{} `json:"realtime_config,omitempty"`
+	RealtimeModel        *string                 `json:"realtime_model,omitempty"`
+	AdditionalProperties map[string]interface{}  `json:"-"`
+}
+
 // DoubaoRealtimeWorkspaceParameters defines model for DoubaoRealtimeWorkspaceParameters.
 type DoubaoRealtimeWorkspaceParameters struct {
 	AgentType DoubaoRealtimeWorkspaceParametersAgentType `json:"agent_type"`
@@ -1539,17 +1646,6 @@ type FlowcraftConversationParametersAgentInitiativePolicy string
 
 // FlowcraftConversationParametersInitiative Who starts the conversation when the workspace runtime opens.
 type FlowcraftConversationParametersInitiative string
-
-// FlowcraftWorkflow defines model for FlowcraftWorkflow.
-type FlowcraftWorkflow struct {
-	ApiVersion WorkflowAPIVersion    `json:"apiVersion"`
-	Kind       FlowcraftWorkflowKind `json:"kind"`
-	Metadata   WorkflowMetadata      `json:"metadata"`
-	Spec       FlowcraftWorkflowSpec `json:"spec"`
-}
-
-// FlowcraftWorkflowKind defines model for FlowcraftWorkflow.Kind.
-type FlowcraftWorkflowKind string
 
 // FlowcraftWorkflowSpec defines model for FlowcraftWorkflowSpec.
 type FlowcraftWorkflowSpec map[string]interface{}
@@ -2212,16 +2308,21 @@ type VolcTenantVoiceProviderData struct {
 	VoiceId    *string                 `json:"voice_id,omitempty"`
 }
 
-// WorkflowAPIVersion defines model for WorkflowAPIVersion.
-type WorkflowAPIVersion string
-
 // WorkflowDocument defines model for WorkflowDocument.
-type WorkflowDocument = FlowcraftWorkflow
+type WorkflowDocument struct {
+	Metadata WorkflowMetadata `json:"metadata"`
+	Spec     WorkflowSpec     `json:"spec"`
+}
+
+// WorkflowDriver defines model for WorkflowDriver.
+type WorkflowDriver string
 
 // WorkflowMetadata defines model for WorkflowMetadata.
 type WorkflowMetadata struct {
 	Description *string `json:"description,omitempty"`
-	Name        string  `json:"name"`
+
+	// Name Stable workflow ID. The creator must provide this value.
+	Name string `json:"name"`
 }
 
 // WorkflowResource defines model for WorkflowResource.
@@ -2230,11 +2331,19 @@ type WorkflowResource struct {
 	ApiVersion ResourceAPIVersion   `json:"apiVersion"`
 	Kind       WorkflowResourceKind `json:"kind"`
 	Metadata   ResourceMetadata     `json:"metadata"`
-	Spec       WorkflowDocument     `json:"spec"`
+	Spec       WorkflowSpec         `json:"spec"`
 }
 
 // WorkflowResourceKind defines model for WorkflowResource.Kind.
 type WorkflowResourceKind string
+
+// WorkflowSpec defines model for WorkflowSpec.
+type WorkflowSpec struct {
+	AstTranslate   *ASTTranslateWorkflowSpec   `json:"ast_translate,omitempty"`
+	DoubaoRealtime *DoubaoRealtimeWorkflowSpec `json:"doubao_realtime,omitempty"`
+	Driver         WorkflowDriver              `json:"driver"`
+	Flowcraft      *FlowcraftWorkflowSpec      `json:"flowcraft,omitempty"`
+}
 
 // Workspace defines model for Workspace.
 type Workspace struct {
@@ -2272,6 +2381,181 @@ type WorkspaceSpec struct {
 	// Parameters Agent-specific workspace parameters. The shape is selected by agent_type.
 	Parameters   *WorkspaceParameters `json:"parameters,omitempty"`
 	WorkflowName string               `json:"workflow_name"`
+}
+
+// Getter for additional properties for DoubaoRealtimeWorkflowSpec. Returns the specified
+// element and whether it was found
+func (a DoubaoRealtimeWorkflowSpec) Get(fieldName string) (value interface{}, found bool) {
+	if a.AdditionalProperties != nil {
+		value, found = a.AdditionalProperties[fieldName]
+	}
+	return
+}
+
+// Setter for additional properties for DoubaoRealtimeWorkflowSpec
+func (a *DoubaoRealtimeWorkflowSpec) Set(fieldName string, value interface{}) {
+	if a.AdditionalProperties == nil {
+		a.AdditionalProperties = make(map[string]interface{})
+	}
+	a.AdditionalProperties[fieldName] = value
+}
+
+// Override default JSON handling for DoubaoRealtimeWorkflowSpec to handle AdditionalProperties
+func (a *DoubaoRealtimeWorkflowSpec) UnmarshalJSON(b []byte) error {
+	object := make(map[string]json.RawMessage)
+	err := json.Unmarshal(b, &object)
+	if err != nil {
+		return err
+	}
+
+	if raw, found := object["model"]; found {
+		err = json.Unmarshal(raw, &a.Model)
+		if err != nil {
+			return fmt.Errorf("error reading 'model': %w", err)
+		}
+		delete(object, "model")
+	}
+
+	if raw, found := object["realtime"]; found {
+		err = json.Unmarshal(raw, &a.Realtime)
+		if err != nil {
+			return fmt.Errorf("error reading 'realtime': %w", err)
+		}
+		delete(object, "realtime")
+	}
+
+	if raw, found := object["realtime_config"]; found {
+		err = json.Unmarshal(raw, &a.RealtimeConfig)
+		if err != nil {
+			return fmt.Errorf("error reading 'realtime_config': %w", err)
+		}
+		delete(object, "realtime_config")
+	}
+
+	if raw, found := object["realtime_model"]; found {
+		err = json.Unmarshal(raw, &a.RealtimeModel)
+		if err != nil {
+			return fmt.Errorf("error reading 'realtime_model': %w", err)
+		}
+		delete(object, "realtime_model")
+	}
+
+	if len(object) != 0 {
+		a.AdditionalProperties = make(map[string]interface{})
+		for fieldName, fieldBuf := range object {
+			var fieldVal interface{}
+			err := json.Unmarshal(fieldBuf, &fieldVal)
+			if err != nil {
+				return fmt.Errorf("error unmarshaling field %s: %w", fieldName, err)
+			}
+			a.AdditionalProperties[fieldName] = fieldVal
+		}
+	}
+	return nil
+}
+
+// Override default JSON handling for DoubaoRealtimeWorkflowSpec to handle AdditionalProperties
+func (a DoubaoRealtimeWorkflowSpec) MarshalJSON() ([]byte, error) {
+	var err error
+	object := make(map[string]json.RawMessage)
+
+	if a.Model != nil {
+		object["model"], err = json.Marshal(a.Model)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'model': %w", err)
+		}
+	}
+
+	if a.Realtime != nil {
+		object["realtime"], err = json.Marshal(a.Realtime)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'realtime': %w", err)
+		}
+	}
+
+	if a.RealtimeConfig != nil {
+		object["realtime_config"], err = json.Marshal(a.RealtimeConfig)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'realtime_config': %w", err)
+		}
+	}
+
+	if a.RealtimeModel != nil {
+		object["realtime_model"], err = json.Marshal(a.RealtimeModel)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'realtime_model': %w", err)
+		}
+	}
+
+	for fieldName, field := range a.AdditionalProperties {
+		object[fieldName], err = json.Marshal(field)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling '%s': %w", fieldName, err)
+		}
+	}
+	return json.Marshal(object)
+}
+
+// AsASTTranslateInternalSpeakerParameters returns the union data inside the ASTTranslateVoiceParameters as a ASTTranslateInternalSpeakerParameters
+func (t ASTTranslateVoiceParameters) AsASTTranslateInternalSpeakerParameters() (ASTTranslateInternalSpeakerParameters, error) {
+	var body ASTTranslateInternalSpeakerParameters
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromASTTranslateInternalSpeakerParameters overwrites any union data inside the ASTTranslateVoiceParameters as the provided ASTTranslateInternalSpeakerParameters
+func (t *ASTTranslateVoiceParameters) FromASTTranslateInternalSpeakerParameters(v ASTTranslateInternalSpeakerParameters) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeASTTranslateInternalSpeakerParameters performs a merge with any union data inside the ASTTranslateVoiceParameters, using the provided ASTTranslateInternalSpeakerParameters
+func (t *ASTTranslateVoiceParameters) MergeASTTranslateInternalSpeakerParameters(v ASTTranslateInternalSpeakerParameters) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsASTTranslateExternalVoiceParameters returns the union data inside the ASTTranslateVoiceParameters as a ASTTranslateExternalVoiceParameters
+func (t ASTTranslateVoiceParameters) AsASTTranslateExternalVoiceParameters() (ASTTranslateExternalVoiceParameters, error) {
+	var body ASTTranslateExternalVoiceParameters
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromASTTranslateExternalVoiceParameters overwrites any union data inside the ASTTranslateVoiceParameters as the provided ASTTranslateExternalVoiceParameters
+func (t *ASTTranslateVoiceParameters) FromASTTranslateExternalVoiceParameters(v ASTTranslateExternalVoiceParameters) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeASTTranslateExternalVoiceParameters performs a merge with any union data inside the ASTTranslateVoiceParameters, using the provided ASTTranslateExternalVoiceParameters
+func (t *ASTTranslateVoiceParameters) MergeASTTranslateExternalVoiceParameters(v ASTTranslateExternalVoiceParameters) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t ASTTranslateVoiceParameters) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *ASTTranslateVoiceParameters) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
 }
 
 // AsOpenAICredentialBody returns the union data inside the CredentialBody as a OpenAICredentialBody
@@ -3355,6 +3639,34 @@ func (t *WorkspaceParameters) MergeDoubaoRealtimeWorkspaceParameters(v DoubaoRea
 	return err
 }
 
+// AsASTTranslateWorkspaceParameters returns the union data inside the WorkspaceParameters as a ASTTranslateWorkspaceParameters
+func (t WorkspaceParameters) AsASTTranslateWorkspaceParameters() (ASTTranslateWorkspaceParameters, error) {
+	var body ASTTranslateWorkspaceParameters
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromASTTranslateWorkspaceParameters overwrites any union data inside the WorkspaceParameters as the provided ASTTranslateWorkspaceParameters
+func (t *WorkspaceParameters) FromASTTranslateWorkspaceParameters(v ASTTranslateWorkspaceParameters) error {
+	v.AgentType = "ast-translate"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeASTTranslateWorkspaceParameters performs a merge with any union data inside the WorkspaceParameters, using the provided ASTTranslateWorkspaceParameters
+func (t *WorkspaceParameters) MergeASTTranslateWorkspaceParameters(v ASTTranslateWorkspaceParameters) error {
+	v.AgentType = "ast-translate"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t WorkspaceParameters) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"agent_type"`
@@ -3369,6 +3681,8 @@ func (t WorkspaceParameters) ValueByDiscriminator() (interface{}, error) {
 		return nil, err
 	}
 	switch discriminator {
+	case "ast-translate":
+		return t.AsASTTranslateWorkspaceParameters()
 	case "doubao-realtime":
 		return t.AsDoubaoRealtimeWorkspaceParameters()
 	case "flowcraft":

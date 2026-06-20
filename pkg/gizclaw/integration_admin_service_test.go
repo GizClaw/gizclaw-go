@@ -17,20 +17,21 @@ func TestIntegrationAdminServiceWorkflowLifecycle(t *testing.T) {
 	ensureAdminPeer(t, ts, admin, apitypes.DeviceInfo{Name: strPtr("admin")})
 
 	createDoc := mustWorkflowDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "demo-assistant",
 			"description": "flowcraft workflow"
 		},
-		"spec": {}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
 	}`)
 	created, err := createWorkflow(context.Background(), admin, createDoc)
 	if err != nil {
 		t.Fatalf("CreateWorkflow error: %v", err)
 	}
-	if created.Kind != apitypes.FlowcraftWorkflowKindFlowcraftWorkflow {
-		t.Fatalf("CreateWorkflow kind = %q", created.Kind)
+	if created.Spec.Driver != apitypes.WorkflowDriverFlowcraft {
+		t.Fatalf("CreateWorkflow driver = %q", created.Spec.Driver)
 	}
 
 	items, err := listWorkflows(context.Background(), admin)
@@ -50,15 +51,16 @@ func TestIntegrationAdminServiceWorkflowLifecycle(t *testing.T) {
 	}
 
 	updateDoc := mustWorkflowDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "demo-assistant",
 			"description": "updated description"
 		},
 		"spec": {
-			"runtime": {
-				"executor_ref": "local"
+			"driver": "flowcraft",
+			"flowcraft": {
+				"runtime": {
+					"executor_ref": "local"
+				}
 			}
 		}
 	}`)
@@ -85,12 +87,13 @@ func TestIntegrationAdminServiceWorkspaceLifecycle(t *testing.T) {
 	ensureAdminPeer(t, ts, admin, apitypes.DeviceInfo{Name: strPtr("admin")})
 
 	workflowDoc := mustWorkflowDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "demo-workflow"
 		},
-		"spec": {}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
 	}`)
 	if _, err := createWorkflow(context.Background(), admin, workflowDoc); err != nil {
 		t.Fatalf("CreateWorkflow error: %v", err)

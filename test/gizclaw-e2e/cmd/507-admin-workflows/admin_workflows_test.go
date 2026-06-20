@@ -28,8 +28,8 @@ func TestAdminWorkflowsUserStory(t *testing.T) {
 
 	get := h.RunCLI("admin", "workflows", "get", "demo-assistant", "--context", "admin-a")
 	get.MustSucceed(t)
-	if !strings.Contains(get.Stdout, `"kind":"FlowcraftWorkflow"`) {
-		t.Fatalf("workflows get missing kind:\n%s", get.Stdout)
+	if !strings.Contains(get.Stdout, `"driver":"flowcraft"`) {
+		t.Fatalf("workflows get missing driver:\n%s", get.Stdout)
 	}
 }
 
@@ -62,17 +62,18 @@ func workflowDocument(t *testing.T, name, description string) apitypes.WorkflowD
 	t.Helper()
 
 	return apitypes.WorkflowDocument{
-		ApiVersion: apitypes.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       apitypes.FlowcraftWorkflowKindFlowcraftWorkflow,
 		Metadata: apitypes.WorkflowMetadata{
 			Name:        name,
 			Description: ptr(description),
 		},
-		Spec: apitypes.FlowcraftWorkflowSpec{
-			"workspace_layout": map[string]interface{}{},
-			"runtime":          map[string]interface{}{},
-			"agents":           []interface{}{},
-			"entry_agent":      "",
+		Spec: apitypes.WorkflowSpec{
+			Driver: apitypes.WorkflowDriverFlowcraft,
+			Flowcraft: &apitypes.FlowcraftWorkflowSpec{
+				"workspace_layout": map[string]interface{}{},
+				"runtime":          map[string]interface{}{},
+				"agents":           []interface{}{},
+				"entry_agent":      "",
+			},
 		},
 	}
 }

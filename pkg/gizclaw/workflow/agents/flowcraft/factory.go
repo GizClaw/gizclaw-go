@@ -101,14 +101,24 @@ type voiceAdapterConfig struct {
 }
 
 func parseWorkflowConfig(spec agenthost.Spec) (workflowConfig, error) {
-	data, err := json.Marshal(spec.Workflow)
+	flowcraft := spec.Workflow.Spec.Flowcraft
+	if flowcraft == nil {
+		return workflowConfig{}, fmt.Errorf("flowcraft: workflow spec.flowcraft is required")
+	}
+	data, err := json.Marshal(flowcraft)
 	if err != nil {
 		return workflowConfig{}, fmt.Errorf("flowcraft: encode workflow: %w", err)
 	}
-	var cfg workflowConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
+	var raw struct {
+		Flowcraft    map[string]any     `json:"flowcraft"`
+		VoiceAdapter voiceAdapterConfig `json:"voice_adapter"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
 		return workflowConfig{}, fmt.Errorf("flowcraft: decode workflow: %w", err)
 	}
+	cfg := workflowConfig{}
+	cfg.Spec.Flowcraft = raw.Flowcraft
+	cfg.Spec.VoiceAdapter = raw.VoiceAdapter
 	cfg.Spec.VoiceAdapter.ASRModel = strings.TrimSpace(cfg.Spec.VoiceAdapter.ASRModel)
 	cfg.Spec.VoiceAdapter.DefaultVoice = strings.TrimSpace(cfg.Spec.VoiceAdapter.DefaultVoice)
 	for rawNodeID, voice := range cfg.Spec.VoiceAdapter.NodeVoices {

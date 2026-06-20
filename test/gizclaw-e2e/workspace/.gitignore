@@ -2,4 +2,5 @@
 *.env
 config/*.json
 !config/*.example.json
+!config/ast-translate*.json
 out/

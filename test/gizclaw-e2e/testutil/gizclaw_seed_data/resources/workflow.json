@@ -5,12 +5,7 @@
     "name": "ui-seed-workflow"
   },
   "spec": {
-    "apiVersion": "gizclaw.flowcraft/v1alpha1",
-    "kind": "FlowcraftWorkflow",
-    "metadata": {
-      "name": "ui-seed-workflow",
-      "description": "Seeded workflow for UI real-service tests"
-    },
-    "spec": {}
+    "driver": "flowcraft",
+    "flowcraft": {}
   }
 }

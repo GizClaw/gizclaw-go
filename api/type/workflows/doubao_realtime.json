@@ -1,0 +1,33 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Doubao Realtime Workflow Type",
+    "description": "DoubaoRealtimeWorkflowSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "DoubaoRealtimeWorkflowSpec": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "realtime_model": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "realtime": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "realtime_config": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  }
+}

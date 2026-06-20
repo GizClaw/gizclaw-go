@@ -158,8 +158,6 @@ func workflowDocument(cfg config) rpcapi.WorkflowCreateRequest {
 	}
 	spec := workflowSpec(cfg)
 	return rpcapi.WorkflowCreateRequest{
-		ApiVersion: "gizclaw.flowcraft/v1alpha1",
-		Kind:       "FlowcraftWorkflow",
 		Metadata: rpcapi.WorkflowMetadata{
 			Name:        cfg.Workflow.Name,
 			Description: &description,
@@ -168,33 +166,66 @@ func workflowDocument(cfg config) rpcapi.WorkflowCreateRequest {
 	}
 }
 
-func workflowSpec(cfg config) map[string]interface{} {
+func workflowSpec(cfg config) rpcapi.WorkflowSpec {
 	if cfg.isFlowcraftAgent() {
-		return map[string]interface{}{
-			"flowcraft": cfg.Workflow.Flowcraft,
-			"voice_adapter": map[string]interface{}{
-				"asr_model":     cfg.Workflow.VoiceAdapter.ASRModel,
-				"default_voice": cfg.Workflow.VoiceAdapter.DefaultVoice,
-				"node_voices":   cfg.Workflow.VoiceAdapter.NodeVoices,
-			},
+		flowcraft := cloneFlowcraftWorkflowSpec(cfg.Workflow.Flowcraft)
+		flowcraft["voice_adapter"] = map[string]interface{}{
+			"asr_model":     cfg.Workflow.VoiceAdapter.ASRModel,
+			"default_voice": cfg.Workflow.VoiceAdapter.DefaultVoice,
+			"node_voices":   cfg.Workflow.VoiceAdapter.NodeVoices,
+		}
+		return rpcapi.WorkflowSpec{
+			Driver:    rpcapi.WorkflowDriverFlowcraft,
+			Flowcraft: &flowcraft,
 		}
 	}
-	return map[string]interface{}{
-		"realtime_model": cfg.Workflow.RealtimeModel,
-		"realtime": map[string]interface{}{
-			"session": map[string]interface{}{
-				"auth_mode":     cfg.Workflow.Session.AuthMode,
-				"bot_name":      cfg.Workflow.Session.BotName,
-				"model":         cfg.Workflow.Session.Model,
-				"resource_id":   cfg.Workflow.Session.ResourceID,
-				"system_role":   cfg.Workflow.Session.SystemRole,
-				"vad_window_ms": cfg.Workflow.Session.VADWindowMS,
-			},
-			"output": map[string]interface{}{
-				"speaker": cfg.Workflow.Output.Speaker,
-			},
+	if cfg.isASTTranslateAgent() {
+		spec := rpcapi.ASTTranslateWorkflowSpec{
+			TranslationModel: cfg.Workflow.Translation,
+			Mode:             optionalASTTranslateMode(cfg.Workflow.ASTTranslate.Mode),
+			Voice:            astTranslateVoiceParams(cfg.Workflow.ASTTranslate.Voice),
+			SpeakerId:        optionalString(cfg.Workflow.ASTTranslate.SpeakerID),
+			IsCustomSpeaker:  cfg.Workflow.ASTTranslate.IsCustomSpeaker,
+			TtsResourceId:    optionalString(cfg.Workflow.ASTTranslate.TTSResourceID),
+			SpeechRate:       cfg.Workflow.ASTTranslate.SpeechRate,
+			Denoise:          cfg.Workflow.ASTTranslate.Denoise,
+			ResourceId:       optionalString(cfg.Workflow.ASTTranslate.ResourceID),
+			AuthMode:         optionalString(cfg.Workflow.ASTTranslate.AuthMode),
+		}
+		spec.EnableSourceLanguageDetect = cfg.Workflow.ASTTranslate.EnableSourceLanguageDetect
+		return rpcapi.WorkflowSpec{
+			Driver:       rpcapi.WorkflowDriverAstTranslate,
+			AstTranslate: &spec,
+		}
+	}
+	realtime := map[string]interface{}{
+		"session": map[string]interface{}{
+			"auth_mode":     cfg.Workflow.Session.AuthMode,
+			"bot_name":      cfg.Workflow.Session.BotName,
+			"model":         cfg.Workflow.Session.Model,
+			"resource_id":   cfg.Workflow.Session.ResourceID,
+			"system_role":   cfg.Workflow.Session.SystemRole,
+			"vad_window_ms": cfg.Workflow.Session.VADWindowMS,
+		},
+		"output": map[string]interface{}{
+			"speaker": cfg.Workflow.Output.Speaker,
 		},
 	}
+	return rpcapi.WorkflowSpec{
+		Driver: rpcapi.WorkflowDriverDoubaoRealtime,
+		DoubaoRealtime: &rpcapi.DoubaoRealtimeWorkflowSpec{
+			RealtimeModel: optionalString(cfg.Workflow.RealtimeModel),
+			Realtime:      &realtime,
+		},
+	}
+}
+
+func cloneFlowcraftWorkflowSpec(in map[string]interface{}) rpcapi.FlowcraftWorkflowSpec {
+	out := make(rpcapi.FlowcraftWorkflowSpec, len(in)+1)
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
 }
 
 func workspaceDocument(cfg config) (rpcapi.WorkspaceCreateRequest, error) {
@@ -214,6 +245,7 @@ func workspaceParameters(cfg config) (*rpcapi.WorkspaceParameters, error) {
 		typed := rpcapi.FlowcraftWorkspaceParameters{
 			AgentType:      rpcapi.FlowcraftWorkspaceParametersAgentTypeFlowcraft,
 			E2e:            cfg.Workflow.Parameters.E2E,
+			Input:          optionalWorkspaceInputMode(cfg.Workflow.Parameters.Input),
 			GenerateModel:  optionalString(cfg.Workflow.Parameters.GenerateModel),
 			ExtractModel:   optionalString(cfg.Workflow.Parameters.ExtractModel),
 			EmbeddingModel: optionalString(cfg.Workflow.Parameters.EmbeddingModel),
@@ -224,10 +256,33 @@ func workspaceParameters(cfg config) (*rpcapi.WorkspaceParameters, error) {
 		}
 		return &params, nil
 	}
+	if cfg.isASTTranslateAgent() {
+		typed := rpcapi.ASTTranslateWorkspaceParameters{
+			AgentType:                  rpcapi.ASTTranslateWorkspaceParametersAgentTypeAstTranslate,
+			E2e:                        cfg.Workflow.Parameters.E2E,
+			Input:                      optionalWorkspaceInputMode(cfg.Workflow.Parameters.Input),
+			TranslationModel:           optionalString(cfg.Workflow.Parameters.TranslationModel),
+			LangPair:                   optionalString(cfg.Workflow.Parameters.LangPair),
+			Mode:                       optionalASTTranslateMode(cfg.Workflow.Parameters.Mode),
+			Voice:                      astTranslateVoiceParams(cfg.Workflow.Parameters.Voice),
+			SpeakerId:                  optionalString(cfg.Workflow.Parameters.SpeakerID),
+			IsCustomSpeaker:            cfg.Workflow.Parameters.IsCustomSpeaker,
+			TtsResourceId:              optionalString(cfg.Workflow.Parameters.TTSResourceID),
+			SpeechRate:                 cfg.Workflow.Parameters.SpeechRate,
+			EnableSourceLanguageDetect: cfg.Workflow.Parameters.EnableSourceLanguageDetect,
+			Denoise:                    cfg.Workflow.Parameters.Denoise,
+		}
+		var params rpcapi.WorkspaceParameters
+		if err := params.FromASTTranslateWorkspaceParameters(typed); err != nil {
+			return nil, fmt.Errorf("build ast translate workspace parameters: %w", err)
+		}
+		return &params, nil
+	}
 
 	typed := rpcapi.DoubaoRealtimeWorkspaceParameters{
 		AgentType:     rpcapi.DoubaoRealtimeWorkspaceParametersAgentTypeDoubaoRealtime,
 		E2e:           cfg.Workflow.Parameters.E2E,
+		Input:         optionalWorkspaceInputMode(cfg.Workflow.Parameters.Input),
 		RealtimeModel: optionalString(cfg.Workflow.RealtimeModel),
 	}
 	var params rpcapi.WorkspaceParameters
@@ -242,6 +297,48 @@ func optionalString(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+func optionalWorkspaceInputMode(value string) *rpcapi.WorkspaceInputMode {
+	if value == "" {
+		return nil
+	}
+	mode := rpcapi.WorkspaceInputMode(value)
+	return &mode
+}
+
+func optionalASTTranslateMode(value string) *rpcapi.ASTTranslateMode {
+	if value == "" {
+		return nil
+	}
+	mode := rpcapi.ASTTranslateMode(value)
+	return &mode
+}
+
+func astTranslateVoiceParams(value astTranslateVoiceConfig) *rpcapi.ASTTranslateVoiceParameters {
+	var voice rpcapi.ASTTranslateVoiceParameters
+	switch {
+	case value.SpeakerID != "":
+		typed := rpcapi.ASTTranslateInternalSpeakerParameters{
+			SpeakerId:       value.SpeakerID,
+			IsCustomSpeaker: value.IsCustomSpeaker,
+			TtsResourceId:   optionalString(value.TTSResourceID),
+			SpeechRate:      value.SpeechRate,
+		}
+		if err := voice.FromASTTranslateInternalSpeakerParameters(typed); err != nil {
+			return nil
+		}
+		return &voice
+	case value.TTSVoice != "":
+		if err := voice.FromASTTranslateExternalVoiceParameters(rpcapi.ASTTranslateExternalVoiceParameters{
+			TtsVoice: value.TTSVoice,
+		}); err != nil {
+			return nil
+		}
+		return &voice
+	default:
+		return nil
+	}
 }
 
 func isRPCConflict(err error) bool {

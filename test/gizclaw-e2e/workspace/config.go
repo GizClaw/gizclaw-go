@@ -37,28 +37,42 @@ type serverConfig struct {
 }
 
 type modelConfig struct {
-	LLM      string `json:"llm" yaml:"llm"`
-	TTS      string `json:"tts" yaml:"tts"`
-	ASR      string `json:"asr" yaml:"asr"`
-	Realtime string `json:"realtime" yaml:"realtime"`
+	LLM         string `json:"llm" yaml:"llm"`
+	TTS         string `json:"tts" yaml:"tts"`
+	ASR         string `json:"asr" yaml:"asr"`
+	Realtime    string `json:"realtime" yaml:"realtime"`
+	Translation string `json:"translation" yaml:"translation"`
 }
 
 type workflowConfig struct {
 	Name          string                   `json:"name"`
 	Description   string                   `json:"description,omitempty"`
 	RealtimeModel string                   `json:"realtime_model"`
+	Translation   string                   `json:"translation_model,omitempty"`
 	Parameters    workspaceParameterConfig `json:"parameters,omitempty"`
 	Session       realtimeSessionConfig    `json:"session"`
 	Output        realtimeOutputConfig     `json:"output"`
 	Flowcraft     map[string]interface{}   `json:"flowcraft,omitempty"`
 	VoiceAdapter  voiceAdapterConfig       `json:"voice_adapter,omitempty"`
+	ASTTranslate  astTranslateConfig       `json:"ast_translate,omitempty"`
 }
 
 type workspaceParameterConfig struct {
-	E2E            *bool  `json:"e2e,omitempty"`
-	GenerateModel  string `json:"generate_model,omitempty"`
-	ExtractModel   string `json:"extract_model,omitempty"`
-	EmbeddingModel string `json:"embedding_model,omitempty"`
+	E2E                        *bool                   `json:"e2e,omitempty"`
+	Input                      string                  `json:"input,omitempty"`
+	GenerateModel              string                  `json:"generate_model,omitempty"`
+	ExtractModel               string                  `json:"extract_model,omitempty"`
+	EmbeddingModel             string                  `json:"embedding_model,omitempty"`
+	TranslationModel           string                  `json:"translation_model,omitempty"`
+	LangPair                   string                  `json:"lang_pair,omitempty"`
+	Mode                       string                  `json:"mode,omitempty"`
+	Voice                      astTranslateVoiceConfig `json:"voice,omitempty"`
+	SpeakerID                  string                  `json:"speaker_id,omitempty"`
+	IsCustomSpeaker            *bool                   `json:"is_custom_speaker,omitempty"`
+	TTSResourceID              string                  `json:"tts_resource_id,omitempty"`
+	SpeechRate                 *int                    `json:"speech_rate,omitempty"`
+	EnableSourceLanguageDetect *bool                   `json:"enable_source_language_detect,omitempty"`
+	Denoise                    *bool                   `json:"denoise,omitempty"`
 }
 
 type realtimeSessionConfig struct {
@@ -78,6 +92,27 @@ type voiceAdapterConfig struct {
 	ASRModel     string            `json:"asr_model,omitempty"`
 	DefaultVoice string            `json:"default_voice,omitempty"`
 	NodeVoices   map[string]string `json:"node_voices,omitempty"`
+}
+
+type astTranslateConfig struct {
+	Mode                       string                  `json:"mode,omitempty"`
+	Voice                      astTranslateVoiceConfig `json:"voice,omitempty"`
+	SpeakerID                  string                  `json:"speaker_id,omitempty"`
+	IsCustomSpeaker            *bool                   `json:"is_custom_speaker,omitempty"`
+	TTSResourceID              string                  `json:"tts_resource_id,omitempty"`
+	SpeechRate                 *int                    `json:"speech_rate,omitempty"`
+	EnableSourceLanguageDetect *bool                   `json:"enable_source_language_detect,omitempty"`
+	Denoise                    *bool                   `json:"denoise,omitempty"`
+	ResourceID                 string                  `json:"resource_id,omitempty"`
+	AuthMode                   string                  `json:"auth_mode,omitempty"`
+}
+
+type astTranslateVoiceConfig struct {
+	SpeakerID       string `json:"speaker_id,omitempty"`
+	IsCustomSpeaker *bool  `json:"is_custom_speaker,omitempty"`
+	TTSResourceID   string `json:"tts_resource_id,omitempty"`
+	SpeechRate      *int   `json:"speech_rate,omitempty"`
+	TTSVoice        string `json:"tts_voice,omitempty"`
 }
 
 type setupContextConfig struct {
@@ -181,9 +216,21 @@ func (c *config) validate() error {
 	c.Models.TTS = strings.TrimSpace(c.Models.TTS)
 	c.Models.ASR = strings.TrimSpace(c.Models.ASR)
 	c.Models.Realtime = strings.TrimSpace(c.Models.Realtime)
+	c.Models.Translation = strings.TrimSpace(c.Models.Translation)
 	c.Workflow.Name = strings.TrimSpace(c.Workflow.Name)
 	c.Workflow.Description = strings.TrimSpace(c.Workflow.Description)
 	c.Workflow.RealtimeModel = strings.TrimSpace(c.Workflow.RealtimeModel)
+	c.Workflow.Translation = strings.TrimSpace(c.Workflow.Translation)
+	c.Workflow.Parameters.Input = strings.TrimSpace(c.Workflow.Parameters.Input)
+	c.Workflow.Parameters.GenerateModel = strings.TrimSpace(c.Workflow.Parameters.GenerateModel)
+	c.Workflow.Parameters.ExtractModel = strings.TrimSpace(c.Workflow.Parameters.ExtractModel)
+	c.Workflow.Parameters.EmbeddingModel = strings.TrimSpace(c.Workflow.Parameters.EmbeddingModel)
+	c.Workflow.Parameters.TranslationModel = strings.TrimSpace(c.Workflow.Parameters.TranslationModel)
+	c.Workflow.Parameters.LangPair = strings.TrimSpace(c.Workflow.Parameters.LangPair)
+	c.Workflow.Parameters.Mode = strings.TrimSpace(c.Workflow.Parameters.Mode)
+	c.Workflow.Parameters.SpeakerID = strings.TrimSpace(c.Workflow.Parameters.SpeakerID)
+	c.Workflow.Parameters.TTSResourceID = strings.TrimSpace(c.Workflow.Parameters.TTSResourceID)
+	c.Workflow.Parameters.Voice.trim()
 	c.Workflow.Session.AuthMode = strings.TrimSpace(c.Workflow.Session.AuthMode)
 	c.Workflow.Session.BotName = strings.TrimSpace(c.Workflow.Session.BotName)
 	c.Workflow.Session.Model = strings.TrimSpace(c.Workflow.Session.Model)
@@ -192,6 +239,12 @@ func (c *config) validate() error {
 	c.Workflow.Output.Speaker = strings.TrimSpace(c.Workflow.Output.Speaker)
 	c.Workflow.VoiceAdapter.ASRModel = strings.TrimSpace(c.Workflow.VoiceAdapter.ASRModel)
 	c.Workflow.VoiceAdapter.DefaultVoice = strings.TrimSpace(c.Workflow.VoiceAdapter.DefaultVoice)
+	c.Workflow.ASTTranslate.Mode = strings.TrimSpace(c.Workflow.ASTTranslate.Mode)
+	c.Workflow.ASTTranslate.SpeakerID = strings.TrimSpace(c.Workflow.ASTTranslate.SpeakerID)
+	c.Workflow.ASTTranslate.TTSResourceID = strings.TrimSpace(c.Workflow.ASTTranslate.TTSResourceID)
+	c.Workflow.ASTTranslate.ResourceID = strings.TrimSpace(c.Workflow.ASTTranslate.ResourceID)
+	c.Workflow.ASTTranslate.AuthMode = strings.TrimSpace(c.Workflow.ASTTranslate.AuthMode)
+	c.Workflow.ASTTranslate.Voice.trim()
 	for rawNodeID, voice := range c.Workflow.VoiceAdapter.NodeVoices {
 		nodeID := strings.TrimSpace(rawNodeID)
 		voice = strings.TrimSpace(voice)
@@ -233,11 +286,17 @@ func (c *config) validate() error {
 	if c.Models.ASR == "" {
 		return fmt.Errorf("models.asr is required")
 	}
-	if !c.isFlowcraftAgent() && c.Models.Realtime == "" {
+	if c.isDoubaoRealtimeAgent() && c.Models.Realtime == "" {
 		return fmt.Errorf("models.realtime is required")
+	}
+	if c.isASTTranslateAgent() && c.Models.Translation == "" {
+		return fmt.Errorf("models.translation is required")
 	}
 	if c.Workflow.RealtimeModel == "" {
 		c.Workflow.RealtimeModel = c.Models.Realtime
+	}
+	if c.Workflow.Translation == "" {
+		c.Workflow.Translation = c.Models.Translation
 	}
 	if c.Workflow.Session.AuthMode == "" {
 		c.Workflow.Session.AuthMode = "v2"
@@ -271,6 +330,17 @@ func (c *config) validate() error {
 			c.Workflow.Parameters.GenerateModel = c.Models.LLM
 		}
 	}
+	if c.isASTTranslateAgent() {
+		if c.Workflow.ASTTranslate.Mode == "" {
+			c.Workflow.ASTTranslate.Mode = "s2s"
+		}
+		if c.Workflow.ASTTranslate.AuthMode == "" {
+			c.Workflow.ASTTranslate.AuthMode = "v2"
+		}
+		if c.Workflow.Parameters.TranslationModel == "" {
+			c.Workflow.Parameters.TranslationModel = c.Workflow.Translation
+		}
+	}
 	if c.Voice == "" {
 		return fmt.Errorf("voice is required")
 	}
@@ -302,6 +372,20 @@ func (c *config) validate() error {
 
 func (c config) isFlowcraftAgent() bool {
 	return c.Agent == "flowcraft"
+}
+
+func (c config) isDoubaoRealtimeAgent() bool {
+	return c.Agent == "doubao-realtime"
+}
+
+func (c config) isASTTranslateAgent() bool {
+	return c.Agent == "ast-translate"
+}
+
+func (v *astTranslateVoiceConfig) trim() {
+	v.SpeakerID = strings.TrimSpace(v.SpeakerID)
+	v.TTSResourceID = strings.TrimSpace(v.TTSResourceID)
+	v.TTSVoice = strings.TrimSpace(v.TTSVoice)
 }
 
 func normalizeCipherMode(mode string) string {

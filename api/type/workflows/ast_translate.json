@@ -1,0 +1,110 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "AST Translate Workflow Type",
+    "description": "AstTranslateWorkflowSpec schema.",
+    "version": "1.0.0"
+  },
+  "paths": {},
+  "components": {
+    "schemas": {
+      "ASTTranslateMode": {
+        "type": "string",
+        "enum": [
+          "s2t",
+          "s2s"
+        ]
+      },
+      "ASTTranslateWorkflowSpec": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "translation_model"
+        ],
+        "properties": {
+          "translation_model": {
+            "type": "string",
+            "description": "GizClaw model resource used to resolve the Volc tenant credential for AST translate."
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ASTTranslateMode"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/ASTTranslateVoiceParameters"
+          },
+          "speaker_id": {
+            "type": "string",
+            "description": "Deprecated compatibility field. Prefer voice.speaker_id."
+          },
+          "is_custom_speaker": {
+            "type": "boolean"
+          },
+          "tts_resource_id": {
+            "type": "string"
+          },
+          "speech_rate": {
+            "type": "integer"
+          },
+          "enable_source_language_detect": {
+            "type": "boolean"
+          },
+          "denoise": {
+            "type": "boolean"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "auth_mode": {
+            "type": "string",
+            "description": "Optional AST auth mode. Supported values are x-api-key and v2."
+          }
+        }
+      },
+      "ASTTranslateVoiceParameters": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ASTTranslateInternalSpeakerParameters"
+          },
+          {
+            "$ref": "#/components/schemas/ASTTranslateExternalVoiceParameters"
+          }
+        ]
+      },
+      "ASTTranslateInternalSpeakerParameters": {
+        "type": "object",
+        "required": [
+          "speaker_id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "speaker_id": {
+            "type": "string",
+            "description": "AST s2s built-in or custom speaker id."
+          },
+          "is_custom_speaker": {
+            "type": "boolean"
+          },
+          "tts_resource_id": {
+            "type": "string"
+          },
+          "speech_rate": {
+            "type": "integer"
+          }
+        }
+      },
+      "ASTTranslateExternalVoiceParameters": {
+        "type": "object",
+        "required": [
+          "tts_voice"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "tts_voice": {
+            "type": "string",
+            "description": "GizClaw voice resource name used by an external TTS path."
+          }
+        }
+      }
+    }
+  }
+}

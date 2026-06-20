@@ -15,7 +15,7 @@ func adminCredentialsListStories() []Story {
 			page.ExpectText("Credentials")
 			page.ExpectText(SeedCredentialName)
 			page.ExpectText("minimax")
-			page.ExpectText("api_key")
+			page.ExpectText("Body Keys")
 			page.ExpectText("Refresh")
 		},
 	}, {

@@ -90,7 +90,7 @@ func TestServiceResolverResolvesWorkspaceAndWorkflow(t *testing.T) {
 	}
 }
 
-func TestServiceResolverUsesWorkflowAPIVersionAsAgentType(t *testing.T) {
+func TestServiceResolverUsesWorkflowDriverAsAgentType(t *testing.T) {
 	resolver := ServiceResolver{
 		Workspaces: fakeWorkspaceService{items: map[string]apitypes.Workspace{
 			"demo": {Name: "demo", WorkflowName: "workflow-1"},
@@ -109,29 +109,29 @@ func TestServiceResolverUsesWorkflowAPIVersionAsAgentType(t *testing.T) {
 	}
 }
 
-func TestAgentTypeFromWorkflowAPIVersion(t *testing.T) {
+func TestAgentTypeFromWorkflowDriver(t *testing.T) {
 	for _, tc := range []struct {
-		apiVersion string
-		want       string
+		driver string
+		want   string
 	}{
-		{apiVersion: "gizclaw.flowcraft/v1alpha1", want: "flowcraft"},
-		{apiVersion: "gizclaw.intercom/v1alpha1", want: "intercom"},
+		{driver: "flowcraft", want: "flowcraft"},
+		{driver: "doubao-realtime", want: "doubao-realtime"},
 	} {
-		doc := rawWorkflow(t, tc.apiVersion)
+		doc := rawWorkflow(t, tc.driver)
 		got, err := agentTypeFromWorkflow(doc)
 		if err != nil {
-			t.Fatalf("agentTypeFromWorkflow(%q) error = %v", tc.apiVersion, err)
+			t.Fatalf("agentTypeFromWorkflow(%q) error = %v", tc.driver, err)
 		}
 		if got != tc.want {
-			t.Fatalf("agentTypeFromWorkflow(%q) = %q, want %q", tc.apiVersion, got, tc.want)
+			t.Fatalf("agentTypeFromWorkflow(%q) = %q, want %q", tc.driver, got, tc.want)
 		}
 	}
 
 	if _, err := agentTypeFromWorkflow(rawWorkflow(t, "bad")); err == nil || !strings.Contains(err.Error(), "unsupported") {
-		t.Fatalf("unsupported apiVersion error = %v", err)
+		t.Fatalf("unsupported driver error = %v", err)
 	}
-	if _, err := agentTypeFromWorkflow(rawWorkflow(t, "")); err == nil || !strings.Contains(err.Error(), "apiVersion is required") {
-		t.Fatalf("empty apiVersion error = %v", err)
+	if _, err := agentTypeFromWorkflow(rawWorkflow(t, "")); err == nil || !strings.Contains(err.Error(), "spec.driver is required") {
+		t.Fatalf("empty driver error = %v", err)
 	}
 }
 
@@ -402,16 +402,19 @@ func mustWorkflow(t *testing.T, name string) apitypes.WorkflowDocument {
 	t.Helper()
 
 	return apitypes.WorkflowDocument{
-		ApiVersion: apitypes.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       apitypes.FlowcraftWorkflowKindFlowcraftWorkflow,
-		Metadata:   apitypes.WorkflowMetadata{Name: name},
-		Spec:       map[string]interface{}{"nodes": []interface{}{}},
+		Metadata: apitypes.WorkflowMetadata{Name: name},
+		Spec: apitypes.WorkflowSpec{
+			Driver: apitypes.WorkflowDriverFlowcraft,
+			Flowcraft: &apitypes.FlowcraftWorkflowSpec{
+				"nodes": []interface{}{},
+			},
+		},
 	}
 }
 
-func rawWorkflow(t *testing.T, apiVersion string) apitypes.WorkflowDocument {
+func rawWorkflow(t *testing.T, driver string) apitypes.WorkflowDocument {
 	t.Helper()
-	data := []byte(`{"apiVersion":"` + apiVersion + `","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}`)
+	data := []byte(`{"metadata":{"name":"workflow"},"spec":{"driver":"` + driver + `"}}`)
 	var doc apitypes.WorkflowDocument
 	if err := json.Unmarshal(data, &doc); err != nil {
 		t.Fatalf("unmarshal raw workflow: %v", err)

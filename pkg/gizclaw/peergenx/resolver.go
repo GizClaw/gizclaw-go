@@ -163,7 +163,7 @@ func (s *Service) ResolveTransformer(ctx context.Context, pattern string) (Trans
 		return TransformerConfig{}, err
 	}
 	switch model.Kind {
-	case apitypes.ModelKindAsr, apitypes.ModelKindTts, apitypes.ModelKindRealtime:
+	case apitypes.ModelKindAsr, apitypes.ModelKindTts, apitypes.ModelKindRealtime, apitypes.ModelKindTranslation:
 	default:
 		return TransformerConfig{}, fmt.Errorf("%w: model %q kind %q is not a transformer", ErrInvalid, model.Id, model.Kind)
 	}

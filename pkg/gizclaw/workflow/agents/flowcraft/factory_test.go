@@ -182,18 +182,16 @@ func TestFactoryNewAgentWritesClawConfig(t *testing.T) {
 		ProviderTenants: fakeTenants{events: &events},
 	})
 	params := map[string]any{"generate_model": "chat"}
-	workflow := apitypes.WorkflowDocument{
-		Spec: apitypes.FlowcraftWorkflowSpec{
-			"flowcraft": map[string]any{
-				"history": map[string]any{"enabled": false},
-				"memory":  map[string]any{"enabled": false},
-			},
-			"voice_adapter": map[string]any{
-				"asr_model":     "asr",
-				"default_voice": "voice",
-			},
+	workflow := testFlowcraftWorkflow(map[string]any{
+		"flowcraft": map[string]any{
+			"history": map[string]any{"enabled": false},
+			"memory":  map[string]any{"enabled": false},
 		},
-	}
+		"voice_adapter": map[string]any{
+			"asr_model":     "asr",
+			"default_voice": "voice",
+		},
+	})
 	transformer, err := (Factory{GenX: service}).NewAgent(ctx, agenthost.Spec{
 		Workspace: apitypes.Workspace{Name: "ws", Parameters: testFlowcraftWorkspaceParameters(params)},
 		Workflow:  workflow,
@@ -224,15 +222,13 @@ func TestFactoryNewAgentFailsClosedOnDeniedVoice(t *testing.T) {
 		ProviderTenants: fakeTenants{events: &events},
 	})
 	params := map[string]any{"generate_model": "chat"}
-	workflow := apitypes.WorkflowDocument{
-		Spec: apitypes.FlowcraftWorkflowSpec{
-			"flowcraft": map[string]any{},
-			"voice_adapter": map[string]any{
-				"asr_model":     "asr",
-				"default_voice": "voice",
-			},
+	workflow := testFlowcraftWorkflow(map[string]any{
+		"flowcraft": map[string]any{},
+		"voice_adapter": map[string]any{
+			"asr_model":     "asr",
+			"default_voice": "voice",
 		},
-	}
+	})
 	_, err := (Factory{GenX: service}).NewAgent(ctx, agenthost.Spec{
 		Workspace: apitypes.Workspace{Name: "ws", Parameters: testFlowcraftWorkspaceParameters(params)},
 		Workflow:  workflow,
@@ -244,19 +240,17 @@ func TestFactoryNewAgentFailsClosedOnDeniedVoice(t *testing.T) {
 }
 
 func TestParseWorkflowConfigTrimsNodeVoices(t *testing.T) {
-	cfg, err := parseWorkflowConfig(agenthost.Spec{Workflow: apitypes.WorkflowDocument{
-		Spec: apitypes.FlowcraftWorkflowSpec{
-			"voice_adapter": map[string]any{
-				"asr_model":     " asr ",
-				"default_voice": " voice ",
-				"node_voices": map[string]any{
-					" answer ": " voice-a ",
-					"":         "ignored",
-					"empty":    " ",
-				},
+	cfg, err := parseWorkflowConfig(agenthost.Spec{Workflow: testFlowcraftWorkflow(map[string]any{
+		"voice_adapter": map[string]any{
+			"asr_model":     " asr ",
+			"default_voice": " voice ",
+			"node_voices": map[string]any{
+				" answer ": " voice-a ",
+				"":         "ignored",
+				"empty":    " ",
 			},
 		},
-	}})
+	})})
 	if err != nil {
 		t.Fatalf("parseWorkflowConfig() error = %v", err)
 	}
@@ -265,6 +259,16 @@ func TestParseWorkflowConfigTrimsNodeVoices(t *testing.T) {
 	}
 	if !reflect.DeepEqual(cfg.Spec.VoiceAdapter.NodeVoices, map[string]string{"answer": "voice-a"}) {
 		t.Fatalf("node voices = %#v", cfg.Spec.VoiceAdapter.NodeVoices)
+	}
+}
+
+func testFlowcraftWorkflow(values map[string]any) apitypes.WorkflowDocument {
+	spec := apitypes.FlowcraftWorkflowSpec(values)
+	return apitypes.WorkflowDocument{
+		Spec: apitypes.WorkflowSpec{
+			Driver:    apitypes.WorkflowDriverFlowcraft,
+			Flowcraft: &spec,
+		},
 	}
 }
 
@@ -278,7 +282,8 @@ func TestFactoryValidation(t *testing.T) {
 	if _, err := (Factory{}).NewAgent(context.Background(), agenthost.Spec{}); err == nil || !strings.Contains(err.Error(), "peergenx") {
 		t.Fatalf("NewAgent(missing genx) error = %v", err)
 	}
-	if _, err := (Factory{GenX: peergenx.New(peergenx.Service{})}).NewAgent(context.Background(), agenthost.Spec{}); err == nil || !strings.Contains(err.Error(), "asr_model") {
+	spec := agenthost.Spec{Workflow: testFlowcraftWorkflow(map[string]any{"flowcraft": map[string]any{}})}
+	if _, err := (Factory{GenX: peergenx.New(peergenx.Service{})}).NewAgent(context.Background(), spec); err == nil || !strings.Contains(err.Error(), "asr_model") {
 		t.Fatalf("NewAgent(missing workflow config) error = %v", err)
 	}
 }

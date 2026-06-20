@@ -16,13 +16,17 @@
           },
           {
             "$ref": "#/components/schemas/DoubaoRealtimeWorkspaceParameters"
+          },
+          {
+            "$ref": "#/components/schemas/ASTTranslateWorkspaceParameters"
           }
         ],
         "discriminator": {
           "propertyName": "agent_type",
           "mapping": {
             "flowcraft": "#/components/schemas/FlowcraftWorkspaceParameters",
-            "doubao-realtime": "#/components/schemas/DoubaoRealtimeWorkspaceParameters"
+            "doubao-realtime": "#/components/schemas/DoubaoRealtimeWorkspaceParameters",
+            "ast-translate": "#/components/schemas/ASTTranslateWorkspaceParameters"
           }
         }
       },
@@ -225,12 +229,12 @@
           "music": {
             "$ref": "#/components/schemas/DoubaoRealtimeMusicParameters"
           },
-          "temperature": {
-            "type": "number"
-          },
           "e2e": {
             "type": "boolean",
             "description": "Marks seed resources used by the local e2e harness."
+          },
+          "temperature": {
+            "type": "number"
           }
         },
         "example": {
@@ -246,6 +250,112 @@
           },
           "music": {
             "enabled": true
+          }
+        }
+      },
+      "ASTTranslateWorkspaceParameters": {
+        "type": "object",
+        "required": [
+          "agent_type"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "agent_type": {
+            "type": "string",
+            "enum": [
+              "ast-translate"
+            ]
+          },
+          "translation_model": {
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/WorkspaceInputMode"
+          },
+          "mode": {
+            "$ref": "./workflows/ast_translate.json#/components/schemas/ASTTranslateMode"
+          },
+          "lang_pair": {
+            "type": "string",
+            "description": "AST language pair, for example zh/en or en/zh. Use auto for automatic Chinese/English mode."
+          },
+          "voice": {
+            "$ref": "#/components/schemas/ASTTranslateVoiceParameters"
+          },
+          "speaker_id": {
+            "type": "string",
+            "description": "Deprecated compatibility field. Prefer voice.speaker_id."
+          },
+          "is_custom_speaker": {
+            "type": "boolean"
+          },
+          "tts_resource_id": {
+            "type": "string"
+          },
+          "speech_rate": {
+            "type": "integer"
+          },
+          "enable_source_language_detect": {
+            "type": "boolean"
+          },
+          "denoise": {
+            "type": "boolean"
+          },
+          "e2e": {
+            "type": "boolean",
+            "description": "Marks seed resources used by the local e2e harness."
+          }
+        },
+        "example": {
+          "agent_type": "ast-translate",
+          "translation_model": "e2e-ast-translate",
+          "input": "push-to-talk",
+          "mode": "s2t",
+          "lang_pair": "auto"
+        }
+      },
+      "ASTTranslateVoiceParameters": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ASTTranslateInternalSpeakerParameters"
+          },
+          {
+            "$ref": "#/components/schemas/ASTTranslateExternalVoiceParameters"
+          }
+        ]
+      },
+      "ASTTranslateInternalSpeakerParameters": {
+        "type": "object",
+        "required": [
+          "speaker_id"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "speaker_id": {
+            "type": "string",
+            "description": "AST s2s built-in or custom speaker id."
+          },
+          "is_custom_speaker": {
+            "type": "boolean"
+          },
+          "tts_resource_id": {
+            "type": "string"
+          },
+          "speech_rate": {
+            "type": "integer"
+          }
+        }
+      },
+      "ASTTranslateExternalVoiceParameters": {
+        "type": "object",
+        "required": [
+          "tts_voice"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "tts_voice": {
+            "type": "string",
+            "description": "GizClaw voice resource name used by an external TTS path."
           }
         }
       }

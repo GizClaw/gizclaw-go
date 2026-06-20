@@ -24,7 +24,7 @@ func (m *Manager) applyWorkflow(ctx context.Context, resource apitypes.Resource)
 		return apitypes.ApplyResult{}, err
 	}
 	if exists {
-		same, err := semanticEqual(existing, item.Spec)
+		same, err := semanticEqual(existing.Spec, item.Spec)
 		if err != nil {
 			return apitypes.ApplyResult{}, applyError(500, "RESOURCE_COMPARE_FAILED", err.Error())
 		}
@@ -32,7 +32,7 @@ func (m *Manager) applyWorkflow(ctx context.Context, resource apitypes.Resource)
 			return applyResult(apitypes.ApplyActionUnchanged, apitypes.ResourceKindWorkflow, item.Metadata.Name), nil
 		}
 	}
-	if err := m.putWorkflow(ctx, name, item.Spec); err != nil {
+	if err := m.putWorkflow(ctx, name, workflowDocumentFromResource(item)); err != nil {
 		return apitypes.ApplyResult{}, err
 	}
 	if exists {
@@ -97,6 +97,13 @@ func resourceFromWorkflow(name string, item apitypes.WorkflowDocument) (apitypes
 		ApiVersion: apitypes.ResourceAPIVersionGizclawAdminv1alpha1,
 		Kind:       apitypes.WorkflowResourceKind(apitypes.ResourceKindWorkflow),
 		Metadata:   apitypes.ResourceMetadata{Name: name},
-		Spec:       item,
+		Spec:       item.Spec,
 	})
+}
+
+func workflowDocumentFromResource(item apitypes.WorkflowResource) apitypes.WorkflowDocument {
+	return apitypes.WorkflowDocument{
+		Metadata: apitypes.WorkflowMetadata{Name: item.Metadata.Name},
+		Spec:     item.Spec,
+	}
 }

@@ -9,7 +9,19 @@
   "components": {
     "schemas": {
       "WorkflowDocument": {
-        "$ref": "./workflows/flowcraft.json#/components/schemas/FlowcraftWorkflow"
+        "type": "object",
+        "required": [
+          "metadata",
+          "spec"
+        ],
+        "properties": {
+          "metadata": {
+            "$ref": "./workflow_metadata.json#/components/schemas/WorkflowMetadata"
+          },
+          "spec": {
+            "$ref": "./workflow_spec.json#/components/schemas/WorkflowSpec"
+          }
+        }
       }
     }
   }

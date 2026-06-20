@@ -73,7 +73,6 @@ export type FirmwareList = {
 export type CredentialUpsert = {
     name: string;
     provider: string;
-    method: CredentialMethod;
     description?: string;
     body: CredentialBody;
 };
@@ -119,7 +118,6 @@ export type MiniMaxTenantList = {
 export type VolcTenantUpsert = {
     name: string;
     credential_name: string;
-    app_id: string;
     region?: string;
     endpoint?: string;
     resource_ids?: Array<string>;
@@ -166,9 +164,7 @@ export type VolcSyncVoicesResult = {
 export type WorkspaceUpsert = {
     name: string;
     workflow_name: string;
-    parameters?: {
-        [key: string]: unknown;
-    };
+    parameters?: WorkspaceParameters;
 };
 
 export type WorkspaceList = {
@@ -180,7 +176,7 @@ export type WorkspaceList = {
 export type WorkflowList = {
     has_next: boolean;
     next_cursor?: string | null;
-    items: Array<FlowcraftWorkflow>;
+    items: Array<WorkflowDocument>;
 };
 
 export type GeminiTenantUpsert = {
@@ -432,7 +428,7 @@ export type WorkflowResource = {
     apiVersion: ResourceApiVersion;
     kind: 'Workflow';
     metadata: ResourceMetadata;
-    spec: FlowcraftWorkflow;
+    spec: WorkflowSpec;
 };
 
 export type WorkspaceResource = {
@@ -548,25 +544,57 @@ export type Configuration = {
 export type Credential = {
     name: string;
     provider: string;
-    method: CredentialMethod;
     body: CredentialBody;
     description?: string;
     created_at: string;
     updated_at: string;
 };
 
-export type CredentialBody = {
-    [key: string]: unknown;
+/**
+ * Provider-specific credential payload. The shape is selected by Credential.provider.
+ */
+export type CredentialBody = OpenAiCredentialBody | GeminiCredentialBody | DashScopeCredentialBody | MiniMaxCredentialBody | VolcCredentialBody;
+
+export type DashScopeCredentialBody = {
+    api_key?: string;
+    token?: string;
+    base_url?: string;
 };
 
-/**
- * Credential authentication method
- */
-export type CredentialMethod = 'api_key' | 'token' | 'app_id_token';
+export type GeminiCredentialBody = {
+    api_key?: string;
+    token?: string;
+    base_url?: string;
+};
+
+export type MiniMaxCredentialBody = {
+    api_key?: string;
+    token?: string;
+    base_url?: string;
+    voice_base_url?: string;
+    minimax_voice_base_url?: string;
+};
+
+export type OpenAiCredentialBody = {
+    api_key?: string;
+    token?: string;
+    base_url?: string;
+    organization?: string;
+    project?: string;
+};
+
+export type VolcCredentialBody = {
+    app_id?: string;
+    speech_token?: string;
+    ark_api_key?: string;
+    openapi_access_key_id?: string;
+    secret_access_key?: string;
+    session_token?: string;
+    websearch_api_key?: string;
+};
 
 export type CredentialSpec = {
     provider: string;
-    method: CredentialMethod;
     description?: string;
     body: CredentialBody;
 };
@@ -767,18 +795,54 @@ export type ModelThinkingCapability = {
 /**
  * Runtime role of a model.
  */
-export type ModelKind = 'llm' | 'tts' | 'asr' | 'embedding';
+export type ModelKind = 'llm' | 'tts' | 'asr' | 'realtime' | 'translation' | 'embedding';
 
 export type ModelProvider = {
     kind: ModelProviderKind;
     name: string;
 };
 
+export type DashScopeTenantModelProviderData = {
+    upstream_model?: string;
+    api_mode?: 'chat_completions' | 'realtime';
+};
+
+export type GeminiTenantModelProviderData = {
+    upstream_model?: string;
+};
+
 /**
- * Provider-specific model runtime configuration keyed by provider kind.
+ * Provider-specific model runtime configuration. The shape is selected by Model.provider.kind.
  */
-export type ModelProviderData = {
-    [key: string]: unknown;
+export type ModelProviderData = GeminiTenantModelProviderData | DashScopeTenantModelProviderData | OpenAiTenantModelProviderData | VolcTenantModelProviderData;
+
+export type OpenAiTenantModelProviderData = {
+    upstream_model?: string;
+    support_json_output?: boolean;
+    support_tool_calls?: boolean;
+    support_text_only?: boolean;
+    use_system_role?: boolean;
+    support_thinking?: boolean;
+    thinking_param?: string;
+    thinking_level_param?: string;
+    thinking_levels?: Array<string>;
+    default_thinking_level?: string;
+};
+
+export type VolcTenantModelProviderData = {
+    upstream_model?: string;
+    api_mode?: 'asr' | 'tts' | 'realtime';
+    resource_id?: string;
+    auth_mode?: string;
+    support_json_output?: boolean;
+    support_tool_calls?: boolean;
+    support_text_only?: boolean;
+    use_system_role?: boolean;
+    support_thinking?: boolean;
+    thinking_param?: string;
+    thinking_level_param?: string;
+    thinking_levels?: Array<string>;
+    default_thinking_level?: string;
 };
 
 /**
@@ -922,11 +986,51 @@ export type VoiceProvider = {
     name: string;
 };
 
+export type DashScopeTenantVoiceProviderData = {
+    voice_id?: string;
+    raw?: {
+        [key: string]: unknown;
+    };
+};
+
+export type GeminiTenantVoiceProviderData = {
+    voice_id?: string;
+    raw?: {
+        [key: string]: unknown;
+    };
+};
+
+export type MiniMaxTenantVoiceProviderData = {
+    voice_id?: string;
+    voice_type?: string;
+    model?: string;
+    format?: string;
+    sample_rate?: number;
+    raw?: {
+        [key: string]: unknown;
+    };
+};
+
+export type OpenAiTenantVoiceProviderData = {
+    voice_id?: string;
+    raw?: {
+        [key: string]: unknown;
+    };
+};
+
 /**
- * Provider-specific voice runtime configuration keyed by provider kind.
+ * Provider-specific voice runtime configuration. The shape is selected by Voice.provider.kind.
  */
-export type VoiceProviderData = {
-    [key: string]: unknown;
+export type VoiceProviderData = GeminiTenantVoiceProviderData | DashScopeTenantVoiceProviderData | OpenAiTenantVoiceProviderData | MiniMaxTenantVoiceProviderData | VolcTenantVoiceProviderData;
+
+export type VolcTenantVoiceProviderData = {
+    resource_id?: string;
+    voice_id?: string;
+    state?: string;
+    status?: string;
+    raw?: {
+        [key: string]: unknown;
+    };
 };
 
 /**
@@ -950,7 +1054,6 @@ export type VoiceSpec = {
 export type VolcTenant = {
     name: string;
     credential_name: string;
-    app_id: string;
     region?: string;
     endpoint?: string;
     resource_ids?: Array<string>;
@@ -962,25 +1065,88 @@ export type VolcTenant = {
 
 export type VolcTenantSpec = {
     credential_name: string;
-    app_id: string;
     region?: string;
     endpoint?: string;
     resource_ids?: Array<string>;
     description?: string;
 };
 
-export type WorkflowApiVersion = 'gizclaw.flowcraft/v1alpha1';
+export type WorkflowDocument = {
+    metadata: WorkflowMetadata;
+    spec: WorkflowSpec;
+};
 
 export type WorkflowMetadata = {
+    /**
+     * Stable workflow ID. The creator must provide this value.
+     */
     name: string;
     description?: string;
 };
 
-export type FlowcraftWorkflow = {
-    apiVersion: WorkflowApiVersion;
-    kind: 'FlowcraftWorkflow';
-    metadata: WorkflowMetadata;
-    spec: FlowcraftWorkflowSpec;
+export type WorkflowDriver = 'flowcraft' | 'doubao-realtime' | 'ast-translate';
+
+export type WorkflowSpec = {
+    driver: WorkflowDriver;
+    flowcraft?: FlowcraftWorkflowSpec;
+    doubao_realtime?: DoubaoRealtimeWorkflowSpec;
+    ast_translate?: AstTranslateWorkflowSpec;
+};
+
+export type AstTranslateExternalVoiceParameters = {
+    /**
+     * GizClaw voice resource name used by an external TTS path.
+     */
+    tts_voice: string;
+};
+
+export type AstTranslateInternalSpeakerParameters = {
+    /**
+     * AST s2s built-in or custom speaker id.
+     */
+    speaker_id: string;
+    is_custom_speaker?: boolean;
+    tts_resource_id?: string;
+    speech_rate?: number;
+};
+
+export type AstTranslateMode = 's2t' | 's2s';
+
+export type AstTranslateVoiceParameters = AstTranslateInternalSpeakerParameters | AstTranslateExternalVoiceParameters;
+
+export type AstTranslateWorkflowSpec = {
+    /**
+     * GizClaw model resource used to resolve the Volc tenant credential for AST translate.
+     */
+    translation_model: string;
+    mode?: AstTranslateMode;
+    voice?: AstTranslateVoiceParameters;
+    /**
+     * Deprecated compatibility field. Prefer voice.speaker_id.
+     */
+    speaker_id?: string;
+    is_custom_speaker?: boolean;
+    tts_resource_id?: string;
+    speech_rate?: number;
+    enable_source_language_detect?: boolean;
+    denoise?: boolean;
+    resource_id?: string;
+    /**
+     * Optional AST auth mode. Supported values are x-api-key and v2.
+     */
+    auth_mode?: string;
+};
+
+export type DoubaoRealtimeWorkflowSpec = {
+    realtime_model?: string;
+    model?: string;
+    realtime?: {
+        [key: string]: unknown;
+    };
+    realtime_config?: {
+        [key: string]: unknown;
+    };
+    [key: string]: unknown;
 };
 
 export type FlowcraftWorkflowSpec = {
@@ -990,18 +1156,148 @@ export type FlowcraftWorkflowSpec = {
 export type Workspace = {
     name: string;
     workflow_name: string;
-    parameters?: {
-        [key: string]: unknown;
-    };
+    parameters?: WorkspaceParameters;
     created_at: string;
     updated_at: string;
 };
 
+export type WorkspaceParametersAstTranslateExternalVoiceParameters = {
+    /**
+     * GizClaw voice resource name used by an external TTS path.
+     */
+    tts_voice: string;
+};
+
+export type WorkspaceParametersAstTranslateInternalSpeakerParameters = {
+    /**
+     * AST s2s built-in or custom speaker id.
+     */
+    speaker_id: string;
+    is_custom_speaker?: boolean;
+    tts_resource_id?: string;
+    speech_rate?: number;
+};
+
+export type WorkspaceParametersAstTranslateVoiceParameters = WorkspaceParametersAstTranslateInternalSpeakerParameters | WorkspaceParametersAstTranslateExternalVoiceParameters;
+
+export type AstTranslateWorkspaceParameters = {
+    agent_type: 'ast-translate';
+    translation_model?: string;
+    input?: WorkspaceInputMode;
+    mode?: AstTranslateMode;
+    /**
+     * AST language pair, for example zh/en or en/zh. Use auto for automatic Chinese/English mode.
+     */
+    lang_pair?: string;
+    voice?: WorkspaceParametersAstTranslateVoiceParameters;
+    /**
+     * Deprecated compatibility field. Prefer voice.speaker_id.
+     */
+    speaker_id?: string;
+    is_custom_speaker?: boolean;
+    tts_resource_id?: string;
+    speech_rate?: number;
+    enable_source_language_detect?: boolean;
+    denoise?: boolean;
+    /**
+     * Marks seed resources used by the local e2e harness.
+     */
+    e2e?: boolean;
+};
+
+export type DoubaoRealtimeExternalVoiceParameters = {
+    /**
+     * GizClaw voice resource name used by an external TTS path.
+     */
+    tts_voice: string;
+};
+
+export type DoubaoRealtimeInternalSpeakerParameters = {
+    /**
+     * Doubao realtime built-in speaker id.
+     */
+    realtime_speaker_id: string;
+};
+
+export type DoubaoRealtimeMusicParameters = {
+    enabled?: boolean;
+};
+
+export type DoubaoRealtimeSearchParameters = {
+    enabled?: boolean;
+    type?: string;
+    bot_id?: string;
+    result_count?: number;
+    no_result_message?: string;
+};
+
+export type DoubaoRealtimeSessionParameters = {
+    bot_name?: string;
+    system_role?: string;
+    upstream_model?: string;
+    vad_window_ms?: number;
+    speaking_style?: string;
+    character_manifest?: string;
+    resource_id?: string;
+};
+
+export type DoubaoRealtimeVoiceParameters = DoubaoRealtimeInternalSpeakerParameters | DoubaoRealtimeExternalVoiceParameters;
+
+export type DoubaoRealtimeWorkspaceParameters = {
+    agent_type: 'doubao-realtime';
+    realtime_model?: string;
+    input?: WorkspaceInputMode;
+    voice?: DoubaoRealtimeVoiceParameters;
+    session?: DoubaoRealtimeSessionParameters;
+    search?: DoubaoRealtimeSearchParameters;
+    music?: DoubaoRealtimeMusicParameters;
+    /**
+     * Marks seed resources used by the local e2e harness.
+     */
+    e2e?: boolean;
+    temperature?: number;
+};
+
+export type FlowcraftConversationParameters = {
+    /**
+     * Who starts the conversation when the workspace runtime opens.
+     */
+    initiative?: 'peer' | 'agent';
+    /**
+     * When agent initiative is allowed.
+     */
+    agent_initiative_policy?: 'once_when_empty' | 'on_reload';
+};
+
+export type FlowcraftWorkspaceParameters = {
+    agent_type: 'flowcraft';
+    input?: WorkspaceInputMode;
+    generate_model?: string;
+    extract_model?: string;
+    embedding_model?: string;
+    conversation?: FlowcraftConversationParameters;
+    /**
+     * Marks seed resources used by the local e2e harness.
+     */
+    e2e?: boolean;
+};
+
+export type WorkspaceInputMode = 'push-to-talk' | 'realtime';
+
+/**
+ * Agent-specific workspace parameters. The shape is selected by agent_type.
+ */
+export type WorkspaceParameters = ({
+    agent_type: 'flowcraft';
+} & FlowcraftWorkspaceParameters) | ({
+    agent_type: 'doubao-realtime';
+} & DoubaoRealtimeWorkspaceParameters) | ({
+    agent_type: 'ast-translate';
+} & AstTranslateWorkspaceParameters);
+
 export type WorkspaceSpec = {
     workflow_name: string;
-    parameters?: {
-        [key: string]: unknown;
-    };
+    parameters?: WorkspaceParameters;
 };
 
 /**
@@ -1930,7 +2226,7 @@ export type ListWorkflowsResponses = {
 export type ListWorkflowsResponse = ListWorkflowsResponses[keyof ListWorkflowsResponses];
 
 export type CreateWorkflowData = {
-    body: FlowcraftWorkflow;
+    body: WorkflowDocument;
     path?: never;
     query?: never;
     url: '/workflows';
@@ -1957,7 +2253,7 @@ export type CreateWorkflowResponses = {
     /**
      * Created workflow
      */
-    200: FlowcraftWorkflow;
+    200: WorkflowDocument;
 };
 
 export type CreateWorkflowResponse = CreateWorkflowResponses[keyof CreateWorkflowResponses];
@@ -3754,7 +4050,7 @@ export type DeleteWorkflowResponses = {
     /**
      * Deleted workflow
      */
-    200: FlowcraftWorkflow;
+    200: WorkflowDocument;
 };
 
 export type DeleteWorkflowResponse = DeleteWorkflowResponses[keyof DeleteWorkflowResponses];
@@ -3788,13 +4084,13 @@ export type GetWorkflowResponses = {
     /**
      * Workflow document
      */
-    200: FlowcraftWorkflow;
+    200: WorkflowDocument;
 };
 
 export type GetWorkflowResponse = GetWorkflowResponses[keyof GetWorkflowResponses];
 
 export type PutWorkflowData = {
-    body: FlowcraftWorkflow;
+    body: WorkflowDocument;
     path: {
         /**
          * Workflow name
@@ -3822,7 +4118,7 @@ export type PutWorkflowResponses = {
     /**
      * Stored workflow
      */
-    200: FlowcraftWorkflow;
+    200: WorkflowDocument;
 };
 
 export type PutWorkflowResponse = PutWorkflowResponses[keyof PutWorkflowResponses];

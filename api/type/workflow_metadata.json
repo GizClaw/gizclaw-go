@@ -16,6 +16,8 @@
         "properties": {
           "name": {
             "type": "string",
+            "description": "Stable workflow ID. The creator must provide this value.",
+            "x-go-type-skip-optional-pointer": true,
             "example": "demo-assistant"
           },
           "description": {

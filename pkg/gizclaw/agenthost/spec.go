@@ -1,7 +1,6 @@
 package agenthost
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -17,11 +16,6 @@ type Spec struct {
 	Workflow  apitypes.WorkflowDocument
 	AgentType string
 	Runtime   WorkspaceRuntime
-}
-
-type workflowEnvelope struct {
-	APIVersion string `json:"apiVersion"`
-	Kind       string `json:"kind"`
 }
 
 func resolveAgentType(workspace apitypes.Workspace, workflow apitypes.WorkflowDocument) (string, error) {
@@ -40,28 +34,12 @@ func resolveAgentType(workspace apitypes.Workspace, workflow apitypes.WorkflowDo
 }
 
 func agentTypeFromWorkflow(workflow apitypes.WorkflowDocument) (string, error) {
-	data, err := json.Marshal(workflow)
-	if err != nil {
-		return "", fmt.Errorf("agenthost: encode workflow: %w", err)
+	agentType := strings.TrimSpace(string(workflow.Spec.Driver))
+	if agentType == "" {
+		return "", errors.New("agenthost: workflow spec.driver is required")
 	}
-	var env workflowEnvelope
-	if err := json.Unmarshal(data, &env); err != nil {
-		return "", fmt.Errorf("agenthost: decode workflow envelope: %w", err)
+	if !workflow.Spec.Driver.Valid() {
+		return "", fmt.Errorf("agenthost: unsupported workflow spec.driver %q", workflow.Spec.Driver)
 	}
-	apiVersion := strings.TrimSpace(env.APIVersion)
-	if apiVersion == "" {
-		return "", errors.New("agenthost: workflow apiVersion is required")
-	}
-	group, _, ok := strings.Cut(apiVersion, "/")
-	if !ok || strings.TrimSpace(group) == "" {
-		return "", fmt.Errorf("agenthost: unsupported workflow apiVersion %q", apiVersion)
-	}
-	group = strings.TrimSpace(group)
-	if strings.HasPrefix(group, "gizclaw.") {
-		group = strings.TrimPrefix(group, "gizclaw.")
-	}
-	if group == "" {
-		return "", fmt.Errorf("agenthost: unsupported workflow apiVersion %q", apiVersion)
-	}
-	return group, nil
+	return agentType, nil
 }

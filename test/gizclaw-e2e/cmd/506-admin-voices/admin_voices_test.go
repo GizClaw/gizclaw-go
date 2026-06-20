@@ -49,7 +49,7 @@ func TestAdminVoicesUserStory(t *testing.T) {
 
 	showVolcTenant := h.RunCLI("admin", "--context", "admin-a", "show", "VolcTenant", "gizclaw-dev")
 	showVolcTenant.MustSucceed(t)
-	for _, want := range []string{`"kind":"VolcTenant"`, `"name":"gizclaw-dev"`, `"app_id":"app-cli"`} {
+	for _, want := range []string{`"kind":"VolcTenant"`, `"name":"gizclaw-dev"`, `"credential_name":"volc-cli-credential"`} {
 		if !strings.Contains(showVolcTenant.Stdout, want) {
 			t.Fatalf("admin show VolcTenant missing %q:\n%s", want, showVolcTenant.Stdout)
 		}
@@ -59,7 +59,7 @@ func TestAdminVoicesUserStory(t *testing.T) {
 	if syncVolcTenant.Err == nil {
 		t.Fatalf("volc sync with incomplete credential should fail:\n%s", syncVolcTenant.Stdout)
 	}
-	for _, want := range []string{"INVALID_VOLC_TENANT", "missing access_key_id/secret_access_key"} {
+	for _, want := range []string{"INVALID_VOLC_TENANT", "missing openapi_access_key_id/secret_access_key"} {
 		if !strings.Contains(syncVolcTenant.Stderr, want) {
 			t.Fatalf("volc sync stderr missing %q:\nstdout:\n%s\nstderr:\n%s", want, syncVolcTenant.Stdout, syncVolcTenant.Stderr)
 		}
@@ -167,13 +167,9 @@ func testVolcVoiceProviderData() *apitypes.VoiceProviderData {
 
 func testVolcCredentialBody() apitypes.CredentialBody {
 	appID := "app-cli"
-	secret := "secret"
-	ak := "ak"
 	var body apitypes.CredentialBody
 	if err := body.FromVolcCredentialBody(apitypes.VolcCredentialBody{
-		AppId:              &appID,
-		OpenapiAccessKeyId: &ak,
-		SecretAccessKey:    &secret,
+		AppId: &appID,
 	}); err != nil {
 		panic(err)
 	}

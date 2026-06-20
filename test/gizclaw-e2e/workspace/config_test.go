@@ -79,6 +79,36 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
 	}
 }
 
+func TestLoadASTTranslateConfig(t *testing.T) {
+	serverKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(server): %v", err)
+	}
+	clientKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(client): %v", err)
+	}
+	contextConfigPath := filepath.Join(t.TempDir(), "config.yaml")
+	writeSetupContextConfig(t, contextConfigPath, serverKey, clientKey, "")
+
+	cfg, err := loadConfig(filepath.Join("config", "ast-translate.json"), contextConfigPath)
+	if err != nil {
+		t.Fatalf("loadConfig(ast-translate) error = %v", err)
+	}
+	if cfg.Agent != "ast-translate" || cfg.Models.Translation != "e2e-ast-translate" {
+		t.Fatalf("ast config = %+v", cfg)
+	}
+	if cfg.Workflow.Translation != "e2e-ast-translate" ||
+		cfg.Workflow.Parameters.TranslationModel != "e2e-ast-translate" ||
+		cfg.Workflow.Parameters.Input != "push-to-talk" ||
+		cfg.Workflow.Parameters.LangPair != "auto" ||
+		cfg.Workflow.ASTTranslate.Mode != "s2s" ||
+		cfg.Workflow.ASTTranslate.AuthMode != "v2" ||
+		cfg.Workflow.ASTTranslate.Voice.SpeakerID != "zh_female_vv_uranus_bigtts" {
+		t.Fatalf("ast workflow = %+v", cfg.Workflow)
+	}
+}
+
 func TestLoadConfigJSONWithExplicitClientConfig(t *testing.T) {
 	serverKey, err := giznet.GenerateKeyPair()
 	if err != nil {
@@ -187,6 +217,11 @@ func TestConfigValidationErrors(t *testing.T) {
 		{"tts", func(c *config) { c.Models.TTS = "" }, "models.tts"},
 		{"asr", func(c *config) { c.Models.ASR = "" }, "models.asr"},
 		{"realtime", func(c *config) { c.Models.Realtime = "" }, "models.realtime"},
+		{"translation", func(c *config) {
+			c.Agent = "ast-translate"
+			c.Models.Realtime = ""
+			c.Models.Translation = ""
+		}, "models.translation"},
 		{"voice", func(c *config) { c.Voice = "" }, "voice"},
 		{"rounds", func(c *config) { c.Rounds = 0 }, "rounds"},
 		{"timeout parse", func(c *config) { c.Timeout = "bad" }, "timeout"},

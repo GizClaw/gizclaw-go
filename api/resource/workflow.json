@@ -30,7 +30,7 @@
             "$ref": "./resource.json#/components/schemas/ResourceMetadata"
           },
           "spec": {
-            "$ref": "../type/workflow_document.json#/components/schemas/WorkflowDocument"
+            "$ref": "../type/workflow_spec.json#/components/schemas/WorkflowSpec"
           }
         }
       }

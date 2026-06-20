@@ -68,6 +68,29 @@ func mergeTestRealtimeWorkspaceValue(typed *apitypes.DoubaoRealtimeWorkspacePara
 	}
 }
 
+func testDoubaoRealtimeWorkflow(values map[string]any) apitypes.WorkflowDocument {
+	spec := apitypes.DoubaoRealtimeWorkflowSpec{}
+	if value, _ := values["model"].(string); value != "" {
+		spec.Model = &value
+	}
+	if value, _ := values["realtime_model"].(string); value != "" {
+		spec.RealtimeModel = &value
+	}
+	if value, ok := values["realtime"].(map[string]any); ok {
+		spec.Realtime = &value
+	}
+	if value, ok := values["realtime_config"].(map[string]any); ok {
+		spec.RealtimeConfig = &value
+	}
+	return apitypes.WorkflowDocument{
+		Metadata: apitypes.WorkflowMetadata{Name: "demo-workflow"},
+		Spec: apitypes.WorkflowSpec{
+			Driver:         apitypes.WorkflowDriverDoubaoRealtime,
+			DoubaoRealtime: &spec,
+		},
+	}
+}
+
 func TestFactoryUsesWorkflowModel(t *testing.T) {
 	factory := Factory{Transformer: recordingTransformer{}}
 	workspaceParams := map[string]any{
@@ -82,29 +105,24 @@ func TestFactoryUsesWorkflowModel(t *testing.T) {
 	}
 	agent, err := factory.NewAgent(context.Background(), agenthost.Spec{
 		Workspace: apitypes.Workspace{Name: "demo", Parameters: testDoubaoRealtimeWorkspaceParameters(workspaceParams)},
-		Workflow: apitypes.WorkflowDocument{
-			ApiVersion: apitypes.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-			Kind:       apitypes.FlowcraftWorkflowKindFlowcraftWorkflow,
-			Metadata:   apitypes.WorkflowMetadata{Name: "demo-workflow"},
-			Spec: apitypes.FlowcraftWorkflowSpec{
-				"model": "doubao-dialog",
-				"realtime": map[string]any{
-					"session": map[string]any{
-						"model":         "O",
-						"system_role":   "简短回答。",
-						"vad_window_ms": 180,
-					},
-					"input": map[string]any{
-						"format":    "speech_opus",
-						"transcode": true,
-					},
-					"output": map[string]any{
-						"speaker": "speaker-id",
-						"format":  "ogg_opus",
-					},
+		Workflow: testDoubaoRealtimeWorkflow(map[string]any{
+			"model": "doubao-dialog",
+			"realtime": map[string]any{
+				"session": map[string]any{
+					"model":         "O",
+					"system_role":   "简短回答。",
+					"vad_window_ms": 180,
+				},
+				"input": map[string]any{
+					"format":    "speech_opus",
+					"transcode": true,
+				},
+				"output": map[string]any{
+					"speaker": "speaker-id",
+					"format":  "ogg_opus",
 				},
 			},
-		},
+		}),
 	})
 	if err != nil {
 		t.Fatalf("NewAgent() error = %v", err)
@@ -148,28 +166,23 @@ func TestFactoryMergesRealtimeConfigAndWorkspaceParams(t *testing.T) {
 	}
 	agent, err := factory.NewAgent(context.Background(), agenthost.Spec{
 		Workspace: apitypes.Workspace{Name: "demo", Parameters: testDoubaoRealtimeWorkspaceParameters(workspaceParams)},
-		Workflow: apitypes.WorkflowDocument{
-			ApiVersion: apitypes.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-			Kind:       apitypes.FlowcraftWorkflowKindFlowcraftWorkflow,
-			Metadata:   apitypes.WorkflowMetadata{Name: "demo-workflow"},
-			Spec: apitypes.FlowcraftWorkflowSpec{
-				"realtime_model": "model/realtime?resource_id=base-resource",
-				"realtime_config": map[string]any{
-					"session": map[string]any{
-						"bot_name": "豆包",
-						"model":    "O",
-					},
-					"input": map[string]any{
-						"sample_rate": 16000,
-					},
+		Workflow: testDoubaoRealtimeWorkflow(map[string]any{
+			"realtime_model": "model/realtime?resource_id=base-resource",
+			"realtime_config": map[string]any{
+				"session": map[string]any{
+					"bot_name": "豆包",
+					"model":    "O",
 				},
-				"realtime": map[string]any{
-					"output": map[string]any{
-						"speaker": "workflow-speaker",
-					},
+				"input": map[string]any{
+					"sample_rate": 16000,
 				},
 			},
-		},
+			"realtime": map[string]any{
+				"output": map[string]any{
+					"speaker": "workflow-speaker",
+				},
+			},
+		}),
 	})
 	if err != nil {
 		t.Fatalf("NewAgent() error = %v", err)

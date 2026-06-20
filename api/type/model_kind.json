@@ -16,6 +16,7 @@
           "tts",
           "asr",
           "realtime",
+          "translation",
           "embedding"
         ],
         "example": "llm"

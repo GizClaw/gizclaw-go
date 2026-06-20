@@ -710,11 +710,13 @@ func requireRPCError(t *testing.T, resp *rpcapi.RPCResponse, code rpcapi.RPCErro
 }
 
 func workflowDoc(name string) rpcapi.WorkflowDocument {
+	spec := rpcapi.FlowcraftWorkflowSpec{"entry_agent": ""}
 	return rpcapi.WorkflowDocument{
-		ApiVersion: rpcapi.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       rpcapi.FlowcraftWorkflowKindFlowcraftWorkflow,
-		Metadata:   rpcapi.WorkflowMetadata{Name: name},
-		Spec:       rpcapi.FlowcraftWorkflowSpec{"entry_agent": ""},
+		Metadata: rpcapi.WorkflowMetadata{Name: name},
+		Spec: rpcapi.WorkflowSpec{
+			Driver:    rpcapi.WorkflowDriverFlowcraft,
+			Flowcraft: &spec,
+		},
 	}
 }
 

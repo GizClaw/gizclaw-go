@@ -1,5 +1,5 @@
 // User story: As an admin operator, I can browse seeded workflows and
-// inspect the workflow kind, API version, and description.
+// inspect the workflow driver.
 package ui_test
 
 import (
@@ -13,9 +13,7 @@ func adminWorkflowsListStories() []Story {
 			page.GotoAdmin("/ai/workflows")
 			page.ExpectText("Workflows")
 			page.ExpectText(SeedWorkflowName)
-			page.ExpectText("FlowcraftWorkflow")
-			page.ExpectText("gizclaw.flowcraft/v1alpha1")
-			page.ExpectText("Seeded workflow for UI real-service tests")
+			page.ExpectText("flowcraft")
 		},
 	}}
 }

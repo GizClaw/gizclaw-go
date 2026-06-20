@@ -20,17 +20,18 @@ func TestServerWorkflowsCRUD(t *testing.T) {
 	ctx := context.Background()
 
 	createDoc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "demo-assistant",
 			"description": "flowcraft workflow"
 		},
 		"spec": {
-			"workspace_layout": {},
-			"runtime": {},
-			"agents": [],
-			"entry_agent": ""
+			"driver": "flowcraft",
+			"flowcraft": {
+				"workspace_layout": {},
+				"runtime": {},
+				"agents": [],
+				"entry_agent": ""
+			}
 		}
 	}`)
 
@@ -42,8 +43,8 @@ func TestServerWorkflowsCRUD(t *testing.T) {
 	if !ok {
 		t.Fatalf("CreateWorkflow() response = %#v", createResp)
 	}
-	if got := discriminatorOf(t, apitypes.WorkflowDocument(created)); got != "FlowcraftWorkflow" {
-		t.Fatalf("CreateWorkflow() discriminator = %q", got)
+	if got := workflowDriver(t, apitypes.WorkflowDocument(created)); got != "flowcraft" {
+		t.Fatalf("CreateWorkflow() driver = %q", got)
 	}
 
 	listResp, err := srv.ListWorkflows(ctx, adminservice.ListWorkflowsRequestObject{})
@@ -72,15 +73,16 @@ func TestServerWorkflowsCRUD(t *testing.T) {
 	}
 
 	updateDoc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "demo-assistant",
 			"description": "updated description"
 		},
 		"spec": {
-			"runtime": {
-				"executor_ref": "local"
+			"driver": "flowcraft",
+			"flowcraft": {
+				"runtime": {
+					"executor_ref": "local"
+				}
 			}
 		}
 	}`)
@@ -117,18 +119,18 @@ func TestServerWorkflowsCRUD(t *testing.T) {
 	}
 }
 
-func TestServerRejectsUnknownWorkflowKind(t *testing.T) {
+func TestServerRejectsUnknownWorkflowDriver(t *testing.T) {
 	t.Parallel()
 
 	srv := newTestServer(t)
 	ctx := context.Background()
 	doc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "UnknownWorkflow",
 		"metadata": {
 			"name": "bad-workflow"
 		},
-		"spec": {}
+		"spec": {
+			"driver": "bad-driver"
+		}
 	}`)
 
 	resp, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc})
@@ -146,12 +148,13 @@ func TestServerAcceptsEmptyFlowcraftSpec(t *testing.T) {
 	srv := newTestServer(t)
 	ctx := context.Background()
 	doc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "empty-flowcraft"
 		},
-		"spec": {}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
 	}`)
 
 	resp, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc})
@@ -162,9 +165,31 @@ func TestServerAcceptsEmptyFlowcraftSpec(t *testing.T) {
 	if !ok {
 		t.Fatalf("CreateWorkflow() response = %#v", resp)
 	}
-	flowcraft := mustFlowcraft(t, apitypes.WorkflowDocument(created))
+	flowcraft := apitypes.WorkflowDocument(created)
 	if flowcraft.Metadata.Name != "empty-flowcraft" {
 		t.Fatalf("CreateWorkflow() name = %q", flowcraft.Metadata.Name)
+	}
+}
+
+func TestServerCreateWorkflowRequiresName(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	ctx := context.Background()
+	doc := mustDocument(t, `{
+		"metadata": {},
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
+	}`)
+
+	resp, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc})
+	if err != nil {
+		t.Fatalf("CreateWorkflow() error = %v", err)
+	}
+	if _, ok := resp.(adminservice.CreateWorkflow400JSONResponse); !ok {
+		t.Fatalf("CreateWorkflow() response = %#v", resp)
 	}
 }
 
@@ -174,12 +199,13 @@ func TestServerPutRejectsPathNameMismatch(t *testing.T) {
 	srv := newTestServer(t)
 	ctx := context.Background()
 	doc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": "other-name"
 		},
-		"spec": {}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
 	}`)
 
 	resp, err := srv.PutWorkflow(ctx, adminservice.PutWorkflowRequestObject{
@@ -216,12 +242,13 @@ func TestServerTrimsWorkflowNameBeforeStoring(t *testing.T) {
 	srv := newTestServer(t)
 	ctx := context.Background()
 	doc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {
 			"name": " padded-workflow "
 		},
-		"spec": {}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
 	}`)
 
 	resp, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc})
@@ -240,7 +267,7 @@ func TestServerTrimsWorkflowNameBeforeStoring(t *testing.T) {
 	if !ok {
 		t.Fatalf("GetWorkflow() response = %#v", gotResp)
 	}
-	flowcraft := mustFlowcraft(t, apitypes.WorkflowDocument(got))
+	flowcraft := apitypes.WorkflowDocument(got)
 	if flowcraft.Metadata.Name != "padded-workflow" {
 		t.Fatalf("GetWorkflow() metadata.name = %q, want padded-workflow", flowcraft.Metadata.Name)
 	}
@@ -254,12 +281,13 @@ func TestServerListWorkflowsPagination(t *testing.T) {
 
 	for _, name := range []string{"alpha", "beta", "gamma"} {
 		doc := mustDocument(t, fmt.Sprintf(`{
-			"apiVersion": "gizclaw.flowcraft/v1alpha1",
-			"kind": "FlowcraftWorkflow",
 			"metadata": {
 				"name": %q
 			},
-			"spec": {}
+			"spec": {
+				"driver": "flowcraft",
+				"flowcraft": {}
+			}
 		}`, name))
 		if _, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc}); err != nil {
 			t.Fatalf("CreateWorkflow(%q) error = %v", name, err)
@@ -306,10 +334,11 @@ func TestServerWorkflowConflictAndMissingDelete(t *testing.T) {
 	srv := newTestServer(t)
 	ctx := context.Background()
 	doc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {"name": "duplicate"},
-		"spec": {}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
 	}`)
 	if _, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc}); err != nil {
 		t.Fatalf("CreateWorkflow(seed) error = %v", err)
@@ -337,10 +366,11 @@ func TestServerWorkflowStoreNotConfigured(t *testing.T) {
 	srv := &Server{}
 	ctx := context.Background()
 	doc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {"name": "missing-store"},
-		"spec": {}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
 	}`)
 
 	listResp, err := srv.ListWorkflows(ctx, adminservice.ListWorkflowsRequestObject{})
@@ -372,10 +402,9 @@ func TestServerRejectsMissingWorkflowRequiredFields(t *testing.T) {
 	srv := newTestServer(t)
 	ctx := context.Background()
 	for name, raw := range map[string]string{
-		"apiVersion": `{"kind":"FlowcraftWorkflow","metadata":{"name":"bad"},"spec":{}}`,
-		"kind":       `{"apiVersion":"gizclaw.flowcraft/v1alpha1","metadata":{"name":"bad"},"spec":{}}`,
-		"name":       `{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{},"spec":{}}`,
-		"spec":       `{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"bad"}}`,
+		"name":   `{"metadata":{},"spec":{"driver":"flowcraft","flowcraft":{}}}`,
+		"driver": `{"metadata":{"name":"bad"},"spec":{"flowcraft":{}}}`,
+		"spec":   `{"metadata":{"name":"bad"}}`,
 	} {
 		doc := mustDocument(t, raw)
 		resp, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc})
@@ -388,23 +417,21 @@ func TestServerRejectsMissingWorkflowRequiredFields(t *testing.T) {
 	}
 }
 
-func TestServerRejectsUnsupportedWorkflowVersion(t *testing.T) {
+func TestServerRejectsUnsupportedWorkflowDriver(t *testing.T) {
 	t.Parallel()
 
 	srv := newTestServer(t)
 	ctx := context.Background()
 	doc := mustDocument(t, `{
-		"apiVersion": "example.invalid/v1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {"name": "bad-version"},
-		"spec": {}
+		"spec": {"driver": "example-invalid"}
 	}`)
 	resp, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc})
 	if err != nil {
-		t.Fatalf("CreateWorkflow(bad version) error = %v", err)
+		t.Fatalf("CreateWorkflow(bad driver) error = %v", err)
 	}
 	if _, ok := resp.(adminservice.CreateWorkflow400JSONResponse); !ok {
-		t.Fatalf("CreateWorkflow(bad version) response = %#v", resp)
+		t.Fatalf("CreateWorkflow(bad driver) response = %#v", resp)
 	}
 }
 
@@ -412,10 +439,11 @@ func TestWorkflowResponseVisitors(t *testing.T) {
 	t.Parallel()
 
 	doc := mustDocument(t, `{
-		"apiVersion": "gizclaw.flowcraft/v1alpha1",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {"name": "visitor"},
-		"spec": {}
+		"spec": {
+			"driver": "flowcraft",
+			"flowcraft": {}
+		}
 	}`)
 	cases := map[string]func(*fiber.Ctx) error{
 		"create": createWorkflow200Response{doc: doc}.VisitCreateWorkflowResponse,
@@ -464,19 +492,13 @@ func mustDocument(t *testing.T, raw string) apitypes.WorkflowDocument {
 	return doc
 }
 
-func discriminatorOf(t *testing.T, doc apitypes.WorkflowDocument) string {
+func workflowDriver(t *testing.T, doc apitypes.WorkflowDocument) string {
 	t.Helper()
 
-	return string(doc.Kind)
+	return string(doc.Spec.Driver)
 }
 
-func mustSingle(t *testing.T, doc apitypes.WorkflowDocument) apitypes.FlowcraftWorkflow {
-	t.Helper()
-
-	return mustFlowcraft(t, doc)
-}
-
-func mustFlowcraft(t *testing.T, doc apitypes.WorkflowDocument) apitypes.FlowcraftWorkflow {
+func mustSingle(t *testing.T, doc apitypes.WorkflowDocument) apitypes.WorkflowDocument {
 	t.Helper()
 
 	return doc

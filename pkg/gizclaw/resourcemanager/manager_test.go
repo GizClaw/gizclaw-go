@@ -118,7 +118,7 @@ func TestPutRejectsMissingServicesByKind(t *testing.T) {
 		{name: "voice", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
 		{name: "pet species", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"PetSpecies","metadata":{"name":"species"},"spec":{"name":"Species"}}`},
 		{name: "workspace", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`},
-		{name: "workflow", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`},
+		{name: "workflow", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"driver":"flowcraft","flowcraft":{}}}`},
 	}
 
 	for _, tc := range tests {
@@ -163,7 +163,7 @@ func TestPutRejectsUnsupportedVersionByKind(t *testing.T) {
 		{name: "voice", resource: `{"apiVersion":"unsupported","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
 		{name: "pet species", resource: `{"apiVersion":"unsupported","kind":"PetSpecies","metadata":{"name":"species"},"spec":{"name":"Species"}}`},
 		{name: "workspace", resource: `{"apiVersion":"unsupported","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`},
-		{name: "workflow", resource: `{"apiVersion":"unsupported","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`},
+		{name: "workflow", resource: `{"apiVersion":"unsupported","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"driver":"flowcraft","flowcraft":{}}}`},
 	}
 
 	for _, tc := range tests {
@@ -281,7 +281,7 @@ func TestDeleteRemovesResourcesByKind(t *testing.T) {
 		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"MiniMaxTenant","metadata":{"name":"tenant"},"spec":{"app_id":"app","group_id":"group","credential_name":"credential"}}`),
 		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`),
 		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"PetSpecies","metadata":{"name":"species"},"spec":{"name":"Species"}}`),
-		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`),
+		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"driver":"flowcraft","flowcraft":{}}}`),
 		mustResource(t, `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`),
 	} {
 		if _, err := manager.Put(context.Background(), resource); err != nil {
@@ -349,7 +349,7 @@ func TestApplyRejectsMissingServicesByKind(t *testing.T) {
 		{name: "voice", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
 		{name: "pet species", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"PetSpecies","metadata":{"name":"species"},"spec":{"name":"Species"}}`},
 		{name: "workspace", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`},
-		{name: "workflow", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`},
+		{name: "workflow", resource: `{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"driver":"flowcraft","flowcraft":{}}}`},
 	}
 
 	for _, tc := range tests {
@@ -394,7 +394,7 @@ func TestApplyRejectsUnsupportedVersionByKind(t *testing.T) {
 		{name: "voice", resource: `{"apiVersion":"unsupported","kind":"Voice","metadata":{"name":"voice"},"spec":{"provider":{"kind":"minimax","name":"tenant"},"source":"manual"}}`},
 		{name: "pet species", resource: `{"apiVersion":"unsupported","kind":"PetSpecies","metadata":{"name":"species"},"spec":{"name":"Species"}}`},
 		{name: "workspace", resource: `{"apiVersion":"unsupported","kind":"Workspace","metadata":{"name":"workspace"},"spec":{"workflow_name":"workflow"}}`},
-		{name: "workflow", resource: `{"apiVersion":"unsupported","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"apiVersion":"gizclaw.flowcraft/v1alpha1","kind":"FlowcraftWorkflow","metadata":{"name":"workflow"},"spec":{}}}`},
+		{name: "workflow", resource: `{"apiVersion":"unsupported","kind":"Workflow","metadata":{"name":"workflow"},"spec":{"driver":"flowcraft","flowcraft":{}}}`},
 	}
 
 	for _, tc := range tests {

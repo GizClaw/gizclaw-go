@@ -1,6 +1,164 @@
 {
   "components": {
     "schemas": {
+      "ASTTranslateExternalVoiceParameters": {
+        "additionalProperties": false,
+        "properties": {
+          "tts_voice": {
+            "description": "GizClaw voice resource name used by an external TTS path.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tts_voice"
+        ],
+        "type": "object"
+      },
+      "ASTTranslateInternalSpeakerParameters": {
+        "additionalProperties": false,
+        "properties": {
+          "is_custom_speaker": {
+            "type": "boolean"
+          },
+          "speaker_id": {
+            "description": "AST s2s built-in or custom speaker id.",
+            "type": "string"
+          },
+          "speech_rate": {
+            "type": "integer"
+          },
+          "tts_resource_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "speaker_id"
+        ],
+        "type": "object"
+      },
+      "ASTTranslateMode": {
+        "enum": [
+          "s2t",
+          "s2s"
+        ],
+        "type": "string"
+      },
+      "ASTTranslateVoiceParameters": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ASTTranslateInternalSpeakerParameters"
+          },
+          {
+            "$ref": "#/components/schemas/ASTTranslateExternalVoiceParameters"
+          }
+        ]
+      },
+      "ASTTranslateWorkflowSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "auth_mode": {
+            "description": "Optional AST auth mode. Supported values are x-api-key and v2.",
+            "type": "string"
+          },
+          "denoise": {
+            "type": "boolean"
+          },
+          "enable_source_language_detect": {
+            "type": "boolean"
+          },
+          "is_custom_speaker": {
+            "type": "boolean"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ASTTranslateMode"
+          },
+          "resource_id": {
+            "type": "string"
+          },
+          "speaker_id": {
+            "description": "Deprecated compatibility field. Prefer voice.speaker_id.",
+            "type": "string"
+          },
+          "speech_rate": {
+            "type": "integer"
+          },
+          "translation_model": {
+            "description": "GizClaw model resource used to resolve the Volc tenant credential for AST translate.",
+            "type": "string"
+          },
+          "tts_resource_id": {
+            "type": "string"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/ASTTranslateVoiceParameters"
+          }
+        },
+        "required": [
+          "translation_model"
+        ],
+        "type": "object"
+      },
+      "ASTTranslateWorkspaceParameters": {
+        "additionalProperties": false,
+        "example": {
+          "agent_type": "ast-translate",
+          "input": "push-to-talk",
+          "lang_pair": "auto",
+          "mode": "s2t",
+          "translation_model": "e2e-ast-translate"
+        },
+        "properties": {
+          "agent_type": {
+            "enum": [
+              "ast-translate"
+            ],
+            "type": "string"
+          },
+          "denoise": {
+            "type": "boolean"
+          },
+          "e2e": {
+            "description": "Marks seed resources used by the local e2e harness.",
+            "type": "boolean"
+          },
+          "enable_source_language_detect": {
+            "type": "boolean"
+          },
+          "input": {
+            "$ref": "#/components/schemas/WorkspaceInputMode"
+          },
+          "is_custom_speaker": {
+            "type": "boolean"
+          },
+          "lang_pair": {
+            "description": "AST language pair, for example zh/en or en/zh. Use auto for automatic Chinese/English mode.",
+            "type": "string"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ASTTranslateMode"
+          },
+          "speaker_id": {
+            "description": "Deprecated compatibility field. Prefer voice.speaker_id.",
+            "type": "string"
+          },
+          "speech_rate": {
+            "type": "integer"
+          },
+          "translation_model": {
+            "type": "string"
+          },
+          "tts_resource_id": {
+            "type": "string"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/ASTTranslateVoiceParameters"
+          }
+        },
+        "required": [
+          "agent_type"
+        ],
+        "type": "object"
+      },
       "AgentSelection": {
         "additionalProperties": false,
         "properties": {
@@ -442,6 +600,26 @@
           }
         ]
       },
+      "DoubaoRealtimeWorkflowSpec": {
+        "additionalProperties": true,
+        "properties": {
+          "model": {
+            "type": "string"
+          },
+          "realtime": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "realtime_config": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "realtime_model": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
       "DoubaoRealtimeWorkspaceParameters": {
         "additionalProperties": false,
         "example": {
@@ -770,41 +948,6 @@
             "type": "string"
           }
         },
-        "type": "object"
-      },
-      "FlowcraftWorkflow": {
-        "example": {
-          "apiVersion": "gizclaw.flowcraft/v1alpha1",
-          "kind": "FlowcraftWorkflow",
-          "metadata": {
-            "description": "flowcraft workflow",
-            "name": "demo-assistant"
-          },
-          "spec": {}
-        },
-        "properties": {
-          "apiVersion": {
-            "$ref": "#/components/schemas/WorkflowAPIVersion"
-          },
-          "kind": {
-            "enum": [
-              "FlowcraftWorkflow"
-            ],
-            "type": "string"
-          },
-          "metadata": {
-            "$ref": "#/components/schemas/WorkflowMetadata"
-          },
-          "spec": {
-            "$ref": "#/components/schemas/FlowcraftWorkflowSpec"
-          }
-        },
-        "required": [
-          "apiVersion",
-          "kind",
-          "metadata",
-          "spec"
-        ],
         "type": "object"
       },
       "FlowcraftWorkflowSpec": {
@@ -1660,6 +1803,7 @@
           "tts",
           "asr",
           "realtime",
+          "translation",
           "embedding"
         ],
         "example": "llm",
@@ -3439,12 +3583,6 @@
         ],
         "type": "object"
       },
-      "WorkflowAPIVersion": {
-        "enum": [
-          "gizclaw.flowcraft/v1alpha1"
-        ],
-        "type": "string"
-      },
       "WorkflowCreateRequest": {
         "$ref": "#/components/schemas/WorkflowDocument"
       },
@@ -3468,7 +3606,27 @@
         "$ref": "#/components/schemas/WorkflowDocument"
       },
       "WorkflowDocument": {
-        "$ref": "#/components/schemas/FlowcraftWorkflow"
+        "properties": {
+          "metadata": {
+            "$ref": "#/components/schemas/WorkflowMetadata"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/WorkflowSpec"
+          }
+        },
+        "required": [
+          "metadata",
+          "spec"
+        ],
+        "type": "object"
+      },
+      "WorkflowDriver": {
+        "enum": [
+          "flowcraft",
+          "doubao-realtime",
+          "ast-translate"
+        ],
+        "type": "string"
       },
       "WorkflowGetRequest": {
         "additionalProperties": false,
@@ -3528,8 +3686,10 @@
             "type": "string"
           },
           "name": {
+            "description": "Stable workflow ID. The creator must provide this value.",
             "example": "demo-assistant",
-            "type": "string"
+            "type": "string",
+            "x-go-type-skip-optional-pointer": true
           }
         },
         "required": [
@@ -3556,6 +3716,27 @@
       },
       "WorkflowPutResponse": {
         "$ref": "#/components/schemas/WorkflowDocument"
+      },
+      "WorkflowSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "ast_translate": {
+            "$ref": "#/components/schemas/ASTTranslateWorkflowSpec"
+          },
+          "doubao_realtime": {
+            "$ref": "#/components/schemas/DoubaoRealtimeWorkflowSpec"
+          },
+          "driver": {
+            "$ref": "#/components/schemas/WorkflowDriver"
+          },
+          "flowcraft": {
+            "$ref": "#/components/schemas/FlowcraftWorkflowSpec"
+          }
+        },
+        "required": [
+          "driver"
+        ],
+        "type": "object"
       },
       "Workspace": {
         "properties": {
@@ -3669,6 +3850,7 @@
         "description": "Agent-specific workspace parameters. The shape is selected by agent_type.",
         "discriminator": {
           "mapping": {
+            "ast-translate": "#/components/schemas/ASTTranslateWorkspaceParameters",
             "doubao-realtime": "#/components/schemas/DoubaoRealtimeWorkspaceParameters",
             "flowcraft": "#/components/schemas/FlowcraftWorkspaceParameters"
           },
@@ -3680,6 +3862,9 @@
           },
           {
             "$ref": "#/components/schemas/DoubaoRealtimeWorkspaceParameters"
+          },
+          {
+            "$ref": "#/components/schemas/ASTTranslateWorkspaceParameters"
           }
         ]
       },

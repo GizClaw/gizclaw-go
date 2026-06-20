@@ -1,0 +1,20 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "Model",
+  "metadata": {
+    "name": "${GIZCLAW_E2E_AST_TRANSLATE_MODEL:-e2e-ast-translate}"
+  },
+  "spec": {
+    "kind": "translation",
+    "source": "manual",
+    "provider": {
+      "kind": "volc-tenant",
+      "name": "${GIZCLAW_E2E_VOLC_TENANT:-e2e-volc-tenant}"
+    },
+    "name": "E2E Doubao AST Translate",
+    "description": "E2E Doubao AST realtime translation model",
+    "provider_data": {
+      "resource_id": "${GIZCLAW_E2E_VOLC_AST_TRANSLATE_RESOURCE_ID:-volc.service_type.10053}"
+    }
+  }
+}

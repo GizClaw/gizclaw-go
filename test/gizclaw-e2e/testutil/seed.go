@@ -85,7 +85,10 @@ func ApplyWorkspaceSeed(ctx context.Context, api *adminservice.ClientWithRespons
 	if err != nil {
 		return err
 	}
-	workflowResp, err := api.PutWorkflowWithResponse(ctx, workflow.Metadata.Name, workflow.Spec)
+	workflowResp, err := api.PutWorkflowWithResponse(ctx, workflow.Metadata.Name, apitypes.WorkflowDocument{
+		Metadata: apitypes.WorkflowMetadata{Name: workflow.Metadata.Name},
+		Spec:     workflow.Spec,
+	})
 	if err != nil {
 		return err
 	}

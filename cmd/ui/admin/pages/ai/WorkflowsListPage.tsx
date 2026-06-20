@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { expectData } from "../../components/api";
-import { listWorkflows, type FlowcraftWorkflow } from "@gizclaw/adminservice";
+import { listWorkflows, type WorkflowDocument } from "@gizclaw/adminservice";
 
 import { ErrorBanner } from "../../components/banners";
 import { EmptyState } from "../../components/empty-state";
@@ -17,7 +17,7 @@ import { useCursorListPage } from "../../hooks/useCursorListPage";
 
 export function WorkflowsListPage(): JSX.Element {
   const navigate = useNavigate();
-  const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh } = useCursorListPage<FlowcraftWorkflow>(
+  const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh } = useCursorListPage<WorkflowDocument>(
     async (query) => {
       const result = await expectData(listWorkflows({ query }));
       return {
@@ -82,7 +82,7 @@ export function WorkflowsListPage(): JSX.Element {
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div className="space-y-1">
             <CardTitle>Workflow catalog</CardTitle>
-            <CardDescription>Workflow documents grouped by top-level kind and metadata.</CardDescription>
+            <CardDescription>Workflow documents grouped by driver and metadata.</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -121,8 +121,8 @@ export function WorkflowsListPage(): JSX.Element {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Kind</TableHead>
-                    <TableHead>API Version</TableHead>
+                    <TableHead>Driver</TableHead>
+                    <TableHead>Spec</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -139,9 +139,9 @@ export function WorkflowsListPage(): JSX.Element {
                     >
                       <TableCell className="font-medium">{workflow.metadata.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{workflow.kind}</Badge>
+                        <Badge variant="outline">{workflow.spec.driver}</Badge>
                       </TableCell>
-                      <TableCell>{workflow.apiVersion}</TableCell>
+                      <TableCell>{workflowSpecLabel(workflow)}</TableCell>
                       <TableCell className="max-w-[28rem] text-sm text-muted-foreground">{workflow.metadata.description?.trim() || "—"}</TableCell>
                       <TableCell className="text-right">
                         <Button asChild className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm" onClick={(event) => event.stopPropagation()} variant="outline">
@@ -165,4 +165,17 @@ export function WorkflowsListPage(): JSX.Element {
 
 function isInteractiveTarget(target: EventTarget): boolean {
   return target instanceof Element && target.closest("a,button,input,select,textarea") !== null;
+}
+
+function workflowSpecLabel(workflow: WorkflowDocument): string {
+  if (workflow.spec.ast_translate !== undefined) {
+    return "ast_translate";
+  }
+  if (workflow.spec.doubao_realtime !== undefined) {
+    return "doubao_realtime";
+  }
+  if (workflow.spec.flowcraft !== undefined) {
+    return "flowcraft";
+  }
+  return "—";
 }

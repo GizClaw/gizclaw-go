@@ -74,12 +74,13 @@ func workflowDocument(t *testing.T, name string) apitypes.WorkflowDocument {
 	t.Helper()
 
 	return apitypes.WorkflowDocument{
-		ApiVersion: apitypes.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       apitypes.FlowcraftWorkflowKindFlowcraftWorkflow,
 		Metadata: apitypes.WorkflowMetadata{
 			Name: name,
 		},
-		Spec: apitypes.FlowcraftWorkflowSpec{},
+		Spec: apitypes.WorkflowSpec{
+			Driver:    apitypes.WorkflowDriverFlowcraft,
+			Flowcraft: &apitypes.FlowcraftWorkflowSpec{},
+		},
 	}
 }
 

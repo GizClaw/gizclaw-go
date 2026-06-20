@@ -70,6 +70,13 @@ func (b DefaultBuilder) BuildTransformer(_ context.Context, cfg TransformerConfi
 			default:
 				return nil, fmt.Errorf("%w: realtime transformer provider %q", ErrUnsupported, cfg.Tenant.Kind)
 			}
+		case apitypes.ModelKindTranslation:
+			switch cfg.Tenant.Kind {
+			case string(apitypes.VoiceProviderKindVolcTenant):
+				return b.buildVolcASTTranslate(cfg)
+			default:
+				return nil, fmt.Errorf("%w: translation transformer provider %q", ErrUnsupported, cfg.Tenant.Kind)
+			}
 		default:
 			return nil, fmt.Errorf("%w: model transformer kind %q", ErrUnsupported, cfg.Model.Kind)
 		}
@@ -305,6 +312,150 @@ func (b DefaultBuilder) buildVolcRealtime(cfg TransformerConfig) (genx.Transform
 	}
 	client := doubaospeech.NewClient(appID, clientOpts...)
 	return transformers.NewDoubaoRealtime(client, opts...), nil
+}
+
+func (b DefaultBuilder) buildVolcASTTranslate(cfg TransformerConfig) (genx.Transformer, error) {
+	if cfg.Tenant.Volc == nil || cfg.Model == nil {
+		return nil, fmt.Errorf("%w: volc tenant and model are required", ErrInvalid)
+	}
+	appID, err := volcCredentialAppID(cfg.Credential)
+	if err != nil {
+		return nil, err
+	}
+	credentialBody, err := cfg.Credential.Body.AsVolcCredentialBody()
+	if err != nil {
+		return nil, err
+	}
+	var providerData apitypes.VolcTenantModelProviderData
+	if cfg.Model.ProviderData != nil {
+		providerData, err = cfg.Model.ProviderData.AsVolcTenantModelProviderData()
+		if err != nil {
+			return nil, fmt.Errorf("%w: decode volc model provider_data: %w", ErrInvalid, err)
+		}
+	}
+	data := mergeParams(nil, cfg.Params)
+	if err := normalizeVolcASTTranslateLanguagePair(data); err != nil {
+		return nil, err
+	}
+	resourceID := firstString(mapString(data, "resource_id"), providerData.ResourceId, doubaospeech.ResourceASTTranslate)
+	clientOpts := []doubaospeech.Option{doubaospeech.WithResourceID(resourceID)}
+	switch mapString(data, "auth_mode", "auth") {
+	case "x-api-key", "api_key":
+		apiKey := firstString(credentialBody.ArkApiKey)
+		if apiKey == "" {
+			return nil, fmt.Errorf("%w: credential %q missing ark_api_key for doubao ast translate x-api-key auth", ErrInvalid, cfg.Credential.Name)
+		}
+		clientOpts = append(clientOpts, doubaospeech.WithAPIKey(apiKey))
+	case "", "v2", "access_key":
+		accessKey := firstString(credentialBody.SpeechToken, credentialBody.OpenapiAccessKeyId)
+		if accessKey == "" {
+			return nil, fmt.Errorf("%w: credential %q missing speech_token or openapi_access_key_id for doubao ast translate", ErrInvalid, cfg.Credential.Name)
+		}
+		clientOpts = append(clientOpts, doubaospeech.WithV2APIKey(accessKey, ""))
+	default:
+		return nil, fmt.Errorf("%w: doubao ast translate auth_mode %q", ErrUnsupported, mapString(data, "auth_mode", "auth"))
+	}
+
+	opts := []transformers.DoubaoASTTranslateOption{
+		transformers.WithDoubaoASTTranslateResourceID(resourceID),
+	}
+	if value := mapString(data, "mode"); value != "" {
+		mode, err := doubaoASTTranslateMode(value)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, transformers.WithDoubaoASTTranslateMode(mode))
+	}
+	if value := mapString(data, "source_language", "source"); value != "" {
+		opts = append(opts, transformers.WithDoubaoASTTranslateSourceLanguage(value))
+	}
+	if value := mapString(data, "target_language", "target"); value != "" {
+		opts = append(opts, transformers.WithDoubaoASTTranslateTargetLanguage(value))
+	}
+	if value := mapString(data, "speaker_id", "speaker"); value != "" {
+		opts = append(opts, transformers.WithDoubaoASTTranslateSpeakerID(value))
+	}
+	if value, ok := mapBool(data, "is_custom_speaker", "custom_speaker"); ok {
+		opts = append(opts, transformers.WithDoubaoASTTranslateCustomSpeaker(value))
+	}
+	if value := mapString(data, "tts_resource_id"); value != "" {
+		opts = append(opts, transformers.WithDoubaoASTTranslateTTSResourceID(value))
+	}
+	if value, ok := mapInt(data, "speech_rate"); ok {
+		opts = append(opts, transformers.WithDoubaoASTTranslateSpeechRate(value))
+	}
+	if value, ok := mapBool(data, "enable_source_language_detect", "source_language_detect"); ok {
+		opts = append(opts, transformers.WithDoubaoASTTranslateSourceLanguageDetect(value))
+	}
+	if value, ok := mapBool(data, "denoise"); ok {
+		opts = append(opts, transformers.WithDoubaoASTTranslateDenoise(value))
+	}
+	client := doubaospeech.NewClient(appID, clientOpts...)
+	return transformers.NewDoubaoASTTranslate(client, opts...), nil
+}
+
+func normalizeVolcASTTranslateLanguagePair(data map[string]any) error {
+	if data == nil {
+		return nil
+	}
+	pair := mapString(data, "lang_pair", "language_pair")
+	source, target, auto, err := volcASTTranslateLanguagesFromPair(pair)
+	if err != nil {
+		return fmt.Errorf("%w: doubao ast translate lang_pair %q: %w", ErrInvalid, pair, err)
+	}
+	if source != "" && target != "" {
+		data["source_language"] = source
+		data["target_language"] = target
+		delete(data, "lang_pair")
+		delete(data, "language_pair")
+	}
+	if auto {
+		data["enable_source_language_detect"] = true
+	}
+	return nil
+}
+
+func volcASTTranslateLanguagesFromPair(pair string) (source string, target string, auto bool, err error) {
+	pair = strings.ToLower(strings.TrimSpace(pair))
+	switch pair {
+	case "":
+		return "", "", false, nil
+	case "auto":
+		return "zhen", "zhen", true, nil
+	}
+	parts := strings.Split(pair, "/")
+	if len(parts) != 2 {
+		return "", "", false, fmt.Errorf("expected source/target or auto")
+	}
+	source = normalizeVolcASTTranslateLanguageCode(parts[0])
+	target = normalizeVolcASTTranslateLanguageCode(parts[1])
+	if source == "" || target == "" {
+		return "", "", false, fmt.Errorf("source and target must be non-empty")
+	}
+	if source == "zhen" || target == "zhen" {
+		return "", "", false, fmt.Errorf("zhen is only available through auto")
+	}
+	return source, target, false, nil
+}
+
+func normalizeVolcASTTranslateLanguageCode(language string) string {
+	switch strings.ToLower(strings.TrimSpace(language)) {
+	case "jp":
+		return "ja"
+	default:
+		return strings.ToLower(strings.TrimSpace(language))
+	}
+}
+
+func doubaoASTTranslateMode(mode string) (doubaospeech.ASTTranslateMode, error) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "", "s2t", "speech-to-text", "speech_to_text":
+		return doubaospeech.ASTTranslateModeS2T, nil
+	case "s2s", "speech-to-speech", "speech_to_speech":
+		return doubaospeech.ASTTranslateModeS2S, nil
+	default:
+		return "", fmt.Errorf("%w: doubao ast translate mode %q", ErrUnsupported, mode)
+	}
 }
 
 func (b DefaultBuilder) buildVolcTTS(cfg TransformerConfig) (genx.Transformer, error) {

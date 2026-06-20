@@ -554,7 +554,7 @@ func handleTestPlayCredentials(w http.ResponseWriter, r *http.Request, client *g
 		out := *result
 		out.Items = append([]rpcapi.Credential(nil), result.Items...)
 		for i := range out.Items {
-			out.Items[i].Body = nil
+			out.Items[i].Body = rpcapi.CredentialBody{}
 		}
 		result = &out
 	}

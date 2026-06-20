@@ -44,12 +44,10 @@ func (t patternTransformer) Transform(ctx context.Context, _ string, input genx.
 }
 
 type realtimeWorkflowConfig struct {
-	Spec struct {
-		Model          string `json:"model"`
-		RealtimeModel  string `json:"realtime_model"`
-		Realtime       map[string]any
-		RealtimeConfig map[string]any `json:"realtime_config"`
-	} `json:"spec"`
+	Model          string
+	RealtimeModel  string
+	Realtime       map[string]any
+	RealtimeConfig map[string]any
 }
 
 func resolveRealtimeModelPattern(spec agenthost.Spec) (string, error) {
@@ -70,15 +68,17 @@ func resolveRealtimeModelPattern(spec agenthost.Spec) (string, error) {
 }
 
 func workflowRealtimeModelPattern(spec agenthost.Spec) string {
-	data, err := json.Marshal(spec.Workflow)
-	if err != nil {
+	workflowSpec := spec.Workflow.Spec.DoubaoRealtime
+	if workflowSpec == nil {
 		return ""
 	}
-	var cfg realtimeWorkflowConfig
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return ""
+	cfg := realtimeWorkflowConfig{
+		Model:          stringPtrValue(workflowSpec.Model),
+		RealtimeModel:  stringPtrValue(workflowSpec.RealtimeModel),
+		RealtimeConfig: mapPtrValue(workflowSpec.RealtimeConfig),
+		Realtime:       mapPtrValue(workflowSpec.Realtime),
 	}
-	pattern := firstNonEmpty(cfg.Spec.RealtimeModel, cfg.Spec.Model)
+	pattern := firstNonEmpty(cfg.RealtimeModel, cfg.Model)
 	if pattern == "" {
 		return ""
 	}
@@ -110,12 +110,19 @@ func firstNonEmpty(values ...string) string {
 
 func realtimeWorkflowParams(cfg realtimeWorkflowConfig) map[string]any {
 	params := make(map[string]any)
-	mergeRealtimeWorkflowParamsValue(params, cfg.Spec.RealtimeConfig)
-	mergeRealtimeWorkflowParamsValue(params, cfg.Spec.Realtime)
+	mergeRealtimeWorkflowParamsValue(params, cfg.RealtimeConfig)
+	mergeRealtimeWorkflowParamsValue(params, cfg.Realtime)
 	if len(params) == 0 {
 		return nil
 	}
 	return params
+}
+
+func mapPtrValue(value *map[string]interface{}) map[string]any {
+	if value == nil {
+		return nil
+	}
+	return *value
 }
 
 func mergeDoubaoRealtimeTypedParams(params map[string]any, typed apitypes.DoubaoRealtimeWorkspaceParameters) map[string]any {

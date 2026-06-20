@@ -105,8 +105,8 @@ func TestServiceResolverErrors(t *testing.T) {
 	}
 }
 
-func TestWorkflowTypeFromAPIVersion(t *testing.T) {
-	got, err := resolveWorkflowType(rawWorkflow(t, "gizclaw.flowcraft/v1alpha1"))
+func TestWorkflowTypeFromDriver(t *testing.T) {
+	got, err := resolveWorkflowType(rawWorkflow(t, "flowcraft"))
 	if err != nil {
 		t.Fatalf("resolveWorkflowType() error = %v", err)
 	}
@@ -114,10 +114,10 @@ func TestWorkflowTypeFromAPIVersion(t *testing.T) {
 		t.Fatalf("resolveWorkflowType() = %q, want flowcraft", got)
 	}
 	if _, err := resolveWorkflowType(rawWorkflow(t, "bad")); err == nil || !strings.Contains(err.Error(), "unsupported") {
-		t.Fatalf("unsupported apiVersion error = %v", err)
+		t.Fatalf("unsupported driver error = %v", err)
 	}
-	if _, err := resolveWorkflowType(rawWorkflow(t, "")); err == nil || !strings.Contains(err.Error(), "apiVersion is required") {
-		t.Fatalf("empty apiVersion error = %v", err)
+	if _, err := resolveWorkflowType(rawWorkflow(t, "")); err == nil || !strings.Contains(err.Error(), "spec.driver is required") {
+		t.Fatalf("empty driver error = %v", err)
 	}
 }
 
@@ -460,21 +460,20 @@ func (s responseWorkflowService) GetWorkflow(context.Context, adminservice.GetWo
 
 func mustWorkflow(name string) apitypes.WorkflowDocument {
 	return apitypes.WorkflowDocument{
-		ApiVersion: apitypes.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       apitypes.FlowcraftWorkflowKindFlowcraftWorkflow,
-		Metadata:   apitypes.WorkflowMetadata{Name: name},
-		Spec:       apitypes.FlowcraftWorkflowSpec{},
+		Metadata: apitypes.WorkflowMetadata{Name: name},
+		Spec: apitypes.WorkflowSpec{
+			Driver:    apitypes.WorkflowDriverFlowcraft,
+			Flowcraft: &apitypes.FlowcraftWorkflowSpec{},
+		},
 	}
 }
 
-func rawWorkflow(t *testing.T, apiVersion string) apitypes.WorkflowDocument {
+func rawWorkflow(t *testing.T, driver string) apitypes.WorkflowDocument {
 	t.Helper()
 	var doc apitypes.WorkflowDocument
 	if err := json.Unmarshal([]byte(`{
-		"apiVersion": "`+apiVersion+`",
-		"kind": "FlowcraftWorkflow",
 		"metadata": {"name": "workflow"},
-		"spec": {}
+		"spec": {"driver": "`+driver+`"}
 	}`), &doc); err != nil {
 		t.Fatalf("unmarshal workflow: %v", err)
 	}

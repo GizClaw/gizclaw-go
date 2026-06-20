@@ -332,17 +332,23 @@
       "WorkflowDocument": {
         "$ref": "./type/workflow_document.json#/components/schemas/WorkflowDocument"
       },
-      "WorkflowAPIVersion": {
-        "$ref": "./type/workflow_api_version.json#/components/schemas/WorkflowAPIVersion"
+      "WorkflowSpec": {
+        "$ref": "./type/workflow_spec.json#/components/schemas/WorkflowSpec"
+      },
+      "WorkflowDriver": {
+        "$ref": "./type/workflow_spec.json#/components/schemas/WorkflowDriver"
       },
       "WorkflowMetadata": {
         "$ref": "./type/workflow_metadata.json#/components/schemas/WorkflowMetadata"
       },
-      "FlowcraftWorkflow": {
-        "$ref": "./type/workflows/flowcraft.json#/components/schemas/FlowcraftWorkflow"
-      },
       "FlowcraftWorkflowSpec": {
         "$ref": "./type/workflows/flowcraft.json#/components/schemas/FlowcraftWorkflowSpec"
+      },
+      "DoubaoRealtimeWorkflowSpec": {
+        "$ref": "./type/workflows/doubao_realtime.json#/components/schemas/DoubaoRealtimeWorkflowSpec"
+      },
+      "ASTTranslateWorkflowSpec": {
+        "$ref": "./type/workflows/ast_translate.json#/components/schemas/ASTTranslateWorkflowSpec"
       },
       "AgentSelection": {
         "$ref": "./type/agent_selection.json#/components/schemas/AgentSelection"

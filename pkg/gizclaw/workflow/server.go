@@ -36,10 +36,8 @@ type WorkflowAdminService interface {
 var _ WorkflowAdminService = (*Server)(nil)
 
 type documentEnvelope struct {
-	APIVersion string           `json:"apiVersion"`
-	Kind       string           `json:"kind"`
-	Metadata   workflowMetadata `json:"metadata"`
-	Spec       *json.RawMessage `json:"spec"`
+	Metadata workflowMetadata `json:"metadata"`
+	Spec     *json.RawMessage `json:"spec"`
 }
 
 type workflowMetadata struct {
@@ -172,15 +170,7 @@ func validateDocument(doc apitypes.WorkflowDocument, expectedName string) (apity
 	if err := json.Unmarshal(raw, &env); err != nil {
 		return apitypes.WorkflowDocument{}, env, nil, err
 	}
-	env.APIVersion = strings.TrimSpace(env.APIVersion)
-	env.Kind = strings.TrimSpace(env.Kind)
 	env.Metadata.Name = strings.TrimSpace(env.Metadata.Name)
-	if env.APIVersion == "" {
-		return apitypes.WorkflowDocument{}, env, nil, errors.New("apiVersion is required")
-	}
-	if env.Kind == "" {
-		return apitypes.WorkflowDocument{}, env, nil, errors.New("kind is required")
-	}
 	if env.Metadata.Name == "" {
 		return apitypes.WorkflowDocument{}, env, nil, errors.New("metadata.name is required")
 	}
@@ -190,12 +180,11 @@ func validateDocument(doc apitypes.WorkflowDocument, expectedName string) (apity
 	if expectedName != "" && env.Metadata.Name != expectedName {
 		return apitypes.WorkflowDocument{}, env, nil, fmt.Errorf("metadata.name %q must match path name %q", env.Metadata.Name, expectedName)
 	}
-
-	if !doc.ApiVersion.Valid() {
-		return apitypes.WorkflowDocument{}, env, nil, fmt.Errorf("unsupported apiVersion %q", env.APIVersion)
+	if strings.TrimSpace(string(doc.Spec.Driver)) == "" {
+		return apitypes.WorkflowDocument{}, env, nil, errors.New("spec.driver is required")
 	}
-	if !doc.Kind.Valid() {
-		return apitypes.WorkflowDocument{}, env, nil, fmt.Errorf("unsupported kind %q", env.Kind)
+	if !doc.Spec.Driver.Valid() {
+		return apitypes.WorkflowDocument{}, env, nil, fmt.Errorf("unsupported spec.driver %q", doc.Spec.Driver)
 	}
 
 	doc.Metadata.Name = env.Metadata.Name

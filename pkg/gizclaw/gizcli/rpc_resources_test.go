@@ -281,11 +281,13 @@ func resourceWorkspace(name string) rpcapi.Workspace {
 }
 
 func resourceWorkflowDoc(name string) rpcapi.WorkflowDocument {
+	spec := rpcapi.FlowcraftWorkflowSpec{"entry_agent": ""}
 	return rpcapi.WorkflowDocument{
-		ApiVersion: rpcapi.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       rpcapi.FlowcraftWorkflowKindFlowcraftWorkflow,
-		Metadata:   rpcapi.WorkflowMetadata{Name: name},
-		Spec:       rpcapi.FlowcraftWorkflowSpec{"entry_agent": ""},
+		Metadata: rpcapi.WorkflowMetadata{Name: name},
+		Spec: rpcapi.WorkflowSpec{
+			Driver:    rpcapi.WorkflowDriverFlowcraft,
+			Flowcraft: &spec,
+		},
 	}
 }
 

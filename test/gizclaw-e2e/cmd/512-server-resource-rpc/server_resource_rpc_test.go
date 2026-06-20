@@ -458,29 +458,33 @@ func seedPeerResources(t *testing.T, h *clitest.Harness) {
 }
 
 func apiWorkflow(name, description string) apitypes.WorkflowDocument {
+	spec := apitypes.FlowcraftWorkflowSpec{
+		"entry_agent": "",
+	}
 	return apitypes.WorkflowDocument{
-		ApiVersion: apitypes.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       apitypes.FlowcraftWorkflowKindFlowcraftWorkflow,
 		Metadata: apitypes.WorkflowMetadata{
 			Name:        name,
 			Description: &description,
 		},
-		Spec: apitypes.FlowcraftWorkflowSpec{
-			"entry_agent": "",
+		Spec: apitypes.WorkflowSpec{
+			Driver:    apitypes.WorkflowDriverFlowcraft,
+			Flowcraft: &spec,
 		},
 	}
 }
 
 func rpcWorkflow(name, description string) rpcapi.WorkflowDocument {
+	spec := rpcapi.FlowcraftWorkflowSpec{
+		"entry_agent": "",
+	}
 	return rpcapi.WorkflowDocument{
-		ApiVersion: rpcapi.WorkflowAPIVersionGizclawFlowcraftv1alpha1,
-		Kind:       rpcapi.FlowcraftWorkflowKindFlowcraftWorkflow,
 		Metadata: rpcapi.WorkflowMetadata{
 			Name:        name,
 			Description: &description,
 		},
-		Spec: rpcapi.FlowcraftWorkflowSpec{
-			"entry_agent": "",
+		Spec: rpcapi.WorkflowSpec{
+			Driver:    rpcapi.WorkflowDriverFlowcraft,
+			Flowcraft: &spec,
 		},
 	}
 }
