@@ -209,10 +209,11 @@ func (h *Harness) startServerProcess() {
 	h.serverCmd = cmd
 	h.serverLog = logFile
 	h.ServerLogPath = logPath
-	h.serverWaitCh = make(chan error, 1)
+	waitCh := make(chan error, 1)
+	h.serverWaitCh = waitCh
 	go func() {
-		h.serverWaitCh <- cmd.Wait()
-		close(h.serverWaitCh)
+		waitCh <- cmd.Wait()
+		close(waitCh)
 	}()
 
 	h.waitForServerIdentity()
@@ -702,9 +703,6 @@ func (h *Harness) stopServer() {
 	}()
 
 	if h.serverCmd.Process == nil {
-		return
-	}
-	if h.serverCmd.ProcessState != nil && h.serverCmd.ProcessState.Exited() {
 		return
 	}
 

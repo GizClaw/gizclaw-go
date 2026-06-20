@@ -21,6 +21,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/publicapi"
 	adminui "github.com/GizClaw/gizclaw-go/cmd/ui/admin"
 	playui "github.com/GizClaw/gizclaw-go/cmd/ui/play"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 )
 
@@ -339,6 +340,14 @@ func registerPlayUIRoutes(mux *http.ServeMux, client clientapi.ClientProvider, i
 		}
 		playOpenAIBufferedProxy(client, invalidate, w, r, "/v1/audio/speech")
 	})
+	mux.HandleFunc("/peer-run/workspace", handlePlayWorkspaceState(client, invalidate))
+	mux.HandleFunc("/peer-run/workspace/details", handlePlayWorkspaceDetails(client, invalidate))
+	mux.HandleFunc("/peer-run/workspace/reload", handlePlayWorkspaceReload(client, invalidate))
+	mux.HandleFunc("/peer-run/workspace/mode", handlePlayWorkspaceMode(client, invalidate))
+	mux.HandleFunc("/peer-run/workspace/history", handlePlayWorkspaceHistory(client, invalidate))
+	mux.HandleFunc("/peer-run/workspace/history/play", handlePlayWorkspaceHistoryPlay(client, invalidate))
+	mux.HandleFunc("/peer-run/workspace/memory/stats", handlePlayWorkspaceMemoryStats(client, invalidate))
+	mux.HandleFunc("/peer-run/workspace/recall", handlePlayWorkspaceRecall(client, invalidate))
 	handler := clientapi.Handler(client, invalidate)
 	for _, pattern := range []string{
 		"/peer-resources",
@@ -349,6 +358,523 @@ func registerPlayUIRoutes(mux *http.ServeMux, client clientapi.ClientProvider, i
 	} {
 		mux.Handle(pattern, handler)
 	}
+}
+
+type playWorkspaceSetRequest struct {
+	WorkspaceName string `json:"workspace_name"`
+}
+
+type playWorkspaceModeRequest struct {
+	Mode          string `json:"mode"`
+	WorkspaceName string `json:"workspace_name,omitempty"`
+}
+
+type playWorkspaceDetailsRequest struct {
+	Parameters    *rpcapi.WorkspaceParameters `json:"parameters,omitempty"`
+	WorkspaceName string                      `json:"workspace_name,omitempty"`
+	WorkflowName  string                      `json:"workflow_name,omitempty"`
+}
+
+type playWorkspaceState struct {
+	ActiveWorkspaceName  string `json:"active_workspace_name,omitempty"`
+	AgentType            string `json:"agent_type,omitempty"`
+	Message              string `json:"message,omitempty"`
+	PendingWorkspaceName string `json:"pending_workspace_name,omitempty"`
+	RuntimeState         string `json:"runtime_state"`
+	WorkspaceMode        string `json:"workspace_mode,omitempty"`
+	WorkspaceName        string `json:"workspace_name"`
+	WorkflowName         string `json:"workflow_name,omitempty"`
+}
+
+func handlePlayWorkspaceDetails(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			workspaceName := strings.TrimSpace(r.URL.Query().Get("workspace_name"))
+			workspace, ok := playWorkspaceGetByName(w, r, client, invalidate, workspaceName)
+			if !ok {
+				return
+			}
+			writePlayWorkspaceJSON(w, http.StatusOK, workspace)
+		case http.MethodPut:
+			var req playWorkspaceDetailsRequest
+			if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+				playWorkspaceHTTPError(w, http.StatusBadRequest, "invalid workspace details json")
+				return
+			}
+			workspace, ok := playWorkspaceGetByName(w, r, client, invalidate, req.WorkspaceName)
+			if !ok {
+				return
+			}
+			if strings.TrimSpace(req.WorkflowName) != "" {
+				workspace.WorkflowName = strings.TrimSpace(req.WorkflowName)
+			}
+			if req.Parameters != nil {
+				workspace.Parameters = req.Parameters
+			}
+			c, ok := playWorkspaceClient(w, client)
+			if !ok {
+				return
+			}
+			ctx, cancel := playWorkspaceRPCContext(r)
+			defer cancel()
+			updated, err := c.PutWorkspace(ctx, playWorkspaceRPCID(), rpcapi.WorkspacePutRequest{Name: workspace.Name, Body: *workspace})
+			if err != nil {
+				if invalidate != nil {
+					invalidate(c)
+				}
+				playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+				return
+			}
+			writePlayWorkspaceJSON(w, http.StatusOK, updated)
+		default:
+			w.Header().Set("Allow", "GET, PUT")
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func handlePlayWorkspaceState(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			c, ok := playWorkspaceClient(w, client)
+			if !ok {
+				return
+			}
+			ctx, cancel := playWorkspaceRPCContext(r)
+			defer cancel()
+			state, err := c.GetServerRunWorkspace(ctx, playWorkspaceRPCID())
+			writePlayWorkspaceState(w, r, c, invalidate, state, err)
+		case http.MethodPut:
+			var req playWorkspaceSetRequest
+			if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+				playWorkspaceHTTPError(w, http.StatusBadRequest, "invalid workspace set json")
+				return
+			}
+			workspaceName := strings.TrimSpace(req.WorkspaceName)
+			if workspaceName == "" {
+				playWorkspaceHTTPError(w, http.StatusBadRequest, "workspace_name is required")
+				return
+			}
+			c, ok := playWorkspaceClient(w, client)
+			if !ok {
+				return
+			}
+			ctx, cancel := playWorkspaceRPCContext(r)
+			defer cancel()
+			state, err := c.SetServerRunWorkspace(ctx, playWorkspaceRPCID(), rpcapi.ServerSetRunWorkspaceRequest{WorkspaceName: workspaceName})
+			writePlayWorkspaceState(w, r, c, invalidate, state, err)
+		default:
+			w.Header().Set("Allow", "GET, PUT")
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func handlePlayWorkspaceReload(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		c, ok := playWorkspaceClient(w, client)
+		if !ok {
+			return
+		}
+		ctx, cancel := playWorkspaceRPCContext(r)
+		defer cancel()
+		state, err := c.ReloadServerRunWorkspace(ctx, playWorkspaceRPCID())
+		writePlayWorkspaceState(w, r, c, invalidate, state, err)
+	}
+}
+
+func handlePlayWorkspaceMode(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut {
+			w.Header().Set("Allow", http.MethodPut)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		var req playWorkspaceModeRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			playWorkspaceHTTPError(w, http.StatusBadRequest, "invalid workspace mode json")
+			return
+		}
+		mode, err := normalizePlayWorkspaceMode(req.Mode)
+		if err != nil {
+			playWorkspaceHTTPError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		c, ok := playWorkspaceClient(w, client)
+		if !ok {
+			return
+		}
+		ctx, cancel := playWorkspaceRPCContext(r)
+		defer cancel()
+		workspaceName := strings.TrimSpace(req.WorkspaceName)
+		if workspaceName == "" {
+			state, err := c.GetServerRunWorkspace(ctx, playWorkspaceRPCID())
+			if err != nil {
+				if invalidate != nil {
+					invalidate(c)
+				}
+				playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+				return
+			}
+			workspaceName = selectedPlayWorkspaceName(state)
+		}
+		if workspaceName == "" {
+			playWorkspaceHTTPError(w, http.StatusBadRequest, "workspace_name is required")
+			return
+		}
+		workspace, err := c.GetWorkspace(ctx, playWorkspaceRPCID(), rpcapi.WorkspaceGetRequest{Name: workspaceName})
+		if err != nil {
+			if invalidate != nil {
+				invalidate(c)
+			}
+			playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		if workspace == nil {
+			playWorkspaceHTTPError(w, http.StatusBadGateway, "empty workspace response")
+			return
+		}
+		if workspace.Parameters == nil {
+			playWorkspaceHTTPError(w, http.StatusBadRequest, "workspace parameters are required")
+			return
+		}
+		params, err := playWorkspaceParametersWithMode(workspace.Parameters, mode)
+		if err != nil {
+			playWorkspaceHTTPError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		workspace.Parameters = params
+		if _, err := c.PutWorkspace(ctx, playWorkspaceRPCID(), rpcapi.WorkspacePutRequest{Name: workspaceName, Body: *workspace}); err != nil {
+			if invalidate != nil {
+				invalidate(c)
+			}
+			playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		state, err := c.ReloadServerRunWorkspace(ctx, playWorkspaceRPCID())
+		writePlayWorkspaceState(w, r, c, invalidate, state, err)
+	}
+}
+
+func playWorkspaceParametersWithMode(parameters *rpcapi.WorkspaceParameters, mode string) (*rpcapi.WorkspaceParameters, error) {
+	discriminator, err := parameters.Discriminator()
+	if err != nil {
+		return nil, fmt.Errorf("decode workspace parameters: %w", err)
+	}
+	input := rpcapi.WorkspaceInputMode(mode)
+	var params rpcapi.WorkspaceParameters
+	switch strings.TrimSpace(discriminator) {
+	case string(rpcapi.FlowcraftWorkspaceParametersAgentTypeFlowcraft):
+		typed, err := parameters.AsFlowcraftWorkspaceParameters()
+		if err != nil {
+			return nil, err
+		}
+		typed.Input = &input
+		if err := params.FromFlowcraftWorkspaceParameters(typed); err != nil {
+			return nil, err
+		}
+	case string(rpcapi.DoubaoRealtimeWorkspaceParametersAgentTypeDoubaoRealtime):
+		typed, err := parameters.AsDoubaoRealtimeWorkspaceParameters()
+		if err != nil {
+			return nil, err
+		}
+		typed.Input = &input
+		if err := params.FromDoubaoRealtimeWorkspaceParameters(typed); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unsupported workspace parameter agent_type %q", discriminator)
+	}
+	return &params, nil
+}
+
+func playWorkspaceGetByName(w http.ResponseWriter, r *http.Request, client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator, workspaceName string) (*rpcapi.WorkspaceGetResponse, bool) {
+	c, ok := playWorkspaceClient(w, client)
+	if !ok {
+		return nil, false
+	}
+	ctx, cancel := playWorkspaceRPCContext(r)
+	defer cancel()
+	workspaceName = strings.TrimSpace(workspaceName)
+	if workspaceName == "" {
+		state, err := c.GetServerRunWorkspace(ctx, playWorkspaceRPCID())
+		if err != nil {
+			if invalidate != nil {
+				invalidate(c)
+			}
+			playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+			return nil, false
+		}
+		workspaceName = selectedPlayWorkspaceName(state)
+	}
+	if workspaceName == "" {
+		playWorkspaceHTTPError(w, http.StatusBadRequest, "workspace_name is required")
+		return nil, false
+	}
+	workspace, err := c.GetWorkspace(ctx, playWorkspaceRPCID(), rpcapi.WorkspaceGetRequest{Name: workspaceName})
+	if err != nil {
+		if invalidate != nil {
+			invalidate(c)
+		}
+		playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+		return nil, false
+	}
+	if workspace == nil {
+		playWorkspaceHTTPError(w, http.StatusBadGateway, "empty workspace response")
+		return nil, false
+	}
+	return workspace, true
+}
+
+func playWorkspaceClient(w http.ResponseWriter, client clientapi.ClientProvider) (*gizcli.Client, bool) {
+	c, err := client()
+	if err != nil {
+		playWorkspaceHTTPError(w, http.StatusServiceUnavailable, err.Error())
+		return nil, false
+	}
+	return c, true
+}
+
+func writePlayWorkspaceState(w http.ResponseWriter, r *http.Request, c *gizcli.Client, invalidate clientapi.ClientInvalidator, state *rpcapi.ServerGetRunWorkspaceResponse, err error) {
+	if err != nil {
+		if invalidate != nil {
+			invalidate(c)
+		}
+		playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+		return
+	}
+	if state == nil {
+		playWorkspaceHTTPError(w, http.StatusBadGateway, "empty workspace state response")
+		return
+	}
+	payload := playWorkspaceState{
+		RuntimeState:         string(state.RuntimeState),
+		WorkspaceName:        strings.TrimSpace(state.WorkspaceName),
+		ActiveWorkspaceName:  stringPtrTrimmed(state.ActiveWorkspaceName),
+		AgentType:            stringPtrTrimmed(state.AgentType),
+		Message:              stringPtrTrimmed(state.Message),
+		PendingWorkspaceName: stringPtrTrimmed(state.PendingWorkspaceName),
+		WorkflowName:         stringPtrTrimmed(state.WorkflowName),
+	}
+	if payload.WorkspaceName == "" && state.SelectedWorkspaceName != nil {
+		payload.WorkspaceName = strings.TrimSpace(*state.SelectedWorkspaceName)
+	}
+	if payload.WorkspaceName != "" {
+		enrichPlayWorkspaceState(r.Context(), c, &payload)
+	}
+	writePlayWorkspaceJSON(w, http.StatusOK, payload)
+}
+
+func enrichPlayWorkspaceState(ctx context.Context, c *gizcli.Client, state *playWorkspaceState) {
+	workspace, err := c.GetWorkspace(ctx, playWorkspaceRPCID(), rpcapi.WorkspaceGetRequest{Name: state.WorkspaceName})
+	if err != nil || workspace == nil {
+		return
+	}
+	state.WorkflowName = workspace.WorkflowName
+	if workspace.Parameters != nil {
+		switch discriminator, err := workspace.Parameters.Discriminator(); {
+		case err != nil:
+		case strings.TrimSpace(discriminator) == string(rpcapi.FlowcraftWorkspaceParametersAgentTypeFlowcraft):
+			state.AgentType = strings.TrimSpace(discriminator)
+			typed, err := workspace.Parameters.AsFlowcraftWorkspaceParameters()
+			if err == nil && typed.Input != nil {
+				state.WorkspaceMode = uiWorkspaceMode(string(*typed.Input))
+			}
+		case strings.TrimSpace(discriminator) == string(rpcapi.DoubaoRealtimeWorkspaceParametersAgentTypeDoubaoRealtime):
+			state.AgentType = strings.TrimSpace(discriminator)
+			typed, err := workspace.Parameters.AsDoubaoRealtimeWorkspaceParameters()
+			if err == nil && typed.Input != nil {
+				state.WorkspaceMode = uiWorkspaceMode(string(*typed.Input))
+			}
+		default:
+			state.AgentType = strings.TrimSpace(discriminator)
+		}
+	}
+}
+
+func selectedPlayWorkspaceName(state *rpcapi.ServerGetRunWorkspaceResponse) string {
+	if state == nil {
+		return ""
+	}
+	for _, value := range []string{
+		strings.TrimSpace(state.WorkspaceName),
+		stringPtrTrimmed(state.SelectedWorkspaceName),
+		stringPtrTrimmed(state.ActiveWorkspaceName),
+		stringPtrTrimmed(state.PendingWorkspaceName),
+	} {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func normalizePlayWorkspaceMode(mode string) (string, error) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "push", "push_to_talk", "push-to-talk", "ptt":
+		return "push-to-talk", nil
+	case "realtime", "real_time", "real-time":
+		return "realtime", nil
+	default:
+		return "", fmt.Errorf("workspace mode must be push or realtime")
+	}
+}
+
+func uiWorkspaceMode(mode string) string {
+	switch normalized, err := normalizePlayWorkspaceMode(mode); {
+	case err != nil:
+		return ""
+	case normalized == "push-to-talk":
+		return "push"
+	default:
+		return normalized
+	}
+}
+
+func handlePlayWorkspaceHistory(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		c, ok := playWorkspaceClient(w, client)
+		if !ok {
+			return
+		}
+		ctx, cancel := playWorkspaceRPCContext(r)
+		defer cancel()
+		resp, err := c.ListServerRunWorkspaceHistory(ctx, playWorkspaceRPCID(), rpcapi.ServerListRunWorkspaceHistoryRequest{})
+		if err != nil {
+			if invalidate != nil {
+				invalidate(c)
+			}
+			playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writePlayWorkspaceJSON(w, http.StatusOK, resp)
+	}
+}
+
+func handlePlayWorkspaceHistoryPlay(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		var req rpcapi.ServerPlayRunWorkspaceHistoryRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			playWorkspaceHTTPError(w, http.StatusBadRequest, "invalid workspace history play json")
+			return
+		}
+		c, ok := playWorkspaceClient(w, client)
+		if !ok {
+			return
+		}
+		ctx, cancel := playWorkspaceRPCContext(r)
+		defer cancel()
+		resp, err := c.PlayServerRunWorkspaceHistory(ctx, playWorkspaceRPCID(), req)
+		if err != nil {
+			if invalidate != nil {
+				invalidate(c)
+			}
+			playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writePlayWorkspaceJSON(w, http.StatusOK, resp)
+	}
+}
+
+func handlePlayWorkspaceMemoryStats(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		c, ok := playWorkspaceClient(w, client)
+		if !ok {
+			return
+		}
+		ctx, cancel := playWorkspaceRPCContext(r)
+		defer cancel()
+		resp, err := c.GetServerRunWorkspaceMemoryStats(ctx, playWorkspaceRPCID(), rpcapi.ServerGetRunWorkspaceMemoryStatsRequest{})
+		if err != nil {
+			if invalidate != nil {
+				invalidate(c)
+			}
+			playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writePlayWorkspaceJSON(w, http.StatusOK, resp)
+	}
+}
+
+func handlePlayWorkspaceRecall(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		var req rpcapi.ServerRunWorkspaceRecallRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			playWorkspaceHTTPError(w, http.StatusBadRequest, "invalid workspace recall json")
+			return
+		}
+		c, ok := playWorkspaceClient(w, client)
+		if !ok {
+			return
+		}
+		ctx, cancel := playWorkspaceRPCContext(r)
+		defer cancel()
+		resp, err := c.ServerRunWorkspaceRecall(ctx, playWorkspaceRPCID(), req)
+		if err != nil {
+			if invalidate != nil {
+				invalidate(c)
+			}
+			playWorkspaceHTTPError(w, http.StatusBadGateway, err.Error())
+			return
+		}
+		writePlayWorkspaceJSON(w, http.StatusOK, resp)
+	}
+}
+
+func stringPtrTrimmed(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return strings.TrimSpace(*value)
+}
+
+func playWorkspaceRPCID() string {
+	return "play-workspace-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+}
+
+func playWorkspaceRPCContext(r *http.Request) (context.Context, context.CancelFunc) {
+	ctx := r.Context()
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, uiAPIProxyTimeout)
+}
+
+func playWorkspaceHTTPError(w http.ResponseWriter, status int, message string) {
+	writePlayWorkspaceJSON(w, status, map[string]any{"error": map[string]string{"message": message}})
+}
+
+func writePlayWorkspaceJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(value)
 }
 
 func playOpenAIBufferedProxy(client clientapi.ClientProvider, invalidate clientapi.ClientInvalidator, w http.ResponseWriter, r *http.Request, targetPath string) {

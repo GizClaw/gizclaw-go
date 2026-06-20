@@ -28,6 +28,7 @@ func allStories() []Story {
 		playShellStories(),
 		playActionsStories(),
 		playAllActionsStories(),
+		playWorkspaceDrawerStories(),
 		playActionErrorsStories(),
 		realServiceSmokeStories(),
 	} {

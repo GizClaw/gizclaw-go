@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net"
@@ -15,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 )
 
@@ -22,6 +24,10 @@ type stringAddr string
 
 func (a stringAddr) Network() string { return "tcp" }
 func (a stringAddr) String() string  { return string(a) }
+
+func ptr[T any](value T) *T {
+	return &value
+}
 
 func TestUIAPIProxyReusesHealthyClient(t *testing.T) {
 	fake := &fakeUIAPIProxyClient{
@@ -459,6 +465,258 @@ func TestPlayUIGeneratedRoutesRejectWrongMethod(t *testing.T) {
 	mux.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/peer-resources/workspaces", nil))
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("POST /peer-resources/workspaces status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestPlayUIWorkspaceRoutesRejectWrongMethodWithoutDial(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPlayUIRoutes(mux, func() (*gizcli.Client, error) {
+		t.Fatal("method mismatch should not dial client")
+		return nil, errors.New("unexpected dial")
+	}, nil)
+
+	for _, tc := range []struct {
+		method string
+		path   string
+		allow  string
+	}{
+		{method: http.MethodPost, path: "/peer-run/workspace", allow: "GET, PUT"},
+		{method: http.MethodGet, path: "/peer-run/workspace/reload", allow: http.MethodPost},
+		{method: http.MethodGet, path: "/peer-run/workspace/mode", allow: http.MethodPut},
+		{method: http.MethodPost, path: "/peer-run/workspace/history", allow: http.MethodGet},
+		{method: http.MethodGet, path: "/peer-run/workspace/history/play", allow: http.MethodPost},
+		{method: http.MethodPost, path: "/peer-run/workspace/memory/stats", allow: http.MethodGet},
+		{method: http.MethodGet, path: "/peer-run/workspace/recall", allow: http.MethodPost},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(tc.method, tc.path, nil))
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Fatalf("%s %s status = %d, want %d", tc.method, tc.path, rec.Code, http.StatusMethodNotAllowed)
+		}
+		if got := rec.Header().Get("Allow"); got != tc.allow {
+			t.Fatalf("%s %s Allow = %q, want %q", tc.method, tc.path, got, tc.allow)
+		}
+	}
+}
+
+func TestPlayUIWorkspaceIntrospectionRoutesUseClientProvider(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPlayUIRoutes(mux, func() (*gizcli.Client, error) {
+		return nil, errors.New("dial failed")
+	}, nil)
+
+	for _, tc := range []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{method: http.MethodGet, path: "/peer-run/workspace/history"},
+		{method: http.MethodPost, path: "/peer-run/workspace/history/play", body: `{"history_id":"h1"}`},
+		{method: http.MethodGet, path: "/peer-run/workspace/memory/stats"},
+		{method: http.MethodPost, path: "/peer-run/workspace/recall", body: `{"query":"hello"}`},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body)))
+		if rec.Code != http.StatusServiceUnavailable {
+			t.Fatalf("%s %s status = %d, want %d", tc.method, tc.path, rec.Code, http.StatusServiceUnavailable)
+		}
+		if !strings.Contains(rec.Body.String(), "dial failed") {
+			t.Fatalf("%s %s body = %q, want dial failure", tc.method, tc.path, rec.Body.String())
+		}
+	}
+}
+
+func TestPlayUIWorkspaceRoutesValidateRequestsBeforeDial(t *testing.T) {
+	mux := http.NewServeMux()
+	registerPlayUIRoutes(mux, func() (*gizcli.Client, error) {
+		t.Fatal("invalid request should not dial client")
+		return nil, errors.New("unexpected dial")
+	}, nil)
+
+	for _, tc := range []struct {
+		method string
+		path   string
+		body   string
+		want   string
+	}{
+		{method: http.MethodPut, path: "/peer-run/workspace", body: `not-json`, want: "invalid workspace set json"},
+		{method: http.MethodPut, path: "/peer-run/workspace", body: `{}`, want: "workspace_name is required"},
+		{method: http.MethodPut, path: "/peer-run/workspace/details", body: `not-json`, want: "invalid workspace details json"},
+		{method: http.MethodPut, path: "/peer-run/workspace/mode", body: `not-json`, want: "invalid workspace mode json"},
+		{method: http.MethodPut, path: "/peer-run/workspace/mode", body: `{"mode":"manual"}`, want: "workspace mode must be push or realtime"},
+		{method: http.MethodPost, path: "/peer-run/workspace/history/play", body: `not-json`, want: "invalid workspace history play json"},
+		{method: http.MethodPost, path: "/peer-run/workspace/recall", body: `not-json`, want: "invalid workspace recall json"},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body)))
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("%s %s status = %d, want %d", tc.method, tc.path, rec.Code, http.StatusBadRequest)
+		}
+		if !strings.Contains(rec.Body.String(), tc.want) {
+			t.Fatalf("%s %s body = %q, want %q", tc.method, tc.path, rec.Body.String(), tc.want)
+		}
+	}
+}
+
+func TestNormalizePlayWorkspaceMode(t *testing.T) {
+	mode, err := normalizePlayWorkspaceMode("ptt")
+	if err != nil || mode != "push-to-talk" {
+		t.Fatalf("normalize ptt = %q/%v, want push-to-talk/nil", mode, err)
+	}
+	mode, err = normalizePlayWorkspaceMode("real-time")
+	if err != nil || mode != "realtime" {
+		t.Fatalf("normalize real-time = %q/%v, want realtime/nil", mode, err)
+	}
+	if _, err := normalizePlayWorkspaceMode("manual"); err == nil {
+		t.Fatal("normalize manual error = nil, want error")
+	}
+}
+
+func TestPlayWorkspaceErrorAndContextHelpers(t *testing.T) {
+	var invalidates atomic.Int32
+	rec := httptest.NewRecorder()
+	writePlayWorkspaceState(rec, httptest.NewRequest(http.MethodGet, "/peer-run/workspace", nil), &gizcli.Client{}, func(*gizcli.Client) {
+		invalidates.Add(1)
+	}, nil, errors.New("rpc failed"))
+	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), "rpc failed") {
+		t.Fatalf("error state response = %d/%q", rec.Code, rec.Body.String())
+	}
+	if invalidates.Load() != 1 {
+		t.Fatalf("invalidates = %d, want 1", invalidates.Load())
+	}
+
+	rec = httptest.NewRecorder()
+	writePlayWorkspaceState(rec, httptest.NewRequest(http.MethodGet, "/peer-run/workspace", nil), &gizcli.Client{}, nil, nil, nil)
+	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), "empty workspace state response") {
+		t.Fatalf("nil state response = %d/%q", rec.Code, rec.Body.String())
+	}
+
+	rec = httptest.NewRecorder()
+	if _, ok := playWorkspaceGetByName(rec, httptest.NewRequest(http.MethodGet, "/peer-run/workspace/details", nil), func() (*gizcli.Client, error) {
+		return nil, errors.New("dial failed")
+	}, nil, ""); ok {
+		t.Fatal("playWorkspaceGetByName ok = true, want false")
+	}
+	if rec.Code != http.StatusServiceUnavailable || !strings.Contains(rec.Body.String(), "dial failed") {
+		t.Fatalf("get by name dial failure = %d/%q", rec.Code, rec.Body.String())
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	ctx, cancel := playWorkspaceRPCContext(req)
+	defer cancel()
+	if _, ok := ctx.Deadline(); !ok {
+		t.Fatal("playWorkspaceRPCContext without deadline did not set timeout")
+	}
+
+	deadlineCtx, deadlineCancel := context.WithDeadline(req.Context(), time.Now().Add(time.Minute))
+	defer deadlineCancel()
+	ctx, cancel = playWorkspaceRPCContext(req.WithContext(deadlineCtx))
+	defer cancel()
+	if ctx != deadlineCtx {
+		t.Fatal("playWorkspaceRPCContext with deadline should reuse request context")
+	}
+}
+
+func TestPlayWorkspaceParametersWithMode(t *testing.T) {
+	var flowcraft rpcapi.WorkspaceParameters
+	if err := flowcraft.FromFlowcraftWorkspaceParameters(rpcapi.FlowcraftWorkspaceParameters{
+		GenerateModel: ptr("chat"),
+	}); err != nil {
+		t.Fatalf("FromFlowcraftWorkspaceParameters() error = %v", err)
+	}
+	updated, err := playWorkspaceParametersWithMode(&flowcraft, "realtime")
+	if err != nil {
+		t.Fatalf("flowcraft mode update error = %v", err)
+	}
+	flowcraftTyped, err := updated.AsFlowcraftWorkspaceParameters()
+	if err != nil {
+		t.Fatalf("decode updated flowcraft params: %v", err)
+	}
+	if flowcraftTyped.Input == nil || *flowcraftTyped.Input != rpcapi.WorkspaceInputModeRealtime {
+		t.Fatalf("flowcraft input = %v, want realtime", flowcraftTyped.Input)
+	}
+	if flowcraftTyped.GenerateModel == nil || *flowcraftTyped.GenerateModel != "chat" {
+		t.Fatalf("flowcraft generate_model = %v, want chat", flowcraftTyped.GenerateModel)
+	}
+
+	var doubao rpcapi.WorkspaceParameters
+	if err := doubao.FromDoubaoRealtimeWorkspaceParameters(rpcapi.DoubaoRealtimeWorkspaceParameters{
+		RealtimeModel: ptr("voice"),
+	}); err != nil {
+		t.Fatalf("FromDoubaoRealtimeWorkspaceParameters() error = %v", err)
+	}
+	updated, err = playWorkspaceParametersWithMode(&doubao, "push-to-talk")
+	if err != nil {
+		t.Fatalf("doubao mode update error = %v", err)
+	}
+	doubaoTyped, err := updated.AsDoubaoRealtimeWorkspaceParameters()
+	if err != nil {
+		t.Fatalf("decode updated doubao params: %v", err)
+	}
+	if doubaoTyped.Input == nil || *doubaoTyped.Input != rpcapi.WorkspaceInputModePushToTalk {
+		t.Fatalf("doubao input = %v, want push-to-talk", doubaoTyped.Input)
+	}
+	if doubaoTyped.RealtimeModel == nil || *doubaoTyped.RealtimeModel != "voice" {
+		t.Fatalf("doubao realtime_model = %v, want voice", doubaoTyped.RealtimeModel)
+	}
+
+	var ast rpcapi.WorkspaceParameters
+	if err := ast.FromASTTranslateWorkspaceParameters(rpcapi.ASTTranslateWorkspaceParameters{}); err != nil {
+		t.Fatalf("FromASTTranslateWorkspaceParameters() error = %v", err)
+	}
+	if _, err := playWorkspaceParametersWithMode(&ast, "realtime"); err == nil || !strings.Contains(err.Error(), "unsupported workspace parameter agent_type") {
+		t.Fatalf("ast mode update error = %v, want unsupported agent_type", err)
+	}
+}
+
+func TestWritePlayWorkspaceStateResponse(t *testing.T) {
+	selected := "selected-workspace"
+	active := "active-workspace"
+	pending := "pending-workspace"
+	agentType := "flowcraft"
+	message := "ready"
+	workflowName := "demo-workflow"
+	state := &rpcapi.ServerGetRunWorkspaceResponse{
+		RuntimeState:          rpcapi.PeerRunStatusStateRunning,
+		SelectedWorkspaceName: &selected,
+		ActiveWorkspaceName:   &active,
+		PendingWorkspaceName:  &pending,
+		AgentType:             &agentType,
+		Message:               &message,
+		WorkflowName:          &workflowName,
+	}
+	rec := httptest.NewRecorder()
+	writePlayWorkspaceState(rec, httptest.NewRequest(http.MethodGet, "/peer-run/workspace", nil), &gizcli.Client{}, nil, state, nil)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	var got playWorkspaceState
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode state response: %v", err)
+	}
+	if got.RuntimeState != string(rpcapi.PeerRunStatusStateRunning) || got.WorkspaceName != selected || got.ActiveWorkspaceName != active || got.PendingWorkspaceName != pending || got.AgentType != agentType || got.Message != message || got.WorkflowName != workflowName {
+		t.Fatalf("state response = %+v", got)
+	}
+}
+
+func TestPlayWorkspaceNameAndModeHelpers(t *testing.T) {
+	selected := " selected "
+	active := " active "
+	pending := " pending "
+	if got := selectedPlayWorkspaceName(&rpcapi.ServerGetRunWorkspaceResponse{SelectedWorkspaceName: &selected, ActiveWorkspaceName: &active, PendingWorkspaceName: &pending}); got != "selected" {
+		t.Fatalf("selectedPlayWorkspaceName selected = %q, want selected", got)
+	}
+	if got := selectedPlayWorkspaceName(&rpcapi.ServerGetRunWorkspaceResponse{ActiveWorkspaceName: &active, PendingWorkspaceName: &pending}); got != "active" {
+		t.Fatalf("selectedPlayWorkspaceName active = %q, want active", got)
+	}
+	if got := selectedPlayWorkspaceName(&rpcapi.ServerGetRunWorkspaceResponse{PendingWorkspaceName: &pending}); got != "pending" {
+		t.Fatalf("selectedPlayWorkspaceName pending = %q, want pending", got)
+	}
+	if got := uiWorkspaceMode("push-to-talk"); got != "push" {
+		t.Fatalf("uiWorkspaceMode push-to-talk = %q, want push", got)
+	}
+	if got := uiWorkspaceMode("manual"); got != "" {
+		t.Fatalf("uiWorkspaceMode manual = %q, want empty", got)
 	}
 }
 

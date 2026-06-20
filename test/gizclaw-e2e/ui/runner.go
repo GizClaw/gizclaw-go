@@ -12,6 +12,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -43,6 +44,7 @@ const (
 	SeedVolcVoiceID         = itest.SeedVolcVoiceID
 	SeedWorkflowName        = itest.SeedWorkflowName
 	SeedWorkspaceName       = itest.SeedWorkspaceName
+	SeedAltWorkspaceName    = "ui-alt-workspace"
 )
 
 type Story struct {
@@ -217,6 +219,13 @@ func (p *Page) ClickRoleLike(role, name string) {
 	}
 }
 
+func (p *Page) ClickSelector(selector string) {
+	p.t.Helper()
+	if err := p.page.Locator(selector).Click(); err != nil {
+		p.t.Fatalf("click selector=%q: %v", selector, err)
+	}
+}
+
 func (p *Page) ClickNavigationLink(name string) {
 	p.t.Helper()
 	err := p.page.GetByRole(playwright.AriaRole("navigation")).GetByRole(playwright.AriaRole("link"), playwright.LocatorGetByRoleOptions{
@@ -335,6 +344,10 @@ func seedPlayResourceACL(t testing.TB, ctx context.Context, api *adminservice.Cl
 			apitypes.ACLPermissionCredentialUse,
 			apitypes.ACLPermissionVoiceRead,
 			apitypes.ACLPermissionVoiceUse,
+			apitypes.ACLPermissionWorkflowRead,
+			apitypes.ACLPermissionWorkflowUse,
+			apitypes.ACLPermissionWorkspaceRead,
+			apitypes.ACLPermissionWorkspaceUse,
 		},
 	})
 	if err != nil {
@@ -349,6 +362,8 @@ func seedPlayResourceACL(t testing.TB, ctx context.Context, api *adminservice.Cl
 		{Kind: apitypes.ACLResourceKindModel, Id: SeedModelID},
 		{Kind: apitypes.ACLResourceKindCredential, Id: "ui-seed-openai-credential"},
 		{Kind: apitypes.ACLResourceKindVoice, Id: SeedVoiceID},
+		{Kind: apitypes.ACLResourceKindWorkflow, Id: SeedWorkflowName},
+		{Kind: apitypes.ACLResourceKindWorkspace, Id: SeedWorkspaceName},
 	} {
 		id := fmt.Sprintf("ui-play-%s-%s", resource.Kind, strings.NewReplacer(":", "-", "/", "-").Replace(resource.Id))
 		resp, err := api.PutACLPolicyBindingWithResponse(ctx, id, adminservice.ACLPolicyBindingUpsert{
@@ -469,6 +484,14 @@ type testPlayVoiceStreamEvent struct {
 	Voice json.RawMessage `json:"voice,omitempty"`
 }
 
+type testPlayWorkspaceSetRequest struct {
+	WorkspaceName string `json:"workspace_name"`
+}
+
+type testPlayHistoryPlayRequest struct {
+	HistoryID string `json:"history_id"`
+}
+
 func registerTestPlayRoutes(mux *http.ServeMux, client *gizcli.Client) {
 	mux.HandleFunc("/peer-resources", handleTestPlayResourceCatalog)
 	mux.HandleFunc("/peer-resources/", func(w http.ResponseWriter, r *http.Request) {
@@ -484,6 +507,8 @@ func registerTestPlayRoutes(mux *http.ServeMux, client *gizcli.Client) {
 			handleTestPlayCredentials(w, r, client)
 		case "voices":
 			proxyTestPlayOpenAI(w, r, client, "/v1/voices")
+		case "workspaces":
+			handleTestPlayWorkspaces(w, r, client)
 		case "pets":
 			handleTestPlayPets(w, r)
 		case "wallet":
@@ -499,6 +524,7 @@ func registerTestPlayRoutes(mux *http.ServeMux, client *gizcli.Client) {
 	mux.HandleFunc("/play/voices/stream", func(w http.ResponseWriter, r *http.Request) {
 		handleTestPlayVoiceStream(w, r, client)
 	})
+	registerTestPlayWorkspaceRuntimeRoutes(mux)
 	registerTestPlayWebRTCRoute(mux, client)
 }
 
@@ -512,6 +538,12 @@ func registerTestPlayErrorRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/play/voices/stream", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		writeTestPlayVoiceStreamEvent(w, testPlayVoiceStreamEvent{Error: "no gizclaw client configured for error scenario"})
+	})
+	mux.HandleFunc("/peer-run/workspace", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
+	})
+	mux.HandleFunc("/peer-run/workspace/", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
 	})
 	mux.HandleFunc("/webrtc/offer", func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "no gizclaw client configured for error scenario", http.StatusServiceUnavailable)
@@ -559,6 +591,168 @@ func handleTestPlayCredentials(w http.ResponseWriter, r *http.Request, client *g
 		result = &out
 	}
 	writeTestPlayRPCResult(w, result, err)
+}
+
+func handleTestPlayWorkspaces(w http.ResponseWriter, r *http.Request, client *gizcli.Client) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		return
+	}
+	result, err := client.ListWorkspaces(r.Context(), testPlayRPCID(), rpcapi.WorkspaceListRequest{
+		Cursor: testQueryStringPtr(r, "cursor"),
+		Limit:  testQueryIntPtr(r, "limit", 20, 100),
+	})
+	if result != nil {
+		out := *result
+		out.Items = append([]rpcapi.Workspace(nil), result.Items...)
+		out.Items = append(out.Items, rpcapi.Workspace{
+			Name:         SeedAltWorkspaceName,
+			WorkflowName: SeedWorkflowName,
+			CreatedAt:    time.Date(2026, 6, 18, 2, 2, 0, 0, time.UTC),
+			UpdatedAt:    time.Date(2026, 6, 18, 2, 2, 0, 0, time.UTC),
+		})
+		result = &out
+	}
+	writeTestPlayRPCResult(w, result, err)
+}
+
+func registerTestPlayWorkspaceRuntimeRoutes(mux *http.ServeMux) {
+	state := struct {
+		sync.Mutex
+		active  string
+		pending string
+	}{active: SeedWorkspaceName}
+	mux.HandleFunc("/peer-run/workspace", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			state.Lock()
+			writeTestPlayWorkspaceState(w, state.active, state.pending)
+			state.Unlock()
+		case http.MethodPut:
+			var req testPlayWorkspaceSetRequest
+			if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+				http.Error(w, "invalid workspace set json", http.StatusBadRequest)
+				return
+			}
+			if strings.TrimSpace(req.WorkspaceName) == "" {
+				http.Error(w, "workspace_name is required", http.StatusBadRequest)
+				return
+			}
+			state.Lock()
+			state.pending = strings.TrimSpace(req.WorkspaceName)
+			writeTestPlayWorkspaceState(w, state.active, state.pending)
+			state.Unlock()
+		default:
+			w.Header().Set("Allow", "GET, PUT")
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/peer-run/workspace/reload", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		state.Lock()
+		if state.pending != "" {
+			state.active = state.pending
+			state.pending = ""
+		}
+		writeTestPlayWorkspaceState(w, state.active, state.pending)
+		state.Unlock()
+	})
+	mux.HandleFunc("/peer-run/workspace/history", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		writeTestPlayJSON(w, map[string]any{
+			"items": []map[string]any{{
+				"id":               "ui-history-1",
+				"actor":            "assistant",
+				"text":             "北京今天适合轻松散步，也可以看看天气再决定。",
+				"transcript":       "今天适合出去玩吗？",
+				"created_at":       "2026-06-18T02:00:00Z",
+				"duration_ms":      2100,
+				"replay_available": true,
+				"audio": map[string]any{
+					"available":   true,
+					"duration_ms": 2100,
+				},
+			}},
+			"has_next": false,
+		})
+	})
+	mux.HandleFunc("/peer-run/workspace/history/play", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		var req testPlayHistoryPlayRequest
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+			http.Error(w, "invalid history play json", http.StatusBadRequest)
+			return
+		}
+		if strings.TrimSpace(req.HistoryID) == "" {
+			http.Error(w, "history_id is required", http.StatusBadRequest)
+			return
+		}
+		writeTestPlayJSON(w, map[string]any{"accepted": true, "state": "playing", "history_id": req.HistoryID})
+	})
+	mux.HandleFunc("/peer-run/workspace/memory/stats", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		writeTestPlayJSON(w, map[string]any{
+			"available":        true,
+			"enabled":          true,
+			"item_count":       2416,
+			"storage_bytes":    987654,
+			"embedding_status": "disabled",
+			"index_status":     "ready",
+			"updated_at":       "2026-06-18T02:01:00Z",
+			"backend":          "flowcraft-memory",
+		})
+	})
+	mux.HandleFunc("/peer-run/workspace/recall", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			return
+		}
+		writeTestPlayJSON(w, map[string]any{
+			"hits": []map[string]any{{
+				"id":        "ui-recall-1",
+				"score":     0.91,
+				"source_id": "ui-history-1",
+				"snippet":   "北京出行建议：先看天气，再选择轻松散步。",
+				"timestamp": "2026-06-18T02:00:00Z",
+				"metadata": map[string]any{
+					"lane": "preference",
+				},
+			}},
+		})
+	})
+}
+
+func writeTestPlayWorkspaceState(w http.ResponseWriter, activeWorkspace, pendingWorkspace string) {
+	selectedWorkspace := activeWorkspace
+	if pendingWorkspace != "" {
+		selectedWorkspace = pendingWorkspace
+	}
+	writeTestPlayJSON(w, map[string]any{
+		"active_workspace_name":  activeWorkspace,
+		"pending_workspace_name": pendingWorkspace,
+		"workspace_name":         selectedWorkspace,
+		"workflow_name":          SeedWorkflowName,
+		"agent_type":             "flowcraft",
+		"runtime_state":          "active",
+	})
 }
 
 func handleTestPlayPets(w http.ResponseWriter, r *http.Request) {

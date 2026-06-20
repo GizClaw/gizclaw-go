@@ -1,9 +1,9 @@
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { createRoot } from "react-dom/client";
 import OpenAI from "openai";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import { Bot, Brain, BriefcaseBusiness, Coins, Database, Gift, KeyRound, MessageCircle, Mic2, PawPrint, Pencil, Plus, ReceiptText, RefreshCw, SendHorizontal, Trash2, Volume2, VolumeX, Workflow } from "lucide-react";
+import { Bot, Brain, BriefcaseBusiness, ChevronDown, Clock3, Coins, Database, Gift, KeyRound, Loader2, MessageCircle, Mic2, PawPrint, Pencil, Play, Plus, ReceiptText, RefreshCw, Search, SendHorizontal, Trash2, Volume2, VolumeX, Workflow } from "lucide-react";
 import { toast } from "sonner";
 import {
   ActionBarPrimitive,
@@ -70,16 +70,19 @@ import { Field as ShadField, FieldGroup, FieldLabel } from "@/components/ui/fiel
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toaster } from "@/components/ui/sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/components/ui/utils";
 
 type Section = "overview" | "workspaces" | "workflows" | "models" | "credentials" | "voices" | "pets" | "walletTransactions" | "rewards";
+type TopDrawer = "workspace" | "test-chat" | null;
 
 type ModelSpec = {
   capabilities?: ModelCapabilities;
@@ -206,6 +209,103 @@ type StoredHistory = {
   }>;
 };
 
+type ActiveWorkspaceState = {
+  active_workspace_name?: string;
+  agent_type?: string;
+  message?: string;
+  pending_workspace_name?: string;
+  runtime_state?: string;
+  workspace_mode?: WorkspaceChatMode;
+  workspace_name?: string | null;
+  workflow_name?: string;
+};
+
+type WorkspaceChatMode = "push" | "realtime";
+
+type WorkspaceDetails = {
+  display_name?: string;
+  name: string;
+  parameters?: Record<string, unknown>;
+  workflow_name: string;
+};
+
+type WorkspaceHistoryEntry = {
+  actor?: string;
+  audio?: {
+    available?: boolean;
+    duration_ms?: number;
+  };
+  created_at?: string;
+  duration_ms?: number;
+  id: string;
+  replay_available?: boolean;
+  text?: string;
+  transcript?: string;
+};
+
+type WorkspaceMemoryStats = {
+  available?: boolean;
+  backend?: string;
+  embedding_status?: string;
+  enabled?: boolean;
+  index_status?: string;
+  item_count?: number;
+  last_updated_at?: string;
+  storage_bytes?: number;
+  updated_at?: string;
+};
+
+type WorkspaceRecallHit = {
+  id: string;
+  metadata?: Record<string, unknown>;
+  score?: number;
+  snippet?: string;
+  created_at?: string;
+  source_id?: string;
+  timestamp?: string;
+};
+
+type WorkspaceRecallResponse = {
+  hits?: WorkspaceRecallHit[];
+};
+
+type WebRTCSessionDescription = {
+  sdp: string;
+  type: RTCSdpType;
+};
+
+type PeerStreamEvent = {
+  error?: string;
+  kind?: "text" | "audio" | "video" | "mixed";
+  label?: string;
+  mime_type?: string;
+  seq?: number;
+  stream_id?: string;
+  text?: string;
+  timestamp?: number;
+  type: "bos" | "eos" | "text.delta" | "text.done";
+  v: number;
+};
+
+type WorkspaceVoiceSession = {
+  close: (reason?: string) => void;
+  finishInputTurn: (error?: string) => Promise<void>;
+  startInputTurn: (streamID: string) => Promise<void>;
+};
+
+type WorkspaceChatTurnStatus = "recording" | "sending" | "responding" | "playing" | "complete" | "error";
+
+type WorkspaceChatTurn = {
+  assistantText?: string;
+  audioState?: "waiting" | "playing" | "done";
+  createdAt: number;
+  error?: string;
+  id: string;
+  status: WorkspaceChatTurnStatus;
+  streamID?: string;
+  transcript?: string;
+};
+
 const sections: Array<{ icon: typeof Bot; id: Section; label: string }> = [
   { icon: Database, id: "overview", label: "Overview" },
   { icon: BriefcaseBusiness, id: "workspaces", label: "Workspaces" },
@@ -220,6 +320,8 @@ const sections: Array<{ icon: typeof Bot; id: Section; label: string }> = [
 
 const chatSessionsKey = "gizclaw.openai.chat.sessions";
 const openAIAPIKey = "gizclaw-play";
+const topDrawerContentClassName =
+  "top-32 h-[calc(100dvh-8rem)] w-[min(100vw,1120px)] gap-0 p-0 sm:top-24 sm:h-[calc(100dvh-6rem)] sm:max-w-none lg:top-20 lg:h-[calc(100dvh-5rem)]";
 
 let openAIClient: OpenAI | null = null;
 
@@ -235,6 +337,7 @@ function getOpenAIClient(): OpenAI {
 
 function App(): JSX.Element {
   const [section, setSection] = useState<Section>("overview");
+  const [topDrawer, setTopDrawer] = useState<TopDrawer>(null);
   const [models, setModels] = useState<ModelSpec[]>([]);
   const [wallet, setWallet] = useState<WalletResource | null>(null);
   const [loading, setLoading] = useState(true);
@@ -326,7 +429,8 @@ function App(): JSX.Element {
                   <RefreshCw className={cn("size-4", loading && "animate-spin")} />
                   Refresh
                 </Button>
-                <ChatTester models={models} />
+                <WorkspaceDrawer open={topDrawer === "workspace"} onOpenChange={(nextOpen) => setTopDrawer(nextOpen ? "workspace" : null)} />
+                <ChatTester models={models} open={topDrawer === "test-chat"} onOpenChange={(nextOpen) => setTopDrawer(nextOpen ? "test-chat" : null)} />
               </div>
             </div>
           </header>
@@ -361,8 +465,1064 @@ function App(): JSX.Element {
   );
 }
 
-function ChatTester({ models }: { models: ModelSpec[] }): JSX.Element {
-  const [open, setOpen] = useState(false);
+function WorkspaceDrawer({ onOpenChange, open }: { onOpenChange: (open: boolean) => void; open: boolean }): JSX.Element {
+  const [workspaces, setWorkspaces] = useState<ResourceItem[]>([]);
+  const [state, setState] = useState<ActiveWorkspaceState | null>(null);
+  const [selectedWorkspace, setSelectedWorkspace] = useState("");
+  const [history, setHistory] = useState<WorkspaceHistoryEntry[]>([]);
+  const [historyError, setHistoryError] = useState("");
+  const [memory, setMemory] = useState<WorkspaceMemoryStats | null>(null);
+  const [memoryError, setMemoryError] = useState("");
+  const [workspaceDetails, setWorkspaceDetails] = useState<WorkspaceDetails | null>(null);
+  const [workspaceDetailsError, setWorkspaceDetailsError] = useState("");
+  const [workspaceParametersText, setWorkspaceParametersText] = useState("{}");
+  const [workspaceSaving, setWorkspaceSaving] = useState(false);
+  const [recallQuery, setRecallQuery] = useState("");
+  const [recallHits, setRecallHits] = useState<WorkspaceRecallHit[]>([]);
+  const [recallError, setRecallError] = useState("");
+  const [mode, setMode] = useState<WorkspaceChatMode>("push");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const activeWorkspace = state?.active_workspace_name ?? "";
+  const pendingWorkspace = state?.pending_workspace_name ?? "";
+  const currentWorkspace = state?.workspace_name ?? "";
+  const runtimeState = state?.runtime_state ?? (currentWorkspace === "" ? "no active workspace" : "unknown");
+  const pendingDirty = selectedWorkspace !== "" && selectedWorkspace !== currentWorkspace;
+  const canSetWorkspace = pendingDirty && !loading;
+  const canReloadWorkspace = currentWorkspace !== "" && !pendingDirty && !loading;
+
+  const loadWorkspaceDetails = useCallback(async (workspaceName: string) => {
+    const name = workspaceName.trim();
+    if (name === "") {
+      setWorkspaceDetails(null);
+      setWorkspaceParametersText("{}");
+      setWorkspaceDetailsError("");
+      return;
+    }
+    try {
+      const details = await getWorkspaceDetails(name);
+      setWorkspaceDetails(details);
+      setWorkspaceParametersText(formatWorkspaceParameters(details.parameters));
+      setWorkspaceDetailsError("");
+    } catch (err) {
+      setWorkspaceDetails(null);
+      setWorkspaceDetailsError(workspaceFeatureMessage(err));
+    }
+  }, []);
+
+  const loadWorkspaceIntrospection = useCallback(async (workspaceName: string) => {
+    setHistoryError("");
+    setMemoryError("");
+    setRecallError("");
+    setRecallHits([]);
+    if (workspaceName === "") {
+      setHistory([]);
+      setMemory(null);
+      return;
+    }
+
+    const [nextHistory, nextMemory] = await Promise.allSettled([getActiveWorkspaceHistory(), getActiveWorkspaceMemoryStats()]);
+    if (nextHistory.status === "fulfilled") {
+      setHistory(nextHistory.value.items ?? nextHistory.value.data ?? []);
+    } else {
+      setHistory([]);
+      setHistoryError(workspaceFeatureMessage(nextHistory.reason));
+    }
+    if (nextMemory.status === "fulfilled") {
+      setMemory(nextMemory.value);
+    } else {
+      setMemory(null);
+      setMemoryError(workspaceFeatureMessage(nextMemory.reason));
+    }
+  }, []);
+
+  const loadDrawer = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [workspacePage, workspaceState] = await Promise.all([listPeerResourcePage("workspaces", ""), getActiveWorkspace()]);
+      const nextState = normalizeWorkspaceState(workspaceState);
+      setWorkspaces(workspacePage.items ?? workspacePage.data ?? []);
+      setState(nextState);
+      setSelectedWorkspace(nextState.workspace_name ?? "");
+      setMode(nextState.workspace_mode ?? "push");
+      await loadWorkspaceDetails(nextState.workspace_name ?? "");
+      await loadWorkspaceIntrospection(nextState.active_workspace_name ?? nextState.workspace_name ?? "");
+    } catch (err) {
+      setError(toMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, [loadWorkspaceDetails, loadWorkspaceIntrospection]);
+
+  useEffect(() => {
+    if (open) {
+      void loadDrawer();
+    }
+  }, [loadDrawer, open]);
+
+  const setWorkspaceSelection = async (): Promise<void> => {
+    const workspaceName = selectedWorkspace.trim();
+    if (workspaceName === "") {
+      return;
+    }
+    setError("");
+    setLoading(true);
+    try {
+      const nextState = normalizeWorkspaceState(await setActiveWorkspace(workspaceName));
+      setState(nextState);
+      setSelectedWorkspace(nextState.workspace_name ?? workspaceName);
+      setMode(nextState.workspace_mode ?? "push");
+      await loadWorkspaceDetails(nextState.workspace_name ?? workspaceName);
+      await loadWorkspaceIntrospection(nextState.active_workspace_name ?? "");
+      toast.success("Workspace selection updated", { description: workspaceName });
+    } catch (err) {
+      setError(toMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reloadWorkspace = async (): Promise<void> => {
+    setError("");
+    setLoading(true);
+    try {
+      const nextState = normalizeWorkspaceState(await reloadActiveWorkspace());
+      setState(nextState);
+      setSelectedWorkspace(nextState.workspace_name ?? "");
+      setMode(nextState.workspace_mode ?? "push");
+      await loadWorkspaceDetails(nextState.workspace_name ?? "");
+      await loadWorkspaceIntrospection(nextState.active_workspace_name ?? nextState.workspace_name ?? "");
+      toast.success("Workspace runtime reloaded", { description: nextState.active_workspace_name ?? nextState.workspace_name ?? "" });
+    } catch (err) {
+      setError(toMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const playHistory = async (entry: WorkspaceHistoryEntry): Promise<void> => {
+    setHistoryError("");
+    try {
+      await playActiveWorkspaceHistory(entry.id);
+      toast.success("History replay started", { description: entry.id });
+    } catch (err) {
+      setHistoryError(workspaceFeatureMessage(err));
+    }
+  };
+
+  const runRecall = async (): Promise<void> => {
+    const query = recallQuery.trim();
+    if (query === "") {
+      return;
+    }
+    setRecallError("");
+    setLoading(true);
+    try {
+      const response = await recallActiveWorkspace(query);
+      setRecallHits(response.hits ?? []);
+    } catch (err) {
+      setRecallHits([]);
+      setRecallError(workspaceFeatureMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateWorkspaceMode = async (nextMode: WorkspaceChatMode): Promise<void> => {
+    setError("");
+    setLoading(true);
+    try {
+      const nextState = normalizeWorkspaceState(await setActiveWorkspaceMode(nextMode, currentWorkspace || selectedWorkspace));
+      setState(nextState);
+      setSelectedWorkspace(nextState.workspace_name ?? "");
+      setMode(nextState.workspace_mode ?? nextMode);
+      await loadWorkspaceDetails(nextState.workspace_name ?? "");
+      await loadWorkspaceIntrospection(nextState.active_workspace_name ?? nextState.workspace_name ?? "");
+      toast.success("Workspace mode reloaded", { description: nextMode === "push" ? "Push To Talk" : "Realtime Chat" });
+    } catch (err) {
+      setError(toMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveWorkspaceDetails = async (): Promise<void> => {
+    const workspaceName = (workspaceDetails?.name ?? currentWorkspace ?? selectedWorkspace).trim();
+    if (workspaceName === "") {
+      setWorkspaceDetailsError("Select a workspace before saving.");
+      return;
+    }
+    let parameters: Record<string, unknown>;
+    try {
+      parameters = parseWorkspaceParameters(workspaceParametersText);
+    } catch (err) {
+      setWorkspaceDetailsError(toMessage(err));
+      return;
+    }
+    setWorkspaceSaving(true);
+    try {
+      const updated = await updateWorkspaceDetails({
+        parameters,
+        workspace_name: workspaceName,
+        workflow_name: workspaceDetails?.workflow_name ?? "",
+      });
+      setWorkspaceDetails(updated);
+      setWorkspaceParametersText(formatWorkspaceParameters(updated.parameters));
+      setWorkspaceDetailsError("");
+      toast.success("Workspace saved", { description: "Reload the workspace runtime to apply changes." });
+      await loadDrawer();
+    } catch (err) {
+      setWorkspaceDetailsError(workspaceFeatureMessage(err));
+    } finally {
+      setWorkspaceSaving(false);
+    }
+  };
+
+  return (
+    <Sheet modal={false} open={open} onOpenChange={onOpenChange}>
+      <Button aria-pressed={open} onClick={() => onOpenChange(!open)} size="sm" type="button" variant={open ? "default" : "outline"}>
+        <BriefcaseBusiness data-icon="inline-start" />
+        Workspace
+      </Button>
+      <SheetContent
+        className={topDrawerContentClassName}
+        onInteractOutside={(event) => event.preventDefault()}
+        overlayClassName="pointer-events-none top-32 bg-transparent sm:top-24 lg:top-20"
+        side="right"
+      >
+        <SheetHeader className="border-b px-5 py-4 pr-12">
+          <div className="flex flex-col gap-2">
+            <SheetTitle>Workspace</SheetTitle>
+            <SheetDescription>Inspect and test the current peer run active workspace.</SheetDescription>
+          </div>
+          <div className="grid items-end gap-3 pt-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <div className="min-w-0">
+              <ScrollableSelectField
+                label="Active workspace"
+                loading={loading}
+                value={selectedWorkspace}
+                onChange={setSelectedWorkspace}
+                options={workspaces.map((workspace) => stringField(workspace, "name")).filter((name) => name !== "")}
+              />
+            </div>
+            <div className="flex items-end gap-2">
+              <Button className="shrink-0" disabled={!canSetWorkspace} onClick={() => void setWorkspaceSelection()} type="button" variant="outline">
+                Set
+              </Button>
+              <Button className="shrink-0" disabled={!canReloadWorkspace} onClick={() => void reloadWorkspace()} type="button">
+                <RefreshCw data-icon="inline-start" />
+                Reload
+              </Button>
+            </div>
+          </div>
+          <Card className="mt-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center justify-between gap-3 text-sm">
+                <span>Runtime</span>
+                <Badge variant={runtimeState === "active" ? "default" : "outline"}>{runtimeState}</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <WorkspaceInfoItem label="Display name" value={workspaceDetails?.display_name || "-"} />
+              <WorkspaceInfoItem label="Workspace ID" value={currentWorkspace || selectedWorkspace || "-"} />
+              <WorkspaceInfoItem label="Selected" value={selectedWorkspace || "-"} />
+              <WorkspaceInfoItem label="Pending" value={pendingWorkspace || "-"} />
+              <WorkspaceInfoItem label="Active" value={activeWorkspace || "-"} />
+              <WorkspaceInfoItem label="Workflow" value={state?.workflow_name || "-"} />
+              <WorkspaceInfoItem label="Agent" value={state?.agent_type || "unavailable"} />
+            </CardContent>
+          </Card>
+        </SheetHeader>
+        <div className="flex min-h-0 flex-1 flex-col">
+          {error !== "" ? (
+            <Alert className="m-4 mb-0" variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          <Tabs className="flex min-h-0 flex-1 flex-col" defaultValue="chat">
+            <div className="border-b px-5 py-3">
+              <TabsList>
+                <TabsTrigger value="chat">Chat</TabsTrigger>
+                <TabsTrigger value="history">History</TabsTrigger>
+                <TabsTrigger value="memory">Memory</TabsTrigger>
+                <TabsTrigger value="recall">Recall</TabsTrigger>
+                <TabsTrigger value="settings">Settings</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent className="m-0 min-h-0 flex-1" value="chat">
+              <WorkspaceChatPanel mode={mode} onModeChange={(nextMode) => {
+                void updateWorkspaceMode(nextMode);
+              }} state={state} />
+            </TabsContent>
+            <TabsContent className="m-0 min-h-0 flex-1" value="history">
+              <WorkspaceHistoryPanel error={historyError} history={history} loading={loading} onPlay={playHistory} />
+            </TabsContent>
+            <TabsContent className="m-0 min-h-0 flex-1" value="memory">
+              <WorkspaceMemoryPanel error={memoryError} memory={memory} />
+            </TabsContent>
+            <TabsContent className="m-0 min-h-0 flex-1" value="recall">
+              <WorkspaceRecallPanel error={recallError} hits={recallHits} loading={loading} query={recallQuery} onQueryChange={setRecallQuery} onRun={runRecall} />
+            </TabsContent>
+            <TabsContent className="m-0 min-h-0 flex-1" value="settings">
+              <WorkspaceDetailsPanel
+                details={workspaceDetails}
+                error={workspaceDetailsError}
+                loading={loading}
+                parametersText={workspaceParametersText}
+                saving={workspaceSaving}
+                onParametersChange={setWorkspaceParametersText}
+                onRefresh={() => void loadWorkspaceDetails(currentWorkspace || selectedWorkspace)}
+                onSave={() => void saveWorkspaceDetails()}
+              />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function WorkspaceInfoItem({ label, value }: { label: string; value: string }): JSX.Element {
+  return (
+    <div className="min-w-0">
+      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+      <div className="truncate text-foreground">{value}</div>
+    </div>
+  );
+}
+
+function WorkspaceDetailsPanel({
+  details,
+  error,
+  loading,
+  onParametersChange,
+  onRefresh,
+  onSave,
+  parametersText,
+  saving,
+}: {
+  details: WorkspaceDetails | null;
+  error: string;
+  loading: boolean;
+  onParametersChange: (value: string) => void;
+  onRefresh: () => void;
+  onSave: () => void;
+  parametersText: string;
+  saving: boolean;
+}): JSX.Element {
+  const disabled = details == null || loading || saving;
+  return (
+    <ScrollArea className="h-full">
+      <div className="flex flex-col gap-4 p-5">
+        {error !== "" ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center justify-between gap-3 text-sm">
+              <span>Workspace Info</span>
+              {details != null ? <Badge variant="outline">{details.display_name || details.name}</Badge> : null}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {details == null ? (
+              <EmptyMessage description="Select a workspace to edit its configuration." title="No workspace selected" />
+            ) : (
+              <div className="flex flex-col gap-5">
+                <div className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+                  <WorkspaceInfoItem label="Display name" value={details.display_name || "-"} />
+                  <WorkspaceInfoItem label="Workspace ID" value={details.name || "-"} />
+                  <WorkspaceInfoItem label="Workflow" value={details.workflow_name || "-"} />
+                </div>
+                <FieldGroup>
+                <ShadField data-invalid={error !== ""}>
+                  <FieldLabel htmlFor="workspace-parameters">Parameters</FieldLabel>
+                  <Textarea
+                    aria-invalid={error !== ""}
+                    className="min-h-64 font-mono text-sm"
+                    disabled={disabled}
+                    id="workspace-parameters"
+                    spellCheck={false}
+                    value={parametersText}
+                    onChange={(event) => onParametersChange(event.target.value)}
+                  />
+                </ShadField>
+                <div className="flex items-center justify-end gap-2">
+                  <Button disabled={loading || saving} onClick={onRefresh} type="button" variant="outline">
+                    <RefreshCw data-icon="inline-start" />
+                    Refresh
+                  </Button>
+                  <Button disabled={disabled} onClick={onSave} type="button">
+                    <Pencil data-icon="inline-start" />
+                    Save
+                  </Button>
+                </div>
+                </FieldGroup>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </ScrollArea>
+  );
+}
+
+function workspaceTurnStatusLabel(status: WorkspaceChatTurnStatus): string {
+  switch (status) {
+    case "recording":
+      return "recording";
+    case "sending":
+      return "sending";
+    case "responding":
+      return "responding";
+    case "playing":
+      return "playing";
+    case "complete":
+      return "complete";
+    case "error":
+      return "error";
+  }
+}
+
+function workspaceTurnBadgeVariant(status: WorkspaceChatTurnStatus): "default" | "secondary" | "outline" | "destructive" {
+  switch (status) {
+    case "recording":
+    case "playing":
+      return "default";
+    case "error":
+      return "destructive";
+    case "complete":
+      return "outline";
+    default:
+      return "secondary";
+  }
+}
+
+function splitWorkspaceStreamID(streamID?: string): { prefix: string; suffix: string } {
+  const normalized = streamID?.trim() ?? "";
+  if (normalized === "") {
+    return { prefix: "", suffix: "" };
+  }
+  const index = normalized.indexOf(":");
+  if (index < 0) {
+    return { prefix: normalized, suffix: "" };
+  }
+  return {
+    prefix: normalized.slice(0, index),
+    suffix: normalized.slice(index + 1),
+  };
+}
+
+function WorkspaceChatPanel({ mode, onModeChange, state }: { mode: WorkspaceChatMode; onModeChange: (value: WorkspaceChatMode) => void; state: ActiveWorkspaceState | null }): JSX.Element {
+  const activeWorkspaceName = state?.active_workspace_name ?? "";
+  const hasActiveWorkspace = activeWorkspaceName !== "";
+  const [status, setStatus] = useState<"idle" | "connecting" | "connected" | "error">("idle");
+  const [inputActive, setInputActive] = useState(false);
+  const [inputPressed, setInputPressed] = useState(false);
+  const [error, setError] = useState("");
+  const [turns, setTurns] = useState<WorkspaceChatTurn[]>([]);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const sessionRef = useRef<WorkspaceVoiceSession | null>(null);
+  const currentTurnIDRef = useRef<string | null>(null);
+  const inputActiveRef = useRef(false);
+  const inputPressedRef = useRef(false);
+  const inputStartingRef = useRef(false);
+  const inputFinishPendingRef = useRef<string | undefined>(undefined);
+  const streamTextRef = useRef<Map<string, string>>(new Map());
+  const streamTurnRef = useRef<Map<string, string>>(new Map());
+
+  const closeRecordingTurnsExcept = useCallback((activeTurnID?: string) => {
+    setTurns((current) =>
+      current.map((turn) => {
+        if (turn.status !== "recording" || turn.id === activeTurnID) {
+          return turn;
+        }
+        return { ...turn, status: "sending" };
+      }),
+    );
+  }, []);
+
+  const createTurn = useCallback(
+    (status: WorkspaceChatTurnStatus, streamID?: string) => {
+      const turn: WorkspaceChatTurn = {
+        audioState: "waiting",
+        createdAt: Date.now(),
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        status,
+        streamID: streamID == null || streamID === "" ? undefined : streamID,
+      };
+      currentTurnIDRef.current = turn.id;
+      if (streamID != null && streamID !== "") {
+        streamTurnRef.current.set(streamID, turn.id);
+      }
+      setTurns((current) => [
+        ...current
+          .map((existing) => {
+            if (existing.status !== "recording") {
+              return existing;
+            }
+            return { ...existing, status: "sending" as WorkspaceChatTurnStatus };
+          })
+          .slice(-19),
+        turn,
+      ]);
+      return turn.id;
+    },
+    [],
+  );
+
+  const updateTurn = useCallback((targetID: string, patch: Partial<WorkspaceChatTurn>) => {
+    setTurns((current) => current.map((turn) => (turn.id === targetID ? { ...turn, ...patch } : turn)));
+  }, []);
+
+  const turnIDForStream = useCallback(
+    (streamID: string | undefined, status: WorkspaceChatTurnStatus) => {
+      const normalized = streamID ?? "";
+      if (normalized !== "") {
+        const existing = streamTurnRef.current.get(normalized);
+        if (existing != null) {
+          currentTurnIDRef.current = existing;
+          closeRecordingTurnsExcept(existing);
+          return existing;
+        }
+        return createTurn(status, normalized);
+      }
+      let id = currentTurnIDRef.current;
+      if (id == null) {
+        id = createTurn(status);
+      }
+      return id;
+    },
+    [closeRecordingTurnsExcept, createTurn],
+  );
+
+  const updateCurrentTurn = useCallback((patch: Partial<WorkspaceChatTurn>) => {
+    let id = currentTurnIDRef.current;
+    if (id == null) {
+      id = createTurn("responding");
+    }
+    updateTurn(id, patch);
+  }, [createTurn, updateTurn]);
+
+  const handlePeerEvent = useCallback(
+    (event: PeerStreamEvent) => {
+      const updateEventTurn = (patch: Partial<WorkspaceChatTurn>, status: WorkspaceChatTurnStatus = "responding"): string => {
+        const targetID = turnIDForStream(event.stream_id, status);
+        updateTurn(targetID, patch);
+        return targetID;
+      };
+      if ((event.type === "text.delta" || event.type === "text.done") && event.text != null) {
+        const label = (event.label ?? "").toLowerCase();
+        const key = `${event.stream_id ?? "default"}:${label}`;
+        const current = streamTextRef.current.get(key) ?? "";
+        const next = event.type === "text.done" ? event.text || current : current + event.text;
+        streamTextRef.current.set(key, next);
+        if (label.includes("transcript")) {
+          updateEventTurn({ status: "responding", transcript: next });
+        } else {
+          updateEventTurn({ assistantText: next, status: "responding" });
+        }
+      }
+      const eventError = event.error?.trim() ?? "";
+      if (eventError !== "") {
+        if (eventError === "interrupted") {
+          updateEventTurn({ status: "complete" }, "responding");
+          return;
+        }
+        updateEventTurn({ error: eventError, status: "error" }, "error");
+        return;
+      }
+      if (event.type === "eos" && event.text == null) {
+        if (event.kind === "audio") {
+          const targetID = updateEventTurn({ audioState: "done", status: "complete" }, "responding");
+          if (currentTurnIDRef.current === targetID) {
+            currentTurnIDRef.current = null;
+          }
+        }
+      }
+      if (event.type === "bos" && event.kind === "audio") {
+        updateEventTurn({ audioState: "playing", status: "playing" }, "playing");
+      }
+    },
+    [turnIDForStream, updateTurn],
+  );
+
+  const closeSession = useCallback((reason?: string) => {
+    const session = sessionRef.current;
+    sessionRef.current = null;
+    if (session != null) {
+      session.close(reason);
+    }
+    if (audioRef.current != null) {
+      audioRef.current.srcObject = null;
+    }
+    inputActiveRef.current = false;
+    inputPressedRef.current = false;
+    inputStartingRef.current = false;
+    inputFinishPendingRef.current = undefined;
+    streamTextRef.current.clear();
+    streamTurnRef.current.clear();
+    setInputActive(false);
+    setInputPressed(false);
+    setStatus("idle");
+  }, []);
+
+  const ensureSession = useCallback(async () => {
+    if (sessionRef.current != null || status === "connecting") {
+      return;
+    }
+    setError("");
+    setStatus("connecting");
+    try {
+      const session = await createWorkspaceVoiceSession({
+        onEvent: handlePeerEvent,
+        onRemoteStream: (stream) => {
+          if (audioRef.current == null) {
+            return;
+          }
+          audioRef.current.srcObject = stream;
+          void audioRef.current.play().catch(() => undefined);
+        },
+        onState: (stateName) => {
+          if (stateName === "failed" || stateName === "disconnected" || stateName === "closed") {
+            sessionRef.current = null;
+            setStatus(stateName === "closed" ? "idle" : "error");
+          }
+        },
+      });
+      sessionRef.current = session;
+      setStatus("connected");
+    } catch (err) {
+      const message = toMessage(err);
+      setError(message);
+      setStatus("error");
+      toast.error("Workspace voice failed", { description: message });
+    }
+  }, [handlePeerEvent, status]);
+
+  useEffect(() => {
+    if (!hasActiveWorkspace) {
+      closeSession("workspace closed");
+      return;
+    }
+    void ensureSession();
+  }, [closeSession, ensureSession, hasActiveWorkspace]);
+
+  const startInputTurn = useCallback(async () => {
+    if (sessionRef.current == null || inputActiveRef.current || inputStartingRef.current) {
+      return;
+    }
+    inputStartingRef.current = true;
+    inputPressedRef.current = true;
+    setInputPressed(true);
+    const streamID = newWorkspaceAudioStreamID();
+    const turnID = createTurn("recording", streamID);
+    try {
+      await sessionRef.current.startInputTurn(streamID);
+      inputActiveRef.current = true;
+      setInputActive(true);
+      setTurns((current) => current.map((turn) => (turn.id === turnID ? { ...turn, audioState: "waiting", status: "recording" } : turn)));
+      const pendingReason = inputFinishPendingRef.current;
+      if (pendingReason !== undefined) {
+        inputFinishPendingRef.current = undefined;
+        try {
+          await sessionRef.current.finishInputTurn(pendingReason);
+        } finally {
+          inputActiveRef.current = false;
+          inputPressedRef.current = false;
+          setInputActive(false);
+          setInputPressed(false);
+          setTurns((current) => current.map((turn) => (turn.id === turnID ? { ...turn, status: pendingReason === "" ? "sending" : "error", error: pendingReason === "" ? turn.error : pendingReason } : turn)));
+        }
+      }
+    } catch (err) {
+      inputFinishPendingRef.current = undefined;
+      inputPressedRef.current = false;
+      setInputPressed(false);
+      const message = toMessage(err);
+      setTurns((current) => current.map((turn) => (turn.id === turnID ? { ...turn, error: message, status: "error" } : turn)));
+      setError(message);
+      toast.error("Workspace microphone failed", { description: message });
+    } finally {
+      inputStartingRef.current = false;
+    }
+  }, [createTurn]);
+
+  const finishInputTurn = useCallback(
+    async (reason?: string) => {
+      if (inputStartingRef.current) {
+        inputFinishPendingRef.current = reason ?? "";
+        inputPressedRef.current = false;
+        setInputPressed(false);
+        if (sessionRef.current != null) {
+          try {
+            await sessionRef.current.finishInputTurn(reason);
+          } catch {
+            // The start path will surface microphone errors.
+          }
+        }
+        return;
+      }
+      if (sessionRef.current == null || !inputActiveRef.current) {
+        inputPressedRef.current = false;
+        setInputPressed(false);
+        return;
+      }
+      try {
+        await sessionRef.current.finishInputTurn(reason);
+      } finally {
+        inputActiveRef.current = false;
+        inputPressedRef.current = false;
+        setInputActive(false);
+        setInputPressed(false);
+        updateCurrentTurn({ status: reason == null || reason === "" ? "sending" : "error", ...(reason == null || reason === "" ? {} : { error: reason }) });
+      }
+    },
+    [updateCurrentTurn],
+  );
+
+  useEffect(() => () => closeSession("drawer closed"), [closeSession]);
+
+  useEffect(() => {
+    if (mode !== "push" || !inputPressed) {
+      return;
+    }
+    const finish = (): void => {
+      void finishInputTurn();
+    };
+    window.addEventListener("pointerup", finish);
+    window.addEventListener("blur", finish);
+    return () => {
+      window.removeEventListener("pointerup", finish);
+      window.removeEventListener("blur", finish);
+    };
+  }, [finishInputTurn, inputPressed, mode]);
+
+  const connected = status === "connected";
+  const buttonLabel = mode === "push" ? (inputPressed ? "Release to stop" : "Push to talk") : inputPressed ? "Stop realtime chat" : "Start realtime chat";
+  const statusLabel = status === "idle" ? "stopped" : status;
+
+  const handlePrimaryPointerDown = (event: ReactPointerEvent<HTMLButtonElement>): void => {
+    if (mode !== "push" || !hasActiveWorkspace || !connected) {
+      return;
+    }
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    void startInputTurn();
+  };
+
+  const handlePrimaryPointerUp = (event: ReactPointerEvent<HTMLButtonElement>): void => {
+    if (mode !== "push") {
+      return;
+    }
+    event.preventDefault();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    void finishInputTurn();
+  };
+
+  const handlePrimaryClick = (event: ReactMouseEvent<HTMLButtonElement>): void => {
+    if (mode === "push") {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    if (mode !== "realtime" || !hasActiveWorkspace || !connected) {
+      return;
+    }
+    if (inputActive) {
+      void finishInputTurn();
+      return;
+    }
+    void startInputTurn();
+  };
+
+  return (
+    <div className="flex h-full flex-col gap-4 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold">Conversation</div>
+          <div className="mt-1 flex flex-wrap gap-2">
+            <Badge variant={connected ? "default" : "secondary"}>{statusLabel}</Badge>
+            {activeWorkspaceName !== "" ? <Badge variant="outline">{activeWorkspaceName}</Badge> : null}
+          </div>
+        </div>
+        {hasActiveWorkspace ? (
+          <div className="flex h-10 shrink-0">
+            <Button
+              className={cn("h-10 rounded-r-none", inputPressed && "bg-primary text-primary-foreground ring-2 ring-primary/40 ring-offset-2 ring-offset-background")}
+              data-state={inputPressed ? "pressed" : "idle"}
+              disabled={!hasActiveWorkspace || !connected}
+              id="workspace-chat-primary-trigger"
+              type="button"
+              onClick={handlePrimaryClick}
+              onContextMenu={(event) => {
+                if (mode === "push") {
+                  event.preventDefault();
+                }
+              }}
+              onKeyDown={(event) => {
+                if (mode === "push" && (event.key === " " || event.key === "Enter") && !event.repeat) {
+                  event.preventDefault();
+                  void startInputTurn();
+                }
+              }}
+              onKeyUp={(event) => {
+                if (mode === "push" && (event.key === " " || event.key === "Enter")) {
+                  event.preventDefault();
+                  void finishInputTurn();
+                }
+              }}
+              onPointerCancel={(event) => {
+                if (mode === "push" && event.currentTarget.hasPointerCapture(event.pointerId)) {
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                  void finishInputTurn("push to talk canceled");
+                }
+              }}
+              onPointerDown={handlePrimaryPointerDown}
+              onPointerUp={handlePrimaryPointerUp}
+              style={mode === "push" ? { touchAction: "none", userSelect: "none" } : undefined}
+            >
+              <Mic2 data-icon="inline-start" />
+              <span>{buttonLabel}</span>
+            </Button>
+            <Popover open={modeMenuOpen} onOpenChange={setModeMenuOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  aria-label="Switch workspace chat mode"
+                  className="h-10 w-10 shrink-0 rounded-l-none px-0"
+                  disabled={inputActive || status === "connecting"}
+                  id="workspace-chat-mode-trigger"
+                  type="button"
+                >
+                  <ChevronDown data-icon="inline-end" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-56 p-1">
+                <WorkspaceModeOption current={mode === "push"} label="Push To Talk" onSelect={() => {
+                  onModeChange("push");
+                  setModeMenuOpen(false);
+                }} />
+                <WorkspaceModeOption current={mode === "realtime"} label="Realtime Chat" onSelect={() => {
+                  onModeChange("realtime");
+                  setModeMenuOpen(false);
+                }} />
+              </PopoverContent>
+            </Popover>
+          </div>
+        ) : null}
+      </div>
+      {hasActiveWorkspace ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <audio ref={audioRef} autoPlay playsInline />
+          {error !== "" ? (
+            <Alert className="shrink-0" variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          <ScrollArea className="min-h-0 flex-1 rounded-md border bg-background">
+            <div className="flex flex-col gap-3 p-4 text-sm">
+              {turns.length === 0 ? (
+                <EmptyMessage description="Hold the button to start a voice turn." title="No conversation turns" />
+              ) : (
+                Array.from(turns).reverse().map((turn) => {
+                  const streamMeta = splitWorkspaceStreamID(turn.streamID);
+                  return (
+                    <div className="rounded-md border bg-card px-3 py-3" key={turn.id}>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          {streamMeta.prefix !== "" ? <Badge variant="outline">{streamMeta.prefix}</Badge> : null}
+                          <Badge variant={workspaceTurnBadgeVariant(turn.status)}>{workspaceTurnStatusLabel(turn.status)}</Badge>
+                          {turn.status === "recording" ? <Badge variant="secondary">BOS sent</Badge> : null}
+                          {turn.status !== "recording" && turn.status !== "error" ? <Badge variant="secondary">EOS sent</Badge> : null}
+                          {turn.audioState != null ? <Badge variant="outline">audio {turn.audioState}</Badge> : null}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{formatDate(turn.createdAt)}</span>
+                      </div>
+                      {turn.transcript != null && turn.transcript !== "" ? (
+                        <div className="mt-3 rounded-md bg-muted px-3 py-2">
+                          <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                            <span>You</span>
+                            {streamMeta.suffix !== "" ? <span className="font-mono">{streamMeta.suffix}</span> : null}
+                          </div>
+                          <div className="whitespace-pre-wrap break-words">{turn.transcript}</div>
+                        </div>
+                      ) : null}
+                      {turn.assistantText != null && turn.assistantText !== "" ? (
+                        <div className="mt-3 rounded-md bg-secondary px-3 py-2">
+                          <div className="flex items-center justify-between gap-2 text-xs font-medium text-muted-foreground">
+                            <span>Assistant</span>
+                            {streamMeta.suffix !== "" ? <span className="font-mono">{streamMeta.suffix}</span> : null}
+                          </div>
+                          <div className="whitespace-pre-wrap break-words">{turn.assistantText}</div>
+                        </div>
+                      ) : null}
+                      {turn.error != null && turn.error !== "" ? <div className="mt-3 text-sm text-destructive">{turn.error}</div> : null}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      ) : (
+        <EmptyMessage description="Select an active workspace before starting conversation tests." title="No active workspace" />
+      )}
+    </div>
+  );
+}
+
+function WorkspaceHistoryPanel({ error, history, loading, onPlay }: { error: string; history: WorkspaceHistoryEntry[]; loading: boolean; onPlay: (entry: WorkspaceHistoryEntry) => Promise<void> }): JSX.Element {
+  if (loading && history.length === 0) {
+    return <LoadingGrid />;
+  }
+  if (error !== "") {
+    return <EmptyMessage description={error} title="History unavailable" />;
+  }
+  if (history.length === 0) {
+    return <EmptyMessage description="No history is available for the active workspace." title="No history" />;
+  }
+  return (
+    <ScrollArea className="h-full">
+      <div className="p-5">
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Time</TableHead>
+                <TableHead>Actor</TableHead>
+                <TableHead>Text</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead className="w-24 text-right">Replay</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {history.map((entry) => (
+                <TableRow key={entry.id}>
+                  <TableCell className="text-muted-foreground">{formatDate(entry.created_at)}</TableCell>
+                  <TableCell>{entry.actor ?? "-"}</TableCell>
+                  <TableCell className="max-w-sm truncate">{entry.text || entry.transcript || entry.id}</TableCell>
+                  <TableCell>{formatDuration(entry.duration_ms ?? entry.audio?.duration_ms)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button disabled={entry.replay_available === false} onClick={() => void onPlay(entry)} size="sm" type="button" variant="outline">
+                      <Play data-icon="inline-start" />
+                      Play
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </ScrollArea>
+  );
+}
+
+function WorkspaceModeOption({ current, label, onSelect }: { current: boolean; label: string; onSelect: () => void }): JSX.Element {
+  return (
+    <button
+      aria-pressed={current}
+      className={cn(
+        "flex w-full items-center justify-between gap-3 rounded-sm px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground",
+        current && "bg-accent text-accent-foreground",
+      )}
+      onClick={onSelect}
+      type="button"
+    >
+      <span>{label}</span>
+      {current ? <Badge variant="outline">Current</Badge> : null}
+    </button>
+  );
+}
+
+function WorkspaceMemoryPanel({ error, memory }: { error: string; memory: WorkspaceMemoryStats | null }): JSX.Element {
+  if (error !== "") {
+    return <EmptyMessage description={error} title="Memory unavailable" />;
+  }
+  if (memory == null || memory.available === false) {
+    return <EmptyMessage description="Memory stats are unavailable for the active workspace." title="Memory unavailable" />;
+  }
+  const rows = [
+    ["Enabled", memory.enabled === false ? "No" : "Yes"],
+    ["Items", String(memory.item_count ?? 0)],
+    ["Storage", formatBytes(memory.storage_bytes)],
+    ["Embedding", memory.embedding_status ?? "-"],
+    ["Index", memory.index_status ?? "-"],
+    ["Backend", memory.backend ?? "-"],
+    ["Updated", formatDate(memory.last_updated_at ?? memory.updated_at)],
+  ];
+  return (
+    <div className="p-5">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Memory</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map(([label, value]) => (
+            <WorkspaceInfoItem key={label} label={label} value={value} />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function WorkspaceRecallPanel({ error, hits, loading, onQueryChange, onRun, query }: { error: string; hits: WorkspaceRecallHit[]; loading: boolean; onQueryChange: (value: string) => void; onRun: () => Promise<void>; query: string }): JSX.Element {
+  return (
+    <div className="flex h-full flex-col gap-4 p-5">
+      <div className="flex gap-2">
+        <Input onChange={(event) => onQueryChange(event.target.value)} onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            void onRun();
+          }
+        }} placeholder="Recall query" value={query} />
+        <Button aria-busy={loading} disabled={loading || query.trim() === ""} onClick={() => void onRun()} type="button">
+          {loading ? <Loader2 className="animate-spin" data-icon="inline-start" /> : <Search data-icon="inline-start" />}
+          {loading ? "Running" : "Run Recall"}
+        </Button>
+      </div>
+      {error !== "" ? (
+        <EmptyMessage description={error} title="Recall unavailable" />
+      ) : hits.length === 0 ? (
+        <EmptyMessage description="Run a recall query to inspect active workspace matches." title="No recall results" />
+      ) : (
+        <ScrollArea className="min-h-0 flex-1 rounded-md border">
+          <div className="flex flex-col gap-3 p-4">
+            {hits.map((hit) => (
+              <Card key={hit.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between gap-3 text-sm">
+                    <span>{hit.source_id ?? hit.id}</span>
+                    <Badge variant="outline">{formatScore(hit.score)}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-2 text-sm">
+                  <div>{hit.snippet ?? "No snippet"}</div>
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock3 className="size-3" />
+                    {formatDate(hit.created_at ?? hit.timestamp)}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+    </div>
+  );
+}
+
+function ChatTester({ models, onOpenChange, open }: { models: ModelSpec[]; onOpenChange: (open: boolean) => void; open: boolean }): JSX.Element {
   const [sessions, setSessions] = useState<ChatSession[]>(() => loadChatSessions());
   const [activeSessionID, setActiveSessionID] = useState(() => sessions[0]?.id ?? createChatSession().id);
   const [selectedModel, setSelectedModel] = useState("");
@@ -503,13 +1663,13 @@ function ChatTester({ models }: { models: ModelSpec[] }): JSX.Element {
   };
 
   return (
-    <Sheet modal={false} open={open} onOpenChange={setOpen}>
-      <Button onClick={() => setOpen(true)} size="sm" type="button" variant="outline">
-        <MessageCircle className="size-4" />
+    <Sheet modal={false} open={open} onOpenChange={onOpenChange}>
+      <Button aria-pressed={open} onClick={() => onOpenChange(!open)} size="sm" type="button" variant={open ? "default" : "outline"}>
+        <MessageCircle data-icon="inline-start" />
         Test Chat
       </Button>
       <SheetContent
-        className="top-32 h-[calc(100dvh-8rem)] w-[min(100vw,1120px)] gap-0 p-0 sm:top-24 sm:h-[calc(100dvh-6rem)] sm:max-w-none lg:top-20 lg:h-[calc(100dvh-5rem)]"
+        className={topDrawerContentClassName}
         onInteractOutside={(event) => event.preventDefault()}
         overlayClassName="pointer-events-none top-32 bg-transparent sm:top-24 lg:top-20"
         side="right"
@@ -1225,10 +2385,10 @@ function WorkspacesPanel(): JSX.Element {
   const loadPage = useCallback((cursor: string) => listPeerResourcePage("workspaces", cursor), []);
   return (
     <PagedSimpleTable
-      columns={["Name", "Workflow", "Updated"]}
+      columns={["Display name", "Workspace ID", "Workflow", "Updated"]}
       empty="No workspaces"
       loadPage={loadPage}
-      row={(item) => [stringField(item, "name"), stringField(item, "workflow_name"), formatDate(stringField(item, "updated_at"))]}
+      row={(item) => [stringField(item, "display_name") || "-", stringField(item, "name"), stringField(item, "workflow_name"), formatDate(stringField(item, "updated_at"))]}
       title="Workspaces"
     />
   );
@@ -2166,6 +3326,333 @@ async function listPeerResourcePage(name: string, cursor: string): Promise<PageR
   }
 }
 
+function getActiveWorkspace(): Promise<ActiveWorkspaceState> {
+  return fetchJSON<ActiveWorkspaceState>("/peer-run/workspace");
+}
+
+function setActiveWorkspace(workspaceName: string): Promise<ActiveWorkspaceState> {
+  return fetchJSON<ActiveWorkspaceState>("/peer-run/workspace", {
+    body: JSON.stringify({ workspace_name: workspaceName }),
+    headers: { "Content-Type": "application/json" },
+    method: "PUT",
+  });
+}
+
+function reloadActiveWorkspace(): Promise<ActiveWorkspaceState> {
+  return fetchJSON<ActiveWorkspaceState>("/peer-run/workspace/reload", {
+    method: "POST",
+  });
+}
+
+function setActiveWorkspaceMode(mode: WorkspaceChatMode, workspaceName?: string): Promise<ActiveWorkspaceState> {
+  return fetchJSON<ActiveWorkspaceState>("/peer-run/workspace/mode", {
+    body: JSON.stringify({ mode, workspace_name: workspaceName }),
+    headers: { "Content-Type": "application/json" },
+    method: "PUT",
+  });
+}
+
+function getWorkspaceDetails(workspaceName?: string): Promise<WorkspaceDetails> {
+  const query = workspaceName == null || workspaceName.trim() === "" ? "" : `?workspace_name=${encodeURIComponent(workspaceName.trim())}`;
+  return fetchJSON<WorkspaceDetails>(`/peer-run/workspace/details${query}`);
+}
+
+function updateWorkspaceDetails(request: { parameters: Record<string, unknown>; workspace_name: string; workflow_name: string }): Promise<WorkspaceDetails> {
+  return fetchJSON<WorkspaceDetails>("/peer-run/workspace/details", {
+    body: JSON.stringify(request),
+    headers: { "Content-Type": "application/json" },
+    method: "PUT",
+  });
+}
+
+function getActiveWorkspaceHistory(): Promise<PageResponse<WorkspaceHistoryEntry>> {
+  return fetchJSON<PageResponse<WorkspaceHistoryEntry>>("/peer-run/workspace/history");
+}
+
+function playActiveWorkspaceHistory(historyID: string): Promise<{ accepted: boolean; state?: string }> {
+  return fetchJSON<{ accepted: boolean; state?: string }>("/peer-run/workspace/history/play", {
+    body: JSON.stringify({ history_id: historyID }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+}
+
+function getActiveWorkspaceMemoryStats(): Promise<WorkspaceMemoryStats> {
+  return fetchJSON<WorkspaceMemoryStats>("/peer-run/workspace/memory/stats");
+}
+
+function recallActiveWorkspace(query: string): Promise<WorkspaceRecallResponse> {
+  return fetchJSON<WorkspaceRecallResponse>("/peer-run/workspace/recall", {
+    body: JSON.stringify({ limit: 10, query }),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+}
+
+async function createWorkspaceVoiceSession({
+  onEvent,
+  onRemoteStream,
+  onState,
+}: {
+  onEvent: (event: PeerStreamEvent) => void;
+  onRemoteStream: (stream: MediaStream) => void;
+  onState: (state: RTCPeerConnectionState) => void;
+}): Promise<WorkspaceVoiceSession> {
+  const pc = new RTCPeerConnection();
+  const eventChannel = pc.createDataChannel("event", { ordered: true });
+  const remote = new MediaStream();
+  const audioTransceiver = pc.addTransceiver("audio", { direction: "sendrecv" });
+  let inputStream: MediaStream | null = null;
+  let inputTrack: MediaStreamTrack | null = null;
+  let audioEOSSent = false;
+  let audioBOSSent = false;
+  let inputStreamID = "";
+
+  try {
+    pc.onconnectionstatechange = () => {
+      onState(pc.connectionState);
+    };
+    pc.ontrack = (event) => {
+      remote.addTrack(event.track);
+      onRemoteStream(remote);
+    };
+    eventChannel.onmessage = (message) => {
+      const event = parsePeerStreamEvent(message.data);
+      if (event != null) {
+        onEvent(event);
+      }
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    await waitForICEGatheringComplete(pc);
+    const local = pc.localDescription;
+    if (local == null) {
+      throw new Error("WebRTC offer was not created.");
+    }
+    const answer = await createWebRTCOffer({ sdp: local.sdp, type: local.type });
+    await pc.setRemoteDescription(answer);
+    await waitForDataChannelOpen(eventChannel);
+  } catch (err) {
+    pc.close();
+    throw err;
+  }
+
+  const sendEvent = (event: PeerStreamEvent): void => {
+    if (eventChannel.readyState !== "open") {
+      return;
+    }
+    eventChannel.send(JSON.stringify(event));
+  };
+  const ensureInputCapture = async (): Promise<MediaStreamTrack> => {
+    if (inputTrack != null && inputTrack.readyState === "live") {
+      return inputTrack;
+    }
+    if (!window.isSecureContext && window.location.hostname !== "127.0.0.1" && window.location.hostname !== "localhost") {
+      throw new Error("Microphone capture requires a secure context.");
+    }
+    const media = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+      },
+    });
+    const [track] = media.getAudioTracks();
+    if (track == null) {
+      for (const item of media.getTracks()) {
+        item.stop();
+      }
+      throw new Error("Microphone capture returned no audio track.");
+    }
+    track.enabled = false;
+    inputStream = media;
+    inputTrack = track;
+    try {
+      await audioTransceiver.sender.replaceTrack(track);
+    } catch (err) {
+      stopInputCapture();
+      throw err;
+    }
+    return track;
+  };
+  const stopInputCapture = (): void => {
+    if (inputTrack != null) {
+      inputTrack.stop();
+      inputTrack = null;
+    }
+    if (inputStream != null) {
+      for (const track of inputStream.getTracks()) {
+        track.stop();
+      }
+      inputStream = null;
+    }
+  };
+
+  const session: WorkspaceVoiceSession = {
+    close: (reason?: string) => {
+      void session.finishInputTurn(reason);
+      stopInputCapture();
+      for (const track of remote.getTracks()) {
+        track.stop();
+      }
+      if (eventChannel.readyState === "open" || eventChannel.readyState === "connecting") {
+        eventChannel.close();
+      }
+      pc.close();
+    },
+    finishInputTurn: async (error?: string) => {
+      if (audioEOSSent || !audioBOSSent) {
+        return;
+      }
+      const streamID = inputStreamID === "" ? newWorkspaceAudioStreamID() : inputStreamID;
+      audioEOSSent = true;
+      audioBOSSent = false;
+      inputStreamID = "";
+      sendEvent({
+        ...(error != null && error !== "" ? { error } : {}),
+        kind: "audio",
+        mime_type: "audio/opus",
+        stream_id: streamID,
+        type: "eos",
+        v: 1,
+      });
+      if (inputTrack != null) {
+        inputTrack.enabled = false;
+      }
+    },
+    startInputTurn: async (streamID: string) => {
+      if (audioBOSSent) {
+        return;
+      }
+      const track = await ensureInputCapture();
+      inputStreamID = streamID;
+      audioBOSSent = true;
+      audioEOSSent = false;
+      sendEvent({ kind: "audio", mime_type: "audio/opus", stream_id: inputStreamID, type: "bos", v: 1 });
+      track.enabled = true;
+    },
+  };
+  return session;
+}
+
+function newWorkspaceAudioStreamID(): string {
+  return `audio-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parsePeerStreamEvent(data: unknown): PeerStreamEvent | null {
+  try {
+    const text = typeof data === "string" ? data : data instanceof ArrayBuffer ? new TextDecoder().decode(data) : "";
+    if (text === "") {
+      return null;
+    }
+    const parsed = JSON.parse(text) as Partial<PeerStreamEvent>;
+    if (parsed.type == null) {
+      return null;
+    }
+    return parsed as PeerStreamEvent;
+  } catch {
+    return null;
+  }
+}
+
+function waitForICEGatheringComplete(pc: RTCPeerConnection): Promise<void> {
+  if (pc.iceGatheringState === "complete") {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const onStateChange = (): void => {
+      if (pc.iceGatheringState === "complete") {
+        pc.removeEventListener("icegatheringstatechange", onStateChange);
+        resolve();
+      }
+    };
+    pc.addEventListener("icegatheringstatechange", onStateChange);
+  });
+}
+
+function waitForDataChannelOpen(channel: RTCDataChannel): Promise<void> {
+  if (channel.readyState === "open") {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const cleanup = (): void => {
+      channel.removeEventListener("open", onOpen);
+      channel.removeEventListener("close", onClose);
+      channel.removeEventListener("error", onError);
+    };
+    const onOpen = (): void => {
+      cleanup();
+      resolve();
+    };
+    const onClose = (): void => {
+      cleanup();
+      reject(new Error("WebRTC event channel closed before opening."));
+    };
+    const onError = (): void => {
+      cleanup();
+      reject(new Error("WebRTC event channel failed."));
+    };
+    channel.addEventListener("open", onOpen);
+    channel.addEventListener("close", onClose);
+    channel.addEventListener("error", onError);
+  });
+}
+
+function createWebRTCOffer(offer: WebRTCSessionDescription): Promise<WebRTCSessionDescription> {
+  return fetchJSON<WebRTCSessionDescription>("/webrtc/offer", {
+    body: JSON.stringify(offer),
+    headers: { "Content-Type": "application/json" },
+    method: "POST",
+  });
+}
+
+async function fetchJSON<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(path, init);
+  if (!response.ok) {
+    throw new Error(await responseErrorMessage(response));
+  }
+  return (await response.json()) as T;
+}
+
+function normalizeWorkspaceState(state: ActiveWorkspaceState): ActiveWorkspaceState {
+  return {
+    ...state,
+    runtime_state: state.runtime_state ?? (state.workspace_name == null || state.workspace_name === "" ? "no active workspace" : "unknown"),
+    workspace_mode: normalizeWorkspaceMode(state.workspace_mode),
+  };
+}
+
+function normalizeWorkspaceMode(mode: unknown): WorkspaceChatMode {
+  switch (String(mode ?? "").trim().toLowerCase()) {
+    case "realtime":
+    case "real_time":
+    case "real-time":
+      return "realtime";
+    default:
+      return "push";
+  }
+}
+
+function formatWorkspaceParameters(parameters: unknown): string {
+  const value = parameters == null ? {} : parameters;
+  return JSON.stringify(value, null, 2);
+}
+
+function parseWorkspaceParameters(text: string): Record<string, unknown> {
+  const trimmed = text.trim();
+  const parsed = trimmed === "" ? {} : JSON.parse(trimmed);
+  if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Workspace parameters must be a JSON object.");
+  }
+  return parsed as Record<string, unknown>;
+}
+
+function workspaceFeatureMessage(err: unknown): string {
+  const message = toMessage(err).replace(/^HTTP 501 Not Implemented\s*/i, "").trim();
+  return message === "" ? "This workspace feature is unavailable for the active agent." : message;
+}
+
 function getWallet(): Promise<WalletResource> {
   return expectData(getPeerWallet()) as Promise<WalletResource>;
 }
@@ -2515,11 +4002,41 @@ function formatDate(value: number | string | undefined | null): string {
   if (value == null || value === "") {
     return "-";
   }
-  const date = typeof value === "number" ? new Date(value * 1000) : new Date(value);
+  const date = typeof value === "number" ? new Date(value < 10_000_000_000 ? value * 1000 : value) : new Date(value);
   if (Number.isNaN(date.getTime())) {
     return String(value);
   }
   return date.toLocaleString();
+}
+
+function formatDuration(value: number | undefined | null): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "-";
+  }
+  if (value < 1000) {
+    return `${Math.round(value)}ms`;
+  }
+  return `${(value / 1000).toFixed(1)}s`;
+}
+
+function formatBytes(value: number | undefined | null): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "-";
+  }
+  if (value < 1024) {
+    return `${Math.round(value)} B`;
+  }
+  if (value < 1024 * 1024) {
+    return `${(value / 1024).toFixed(1)} KiB`;
+  }
+  return `${(value / 1024 / 1024).toFixed(1)} MiB`;
+}
+
+function formatScore(value: number | undefined | null): string {
+  if (value == null || !Number.isFinite(value)) {
+    return "-";
+  }
+  return value.toFixed(3);
 }
 
 function compactID(value: string): string {
