@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	clitest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/cmd"
 )
 
@@ -72,12 +71,4 @@ func seedMiniMaxTenant(t *testing.T, h *clitest.Harness) {
 
 func ptr(value string) *string {
 	return &value
-}
-
-func testMiniMaxCredentialBody(apiKey string) apitypes.CredentialBody {
-	var body apitypes.CredentialBody
-	if err := body.FromMiniMaxCredentialBody(apitypes.MiniMaxCredentialBody{ApiKey: ptr(apiKey)}); err != nil {
-		panic(err)
-	}
-	return body
 }

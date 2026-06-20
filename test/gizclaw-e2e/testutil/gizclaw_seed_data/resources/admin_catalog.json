@@ -14,7 +14,6 @@
         },
         "spec": {
           "provider": "minimax",
-          "method": "api_key",
           "description": "Seeded credential for UI real-service tests",
           "body": {
             "api_key": "sk-ui-seed"
@@ -29,7 +28,6 @@
         },
         "spec": {
           "provider": "openai",
-          "method": "api_key",
           "description": "Seeded OpenAI-compatible credential for UI tests",
           "body": {
             "api_key": "sk-ui-openai-seed"
@@ -44,7 +42,6 @@
         },
         "spec": {
           "provider": "gemini",
-          "method": "api_key",
           "description": "Seeded Gemini credential for UI tests",
           "body": {
             "api_key": "sk-ui-gemini-seed"
@@ -59,7 +56,6 @@
         },
         "spec": {
           "provider": "dashscope",
-          "method": "api_key",
           "description": "Seeded DashScope credential for UI tests",
           "body": {
             "api_key": "sk-ui-dashscope-seed"
@@ -74,7 +70,6 @@
         },
         "spec": {
           "provider": "volc",
-          "method": "api_key",
           "description": "Seeded Volcengine credential for UI CLI tests",
           "body": {
             "app_id": "ui-seed-volc-app"
@@ -141,7 +136,6 @@
           "name": "ui-seed-volc-tenant"
         },
         "spec": {
-          "app_id": "ui-seed-volc-app",
           "credential_name": "ui-seed-volc-credential",
           "region": "cn-beijing",
           "resource_ids": [
@@ -201,12 +195,10 @@
           "name": "Seeded UI Voice",
           "description": "Seeded voice for UI real-service tests",
           "provider_data": {
-            "minimax-tenant": {
-              "voice_id": "provider-ui-seed-voice",
-              "voice_type": "voice_cloning",
-              "raw": {
-                "origin": "integration-seed"
-              }
+            "voice_id": "provider-ui-seed-voice",
+            "voice_type": "voice_cloning",
+            "raw": {
+              "origin": "integration-seed"
             }
           }
         }
@@ -226,15 +218,12 @@
           "name": "Seeded Volc UI Voice",
           "description": "Seeded Volc voice for UI CLI tests",
           "provider_data": {
-            "volc-tenant": {
-              "app_id": "ui-seed-volc-app",
-              "resource_id": "seed-tts-2.0",
-              "state": "Success",
-              "status": "Available",
-              "voice_id": "ICL_ui_seed_voice",
-              "raw": {
-                "origin": "integration-seed"
-              }
+            "resource_id": "seed-tts-2.0",
+            "state": "Success",
+            "status": "Available",
+            "voice_id": "ICL_ui_seed_voice",
+            "raw": {
+              "origin": "integration-seed"
             }
           }
         }
@@ -262,9 +251,7 @@
             "temperature": true
           },
           "provider_data": {
-            "openai-tenant": {
-              "upstream_model": "gpt-4o-mini"
-            }
+            "upstream_model": "gpt-4o-mini"
           }
         }
       },

@@ -51,11 +51,8 @@ func seedWorkspace(t *testing.T, h *clitest.Harness) {
 		t.Fatalf("seed workflow got status %d: %s", workflowResp.StatusCode(), strings.TrimSpace(string(workflowResp.Body)))
 	}
 	var params apitypes.WorkspaceParameters
-	if err := params.FromFlowcraftWorkspaceParameters(apitypes.FlowcraftWorkspaceParameters{
-		AgentType: apitypes.FlowcraftWorkspaceParametersAgentTypeFlowcraft,
-		E2e:       ptr(true),
-	}); err != nil {
-		t.Fatalf("build workspace parameters: %v", err)
+	if err := params.FromFlowcraftWorkspaceParameters(apitypes.FlowcraftWorkspaceParameters{}); err != nil {
+		t.Fatalf("FromFlowcraftWorkspaceParameters() error = %v", err)
 	}
 	workspaceResp, err := api.CreateWorkspaceWithResponse(ctx, adminservice.WorkspaceUpsert{
 		Name:         "workspace-a",
@@ -73,17 +70,14 @@ func seedWorkspace(t *testing.T, h *clitest.Harness) {
 func workflowDocument(t *testing.T, name string) apitypes.WorkflowDocument {
 	t.Helper()
 
+	spec := apitypes.FlowcraftWorkflowSpec{}
 	return apitypes.WorkflowDocument{
 		Metadata: apitypes.WorkflowMetadata{
 			Name: name,
 		},
 		Spec: apitypes.WorkflowSpec{
 			Driver:    apitypes.WorkflowDriverFlowcraft,
-			Flowcraft: &apitypes.FlowcraftWorkflowSpec{},
+			Flowcraft: &spec,
 		},
 	}
-}
-
-func ptr[T any](v T) *T {
-	return &v
 }

@@ -22,7 +22,6 @@ func TestAdminResourcesUserStory(t *testing.T) {
 		"metadata": {"name": "minimax-main"},
 		"spec": {
 			"provider": "minimax",
-			"method": "api_key",
 			"body": {"api_key": "secret"}
 		}
 	}`), 0o644); err != nil {
@@ -55,7 +54,6 @@ func TestAdminResourcesUserStory(t *testing.T) {
 		"metadata": {"name": "minimax-main"},
 		"spec": {
 			"provider": "minimax",
-			"method": "api_key",
 			"description": "updated credential",
 			"body": {"api_key": "secret"}
 		}
@@ -110,11 +108,9 @@ func TestAdminResourceListAppliesModelAndVoice(t *testing.T) {
 						"name": "OpenAI main chat",
 						"description": "OpenAI-compatible chat model from resource apply",
 						"provider_data": {
-							"openai-tenant": {
-								"upstream_model": "gpt-4o-mini",
-								"support_json_output": true,
-								"support_tool_calls": true
-							}
+							"upstream_model": "gpt-4o-mini",
+							"support_json_output": true,
+							"support_tool_calls": true
 						}
 					}
 				},
@@ -131,9 +127,7 @@ func TestAdminResourceListAppliesModelAndVoice(t *testing.T) {
 						"name": "OpenAI Alloy",
 						"description": "OpenAI-compatible voice from resource apply",
 						"provider_data": {
-							"openai-tenant": {
-								"voice_id": "alloy"
-							}
+							"voice_id": "alloy"
 						}
 					}
 				}

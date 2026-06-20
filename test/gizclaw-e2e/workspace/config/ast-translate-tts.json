@@ -1,5 +1,4 @@
 {
-  "workspace": "e2e-ast-translate-tts",
   "agent": "ast-translate",
   "models": {
     "llm": "e2e-doubao-2-lite-chat",

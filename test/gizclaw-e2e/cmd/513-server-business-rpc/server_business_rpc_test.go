@@ -124,11 +124,11 @@ func seedBusinessResources(t *testing.T, h *clitest.Harness, openAIBaseURL strin
 		"metadata": {"name": "business-resources"},
 		"spec": {
 			"items": [
-				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"openai-key"},"spec":{"provider":"openai","method":"api_key","body":{"api_key":"sk-e2e"}}},
+				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Credential","metadata":{"name":"openai-key"},"spec":{"provider":"openai","body":{"api_key":"sk-e2e"}}},
 				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"OpenAITenant","metadata":{"name":"openai-e2e"},"spec":{"kind":"compatible","credential_name":"openai-key","base_url":%q,"api_mode":"chat_completions"}},
 				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Model","metadata":{"name":"reward-claim"},"spec":{"kind":"llm","source":"manual","provider":{"kind":"openai-tenant","name":"openai-e2e"},"provider_data":{"upstream_model":"reward-e2e","support_json_output":true,"use_system_role":true}}},
 				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Model","metadata":{"name":"pet-action"},"spec":{"kind":"llm","source":"manual","provider":{"kind":"openai-tenant","name":"openai-e2e"},"provider_data":{"upstream_model":"pet-e2e","support_json_output":true,"use_system_role":true}}},
-				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice-a"},"spec":{"name":"Voice A","source":"manual","provider":{"kind":"openai-tenant","name":"openai-e2e"},"provider_data":{"openai-tenant":{"voice_id":"alloy"}}}},
+				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Voice","metadata":{"name":"voice-a"},"spec":{"name":"Voice A","source":"manual","provider":{"kind":"openai-tenant","name":"openai-e2e"},"provider_data":{"voice_id":"alloy"}}},
 				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"PetSpecies","metadata":{"name":"rabbit"},"spec":{"name":"Rabbit"}},
 				{"apiVersion":"gizclaw.admin/v1alpha1","kind":"Badge","metadata":{"name":"founder"},"spec":{"name":"Founder","description":"first reward badge"}}
 			]

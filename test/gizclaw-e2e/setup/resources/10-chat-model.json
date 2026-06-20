@@ -21,13 +21,11 @@
       "tool_calls": true
     },
     "provider_data": {
-      "openai-tenant": {
-        "upstream_model": "${GIZCLAW_E2E_OPENAI_UPSTREAM_MODEL}",
-        "support_json_output": true,
-        "support_text_only": true,
-        "support_tool_calls": true,
-        "use_system_role": true
-      }
+      "upstream_model": "${GIZCLAW_E2E_OPENAI_UPSTREAM_MODEL}",
+      "support_json_output": true,
+      "support_text_only": true,
+      "support_tool_calls": true,
+      "use_system_role": true
     }
   }
 }

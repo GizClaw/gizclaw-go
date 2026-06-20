@@ -45,11 +45,12 @@ workspace_dir="${GIZCLAW_E2E_SERVER_WORKSPACE:-$testbench_dir/workspace}"
 context_home="${GIZCLAW_E2E_CONTEXT_HOME:-$testbench_dir/context}"
 listen_addr="${GIZCLAW_E2E_SERVER_ADDR:-127.0.0.1:9820}"
 cipher_mode="${GIZCLAW_E2E_SERVER_CIPHER_MODE:-chacha_poly}"
+gizclaw_bin_explicit="${GIZCLAW_BIN+x}"
 gizclaw_bin="${GIZCLAW_BIN:-$testbench_dir/bin/gizclaw}"
 
 mkdir -p "$workspace_dir" "$(dirname "$gizclaw_bin")"
 
-if [[ ! -x "$gizclaw_bin" ]]; then
+if [[ -z "$gizclaw_bin_explicit" || ! -x "$gizclaw_bin" ]]; then
   (cd "$repo_root" && go build -o "$gizclaw_bin" ./cmd/gizclaw)
 fi
 

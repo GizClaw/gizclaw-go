@@ -1,8 +1,12 @@
 {
-  "workspace": "doubao-realtime",
+  "server": {
+    "addr": "127.0.0.1:9820",
+    "public_key": "DMEgkcGSxSrzqpNs3KYHknfpZo41Tkfuv1qi1qjivGJc",
+    "cipher_mode": "chacha_poly"
+  },
   "agent": "doubao-realtime",
   "models": {
-    "llm": "e2e-chat",
+    "llm": "e2e-doubao-2-lite-chat",
     "tts": "e2e-tts",
     "asr": "e2e-asr",
     "realtime": "e2e-realtime"
@@ -10,13 +14,27 @@
   "workflow": {
     "name": "e2e-doubao-realtime",
     "description": "Workspace e2e Doubao realtime workflow",
+    "realtime_model": "e2e-realtime",
     "parameters": {
-      "e2e": true
+      "e2e": true,
+      "input": "push-to-talk",
+      "voice": {
+        "realtime_speaker_id": "zh_female_vv_jupiter_bigtts"
+      },
+      "search": {
+        "enabled": true,
+        "type": "web_summary",
+        "result_count": 5,
+        "no_result_message": "没有找到相关结果。"
+      },
+      "music": {
+        "enabled": true
+      }
     },
     "session": {
       "auth_mode": "v2",
       "bot_name": "豆包",
-      "model": "O",
+      "model": "1.2.1.1",
       "resource_id": "volc.speech.dialog",
       "system_role": "你是一个简短、自然的中文语音聊天助手。",
       "vad_window_ms": 200
@@ -25,8 +43,8 @@
       "speaker": "zh_female_vv_jupiter_bigtts"
     }
   },
-  "voice": "volc-tenant:e2e-volc-tenant:zh_female_vv_uranus_bigtts",
+  "voice": "volc-tenant:e2e-volc-tenant:zh_female_vv_mars_bigtts",
   "rounds": 3,
-  "timeout": "120s",
+  "timeout": "300s",
   "persona": "You are a concise Chinese voice chat test user. Keep every utterance short and speech friendly."
 }

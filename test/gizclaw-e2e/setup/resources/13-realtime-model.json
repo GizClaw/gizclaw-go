@@ -13,8 +13,6 @@
     },
     "name": "E2E Doubao Realtime",
     "description": "E2E Doubao realtime model",
-    "provider_data": {
-      "volc-tenant": {}
-    }
+    "provider_data": {}
   }
 }

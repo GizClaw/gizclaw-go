@@ -43,7 +43,7 @@ func loadConfig(args []string) (config, error) {
 	cfg := config{
 		APIKey:     "test",
 		BaseURL:    "http://127.0.0.1:8081/v1",
-		ModelID:    "e2e-chat",
+		ModelID:    "e2e-doubao-2-lite-chat",
 		TTSModelID: "e2e-tts",
 		ASRModelID: "e2e-asr",
 		Timeout:    90 * time.Second,

@@ -21,7 +21,7 @@ func TestLoadConfigUsesFixedE2EDefaults(t *testing.T) {
 	if cfg.APIKey != "test" || cfg.BaseURL != "http://127.0.0.1:8081/v1" {
 		t.Fatalf("api config = %#v", cfg)
 	}
-	if cfg.ModelID != "e2e-chat" || cfg.TTSModelID != "e2e-tts" || cfg.ASRModelID != "e2e-asr" || cfg.VoiceID != "" {
+	if cfg.ModelID != "e2e-doubao-2-lite-chat" || cfg.TTSModelID != "e2e-tts" || cfg.ASRModelID != "e2e-asr" || cfg.VoiceID != "" {
 		t.Fatalf("model config = %#v", cfg)
 	}
 }
@@ -257,6 +257,44 @@ func TestTranscriptionAssertions(t *testing.T) {
 	}
 	if err := assertTranscriptionSimilar("different", "abcdef", "uvwxyz", 0.5); err == nil {
 		t.Fatal("assertTranscriptionSimilar(different) error = nil")
+	}
+}
+
+func TestAudioContentTypeAndFilename(t *testing.T) {
+	contentTypes := map[string]string{
+		"speech.ogg":  "audio/ogg",
+		"speech.OPUS": "audio/ogg",
+		"speech.mp3":  "audio/mpeg",
+		"speech.wav":  "audio/wav",
+		"speech.flac": "audio/flac",
+		"speech.m4a":  "audio/mp4",
+		"speech.bin":  "application/octet-stream",
+	}
+	for path, want := range contentTypes {
+		if got := audioContentType(path); got != want {
+			t.Fatalf("audioContentType(%q) = %q, want %q", path, got, want)
+		}
+	}
+
+	filenames := []struct {
+		name        string
+		filename    string
+		contentType string
+		data        []byte
+		want        string
+	}{
+		{name: "content type with params", filename: "speech.tmp", contentType: "audio/mpeg; charset=binary", want: "speech.mp3"},
+		{name: "ogg magic", filename: "speech.tmp", data: []byte("OggS\x00"), want: "speech.ogg"},
+		{name: "id3 magic", filename: "speech.tmp", data: []byte("ID3\x04"), want: "speech.mp3"},
+		{name: "empty base", filename: ".tmp", contentType: "audio/wav", want: "audio.wav"},
+		{name: "unknown", filename: "speech.tmp", contentType: "application/octet-stream", data: []byte{1, 2, 3}, want: "speech.tmp"},
+	}
+	for _, tt := range filenames {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := audioFilename(tt.filename, tt.contentType, tt.data); got != tt.want {
+				t.Fatalf("audioFilename() = %q, want %q", got, tt.want)
+			}
+		})
 	}
 }
 

@@ -23,6 +23,12 @@ cp test/gizclaw-e2e/setup/.env.example test/gizclaw-e2e/setup/.env
 $EDITOR test/gizclaw-e2e/setup/.env
 ```
 
+`GIZCLAW_E2E_VOLC_ACCESS_KEY_ID` and
+`GIZCLAW_E2E_VOLC_SECRET_ACCESS_KEY` are required for `sync-voices`. The setup
+script syncs Volc tenant voices, reads the fixed e2e voice ids back from the
+catalog, and then applies ACL grants for those synced voices. Do not add manual
+Volc `Voice` resources with guessed `resource_id` values.
+
 2. Setup for `openaicompat`.
 
 Start the e2e server in terminal 1:
@@ -91,10 +97,28 @@ Apply resources again in terminal 2:
 
 ```sh
 go run ./test/gizclaw-e2e/workspace \
-  -config test/gizclaw-e2e/workspace/config/doubao-realtime.example.json
+  -config test/gizclaw-e2e/workspace/config/doubao-realtime.json \
+  -case push-to-talk-roundtrip
 
 go run ./test/gizclaw-e2e/workspace \
-  -config test/gizclaw-e2e/workspace/config/flowcraft.example.json
+  -config test/gizclaw-e2e/workspace/config/doubao-realtime.json \
+  -case realtime-roundtrip
+
+go run ./test/gizclaw-e2e/workspace \
+  -config test/gizclaw-e2e/workspace/config/flowcraft-basic.json \
+  -case push-to-talk-roundtrip
+
+go run ./test/gizclaw-e2e/workspace \
+  -config test/gizclaw-e2e/workspace/config/flowcraft-basic.json \
+  -case realtime-roundtrip
+
+go run ./test/gizclaw-e2e/workspace \
+  -config test/gizclaw-e2e/workspace/config/flowcraft-basic.json \
+  -case push-to-talk-interrupt
+
+go run ./test/gizclaw-e2e/workspace \
+  -config test/gizclaw-e2e/workspace/config/flowcraft-basic.json \
+  -case realtime-interrupt
 ```
 
 Local compile/unit checks:

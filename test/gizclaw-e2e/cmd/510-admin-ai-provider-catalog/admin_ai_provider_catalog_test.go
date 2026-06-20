@@ -28,7 +28,6 @@ func TestAdminAIProviderCatalogUserStory(t *testing.T) {
 					"metadata": {"name": "openai-cli-key"},
 					"spec": {
 						"provider": "openai",
-						"method": "api_key",
 						"body": {"api_key": "sk-openai"}
 					}
 				},
@@ -38,7 +37,6 @@ func TestAdminAIProviderCatalogUserStory(t *testing.T) {
 					"metadata": {"name": "gemini-cli-key"},
 					"spec": {
 						"provider": "gemini",
-						"method": "api_key",
 						"body": {"api_key": "sk-gemini"}
 					}
 				},
@@ -48,7 +46,6 @@ func TestAdminAIProviderCatalogUserStory(t *testing.T) {
 					"metadata": {"name": "dashscope-cli-key"},
 					"spec": {
 						"provider": "dashscope",
-						"method": "api_key",
 						"body": {"api_key": "sk-dashscope"}
 					}
 				},
@@ -100,11 +97,9 @@ func TestAdminAIProviderCatalogUserStory(t *testing.T) {
 						"name": "OpenAI CLI Chat",
 						"description": "CLI seeded chat model",
 						"provider_data": {
-							"openai-tenant": {
-								"upstream_model": "gpt-cli",
-								"support_json_output": true,
-								"support_tool_calls": true
-							}
+							"upstream_model": "gpt-cli",
+							"support_json_output": true,
+							"support_tool_calls": true
 						}
 					}
 				},

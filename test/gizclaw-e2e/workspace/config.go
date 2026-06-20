@@ -268,11 +268,14 @@ func (c *config) validate() error {
 	if c.Server.CipherMode == "" {
 		c.Server.CipherMode = string(giznet.CipherModeChaChaPoly)
 	}
-	if c.Workspace == "" {
-		return fmt.Errorf("workspace is required")
-	}
-	if c.Workflow.Name == "" {
+	if c.Workflow.Name == "" && c.Workspace != "" {
 		c.Workflow.Name = c.Workspace
+	}
+	if c.Workspace == "" {
+		c.Workspace = c.Workflow.Name
+	}
+	if c.Workspace == "" {
+		return fmt.Errorf("workspace or workflow.name is required")
 	}
 	if c.Agent == "" {
 		return fmt.Errorf("agent is required")

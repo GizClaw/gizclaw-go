@@ -55,6 +55,14 @@ func TestAdminVoicesUserStory(t *testing.T) {
 		}
 	}
 
+	showVolcCredential := h.RunCLI("admin", "--context", "admin-a", "show", "Credential", "volc-cli-credential")
+	showVolcCredential.MustSucceed(t)
+	for _, want := range []string{`"kind":"Credential"`, `"name":"volc-cli-credential"`, `"app_id":"app-cli"`} {
+		if !strings.Contains(showVolcCredential.Stdout, want) {
+			t.Fatalf("admin show Volc credential missing %q:\n%s", want, showVolcCredential.Stdout)
+		}
+	}
+
 	syncVolcTenant := h.RunCLI("admin", "volc-tenants", "--context", "admin-a", "sync-voices", "gizclaw-dev")
 	if syncVolcTenant.Err == nil {
 		t.Fatalf("volc sync with incomplete credential should fail:\n%s", syncVolcTenant.Stdout)
@@ -77,6 +85,21 @@ func seedVoices(t *testing.T, h *clitest.Harness) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	volcProviderData := apitypes.VoiceProviderData{}
+	resourceID := "seed-tts-2.0"
+	state := "Success"
+	status := "Available"
+	voiceID := "ICL_cli_seed_voice"
+	raw := map[string]interface{}{"app_id": "app-cli"}
+	if err := volcProviderData.FromVolcTenantVoiceProviderData(apitypes.VolcTenantVoiceProviderData{
+		ResourceId: &resourceID,
+		State:      &state,
+		Status:     &status,
+		VoiceId:    &voiceID,
+		Raw:        &raw,
+	}); err != nil {
+		t.Fatalf("FromVolcTenantVoiceProviderData() error = %v", err)
+	}
 	for _, req := range []adminservice.VoiceUpsert{
 		{
 			Id:     "voice-1",
@@ -106,7 +129,7 @@ func seedVoices(t *testing.T, h *clitest.Harness) {
 			},
 			Name:         ptr("Volc CLI Seed Voice"),
 			Description:  ptr("seeded Volc voice for CLI examples"),
-			ProviderData: testVolcVoiceProviderData(),
+			ProviderData: &volcProviderData,
 		},
 	} {
 		resp, err := api.CreateVoiceWithResponse(ctx, req)
@@ -120,7 +143,10 @@ func seedVoices(t *testing.T, h *clitest.Harness) {
 	credentialResp, err := api.CreateCredentialWithResponse(ctx, adminservice.CredentialUpsert{
 		Name:     "volc-cli-credential",
 		Provider: "volc",
-		Body:     testVolcCredentialBody(),
+		Body: testVolcCredentialBodyFromStrings(map[string]string{
+			"app_id":       "app-cli",
+			"speech_token": "token-cli",
+		}),
 	})
 	if err != nil {
 		t.Fatalf("seed volc credential: %v", err)
@@ -146,32 +172,4 @@ func seedVoices(t *testing.T, h *clitest.Harness) {
 
 func ptr(value string) *string {
 	return &value
-}
-
-func testVolcVoiceProviderData() *apitypes.VoiceProviderData {
-	resourceID := "seed-tts-2.0"
-	state := "Success"
-	status := "Available"
-	voiceID := "ICL_cli_seed_voice"
-	var out apitypes.VoiceProviderData
-	if err := out.FromVolcTenantVoiceProviderData(apitypes.VolcTenantVoiceProviderData{
-		ResourceId: &resourceID,
-		State:      &state,
-		Status:     &status,
-		VoiceId:    &voiceID,
-	}); err != nil {
-		panic(err)
-	}
-	return &out
-}
-
-func testVolcCredentialBody() apitypes.CredentialBody {
-	appID := "app-cli"
-	var body apitypes.CredentialBody
-	if err := body.FromVolcCredentialBody(apitypes.VolcCredentialBody{
-		AppId: &appID,
-	}); err != nil {
-		panic(err)
-	}
-	return body
 }

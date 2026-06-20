@@ -13,8 +13,6 @@
     },
     "name": "E2E TTS",
     "description": "E2E Volc TTS model",
-    "provider_data": {
-      "volc-tenant": {}
-    }
+    "provider_data": {}
   }
 }

@@ -26,16 +26,14 @@
       }
     },
     "provider_data": {
-      "volc-tenant": {
-        "upstream_model": "${GIZCLAW_E2E_DOUBAO_2_LITE_UPSTREAM_MODEL:-doubao-seed-2-0-lite-260215}",
-        "support_json_output": true,
-        "support_text_only": true,
-        "support_tool_calls": true,
-        "support_thinking": true,
-        "thinking_param": "thinking.type",
-        "default_thinking_level": "disabled",
-        "use_system_role": true
-      }
+      "upstream_model": "${GIZCLAW_E2E_DOUBAO_2_LITE_UPSTREAM_MODEL:-doubao-seed-2-0-lite-260215}",
+      "support_json_output": true,
+      "support_text_only": true,
+      "support_tool_calls": true,
+      "support_thinking": true,
+      "thinking_param": "thinking.type",
+      "default_thinking_level": "disabled",
+      "use_system_role": true
     }
   }
 }

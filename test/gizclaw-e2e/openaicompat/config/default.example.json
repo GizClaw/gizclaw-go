@@ -1,5 +1,5 @@
 {
-  "model": "e2e-chat",
+  "model": "e2e-doubao-2-lite-chat",
   "tts_model": "e2e-tts",
   "asr_model": "e2e-asr",
   "timeout": "90s"

@@ -14,9 +14,7 @@
     "name": "E2E ASR",
     "description": "E2E Volc ASR model",
     "provider_data": {
-      "volc-tenant": {
-        "resource_id": "${GIZCLAW_E2E_VOLC_ASR_RESOURCE_ID:-volc.bigasr.sauc.duration}"
-      }
+      "resource_id": "${GIZCLAW_E2E_VOLC_ASR_RESOURCE_ID:-volc.bigasr.sauc.duration}"
     }
   }
 }

@@ -251,6 +251,34 @@ func TestConfigValidationErrors(t *testing.T) {
 	}
 }
 
+func TestConfigValidationDefaultsWorkspaceFromWorkflowName(t *testing.T) {
+	serverKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(server): %v", err)
+	}
+	clientKey, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair(client): %v", err)
+	}
+	cfg := config{
+		Server:           serverConfig{Addr: "127.0.0.1:9820", PublicKey: serverKey.Public.String()},
+		Agent:            "flowcraft",
+		Models:           modelConfig{LLM: "chat", TTS: "tts", ASR: "asr"},
+		Workflow:         workflowConfig{Name: "flowcraft-basic"},
+		Voice:            "voice",
+		Rounds:           1,
+		Timeout:          "1s",
+		Persona:          "persona",
+		ClientPrivateKey: clientKey.Private.String(),
+	}
+	if err := cfg.validate(); err != nil {
+		t.Fatalf("validate() error = %v", err)
+	}
+	if cfg.Workspace != "flowcraft-basic" || cfg.Workflow.Name != "flowcraft-basic" {
+		t.Fatalf("workspace/workflow defaults = %q/%q", cfg.Workspace, cfg.Workflow.Name)
+	}
+}
+
 func writeSetupContextConfig(t *testing.T, path string, serverKey, clientKey *giznet.KeyPair, cipherMode string) {
 	t.Helper()
 	if cipherMode == "" {

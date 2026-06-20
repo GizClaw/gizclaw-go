@@ -61,19 +61,20 @@ func seedWorkflows(t *testing.T, h *clitest.Harness) {
 func workflowDocument(t *testing.T, name, description string) apitypes.WorkflowDocument {
 	t.Helper()
 
+	spec := apitypes.FlowcraftWorkflowSpec{
+		"workspace_layout": map[string]interface{}{},
+		"runtime":          map[string]interface{}{},
+		"agents":           []interface{}{},
+		"entry_agent":      "",
+	}
 	return apitypes.WorkflowDocument{
 		Metadata: apitypes.WorkflowMetadata{
 			Name:        name,
 			Description: ptr(description),
 		},
 		Spec: apitypes.WorkflowSpec{
-			Driver: apitypes.WorkflowDriverFlowcraft,
-			Flowcraft: &apitypes.FlowcraftWorkflowSpec{
-				"workspace_layout": map[string]interface{}{},
-				"runtime":          map[string]interface{}{},
-				"agents":           []interface{}{},
-				"entry_agent":      "",
-			},
+			Driver:    apitypes.WorkflowDriverFlowcraft,
+			Flowcraft: &spec,
 		},
 	}
 }
