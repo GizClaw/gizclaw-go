@@ -65,21 +65,23 @@ type workflowConfig struct {
 }
 
 type workspaceParameterConfig struct {
-	E2E                        *bool                   `json:"e2e,omitempty"`
-	Input                      string                  `json:"input,omitempty"`
-	GenerateModel              string                  `json:"generate_model,omitempty"`
-	ExtractModel               string                  `json:"extract_model,omitempty"`
-	EmbeddingModel             string                  `json:"embedding_model,omitempty"`
-	TranslationModel           string                  `json:"translation_model,omitempty"`
-	LangPair                   string                  `json:"lang_pair,omitempty"`
-	Mode                       string                  `json:"mode,omitempty"`
-	Voice                      astTranslateVoiceConfig `json:"voice,omitempty"`
-	SpeakerID                  string                  `json:"speaker_id,omitempty"`
-	IsCustomSpeaker            *bool                   `json:"is_custom_speaker,omitempty"`
-	TTSResourceID              string                  `json:"tts_resource_id,omitempty"`
-	SpeechRate                 *int                    `json:"speech_rate,omitempty"`
-	EnableSourceLanguageDetect *bool                   `json:"enable_source_language_detect,omitempty"`
-	Denoise                    *bool                   `json:"denoise,omitempty"`
+	E2E                        *bool                `json:"e2e,omitempty"`
+	Input                      string               `json:"input,omitempty"`
+	GenerateModel              string               `json:"generate_model,omitempty"`
+	ExtractModel               string               `json:"extract_model,omitempty"`
+	EmbeddingModel             string               `json:"embedding_model,omitempty"`
+	TranslationModel           string               `json:"translation_model,omitempty"`
+	LangPair                   string               `json:"lang_pair,omitempty"`
+	Mode                       string               `json:"mode,omitempty"`
+	Voice                      workspaceVoiceConfig `json:"voice,omitempty"`
+	Search                     realtimeSearchConfig `json:"search,omitempty"`
+	Music                      realtimeMusicConfig  `json:"music,omitempty"`
+	SpeakerID                  string               `json:"speaker_id,omitempty"`
+	IsCustomSpeaker            *bool                `json:"is_custom_speaker,omitempty"`
+	TTSResourceID              string               `json:"tts_resource_id,omitempty"`
+	SpeechRate                 *int                 `json:"speech_rate,omitempty"`
+	EnableSourceLanguageDetect *bool                `json:"enable_source_language_detect,omitempty"`
+	Denoise                    *bool                `json:"denoise,omitempty"`
 }
 
 type realtimeSessionConfig struct {
@@ -120,6 +122,27 @@ type astTranslateVoiceConfig struct {
 	TTSResourceID   string `json:"tts_resource_id,omitempty"`
 	SpeechRate      *int   `json:"speech_rate,omitempty"`
 	TTSVoice        string `json:"tts_voice,omitempty"`
+}
+
+type workspaceVoiceConfig struct {
+	RealtimeSpeakerID string `json:"realtime_speaker_id,omitempty"`
+	SpeakerID         string `json:"speaker_id,omitempty"`
+	IsCustomSpeaker   *bool  `json:"is_custom_speaker,omitempty"`
+	TTSResourceID     string `json:"tts_resource_id,omitempty"`
+	SpeechRate        *int   `json:"speech_rate,omitempty"`
+	TTSVoice          string `json:"tts_voice,omitempty"`
+}
+
+type realtimeSearchConfig struct {
+	Enabled         *bool  `json:"enabled,omitempty"`
+	Type            string `json:"type,omitempty"`
+	BotID           string `json:"bot_id,omitempty"`
+	ResultCount     *int   `json:"result_count,omitempty"`
+	NoResultMessage string `json:"no_result_message,omitempty"`
+}
+
+type realtimeMusicConfig struct {
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type setupContextConfig struct {
@@ -238,6 +261,7 @@ func (c *config) validate() error {
 	c.Workflow.Parameters.SpeakerID = strings.TrimSpace(c.Workflow.Parameters.SpeakerID)
 	c.Workflow.Parameters.TTSResourceID = strings.TrimSpace(c.Workflow.Parameters.TTSResourceID)
 	c.Workflow.Parameters.Voice.trim()
+	c.Workflow.Parameters.Search.trim()
 	c.Workflow.Session.AuthMode = strings.TrimSpace(c.Workflow.Session.AuthMode)
 	c.Workflow.Session.BotName = strings.TrimSpace(c.Workflow.Session.BotName)
 	c.Workflow.Session.Model = strings.TrimSpace(c.Workflow.Session.Model)
@@ -425,6 +449,19 @@ func (v *astTranslateVoiceConfig) trim() {
 	v.SpeakerID = strings.TrimSpace(v.SpeakerID)
 	v.TTSResourceID = strings.TrimSpace(v.TTSResourceID)
 	v.TTSVoice = strings.TrimSpace(v.TTSVoice)
+}
+
+func (v *workspaceVoiceConfig) trim() {
+	v.RealtimeSpeakerID = strings.TrimSpace(v.RealtimeSpeakerID)
+	v.SpeakerID = strings.TrimSpace(v.SpeakerID)
+	v.TTSResourceID = strings.TrimSpace(v.TTSResourceID)
+	v.TTSVoice = strings.TrimSpace(v.TTSVoice)
+}
+
+func (c *realtimeSearchConfig) trim() {
+	c.Type = strings.TrimSpace(c.Type)
+	c.BotID = strings.TrimSpace(c.BotID)
+	c.NoResultMessage = strings.TrimSpace(c.NoResultMessage)
 }
 
 func normalizeCipherMode(mode string) string {

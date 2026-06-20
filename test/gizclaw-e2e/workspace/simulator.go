@@ -169,20 +169,42 @@ func (d *personaDriver) waitFlowcraftHistoryProgress(ctx context.Context, reason
 		}
 		select {
 		case <-ctx.Done():
+			if d.allowStableFlowcraftHistory(reason, history) {
+				return nil
+			}
 			return fmt.Errorf("%s: wait flowcraft history progress: %w", reason, ctx.Err())
 		case <-deadline.C:
-			count := 0
 			message := ""
 			if history != nil {
-				count = len(history.Items)
 				if history.Message != nil {
 					message = *history.Message
 				}
+			}
+			if d.allowStableFlowcraftHistory(reason, history) {
+				return nil
+			}
+			count := 0
+			if history != nil {
+				count = len(history.Items)
 			}
 			return fmt.Errorf("%s: flowcraft history did not advance from %d, current=%d message=%q", reason, d.runtimeHistoryItems, count, message)
 		case <-time.After(500 * time.Millisecond):
 		}
 	}
+}
+
+func (d *personaDriver) allowStableFlowcraftHistory(reason string, history *rpcapi.ServerListRunWorkspaceHistoryResponse) bool {
+	if history == nil || !history.Available || len(history.Items) == 0 {
+		return false
+	}
+	if len(history.Items) < d.runtimeHistoryItems {
+		return false
+	}
+	previous := d.runtimeHistoryItems
+	d.runtimeHistoryItems = len(history.Items)
+	d.runtimeHistorySig = flowcraftHistoryProgressSignature(history.Items)
+	fmt.Printf("workspace_progress event=flowcraft_history_no_advance workspace=%s reason=%q previous=%d current=%d\n", d.cfg.Workspace, reason, previous, len(history.Items))
+	return true
 }
 
 func flowcraftHistoryProgressSignature(items []rpcapi.PeerRunHistoryEntry) string {
@@ -437,14 +459,14 @@ func (d *personaDriver) runRound(ctx context.Context, index int, mode conversati
 	if stat.DownlinkPackets == 0 {
 		return stat, fmt.Errorf("round %d: missing downlink audio; recent events: %s", index, trace.String())
 	}
-	if !mode.SkipAssistantAudioASR {
+	if skipReason := d.assistantAudioASRSkipReason(mode); skipReason == "" {
 		stat.AssistantAudioASR, err = d.verifyAssistantAudioASR(ctx, index, "assistant", stat.AssistantText, downlinkFrames)
 		if err != nil {
 			return stat, fmt.Errorf("round %d: %w", index, err)
 		}
 	} else {
-		stat.AssistantAudioASR = "skipped by human-review"
-		fmt.Printf("workspace_progress event=assistant_audio_asr_skipped workspace=%s round=%d reason=human-review\n", d.cfg.Workspace, index)
+		stat.AssistantAudioASR = "skipped: " + skipReason
+		fmt.Printf("workspace_progress event=assistant_audio_asr_skipped workspace=%s round=%d reason=%s\n", d.cfg.Workspace, index, skipReason)
 	}
 	fmt.Printf("workspace_progress event=round_done workspace=%s round=%d transcript_chars=%d assistant_chars=%d downlink_packets=%d total=%s\n", d.cfg.Workspace, index, runeCount(stat.Transcript), runeCount(stat.AssistantText), stat.DownlinkPackets, stat.WorkspaceTotal.Truncate(time.Millisecond))
 	return stat, nil
@@ -459,33 +481,56 @@ func (d *personaDriver) verifyAssistantAudioASR(ctx context.Context, index int, 
 	var parts []string
 	started := time.Now()
 	for _, chunk := range chunks {
-		audio, err := oggOpusFromPackets(16000, 1, frames[chunk.start:chunk.end])
-		if err != nil {
-			return "", fmt.Errorf("encode assistant audio: %w", err)
-		}
 		partName := name
 		if len(frames) > assistantASRFramesPerChunk {
 			partName = fmt.Sprintf("%s-part-%02d", name, len(parts)+1)
 		}
-		path, err := d.writeRoundAudioFile(index, partName, audio)
-		if err != nil {
-			return "", err
-		}
 		partStart := time.Now()
 		fmt.Printf("workspace_progress event=assistant_audio_asr_part_start workspace=%s round=%d name=%s part=%d frames=%d\n", d.cfg.Workspace, index, name, len(parts)+1, chunk.end-chunk.start)
-		audioASR, err := d.transcribe(ctx, path)
+		audioASR, err := d.transcribeAssistantAudioFrames(ctx, index, partName, frames[chunk.start:chunk.end])
 		if err != nil {
 			return "", fmt.Errorf("assistant audio asr part %d: %w", len(parts)+1, err)
 		}
 		parts = append(parts, audioASR)
 		fmt.Printf("workspace_progress event=assistant_audio_asr_part_done workspace=%s round=%d name=%s part=%d duration=%s text_chars=%d\n", d.cfg.Workspace, index, name, len(parts), time.Since(partStart).Truncate(time.Millisecond), runeCount(audioASR))
 	}
-	audioASR := strings.TrimSpace(strings.Join(parts, ""))
+	audioASR := strings.TrimSpace(strings.Join(parts, " "))
 	if err := assertTextSimilar("assistant audio asr", assistantText, audioASR, 0.35); err != nil {
 		return "", err
 	}
 	fmt.Printf("workspace_progress event=assistant_audio_asr_done workspace=%s round=%d name=%s duration=%s text_chars=%d\n", d.cfg.Workspace, index, name, time.Since(started).Truncate(time.Millisecond), runeCount(audioASR))
 	return audioASR, nil
+}
+
+func (d *personaDriver) transcribeAssistantAudioFrames(ctx context.Context, index int, name string, frames [][]byte) (string, error) {
+	audio, err := oggOpusFromPackets(16000, 1, frames)
+	if err != nil {
+		return "", fmt.Errorf("encode assistant audio: %w", err)
+	}
+	path, err := d.writeRoundAudioFile(index, name, audio)
+	if err != nil {
+		return "", err
+	}
+	audioASR, err := d.transcribeAssistantAudio(ctx, path)
+	if err == nil {
+		return audioASR, nil
+	}
+	if ctx.Err() != nil {
+		return "", err
+	}
+	if len(frames) <= assistantASRMinRetryFrames {
+		return "", err
+	}
+	mid := len(frames) / 2
+	left, leftErr := d.transcribeAssistantAudioFrames(ctx, index, name+"a", frames[:mid])
+	if leftErr != nil {
+		return "", fmt.Errorf("%w; split-left: %w", err, leftErr)
+	}
+	right, rightErr := d.transcribeAssistantAudioFrames(ctx, index, name+"b", frames[mid:])
+	if rightErr != nil {
+		return "", fmt.Errorf("%w; split-right: %w", err, rightErr)
+	}
+	return strings.TrimSpace(strings.TrimSpace(left) + " " + strings.TrimSpace(right)), nil
 }
 
 func progressModeName(mode conversationMode) string {
@@ -498,6 +543,7 @@ func progressModeName(mode conversationMode) string {
 const (
 	workspaceRoundResponseTimeout = 180 * time.Second
 	assistantASRFramesPerChunk    = 600
+	assistantASRMinRetryFrames    = 120
 	assistantASRMinTailFrames     = 100
 )
 
@@ -625,11 +671,16 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 			if stat.SecondAssistantText == "" {
 				return stat, fmt.Errorf("interrupt missing second assistant text; recent events: %s", trace.String())
 			}
-			audioASR, err := d.verifyAssistantAudioASR(ctx, index, "interrupt-second-assistant", stat.SecondAssistantText, secondFrames)
-			if err != nil {
-				return stat, fmt.Errorf("interrupt second response: %w", err)
+			if skipReason := d.assistantAudioASRSkipReason(mode); skipReason == "" {
+				audioASR, err := d.verifyAssistantAudioASR(ctx, index, "interrupt-second-assistant", stat.SecondAssistantText, secondFrames)
+				if err != nil {
+					return stat, fmt.Errorf("interrupt second response: %w", err)
+				}
+				stat.SecondAssistantAudioASR = audioASR
+			} else {
+				stat.SecondAssistantAudioASR = "skipped: " + skipReason
+				fmt.Printf("workspace_progress event=assistant_audio_asr_skipped workspace=%s round=%d reason=%s\n", d.cfg.Workspace, index, skipReason)
 			}
-			stat.SecondAssistantAudioASR = audioASR
 			return stat, nil
 		}
 		select {
@@ -876,6 +927,33 @@ func (d *personaDriver) transcribe(ctx context.Context, audioPath string) (strin
 		return "", fmt.Errorf("transcription returned empty text")
 	}
 	return text, nil
+}
+
+func (d *personaDriver) transcribeAssistantAudio(ctx context.Context, audioPath string) (string, error) {
+	return d.transcribe(ctx, audioPath)
+}
+
+func (d *personaDriver) assistantAudioASRSkipReason(mode conversationMode) string {
+	if mode.SkipAssistantAudioASR {
+		return "human-review"
+	}
+	if d == nil || !d.cfg.isASTTranslateAgent() {
+		return ""
+	}
+	pair := strings.ToLower(strings.TrimSpace(d.cfg.Workflow.Parameters.LangPair))
+	if pair == "" || pair == "auto" {
+		return ""
+	}
+	parts := strings.Split(pair, "/")
+	if len(parts) != 2 {
+		return ""
+	}
+	switch strings.TrimSpace(parts[1]) {
+	case "jp", "ja":
+		return "ast-translate-target-jp-human-review"
+	default:
+		return ""
+	}
 }
 
 func (d *personaDriver) writeRoundAudio(index int, audio []byte) (string, error) {

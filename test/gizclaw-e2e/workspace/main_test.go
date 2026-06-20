@@ -409,6 +409,9 @@ func TestDialClientRejectsInvalidPrivateKey(t *testing.T) {
 
 func TestEnsureWorkspacePutsWorkflowAndRecreatesWorkspace(t *testing.T) {
 	control := &fakeRunControl{}
+	searchEnabled := true
+	musicEnabled := true
+	searchCount := 3
 	cfg := config{
 		Workspace: "workspace-a",
 		Agent:     "doubao-realtime",
@@ -416,7 +419,19 @@ func TestEnsureWorkspacePutsWorkflowAndRecreatesWorkspace(t *testing.T) {
 		Workflow: workflowConfig{
 			Name:          "workflow-a",
 			RealtimeModel: "realtime",
-			Parameters:    workspaceParameterConfig{Input: "realtime"},
+			Parameters: workspaceParameterConfig{
+				Input: "realtime",
+				Voice: workspaceVoiceConfig{
+					RealtimeSpeakerID: "speaker-a",
+				},
+				Search: realtimeSearchConfig{
+					Enabled:         &searchEnabled,
+					Type:            "web_summary",
+					ResultCount:     &searchCount,
+					NoResultMessage: "none",
+				},
+				Music: realtimeMusicConfig{Enabled: &musicEnabled},
+			},
 			Session: realtimeSessionConfig{
 				AuthMode:    "v2",
 				BotName:     "豆包",
@@ -472,6 +487,26 @@ func TestEnsureWorkspacePutsWorkflowAndRecreatesWorkspace(t *testing.T) {
 		params.RealtimeModel == nil || *params.RealtimeModel != "realtime" ||
 		params.Input == nil || *params.Input != rpcapi.WorkspaceInputModeRealtime {
 		t.Fatalf("workspace parameters = %#v", params)
+	}
+	if params.Search == nil ||
+		params.Search.Enabled == nil || !*params.Search.Enabled ||
+		params.Search.Type == nil || *params.Search.Type != "web_summary" ||
+		params.Search.ResultCount == nil || *params.Search.ResultCount != searchCount ||
+		params.Search.NoResultMessage == nil || *params.Search.NoResultMessage != "none" {
+		t.Fatalf("workspace search parameters = %#v", params.Search)
+	}
+	if params.Music == nil || params.Music.Enabled == nil || !*params.Music.Enabled {
+		t.Fatalf("workspace music parameters = %#v", params.Music)
+	}
+	if params.Voice == nil {
+		t.Fatalf("workspace voice parameters = %#v", params.Voice)
+	}
+	voice, err := params.Voice.AsDoubaoRealtimeInternalSpeakerParameters()
+	if err != nil {
+		t.Fatalf("workspace voice decode error = %v", err)
+	}
+	if voice.RealtimeSpeakerId != "speaker-a" {
+		t.Fatalf("workspace voice = %#v", voice)
 	}
 }
 

@@ -266,22 +266,17 @@ func (b DefaultBuilder) buildVolcRealtime(cfg TransformerConfig) (genx.Transform
 		clientOpts[0] = doubaospeech.WithResourceID(resourceID)
 	}
 	switch mapString(data, "auth_mode", "auth") {
-	case "x-api-key", "api_key", "":
-		apiKey := firstString(credentialBody.ArkApiKey)
+	case "x-api-key", "api_key":
+		apiKey := firstString(credentialBody.SpeechToken)
 		if apiKey != "" {
 			clientOpts = append(clientOpts, doubaospeech.WithAPIKey(apiKey))
 			break
 		}
-		token := firstString(credentialBody.SpeechToken)
-		if token != "" {
-			clientOpts = append(clientOpts, doubaospeech.WithBearerToken(token))
-			break
-		}
-		return nil, fmt.Errorf("%w: credential %q missing ark_api_key or speech_token for doubao realtime", ErrInvalid, cfg.Credential.Name)
-	case "v2", "realtime-api-key":
-		accessKey := firstString(credentialBody.OpenapiAccessKeyId)
+		return nil, fmt.Errorf("%w: credential %q missing speech_token for doubao realtime x-api-key auth", ErrInvalid, cfg.Credential.Name)
+	case "", "v2", "realtime-api-key", "access_key", "speech-api-key", "speech_api_key":
+		accessKey := firstString(credentialBody.SpeechToken)
 		if accessKey == "" {
-			return nil, fmt.Errorf("%w: credential %q missing openapi_access_key_id for doubao realtime", ErrInvalid, cfg.Credential.Name)
+			return nil, fmt.Errorf("%w: credential %q missing speech_token for doubao realtime", ErrInvalid, cfg.Credential.Name)
 		}
 		clientOpts = append(clientOpts, doubaospeech.WithRealtimeAPIKey(accessKey, doubaospeech.AppKeyRealtime))
 	default:

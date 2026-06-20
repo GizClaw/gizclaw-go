@@ -146,6 +146,53 @@ func TestWaitFlowcraftHistoryProgressAcceptsCappedContentChange(t *testing.T) {
 	}
 }
 
+func TestWaitFlowcraftHistoryProgressAllowsAvailableHistoryWithoutAdvance(t *testing.T) {
+	items := testHistoryEntries("已有回复")
+	driver := &personaDriver{
+		cfg: config{
+			Agent:     "flowcraft",
+			Workspace: "history-stable",
+		},
+		runtimeClient: &fakeRunControl{
+			history: &rpcapi.ServerListRunWorkspaceHistoryResponse{
+				Available: true,
+				Items:     items,
+			},
+		},
+		runtimeHistoryItems: len(items),
+		runtimeHistorySig:   flowcraftHistoryProgressSignature(items),
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := driver.waitFlowcraftHistoryProgress(ctx, "stable history"); err != nil {
+		t.Fatalf("waitFlowcraftHistoryProgress() error = %v", err)
+	}
+}
+
+func TestWaitFlowcraftHistoryProgressRejectsShorterHistoryWithoutAdvance(t *testing.T) {
+	items := testHistoryEntries("旧回复")
+	driver := &personaDriver{
+		cfg: config{
+			Agent:     "flowcraft",
+			Workspace: "history-shorter",
+		},
+		runtimeClient: &fakeRunControl{
+			history: &rpcapi.ServerListRunWorkspaceHistoryResponse{
+				Available: true,
+				Items:     items,
+			},
+		},
+		runtimeHistoryItems: len(items) + 1,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	if err := driver.waitFlowcraftHistoryProgress(ctx, "shorter history"); err == nil {
+		t.Fatalf("waitFlowcraftHistoryProgress() error = nil, want failure")
+	}
+}
+
 func TestPrepareConversationRequiresConfiguredSelfStart(t *testing.T) {
 	driver := &personaDriver{
 		cfg: config{
@@ -283,6 +330,7 @@ func TestPersonaDriverDefaultOpenAIPaths(t *testing.T) {
 		{0x11, 0x22},
 	})
 	var sawChat, sawSpeech, sawTranscription bool
+	var transcriptionBody []byte
 	client := openai.NewClient(
 		option.WithAPIKey("test"),
 		option.WithBaseURL("http://gizclaw/v1"),
@@ -296,6 +344,11 @@ func TestPersonaDriverDefaultOpenAIPaths(t *testing.T) {
 				return binaryResponse("audio/ogg", oggAudio), nil
 			case strings.HasSuffix(req.URL.Path, "/audio/transcriptions"):
 				sawTranscription = true
+				var err error
+				transcriptionBody, err = io.ReadAll(req.Body)
+				if err != nil {
+					t.Fatalf("read transcription request: %v", err)
+				}
 				return jsonResponse(`{"text":"你好测试"}`), nil
 			default:
 				t.Fatalf("unexpected OpenAI path %s", req.URL.Path)
@@ -338,6 +391,30 @@ func TestPersonaDriverDefaultOpenAIPaths(t *testing.T) {
 	}
 	if !sawChat || !sawSpeech || !sawTranscription {
 		t.Fatalf("saw chat/speech/transcription = %t/%t/%t", sawChat, sawSpeech, sawTranscription)
+	}
+	if bytes.Contains(transcriptionBody, []byte(`name="language"`)) {
+		t.Fatalf("input transcription unexpectedly set language: %s", transcriptionBody)
+	}
+}
+
+func TestPersonaDriverSkipsAssistantAudioASRForJapaneseASTTarget(t *testing.T) {
+	driver := &personaDriver{
+		cfg: config{
+			Agent: "ast-translate",
+			Workflow: workflowConfig{
+				Parameters: workspaceParameterConfig{LangPair: "zh/jp"},
+			},
+		},
+	}
+	if got := driver.assistantAudioASRSkipReason(conversationMode{}); got != "ast-translate-target-jp-human-review" {
+		t.Fatalf("assistantAudioASRSkipReason() = %q", got)
+	}
+	driver.cfg.Workflow.Parameters.LangPair = "zh/en"
+	if got := driver.assistantAudioASRSkipReason(conversationMode{}); got != "" {
+		t.Fatalf("assistantAudioASRSkipReason(zh/en) = %q", got)
+	}
+	if got := driver.assistantAudioASRSkipReason(conversationMode{SkipAssistantAudioASR: true}); got != "human-review" {
+		t.Fatalf("assistantAudioASRSkipReason(human-review) = %q", got)
 	}
 }
 
@@ -493,6 +570,43 @@ func TestAssistantASRFrameChunksMergesShortTail(t *testing.T) {
 				t.Fatalf("assistantASRFrameChunks(%d) = %+v, want %+v", tt.frameCount, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestVerifyAssistantAudioASRSplitsFailedLargeChunk(t *testing.T) {
+	frames := make([][]byte, assistantASRMinRetryFrames*2)
+	for i := range frames {
+		frames[i] = []byte{byte(i)}
+	}
+	var sawBase, sawLeft, sawRight bool
+	driver := &personaDriver{
+		cfg: config{OutputDir: t.TempDir()},
+		transcribeAudioFile: func(_ context.Context, path string) (string, error) {
+			switch filepath.Base(path) {
+			case "round-01-assistant.ogg":
+				sawBase = true
+				return "", errors.New("transcription failed")
+			case "round-01-assistanta.ogg":
+				sawLeft = true
+				return "你好", nil
+			case "round-01-assistantb.ogg":
+				sawRight = true
+				return "测试", nil
+			default:
+				t.Fatalf("unexpected transcription path %s", path)
+				return "", nil
+			}
+		},
+	}
+	got, err := driver.verifyAssistantAudioASR(context.Background(), 1, "assistant", "你好测试", frames)
+	if err != nil {
+		t.Fatalf("verifyAssistantAudioASR() error = %v", err)
+	}
+	if got != "你好 测试" {
+		t.Fatalf("verifyAssistantAudioASR() = %q", got)
+	}
+	if !sawBase || !sawLeft || !sawRight {
+		t.Fatalf("saw base/left/right = %t/%t/%t", sawBase, sawLeft, sawRight)
 	}
 }
 
