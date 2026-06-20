@@ -33,7 +33,7 @@ func handleRPCWithStream(
 	}
 	defer stream.Close()
 
-	req, err := stream.ReadRequest()
+	req, requestEOS, err := stream.ReadRequestEnvelope()
 	if err != nil {
 		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 			return nil
@@ -46,8 +46,10 @@ func handleRPCWithStream(
 			return err
 		}
 	}
-	if err := stream.ReadEOS(); err != nil {
-		return err
+	if !requestEOS {
+		if err := stream.ReadEOS(); err != nil {
+			return err
+		}
 	}
 
 	ctx, stop := rpcConnContext(conn)
@@ -71,7 +73,7 @@ func handleRPCWithStream(
 	if resp.V == 0 {
 		resp.V = rpcapi.RPCVersionV1
 	}
-	if err := stream.WriteResponse(resp); err != nil {
+	if err := stream.WriteResponseEnvelope(resp); err != nil {
 		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 			return nil
 		}
@@ -149,18 +151,20 @@ func callRPC(ctx context.Context, conn net.Conn, req *rpcapi.RPCRequest) (*rpcap
 	}
 	defer stream.Close()
 
-	if err := stream.WriteRequest(req); err != nil {
+	if err := stream.WriteRequestEnvelope(req); err != nil {
 		return nil, err
 	}
 	if err := stream.WriteEOS(); err != nil {
 		return nil, err
 	}
-	resp, err := stream.ReadResponse()
+	resp, responseEOS, err := stream.ReadResponseEnvelope()
 	if err != nil {
 		return nil, err
 	}
-	if err := stream.ReadEOS(); err != nil {
-		return nil, err
+	if !responseEOS {
+		if err := stream.ReadEOS(); err != nil {
+			return nil, err
+		}
 	}
 	return resp, nil
 }

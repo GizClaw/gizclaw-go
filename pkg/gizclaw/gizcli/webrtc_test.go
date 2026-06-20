@@ -74,6 +74,32 @@ func TestWebRTCOpusRTPTimestamp(t *testing.T) {
 	}
 }
 
+func TestWebRTCOpusPacketRTPTicks(t *testing.T) {
+	tests := []struct {
+		name   string
+		packet []byte
+		want   uint32
+	}{
+		{name: "empty defaults to twenty milliseconds", packet: nil, want: 960},
+		{name: "silk ten milliseconds", packet: []byte{0x00}, want: 480},
+		{name: "silk sixty milliseconds", packet: []byte{0x18}, want: 2880},
+		{name: "hybrid twenty milliseconds", packet: []byte{0x78}, want: 960},
+		{name: "celt two point five milliseconds", packet: []byte{0x80}, want: 120},
+		{name: "celt twenty milliseconds", packet: []byte{0x98}, want: 960},
+		{name: "two cbr frames", packet: []byte{0x99}, want: 1920},
+		{name: "arbitrary frame count", packet: []byte{0x9b, 0x03}, want: 2880},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := webRTCOpusPacketRTPTicks(tt.packet)
+			if got != tt.want {
+				t.Fatalf("webRTCOpusPacketRTPTicks() = %d, want %d", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestIsWebRTCRPCDataChannel(t *testing.T) {
 	tests := []struct {
 		label string
@@ -194,24 +220,6 @@ func TestClientPeerPacketSubscriptionCopiesAndUnsubscribes(t *testing.T) {
 	case got := <-packets:
 		t.Fatalf("received packet after unsubscribe: %q", got)
 	case <-time.After(10 * time.Millisecond):
-	}
-}
-
-func TestStampedOpusJitterBufferOrdersByTimestamp(t *testing.T) {
-	jitter := newStampedOpusJitterBuffer(2)
-	if out := jitter.Push(40, []byte("c")); len(out) != 0 {
-		t.Fatalf("first push output = %+v, want none", out)
-	}
-	if out := jitter.Push(0, []byte("a")); len(out) != 0 {
-		t.Fatalf("second push output = %+v, want none", out)
-	}
-	out := jitter.Push(20, []byte("b"))
-	if len(out) != 1 || out[0].timestamp != 0 || string(out[0].frame) != "a" {
-		t.Fatalf("third push output = %+v, want timestamp 0", out)
-	}
-	out = jitter.Push(60, []byte("d"))
-	if len(out) != 1 || out[0].timestamp != 20 || string(out[0].frame) != "b" {
-		t.Fatalf("fourth push output = %+v, want timestamp 20", out)
 	}
 }
 

@@ -16,6 +16,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/audio/stampedopus"
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/agenthost"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peergenx"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/peerresource"
@@ -44,7 +45,8 @@ type PeerConn struct {
 
 	closeOnce              sync.Once
 	agentHost              *agenthost.Service
-	agentInput             *agenthost.PushSource
+	agentInput             *peerRealtimeSource
+	agentInputMu           sync.Mutex
 	events                 *peerStreamEventBroker
 	serverGenX             *peergenx.Service
 	mixer                  *pcm.Mixer
@@ -208,7 +210,7 @@ func (h *PeerConn) initAgentHost() {
 	if manager.AgentHost == nil || manager.PeerRun == nil {
 		return
 	}
-	h.agentInput = agenthost.NewPushSource(64)
+	h.agentInput = newPeerRealtimeSource()
 	h.events = newPeerStreamEventBroker()
 	host := h.peerAgentHost(manager.AgentHost)
 	h.agentHost = &agenthost.Service{
@@ -222,6 +224,7 @@ func (h *PeerConn) initAgentHost() {
 			Tracks: h,
 			Conn:   h.Conn,
 		},
+		OnConsumerError: h.broadcastAgentOutputError,
 	}
 	if h.rpc != nil {
 		h.rpc.peerRunRuntime = h.agentHost
@@ -384,10 +387,24 @@ func (h *PeerConn) handleEventStream(stream net.Conn) error {
 		if err != nil {
 			return err
 		}
-		if err := pushAgentChunk(context.Background(), h.agentInput, chunk); err != nil {
+		if err := h.pushAgentInputChunk(context.Background(), chunk); err != nil {
 			return err
 		}
 	}
+}
+
+func (h *PeerConn) broadcastAgentOutputError(_ context.Context, _ string, err error) {
+	if h == nil || h.events == nil || err == nil {
+		return
+	}
+	label := "agent"
+	message := err.Error()
+	_ = h.events.Broadcast(apitypes.PeerStreamEvent{
+		V:     peerStreamEventVersion,
+		Type:  apitypes.PeerStreamEventTypeEos,
+		Label: &label,
+		Error: &message,
+	})
 }
 
 func (h *PeerConn) serveDirectPackets() error {
@@ -410,7 +427,7 @@ func (h *PeerConn) serveDirectPackets() error {
 			if !ok {
 				continue
 			}
-			if err := pushAgentChunk(context.Background(), h.agentInput, chunk); err != nil {
+			if err := h.pushAgentInputChunk(context.Background(), chunk); err != nil {
 				return err
 			}
 		default:
@@ -418,6 +435,32 @@ func (h *PeerConn) serveDirectPackets() error {
 			// protocols continue to be handled by KCP services.
 		}
 	}
+}
+
+func (h *PeerConn) pushAgentInputChunk(ctx context.Context, chunk *genx.MessageChunk) error {
+	if h == nil || chunk == nil {
+		return nil
+	}
+	h.agentInputMu.Lock()
+	defer h.agentInputMu.Unlock()
+	if h.agentInput == nil {
+		return nil
+	}
+	err := h.agentInput.Push(ctx, chunk)
+	if !errors.Is(err, agenthost.ErrNoActiveInput) {
+		return err
+	}
+	if h.agentHost == nil {
+		return nil
+	}
+	if _, reloadErr := h.agentHost.Reload(ctx); reloadErr != nil {
+		return reloadErr
+	}
+	err = h.agentInput.Push(ctx, chunk)
+	if errors.Is(err, agenthost.ErrNoActiveInput) {
+		return nil
+	}
+	return err
 }
 
 func (h *PeerConn) streamMixedAudioLoop() {

@@ -8,7 +8,6 @@ import (
 	"io"
 	"log/slog"
 	"net"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -99,39 +98,6 @@ func (c *Client) RegisterTo(pc *webrtc.PeerConnection) (*ClientWebRTCRegistratio
 	return r, nil
 }
 
-type stampedOpusFrame struct {
-	timestamp uint64
-	frame     []byte
-}
-
-type stampedOpusJitterBuffer struct {
-	frames []stampedOpusFrame
-	depth  int
-}
-
-func newStampedOpusJitterBuffer(depth int) *stampedOpusJitterBuffer {
-	if depth < 1 {
-		depth = 1
-	}
-	return &stampedOpusJitterBuffer{depth: depth}
-}
-
-func (b *stampedOpusJitterBuffer) Push(timestamp uint64, frame []byte) []stampedOpusFrame {
-	if b == nil {
-		return []stampedOpusFrame{{timestamp: timestamp, frame: append([]byte(nil), frame...)}}
-	}
-	b.frames = append(b.frames, stampedOpusFrame{timestamp: timestamp, frame: append([]byte(nil), frame...)})
-	sort.SliceStable(b.frames, func(i, j int) bool {
-		return b.frames[i].timestamp < b.frames[j].timestamp
-	})
-	if len(b.frames) <= b.depth {
-		return nil
-	}
-	out := b.frames[:1]
-	b.frames = b.frames[1:]
-	return out
-}
-
 // AudioTrack returns the local WebRTC audio track that receives server-side
 // stamped opus packets.
 func (r *ClientWebRTCRegistration) AudioTrack() *webrtc.TrackLocalStaticRTP {
@@ -180,14 +146,16 @@ func isWebRTCEventDataChannel(label string) bool {
 
 func (r *ClientWebRTCRegistration) registerEventDataChannel(dc *webrtc.DataChannel) {
 	var (
-		mu     sync.Mutex
-		stream net.Conn
-		once   sync.Once
+		mu      sync.Mutex
+		stream  net.Conn
+		pending []apitypes.PeerStreamEvent
+		once    sync.Once
 	)
 	closeStream := func() {
 		once.Do(func() {
 			mu.Lock()
 			defer mu.Unlock()
+			pending = nil
 			if stream != nil {
 				_ = stream.Close()
 				stream = nil
@@ -208,7 +176,17 @@ func (r *ClientWebRTCRegistration) registerEventDataChannel(dc *webrtc.DataChann
 		}
 		mu.Lock()
 		stream = eventStream
+		pendingEvents := append([]apitypes.PeerStreamEvent(nil), pending...)
+		pending = nil
 		mu.Unlock()
+		for _, event := range pendingEvents {
+			if err := writeWebRTCPeerStreamEvent(eventStream, event); err != nil {
+				slog.Debug("gizclaw: write pending webrtc event to peer failed", "error", err)
+				closeStream()
+				_ = dc.Close()
+				return
+			}
+		}
 		go func() {
 			defer func() {
 				closeStream()
@@ -218,15 +196,22 @@ func (r *ClientWebRTCRegistration) registerEventDataChannel(dc *webrtc.DataChann
 		}()
 	})
 	dc.OnMessage(func(msg webrtc.DataChannelMessage) {
-		mu.Lock()
-		eventStream := stream
-		mu.Unlock()
-		if eventStream == nil {
-			return
-		}
 		var event apitypes.PeerStreamEvent
 		if err := json.Unmarshal(msg.Data, &event); err != nil {
 			slog.Debug("gizclaw: decode webrtc event failed", "error", err)
+			return
+		}
+		if event.Timestamp == nil {
+			timestamp := time.Now().UnixMilli()
+			event.Timestamp = &timestamp
+		}
+		mu.Lock()
+		eventStream := stream
+		if eventStream == nil {
+			pending = append(pending, event)
+		}
+		mu.Unlock()
+		if eventStream == nil {
 			return
 		}
 		if err := writeWebRTCPeerStreamEvent(eventStream, event); err != nil {
@@ -389,7 +374,8 @@ func (r *ClientWebRTCRegistration) forwardPeerStampedOpusToWebRTCAudio() {
 	defer unsubscribe()
 
 	var sequenceNumber uint16
-	jitter := newStampedOpusJitterBuffer(4)
+	var rtpTimestamp uint32
+	var haveRTPTimestamp bool
 	for {
 		select {
 		case <-r.ctx.Done():
@@ -399,22 +385,25 @@ func (r *ClientWebRTCRegistration) forwardPeerStampedOpusToWebRTCAudio() {
 			if !ok {
 				continue
 			}
-			for _, item := range jitter.Push(timestamp, frame) {
-				packet := &rtp.Packet{
-					Header: rtp.Header{
-						Version:        2,
-						PayloadType:    webRTCOpusPayloadType,
-						SequenceNumber: sequenceNumber,
-						Timestamp:      webRTCOpusRTPTimestamp(item.timestamp),
-					},
-					Payload: item.frame,
-				}
-				if err := r.audioTrack.WriteRTP(packet); err != nil {
-					slog.Debug("gizclaw: write webrtc opus rtp failed", "error", err)
-					return
-				}
-				sequenceNumber++
+			if !haveRTPTimestamp {
+				rtpTimestamp = webRTCOpusRTPTimestamp(timestamp)
+				haveRTPTimestamp = true
 			}
+			packet := &rtp.Packet{
+				Header: rtp.Header{
+					Version:        2,
+					PayloadType:    webRTCOpusPayloadType,
+					SequenceNumber: sequenceNumber,
+					Timestamp:      rtpTimestamp,
+				},
+				Payload: frame,
+			}
+			if err := r.audioTrack.WriteRTP(packet); err != nil {
+				slog.Debug("gizclaw: write webrtc opus rtp failed", "error", err)
+				return
+			}
+			sequenceNumber++
+			rtpTimestamp += webRTCOpusPacketRTPTicks(frame)
 		}
 	}
 }
@@ -443,6 +432,71 @@ func webRTCRTPMillisDelta(clockRate uint32, baseTimestamp, timestamp uint32) uin
 
 func webRTCOpusRTPTimestamp(stampedMillis uint64) uint32 {
 	return uint32(stampedMillis * uint64(webRTCOpusClockRate) / uint64(time.Second/time.Millisecond))
+}
+
+func webRTCOpusPacketRTPTicks(packet []byte) uint32 {
+	ticks := webRTCOpusFrameRTPTicks(packet)
+	if ticks == 0 {
+		return 960
+	}
+	return ticks * uint32(webRTCOpusPacketFrameCount(packet))
+}
+
+func webRTCOpusFrameRTPTicks(packet []byte) uint32 {
+	if len(packet) == 0 {
+		return 0
+	}
+	config := packet[0] >> 3
+	switch {
+	case config < 12:
+		switch config % 4 {
+		case 0:
+			return 480
+		case 1:
+			return 960
+		case 2:
+			return 1920
+		default:
+			return 2880
+		}
+	case config < 16:
+		if config%2 == 0 {
+			return 480
+		}
+		return 960
+	default:
+		switch config % 4 {
+		case 0:
+			return 120
+		case 1:
+			return 240
+		case 2:
+			return 480
+		default:
+			return 960
+		}
+	}
+}
+
+func webRTCOpusPacketFrameCount(packet []byte) int {
+	if len(packet) == 0 {
+		return 1
+	}
+	switch packet[0] & 0x03 {
+	case 0:
+		return 1
+	case 1, 2:
+		return 2
+	default:
+		if len(packet) < 2 {
+			return 1
+		}
+		count := int(packet[1] & 0x3f)
+		if count < 1 {
+			return 1
+		}
+		return count
+	}
 }
 
 func drainWebRTCRTCP(sender *webrtc.RTPSender) {

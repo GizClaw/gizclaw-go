@@ -361,7 +361,11 @@ func stampedOpusChunk(payload []byte) (*genx.MessageChunk, bool) {
 	}, true
 }
 
-func pushAgentChunk(ctx context.Context, source *agenthost.PushSource, chunk *genx.MessageChunk) error {
+type agentChunkPusher interface {
+	Push(context.Context, *genx.MessageChunk) error
+}
+
+func pushAgentChunk(ctx context.Context, source agentChunkPusher, chunk *genx.MessageChunk) error {
 	if source == nil || chunk == nil {
 		return nil
 	}
