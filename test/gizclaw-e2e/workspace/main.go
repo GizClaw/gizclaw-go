@@ -188,7 +188,7 @@ func dialClient(cfg config) (*gizcli.Client, <-chan error, error) {
 }
 
 type runControlClient interface {
-	PutWorkflow(context.Context, string, rpcapi.WorkflowPutRequest) (*rpcapi.WorkflowPutResponse, error)
+	GetWorkflow(context.Context, string, rpcapi.WorkflowGetRequest) (*rpcapi.WorkflowGetResponse, error)
 	StopServerRun(context.Context, string) (*rpcapi.ServerStopRunResponse, error)
 	DeleteWorkspace(context.Context, string, rpcapi.WorkspaceDeleteRequest) (*rpcapi.WorkspaceDeleteResponse, error)
 	CreateWorkspace(context.Context, string, rpcapi.WorkspaceCreateRequest) (*rpcapi.WorkspaceCreateResponse, error)
@@ -205,19 +205,20 @@ func ensureWorkspace(ctx context.Context, client runControlClient, cfg config) (
 	workflowDisplayName := cfg.Workflow.Name
 	workspaceDisplayName := cfg.Workspace
 
-	workflow := workflowDocument(cfg)
-	createdWorkflow, err := client.PutWorkflow(ctx, "workspacetest.workflow.put", rpcapi.WorkflowPutRequest{
+	workflow, err := client.GetWorkflow(ctx, "workspacetest.workflow.get", rpcapi.WorkflowGetRequest{
 		Name: cfg.Workflow.Name,
-		Body: workflow,
 	})
 	if err != nil {
-		return config{}, fmt.Errorf("upsert workflow %q (%s): %w", cfg.Workflow.Name, workflowDisplayName, err)
+		if isRPCNotFound(err) {
+			return config{}, fmt.Errorf("get workflow %q (%s): not found; run test/gizclaw-e2e/setup/apply_resources.sh before workspace tests", cfg.Workflow.Name, workflowDisplayName)
+		}
+		return config{}, fmt.Errorf("get workflow %q (%s): %w", cfg.Workflow.Name, workflowDisplayName, err)
 	}
-	if createdWorkflow == nil || strings.TrimSpace(createdWorkflow.Metadata.Name) == "" {
-		return config{}, fmt.Errorf("upsert workflow %q (%s): empty workflow id", cfg.Workflow.Name, workflowDisplayName)
+	if workflow == nil || strings.TrimSpace(workflow.Metadata.Name) == "" {
+		return config{}, fmt.Errorf("get workflow %q (%s): empty workflow id", cfg.Workflow.Name, workflowDisplayName)
 	}
-	if createdWorkflow.Metadata.Name != cfg.Workflow.Name {
-		return config{}, fmt.Errorf("upsert workflow %q (%s): returned workflow id %q", cfg.Workflow.Name, workflowDisplayName, createdWorkflow.Metadata.Name)
+	if workflow.Metadata.Name != cfg.Workflow.Name {
+		return config{}, fmt.Errorf("get workflow %q (%s): returned workflow id %q", cfg.Workflow.Name, workflowDisplayName, workflow.Metadata.Name)
 	}
 
 	workspace, err := workspaceDocument(cfg)

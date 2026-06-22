@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
@@ -162,6 +163,60 @@ func TestWorkflowSpecCoversTypedAgentSpecs(t *testing.T) {
 	realtime := workflowSpec(config{Workflow: workflowConfig{RealtimeModel: "rt", Session: realtimeSessionConfig{AuthMode: "v2"}, Output: realtimeOutputConfig{Speaker: "sp"}}})
 	if realtime.Driver != rpcapi.WorkflowDriverDoubaoRealtime || realtime.DoubaoRealtime == nil || realtime.DoubaoRealtime.Realtime == nil {
 		t.Fatalf("realtime spec = %+v", realtime)
+	}
+}
+
+func TestSetupWorkflowResourcesCoverWorkspaceConfigs(t *testing.T) {
+	paths, err := filepath.Glob(filepath.Join("config", "*.json"))
+	if err != nil {
+		t.Fatalf("glob configs: %v", err)
+	}
+	if len(paths) == 0 {
+		t.Fatal("workspace configs are missing")
+	}
+	for _, path := range paths {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatalf("read config: %v", err)
+			}
+			var cfg config
+			if err := json.Unmarshal(data, &cfg); err != nil {
+				t.Fatalf("decode config: %v", err)
+			}
+			resourcePath := filepath.Join("..", "setup", "resources", "40-workflow-"+strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))+".json")
+			resourceData, err := os.ReadFile(resourcePath)
+			if err != nil {
+				t.Fatalf("read setup workflow resource %s: %v", resourcePath, err)
+			}
+			var resource struct {
+				APIVersion string                  `json:"apiVersion"`
+				Kind       string                  `json:"kind"`
+				Metadata   rpcapi.WorkflowMetadata `json:"metadata"`
+				Spec       rpcapi.WorkflowSpec     `json:"spec"`
+			}
+			if err := json.Unmarshal(resourceData, &resource); err != nil {
+				t.Fatalf("decode setup workflow resource: %v", err)
+			}
+			want := workflowDocument(cfg)
+			if resource.APIVersion != "gizclaw.admin/v1alpha1" || resource.Kind != "Workflow" {
+				t.Fatalf("resource header = %s/%s", resource.APIVersion, resource.Kind)
+			}
+			if resource.Metadata.Name != want.Metadata.Name {
+				t.Fatalf("resource workflow name = %q, want %q", resource.Metadata.Name, want.Metadata.Name)
+			}
+			gotSpec, err := json.Marshal(resource.Spec)
+			if err != nil {
+				t.Fatalf("marshal resource spec: %v", err)
+			}
+			wantSpec, err := json.Marshal(want.Spec)
+			if err != nil {
+				t.Fatalf("marshal expected spec: %v", err)
+			}
+			if string(gotSpec) != string(wantSpec) {
+				t.Fatalf("setup workflow spec drifted\nresource=%s\nwant=%s", gotSpec, wantSpec)
+			}
+		})
 	}
 }
 
@@ -448,7 +503,7 @@ func TestDialClientRejectsInvalidPrivateKey(t *testing.T) {
 	}
 }
 
-func TestEnsureWorkspacePutsWorkflowAndRecreatesWorkspace(t *testing.T) {
+func TestEnsureWorkspaceRequiresSetupWorkflowAndRecreatesWorkspace(t *testing.T) {
 	control := &fakeRunControl{}
 	searchEnabled := true
 	musicEnabled := true
@@ -488,11 +543,8 @@ func TestEnsureWorkspacePutsWorkflowAndRecreatesWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensureWorkspace() error = %v", err)
 	}
-	if control.createdWorkflow.Metadata.Name != "" || control.putWorkspace.Body.Name != "" {
-		t.Fatalf("ensureWorkspace used wrong methods workflow.create=%+v workspace.put=%+v", control.createdWorkflow, control.putWorkspace)
-	}
-	if control.putWorkflow.Name != "workflow-a" || control.putWorkflow.Body.Metadata.Name != "workflow-a" {
-		t.Fatalf("put workflow = %+v", control.putWorkflow)
+	if control.getWorkflow.Name != "workflow-a" {
+		t.Fatalf("get workflow = %+v", control.getWorkflow)
 	}
 	if !control.stopped {
 		t.Fatal("server run was not stopped before workspace recreate")
@@ -502,14 +554,6 @@ func TestEnsureWorkspacePutsWorkflowAndRecreatesWorkspace(t *testing.T) {
 	}
 	if ensured.Workflow.Name != "workflow-a" {
 		t.Fatalf("ensured workflow name = %q", ensured.Workflow.Name)
-	}
-	if control.putWorkflow.Body.Spec.Driver != rpcapi.WorkflowDriverDoubaoRealtime {
-		t.Fatalf("workflow driver = %q", control.putWorkflow.Body.Spec.Driver)
-	}
-	if control.putWorkflow.Body.Spec.DoubaoRealtime == nil ||
-		control.putWorkflow.Body.Spec.DoubaoRealtime.RealtimeModel == nil ||
-		*control.putWorkflow.Body.Spec.DoubaoRealtime.RealtimeModel != "realtime" {
-		t.Fatalf("workflow realtime_model = %#v", control.putWorkflow.Body.Spec.DoubaoRealtime)
 	}
 	if control.createdWorkspace.Name != "workspace-a" || control.createdWorkspace.WorkflowName != "workflow-a" {
 		t.Fatalf("created workspace = %+v", control.createdWorkspace)
@@ -579,11 +623,8 @@ func TestEnsureWorkspaceAlwaysRecreatesWorkspace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ensureWorkspace() error = %v", err)
 	}
-	if control.createdWorkflow.Metadata.Name != "" || control.putWorkspace.Body.Name != "" {
-		t.Fatalf("ensureWorkspace used wrong methods workflow.create=%+v workspace.put=%+v", control.createdWorkflow, control.putWorkspace)
-	}
-	if control.putWorkflow.Name != "workflow-a" || control.putWorkflow.Body.Metadata.Name != "workflow-a" {
-		t.Fatalf("put workflow = %+v", control.putWorkflow)
+	if control.getWorkflow.Name != "workflow-a" {
+		t.Fatalf("get workflow = %+v", control.getWorkflow)
 	}
 	if control.deletedWorkspace != "workspace-a" {
 		t.Fatalf("deleted workspace = %q", control.deletedWorkspace)
@@ -596,14 +637,26 @@ func TestEnsureWorkspaceAlwaysRecreatesWorkspace(t *testing.T) {
 	}
 }
 
-func TestEnsureWorkspaceReturnsPutErrors(t *testing.T) {
-	control := &fakeRunControl{putWorkflowErr: errors.New("denied")}
+func TestEnsureWorkspaceReturnsGetWorkflowErrors(t *testing.T) {
+	control := &fakeRunControl{getWorkflowErr: errors.New("denied")}
 	_, err := ensureWorkspace(context.Background(), control, config{
 		Workspace: "workspace-a",
 		Agent:     "doubao-realtime",
 		Workflow:  workflowConfig{Name: "workflow-a", RealtimeModel: "realtime"},
 	})
-	if err == nil || !strings.Contains(err.Error(), "upsert workflow") {
+	if err == nil || !strings.Contains(err.Error(), "get workflow") {
+		t.Fatalf("ensureWorkspace() error = %v", err)
+	}
+}
+
+func TestEnsureWorkspaceReturnsSetupHintWhenWorkflowMissing(t *testing.T) {
+	control := &fakeRunControl{getWorkflowErr: rpcapi.Error{Code: rpcapi.RPCErrorCodeNotFound, Message: "missing"}}
+	_, err := ensureWorkspace(context.Background(), control, config{
+		Workspace: "workspace-a",
+		Agent:     "doubao-realtime",
+		Workflow:  workflowConfig{Name: "workflow-a", RealtimeModel: "realtime"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "apply_resources.sh") {
 		t.Fatalf("ensureWorkspace() error = %v", err)
 	}
 }
@@ -917,8 +970,7 @@ func restoreRunHooks(t *testing.T) {
 }
 
 type fakeRunControl struct {
-	createWorkflowErr  error
-	putWorkflowErr     error
+	getWorkflowErr     error
 	createWorkspaceErr error
 	putWorkspaceErr    error
 	deleteWorkspaceErr error
@@ -931,8 +983,8 @@ type fakeRunControl struct {
 	play               *rpcapi.ServerPlayRunWorkspaceHistoryResponse
 	memory             *rpcapi.ServerGetRunWorkspaceMemoryStatsResponse
 	recall             *rpcapi.ServerRunWorkspaceRecallResponse
-	createdWorkflow    rpcapi.WorkflowCreateRequest
-	putWorkflow        rpcapi.WorkflowPutRequest
+	getWorkflow        rpcapi.WorkflowGetRequest
+	workflow           *rpcapi.WorkflowGetResponse
 	createdWorkspace   rpcapi.WorkspaceCreateRequest
 	putWorkspace       rpcapi.WorkspacePutRequest
 	deletedWorkspace   string
@@ -941,20 +993,17 @@ type fakeRunControl struct {
 	reloaded           bool
 }
 
-func (f *fakeRunControl) CreateWorkflow(_ context.Context, _ string, request rpcapi.WorkflowCreateRequest) (*rpcapi.WorkflowCreateResponse, error) {
-	f.createdWorkflow = request
-	if f.createWorkflowErr != nil {
-		return nil, f.createWorkflowErr
+func (f *fakeRunControl) GetWorkflow(_ context.Context, _ string, request rpcapi.WorkflowGetRequest) (*rpcapi.WorkflowGetResponse, error) {
+	f.getWorkflow = request
+	if f.getWorkflowErr != nil {
+		return nil, f.getWorkflowErr
 	}
-	return &request, nil
-}
-
-func (f *fakeRunControl) PutWorkflow(_ context.Context, _ string, request rpcapi.WorkflowPutRequest) (*rpcapi.WorkflowPutResponse, error) {
-	f.putWorkflow = request
-	if f.putWorkflowErr != nil {
-		return nil, f.putWorkflowErr
+	if f.workflow != nil {
+		return f.workflow, nil
 	}
-	return &request.Body, nil
+	return &rpcapi.WorkflowGetResponse{
+		Metadata: rpcapi.WorkflowMetadata{Name: request.Name},
+	}, nil
 }
 
 func (f *fakeRunControl) CreateWorkspace(_ context.Context, _ string, request rpcapi.WorkspaceCreateRequest) (*rpcapi.WorkspaceCreateResponse, error) {
