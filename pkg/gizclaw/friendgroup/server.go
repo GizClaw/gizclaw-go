@@ -369,6 +369,7 @@ func (s *Server) ListFriendGroupMembers(ctx context.Context, owner string, req r
 	return rpcapi.FriendGroupMemberListResponse{Items: items, HasNext: entries.HasNext, NextCursor: entries.NextCursor}, nil
 }
 
+// Deprecated: send chatroom content through the active workspace runtime and use workspace history for storage.
 func (s *Server) SendFriendGroupMessage(ctx context.Context, owner string, req rpcapi.FriendGroupMessageSendRequest) (rpcapi.FriendGroupMessageObject, error) {
 	store, err := s.messagesStore()
 	if err != nil {
@@ -418,6 +419,7 @@ func (s *Server) SendFriendGroupMessage(ctx context.Context, owner string, req r
 	return item, nil
 }
 
+// Deprecated: read chatroom records through workspace history get/audio.get.
 func (s *Server) GetFriendGroupMessage(ctx context.Context, owner string, req rpcapi.FriendGroupMessageGetRequest) (rpcapi.FriendGroupMessageObject, error) {
 	req.FriendGroupId = strings.TrimSpace(req.FriendGroupId)
 	req.Id = strings.TrimSpace(req.Id)
@@ -438,6 +440,7 @@ func (s *Server) GetFriendGroupMessage(ctx context.Context, owner string, req rp
 	return item, nil
 }
 
+// Deprecated: read chatroom records through workspace history list/get.
 func (s *Server) ListFriendGroupMessages(ctx context.Context, owner string, req rpcapi.FriendGroupMessageListRequest) (rpcapi.FriendGroupMessageListResponse, error) {
 	if req.FriendGroupId != nil {
 		v := strings.TrimSpace(*req.FriendGroupId)

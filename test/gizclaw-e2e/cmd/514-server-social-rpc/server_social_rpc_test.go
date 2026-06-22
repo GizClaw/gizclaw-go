@@ -3,7 +3,9 @@ package peersocialrpc_test
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
@@ -269,8 +271,29 @@ func assertChatWorkspaceHistory(t *testing.T, h *clitest.Harness, writerContext,
 
 	writer := h.ConnectClientFromContext(writerContext)
 	defer writer.Close()
+	reader := h.ConnectClientFromContext(readerContext)
+	defer reader.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	if _, err := reader.SetServerRunWorkspace(ctx, "social.chat.reader.workspace.set", rpcapi.ServerSetRunWorkspaceRequest{WorkspaceName: workspaceName}); err != nil {
+		t.Fatalf("%s set run workspace %q: %v", readerContext, workspaceName, err)
+	}
+	readerState, err := reader.ReloadServerRunWorkspace(ctx, "social.chat.reader.workspace.reload")
+	if err != nil {
+		t.Fatalf("%s reload run workspace %q: %v", readerContext, workspaceName, err)
+	}
+	if readerState.RuntimeState != rpcapi.PeerRunStatusStateRunning {
+		t.Fatalf("%s reload workspace state = %#v", readerContext, readerState)
+	}
+	readerInput := newBlockingStream()
+	readerOut, err := reader.Transform(ctx, "chatroom-reader", readerInput)
+	if err != nil {
+		t.Fatalf("%s open chatroom reader stream: %v", readerContext, err)
+	}
+	defer readerOut.Close()
+	defer readerInput.CloseWithError(io.EOF)
+	updatedCh := waitForWorkspaceHistoryUpdated(readerOut)
+
 	if _, err := writer.SetServerRunWorkspace(ctx, "social.chat.workspace.set", rpcapi.ServerSetRunWorkspaceRequest{WorkspaceName: workspaceName}); err != nil {
 		t.Fatalf("%s set run workspace %q: %v", writerContext, workspaceName, err)
 	}
@@ -287,8 +310,15 @@ func assertChatWorkspaceHistory(t *testing.T, h *clitest.Harness, writerContext,
 	}
 	defer out.Close()
 
-	reader := h.ConnectClientFromContext(readerContext)
-	defer reader.Close()
+	select {
+	case err := <-updatedCh:
+		if err != nil {
+			t.Fatalf("%s did not observe workspace history update: %v", readerContext, err)
+		}
+	case <-ctx.Done():
+		t.Fatalf("%s did not observe workspace history update before timeout: %v", readerContext, ctx.Err())
+	}
+
 	entry := waitForWorkspaceHistoryText(t, ctx, reader, workspaceName, text)
 	got, err := reader.GetWorkspaceHistory(ctx, "social.chat.history.get", rpcapi.WorkspaceHistoryGetRequest{
 		WorkspaceName: workspaceName,
@@ -307,6 +337,27 @@ func assertChatWorkspaceHistory(t *testing.T, h *clitest.Harness, writerContext,
 	if !play.Accepted {
 		t.Fatalf("workspace history play = %#v, want accepted", play)
 	}
+}
+
+func waitForWorkspaceHistoryUpdated(stream genx.Stream) <-chan error {
+	ch := make(chan error, 1)
+	go func() {
+		for {
+			chunk, err := stream.Next()
+			if err != nil {
+				ch <- err
+				return
+			}
+			if chunk == nil || chunk.Ctrl == nil {
+				continue
+			}
+			if chunk.Ctrl.Label == "workspace.history.updated" && chunk.Ctrl.Timestamp > 0 {
+				ch <- nil
+				return
+			}
+		}
+	}()
+	return ch
 }
 
 func assertWorkspaceHistoryDenied(t *testing.T, h *clitest.Harness, contextName, workspaceName string) {
@@ -374,6 +425,31 @@ func (s *sliceStream) Close() error {
 
 func (s *sliceStream) CloseWithError(error) error {
 	s.chunks = nil
+	return nil
+}
+
+type blockingStream struct {
+	done chan struct{}
+	once sync.Once
+}
+
+func newBlockingStream() *blockingStream {
+	return &blockingStream{done: make(chan struct{})}
+}
+
+func (s *blockingStream) Next() (*genx.MessageChunk, error) {
+	<-s.done
+	return nil, genx.ErrDone
+}
+
+func (s *blockingStream) Close() error {
+	return s.CloseWithError(io.EOF)
+}
+
+func (s *blockingStream) CloseWithError(error) error {
+	s.once.Do(func() {
+		close(s.done)
+	})
 	return nil
 }
 

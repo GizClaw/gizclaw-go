@@ -2562,7 +2562,10 @@ type WorkflowSpec struct {
 // Workspace defines model for Workspace.
 type Workspace struct {
 	CreatedAt time.Time `json:"created_at"`
-	Name      string    `json:"name"`
+
+	// LastActiveAt Last user-visible workspace conversation or history activity time. Configuration-only updates must not modify this field.
+	LastActiveAt time.Time `json:"last_active_at"`
+	Name         string    `json:"name"`
 
 	// Parameters Agent-specific workspace parameters. The shape is selected by agent_type.
 	Parameters   *WorkspaceParameters `json:"parameters,omitempty"`

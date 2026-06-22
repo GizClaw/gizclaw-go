@@ -1188,8 +1188,9 @@ func newFriendGroupMembersDeleteCmd() *cobra.Command {
 
 func newFriendGroupMessagesCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "messages",
-		Short: "Manage friend group audio messages",
+		Use:        "messages",
+		Short:      "Manage friend group audio messages",
+		Deprecated: "use active workspace runtime and workspace history instead",
 	}
 	cmd.AddCommand(newFriendGroupMessagesListCmd(), newFriendGroupMessagesGetCmd(), newFriendGroupMessagesSendCmd())
 	return cmd
@@ -1200,9 +1201,10 @@ func newFriendGroupMessagesListCmd() *cobra.Command {
 	var cursor string
 	var limit int
 	cmd := &cobra.Command{
-		Use:   "list <friend-group-id>",
-		Short: "List friend group messages",
-		Args:  cobra.ExactArgs(1),
+		Use:        "list <friend-group-id>",
+		Short:      "List friend group messages",
+		Deprecated: "use workspace history list/get instead",
+		Args:       cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runConnectJSON(cmd, opts, func(ctx context.Context, c *gizcli.Client) (any, error) {
 				return c.ListFriendGroupMessages(ctx, "friend_group.messages.list", rpcapi.FriendGroupMessageListRequest{FriendGroupId: &args[0], Cursor: optionalString(cursor), Limit: optionalInt(limit)})
@@ -1218,9 +1220,10 @@ func newFriendGroupMessagesListCmd() *cobra.Command {
 func newFriendGroupMessagesGetCmd() *cobra.Command {
 	var opts connectRPCOptions
 	cmd := &cobra.Command{
-		Use:   "get <friend-group-id> <message-id>",
-		Short: "Get friend group message metadata",
-		Args:  cobra.ExactArgs(2),
+		Use:        "get <friend-group-id> <message-id>",
+		Short:      "Get friend group message metadata",
+		Deprecated: "use workspace history get/audio.get instead",
+		Args:       cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runConnectJSON(cmd, opts, func(ctx context.Context, c *gizcli.Client) (any, error) {
 				return c.GetFriendGroupMessage(ctx, "friend_group.messages.get", rpcapi.FriendGroupMessageGetRequest{FriendGroupId: args[0], Id: args[1]})
@@ -1237,8 +1240,9 @@ func newFriendGroupMessagesSendCmd() *cobra.Command {
 	var contentType string
 	var ttlSeconds int
 	cmd := &cobra.Command{
-		Use:   "send <friend-group-id> --audio-file <path>",
-		Short: "Send a friend group audio message",
+		Use:        "send <friend-group-id> --audio-file <path>",
+		Short:      "Send a friend group audio message",
+		Deprecated: "send through the active workspace runtime instead",
 		Args: func(cmd *cobra.Command, args []string) error {
 			if err := cobra.ExactArgs(1)(cmd, args); err != nil {
 				return err

@@ -126,6 +126,23 @@ func TestPeerStreamEventToChunkPreservesAudioEOSMIME(t *testing.T) {
 	}
 }
 
+func TestPeerStreamEventToChunkAcceptsWorkspaceHistoryUpdated(t *testing.T) {
+	lastUpdated := time.Date(2026, 6, 22, 12, 0, 0, 123000000, time.UTC)
+	chunk, err := peerStreamEventToChunk(apitypes.PeerStreamEvent{
+		Type:          apitypes.PeerStreamEventTypeWorkspaceHistoryUpdated,
+		LastUpdatedAt: &lastUpdated,
+	})
+	if err != nil {
+		t.Fatalf("peerStreamEventToChunk() error = %v", err)
+	}
+	if chunk.Ctrl == nil || chunk.Ctrl.Label != "workspace.history.updated" || chunk.Ctrl.Timestamp != lastUpdated.UnixMilli() {
+		t.Fatalf("chunk ctrl = %#v, want workspace history update", chunk.Ctrl)
+	}
+	if chunk.Part != nil {
+		t.Fatalf("chunk part = %#v, want nil", chunk.Part)
+	}
+}
+
 func TestPeerStreamPushSkipsNilAndOggDirectPacket(t *testing.T) {
 	clientSide, serverSide := net.Pipe()
 	defer clientSide.Close()

@@ -85,6 +85,7 @@ func (s *Server) CreateWorkspace(ctx context.Context, request adminservice.Creat
 	now := time.Now().UTC()
 	workspace := apitypes.Workspace{
 		CreatedAt:    now,
+		LastActiveAt: now,
 		Name:         normalized.Name,
 		Parameters:   cloneParameters(normalized.Parameters),
 		UpdatedAt:    now,
@@ -191,6 +192,7 @@ func (s *Server) PutWorkspace(ctx context.Context, request adminservice.PutWorks
 	now := time.Now().UTC()
 	workspace := apitypes.Workspace{
 		CreatedAt:    now,
+		LastActiveAt: now,
 		Name:         normalized.Name,
 		Parameters:   cloneParameters(normalized.Parameters),
 		UpdatedAt:    now,
@@ -198,6 +200,7 @@ func (s *Server) PutWorkspace(ctx context.Context, request adminservice.PutWorks
 	}
 	if err == nil {
 		workspace.CreatedAt = previous.CreatedAt
+		workspace.LastActiveAt = previous.LastActiveAt
 	}
 	if s.RuntimeStore != nil {
 		if _, err := s.RuntimeStore.PrepareWorkspace(ctx, workspace.Name); err != nil {
@@ -230,7 +233,7 @@ func getWorkspace(ctx context.Context, store kv.Store, name string) (apitypes.Wo
 	if err := json.Unmarshal(data, &workspace); err != nil {
 		return apitypes.Workspace{}, fmt.Errorf("workspace: decode %s: %w", name, err)
 	}
-	return workspace, nil
+	return normalizeWorkspaceTimestamps(workspace), nil
 }
 
 func listWorkspacePage(ctx context.Context, store kv.Store, prefix kv.Key, cursor string, limit int) ([]apitypes.Workspace, bool, *string, error) {
@@ -245,9 +248,19 @@ func listWorkspacePage(ctx context.Context, store kv.Store, prefix kv.Key, curso
 		if err := json.Unmarshal(entry.Value, &workspace); err != nil {
 			return nil, false, nil, fmt.Errorf("workspace: decode list %s: %w", entry.Key.String(), err)
 		}
-		items = append(items, workspace)
+		items = append(items, normalizeWorkspaceTimestamps(workspace))
 	}
 	return items, hasNext, nextCursor, nil
+}
+
+func normalizeWorkspaceTimestamps(workspace apitypes.Workspace) apitypes.Workspace {
+	if workspace.LastActiveAt.IsZero() {
+		workspace.LastActiveAt = workspace.CreatedAt
+	}
+	if workspace.LastActiveAt.IsZero() {
+		workspace.LastActiveAt = workspace.UpdatedAt
+	}
+	return workspace
 }
 
 func normalizeWorkspaceUpsert(in adminservice.WorkspaceUpsert, expectedName string) (adminservice.WorkspaceUpsert, error) {

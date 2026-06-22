@@ -233,6 +233,14 @@ func peerStreamEventToChunk(event apitypes.PeerStreamEvent) (*genx.MessageChunk,
 	case apitypes.PeerStreamEventTypeEos:
 		ctrl.EndOfStream = true
 		return peerStreamEventControlChunk(ctrl, event), nil
+	case apitypes.PeerStreamEventTypeWorkspaceHistoryUpdated:
+		ctrl.Label = "workspace.history.updated"
+		if event.LastUpdatedAt != nil {
+			ctrl.Timestamp = event.LastUpdatedAt.UTC().UnixMilli()
+		} else if event.Timestamp != nil {
+			ctrl.Timestamp = *event.Timestamp
+		}
+		return &genx.MessageChunk{Ctrl: ctrl}, nil
 	case apitypes.PeerStreamEventTypeTextDelta:
 		text := ""
 		if event.Text != nil {

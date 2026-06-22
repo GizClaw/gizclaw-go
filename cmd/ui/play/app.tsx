@@ -274,12 +274,13 @@ type PeerStreamEvent = {
   error?: string;
   kind?: "text" | "audio" | "video" | "mixed";
   label?: string;
+  last_updated_at?: string;
   mime_type?: string;
   seq?: number;
   stream_id?: string;
   text?: string;
   timestamp?: number;
-  type: "bos" | "eos" | "text.delta" | "text.done";
+  type: "bos" | "eos" | "text.delta" | "text.done" | "workspace.history.updated";
   v: number;
 };
 
@@ -541,7 +542,7 @@ function WorkspaceDrawer({ onOpenChange, open }: { onOpenChange: (open: boolean)
     try {
       const [workspacePage, workspaceState] = await Promise.all([listPeerResourcePage("workspaces", ""), getActiveWorkspace()]);
       const nextState = normalizeWorkspaceState(workspaceState);
-      setWorkspaces(workspacePage.items ?? workspacePage.data ?? []);
+      setWorkspaces(sortWorkspacesByActivity(workspacePage.items ?? workspacePage.data ?? []));
       setState(nextState);
       setSelectedWorkspace(nextState.workspace_name ?? "");
       setMode(nextState.workspace_mode ?? "push");
@@ -1048,6 +1049,10 @@ function WorkspaceChatPanel({
         updateTurn(targetID, patch);
         return targetID;
       };
+      if (event.type === "workspace.history.updated") {
+        notifyHistoryChange();
+        return;
+      }
       if ((event.type === "text.delta" || event.type === "text.done") && event.text != null) {
         const label = (event.label ?? "").toLowerCase();
         const key = `${event.stream_id ?? "default"}:${label}`;
@@ -2437,13 +2442,20 @@ function PagedSimpleTable<T>({
 }
 
 function WorkspacesPanel(): JSX.Element {
-  const loadPage = useCallback((cursor: string) => listPeerResourcePage("workspaces", cursor), []);
+  const loadPage = useCallback(async (cursor: string) => {
+    const page = await listPeerResourcePage("workspaces", cursor);
+    const items = page.items ?? page.data;
+    if (items == null) {
+      return page;
+    }
+    return { ...page, items: sortWorkspacesByActivity(items), data: undefined };
+  }, []);
   return (
     <PagedSimpleTable
-      columns={["Display name", "Workspace ID", "Workflow", "Updated"]}
+      columns={["Display name", "Workspace ID", "Workflow", "Last active", "Updated"]}
       empty="No workspaces"
       loadPage={loadPage}
-      row={(item) => [stringField(item, "display_name") || "-", stringField(item, "name"), stringField(item, "workflow_name"), formatDate(stringField(item, "updated_at"))]}
+      row={(item) => [stringField(item, "display_name") || "-", stringField(item, "name"), stringField(item, "workflow_name"), formatDate(stringField(item, "last_active_at")), formatDate(stringField(item, "updated_at"))]}
       title="Workspaces"
     />
   );
@@ -3737,6 +3749,31 @@ function stringField(item: ResourceItem, key: string): string {
     return String(value);
   }
   return jsonSummary(value);
+}
+
+function sortWorkspacesByActivity(items: ResourceItem[]): ResourceItem[] {
+  return [...items].sort((left, right) => {
+    const leftTime = workspaceActivityTime(left);
+    const rightTime = workspaceActivityTime(right);
+    if (leftTime !== rightTime) {
+      return rightTime - leftTime;
+    }
+    return stringField(left, "name").localeCompare(stringField(right, "name"));
+  });
+}
+
+function workspaceActivityTime(item: ResourceItem): number {
+  for (const key of ["last_active_at", "updated_at", "created_at"]) {
+    const value = stringField(item, key);
+    if (value === "") {
+      continue;
+    }
+    const timestamp = Date.parse(value);
+    if (!Number.isNaN(timestamp)) {
+      return timestamp;
+    }
+  }
+  return 0;
 }
 
 function summaryField(item: ResourceItem, key: string): string {

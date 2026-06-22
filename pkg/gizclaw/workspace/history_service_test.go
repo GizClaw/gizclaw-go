@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
@@ -23,7 +24,7 @@ func TestServerWorkspaceHistoryServiceAuthorizesReadPaths(t *testing.T) {
 	ctx := context.Background()
 	seedWorkspace(t, srv, "demo")
 
-	entry, err := srv.AppendWorkspaceHistory(ctx, "demo", AppendHistoryRequest{
+	entry, err := srv.AppendWorkspaceHistory(ctx, " demo ", AppendHistoryRequest{
 		Type:  "agent",
 		Name:  "assistant",
 		Text:  "hello",
@@ -70,6 +71,59 @@ func TestServerWorkspaceHistoryServiceAuthorizesReadPaths(t *testing.T) {
 		if req.Subject != subject || req.Resource != acl.WorkspaceResource("demo") || req.Permission != apitypes.ACLPermissionWorkspaceRead {
 			t.Fatalf("authorize request = %+v", req)
 		}
+	}
+}
+
+func TestServerAppendWorkspaceHistoryBumpsLastActiveAt(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	srv.RuntimeStore = NewObjectRuntimeStore(objectstore.Dir(t.TempDir()))
+	ctx := context.Background()
+	seedWorkspace(t, srv, "demo")
+
+	before, err := getWorkspace(ctx, srv.Store, "demo")
+	if err != nil {
+		t.Fatalf("getWorkspace(before) error = %v", err)
+	}
+	entryCreatedAt := before.LastActiveAt.Add(2 * time.Hour)
+	entry, err := srv.AppendWorkspaceHistory(ctx, "demo", AppendHistoryRequest{
+		CreatedAt: entryCreatedAt,
+		Name:      "assistant",
+		Text:      "hello",
+		Type:      "agent",
+	})
+	if err != nil {
+		t.Fatalf("AppendWorkspaceHistory() error = %v", err)
+	}
+	if !entry.CreatedAt.Equal(entryCreatedAt) {
+		t.Fatalf("entry created_at = %s, want %s", entry.CreatedAt, entryCreatedAt)
+	}
+	after, err := getWorkspace(ctx, srv.Store, "demo")
+	if err != nil {
+		t.Fatalf("getWorkspace(after) error = %v", err)
+	}
+	if !after.LastActiveAt.Equal(entryCreatedAt) {
+		t.Fatalf("last_active_at = %s, want %s", after.LastActiveAt, entryCreatedAt)
+	}
+	if !after.UpdatedAt.Equal(before.UpdatedAt) {
+		t.Fatalf("updated_at = %s, want unchanged %s", after.UpdatedAt, before.UpdatedAt)
+	}
+
+	if _, err := srv.AppendWorkspaceHistory(ctx, "demo", AppendHistoryRequest{
+		CreatedAt: before.LastActiveAt.Add(time.Minute),
+		Name:      "older",
+		Text:      "old",
+		Type:      "agent",
+	}); err != nil {
+		t.Fatalf("AppendWorkspaceHistory(older) error = %v", err)
+	}
+	got, err := getWorkspace(ctx, srv.Store, "demo")
+	if err != nil {
+		t.Fatalf("getWorkspace(final) error = %v", err)
+	}
+	if !got.LastActiveAt.Equal(entryCreatedAt) {
+		t.Fatalf("last_active_at after older append = %s, want unchanged %s", got.LastActiveAt, entryCreatedAt)
 	}
 }
 

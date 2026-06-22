@@ -14,6 +14,7 @@
           "name",
           "workflow_name",
           "created_at",
+          "last_active_at",
           "updated_at"
         ],
         "properties": {
@@ -29,6 +30,11 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "last_active_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Last user-visible workspace conversation or history activity time. Configuration-only updates must not modify this field."
           },
           "updated_at": {
             "type": "string",

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -35,8 +36,11 @@ func TestServerWorkspacesCRUD(t *testing.T) {
 	if created.Name != "alpha" || created.WorkflowName != "workflow-1" {
 		t.Fatalf("CreateWorkspace() workspace = %#v", created)
 	}
-	if created.CreatedAt.IsZero() || created.UpdatedAt.IsZero() {
+	if created.CreatedAt.IsZero() || created.UpdatedAt.IsZero() || created.LastActiveAt.IsZero() {
 		t.Fatalf("CreateWorkspace() timestamps = %#v", created)
+	}
+	if !created.LastActiveAt.Equal(created.CreatedAt) {
+		t.Fatalf("CreateWorkspace() last_active_at = %s, want created_at %s", created.LastActiveAt, created.CreatedAt)
 	}
 	if len(runtime.prepared) != 1 || runtime.prepared[0] != "alpha" {
 		t.Fatalf("runtime prepared after create = %#v", runtime.prepared)
@@ -85,6 +89,9 @@ func TestServerWorkspacesCRUD(t *testing.T) {
 	if updated.CreatedAt.IsZero() || updated.UpdatedAt.Before(updated.CreatedAt) {
 		t.Fatalf("PutWorkspace() timestamps = %#v", updated)
 	}
+	if !updated.LastActiveAt.Equal(created.LastActiveAt) {
+		t.Fatalf("PutWorkspace() last_active_at = %s, want unchanged %s", updated.LastActiveAt, created.LastActiveAt)
+	}
 	if len(runtime.prepared) != 2 || runtime.prepared[1] != "alpha" {
 		t.Fatalf("runtime prepared after put = %#v", runtime.prepared)
 	}
@@ -106,6 +113,48 @@ func TestServerWorkspacesCRUD(t *testing.T) {
 	}
 	if _, ok := getAfterDelete.(adminservice.GetWorkspace404JSONResponse); !ok {
 		t.Fatalf("GetWorkspace() after delete response = %#v", getAfterDelete)
+	}
+}
+
+func TestServerWorkspaceLastActiveBackfillsLegacyRecords(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	ctx := context.Background()
+	createdAt := time.Date(2026, 6, 22, 8, 0, 0, 0, time.UTC)
+	updatedAt := createdAt.Add(time.Hour)
+	legacy := map[string]any{
+		"name":          "legacy",
+		"workflow_name": "workflow-1",
+		"created_at":    createdAt.Format(time.RFC3339Nano),
+		"updated_at":    updatedAt.Format(time.RFC3339Nano),
+	}
+	data, err := json.Marshal(legacy)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if err := srv.Store.Set(ctx, workspaceKey("legacy"), data); err != nil {
+		t.Fatalf("seed legacy workspace: %v", err)
+	}
+
+	got, err := getWorkspace(ctx, srv.Store, "legacy")
+	if err != nil {
+		t.Fatalf("getWorkspace() error = %v", err)
+	}
+	if !got.LastActiveAt.Equal(createdAt) {
+		t.Fatalf("getWorkspace() last_active_at = %s, want created_at %s", got.LastActiveAt, createdAt)
+	}
+
+	listResp, err := srv.ListWorkspaces(ctx, adminservice.ListWorkspacesRequestObject{})
+	if err != nil {
+		t.Fatalf("ListWorkspaces() error = %v", err)
+	}
+	listed, ok := listResp.(adminservice.ListWorkspaces200JSONResponse)
+	if !ok || len(listed.Items) != 1 {
+		t.Fatalf("ListWorkspaces() response = %#v", listResp)
+	}
+	if !listed.Items[0].LastActiveAt.Equal(createdAt) {
+		t.Fatalf("ListWorkspaces() last_active_at = %s, want created_at %s", listed.Items[0].LastActiveAt, createdAt)
 	}
 }
 

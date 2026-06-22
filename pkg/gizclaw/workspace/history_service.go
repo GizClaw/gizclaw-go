@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
 type Authorizer interface {
@@ -15,11 +17,19 @@ type Authorizer interface {
 }
 
 func (s *Server) AppendWorkspaceHistory(ctx context.Context, workspaceName string, req AppendHistoryRequest) (HistoryEntry, error) {
-	store, err := s.historyStore(ctx, workspaceName)
+	workspaceName = strings.TrimSpace(workspaceName)
+	metadataStore, history, err := s.historyStoreWithMetadata(ctx, workspaceName)
 	if err != nil {
 		return HistoryEntry{}, err
 	}
-	return store.Append(ctx, req)
+	entry, err := history.Append(ctx, req)
+	if err != nil {
+		return HistoryEntry{}, err
+	}
+	if err := bumpWorkspaceLastActive(ctx, metadataStore, workspaceName, entry.CreatedAt); err != nil {
+		return HistoryEntry{}, err
+	}
+	return entry, nil
 }
 
 func (s *Server) ListWorkspaceHistory(ctx context.Context, subject apitypes.ACLSubject, workspaceName string, req apitypes.PeerRunHistoryListRequest) (apitypes.PeerRunHistoryListResponse, error) {
@@ -69,29 +79,51 @@ func (s *Server) authorizeHistoryRead(ctx context.Context, subject apitypes.ACLS
 }
 
 func (s *Server) historyStore(ctx context.Context, workspaceName string) (*HistoryStore, error) {
+	_, history, err := s.historyStoreWithMetadata(ctx, workspaceName)
+	return history, err
+}
+
+func (s *Server) historyStoreWithMetadata(ctx context.Context, workspaceName string) (kv.Store, *HistoryStore, error) {
 	if s == nil {
-		return nil, fmt.Errorf("workspace: nil server")
+		return nil, nil, fmt.Errorf("workspace: nil server")
 	}
 	workspaceName = strings.TrimSpace(workspaceName)
 	if workspaceName == "" {
-		return nil, fmt.Errorf("workspace: name is required")
+		return nil, nil, fmt.Errorf("workspace: name is required")
 	}
 	store, err := s.store()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if _, err := getWorkspace(ctx, store, workspaceName); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if s.RuntimeStore == nil {
-		return nil, fmt.Errorf("workspace: runtime store is required")
+		return nil, nil, fmt.Errorf("workspace: runtime store is required")
 	}
 	rt, err := s.RuntimeStore.GetWorkspaceRuntime(ctx, workspaceName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if rt.History == nil {
-		return nil, fmt.Errorf("workspace: history store is required")
+		return nil, nil, fmt.Errorf("workspace: history store is required")
 	}
-	return rt.History, nil
+	return store, rt.History, nil
+}
+
+func bumpWorkspaceLastActive(ctx context.Context, store kv.Store, workspaceName string, lastActiveAt time.Time) error {
+	if lastActiveAt.IsZero() {
+		lastActiveAt = time.Now().UTC()
+	}
+	workspace, err := getWorkspace(ctx, store, workspaceName)
+	if err != nil {
+		return err
+	}
+	workspace = normalizeWorkspaceTimestamps(workspace)
+	lastActiveAt = lastActiveAt.UTC()
+	if !workspace.LastActiveAt.IsZero() && !lastActiveAt.After(workspace.LastActiveAt) {
+		return nil
+	}
+	workspace.LastActiveAt = lastActiveAt
+	return writeWorkspace(ctx, store, workspace)
 }

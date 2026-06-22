@@ -4280,6 +4280,11 @@
             "format": "date-time",
             "type": "string"
           },
+          "last_active_at": {
+            "description": "Last user-visible workspace conversation or history activity time. Configuration-only updates must not modify this field.",
+            "format": "date-time",
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -4298,6 +4303,7 @@
           "name",
           "workflow_name",
           "created_at",
+          "last_active_at",
           "updated_at"
         ],
         "type": "object"
