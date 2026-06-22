@@ -186,6 +186,9 @@ func validateDocument(doc apitypes.WorkflowDocument, expectedName string) (apity
 	if !doc.Spec.Driver.Valid() {
 		return apitypes.WorkflowDocument{}, env, nil, fmt.Errorf("unsupported spec.driver %q", doc.Spec.Driver)
 	}
+	if err := validateDriverSpec(doc.Spec); err != nil {
+		return apitypes.WorkflowDocument{}, env, nil, err
+	}
 
 	doc.Metadata.Name = env.Metadata.Name
 	raw, err = json.Marshal(doc)
@@ -193,6 +196,18 @@ func validateDocument(doc apitypes.WorkflowDocument, expectedName string) (apity
 		return apitypes.WorkflowDocument{}, env, nil, err
 	}
 	return doc, env, raw, nil
+}
+
+func validateDriverSpec(spec apitypes.WorkflowSpec) error {
+	switch spec.Driver {
+	case apitypes.WorkflowDriverChatroom:
+		if spec.Chatroom == nil {
+			return errors.New("spec.chatroom is required")
+		}
+		return nil
+	default:
+		return nil
+	}
 }
 
 func decodeDocument(data []byte) (apitypes.WorkflowDocument, error) {

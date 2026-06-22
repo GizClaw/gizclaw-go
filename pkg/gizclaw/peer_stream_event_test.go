@@ -90,6 +90,38 @@ func TestPeerStreamEventChunkMapping(t *testing.T) {
 	if !ok || blob.MIMEType != mimeType || len(blob.Data) != 0 || !audioEOS.IsEndOfStream() {
 		t.Fatalf("audio eos chunk = %#v, want empty audio EOS blob", audioEOS)
 	}
+
+	lastUpdated := time.Date(2026, 6, 22, 12, 0, 0, 123000000, time.UTC)
+	historyUpdated, err := peerStreamEventToChunk(apitypes.PeerStreamEvent{
+		V:             1,
+		Type:          apitypes.PeerStreamEventTypeWorkspaceHistoryUpdated,
+		LastUpdatedAt: &lastUpdated,
+	})
+	if err != nil {
+		t.Fatalf("history updated peerStreamEventToChunk() error = %v", err)
+	}
+	if historyUpdated.Ctrl == nil || historyUpdated.Ctrl.Label != peerStreamEventHistoryUpdatedLabel || historyUpdated.Ctrl.Timestamp != lastUpdated.UnixMilli() {
+		t.Fatalf("history updated chunk = %#v", historyUpdated)
+	}
+	events = peerStreamEventsFromChunk(historyUpdated)
+	if len(events) != 1 || events[0].Type != apitypes.PeerStreamEventTypeWorkspaceHistoryUpdated {
+		t.Fatalf("history updated events = %+v", events)
+	}
+	if events[0].LastUpdatedAt == nil || !events[0].LastUpdatedAt.Equal(time.UnixMilli(lastUpdated.UnixMilli()).UTC()) {
+		t.Fatalf("history updated last_updated_at = %#v", events[0].LastUpdatedAt)
+	}
+
+	historyUpdatedFromTimestamp, err := peerStreamEventToChunk(apitypes.PeerStreamEvent{
+		V:         1,
+		Type:      apitypes.PeerStreamEventTypeWorkspaceHistoryUpdated,
+		Timestamp: &timestamp,
+	})
+	if err != nil {
+		t.Fatalf("history updated timestamp peerStreamEventToChunk() error = %v", err)
+	}
+	if historyUpdatedFromTimestamp.Ctrl == nil || historyUpdatedFromTimestamp.Ctrl.Timestamp != timestamp {
+		t.Fatalf("history updated timestamp chunk = %#v, want timestamp %d", historyUpdatedFromTimestamp, timestamp)
+	}
 }
 
 func TestPeerAgentOutputWritesStampedOpus(t *testing.T) {

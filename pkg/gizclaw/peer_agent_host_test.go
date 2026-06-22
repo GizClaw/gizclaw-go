@@ -6,6 +6,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/agenthost"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow/agents/asttranslate"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow/agents/chatroom"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow/agents/doubaorealtime"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workflow/agents/flowcraft"
 )
@@ -31,7 +32,7 @@ func TestNewPeerAgentHostRegistersBuiltInAgents(t *testing.T) {
 	if got.WorkspaceRuntimes() != base.WorkspaceRuntimes() {
 		t.Fatal("newPeerAgentHost() did not preserve workspace runtime registry")
 	}
-	for _, agentType := range []string{asttranslate.Type, doubaorealtime.Type, flowcraft.Type} {
+	for _, agentType := range []string{asttranslate.Type, chatroom.Type, doubaorealtime.Type, flowcraft.Type} {
 		t.Run(agentType, func(t *testing.T) {
 			if _, ok := got.Registry.Get(agentType); !ok {
 				t.Fatalf("agent type %q was not registered", agentType)

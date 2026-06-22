@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/internal/socialutil"
@@ -104,18 +105,34 @@ func TestMembersMaintainACLBindings(t *testing.T) {
 	ctx := context.Background()
 	s := newTestServer(t)
 	s.ACL = newTestACL(t)
+	workspaces := &recordingWorkspaceService{}
+	s.Workspaces = workspaces
 
 	group, err := s.CreateFriendGroup(ctx, "peer-a", rpcapi.FriendGroupCreateRequest{Name: "room"})
 	if err != nil {
 		t.Fatalf("CreateFriendGroup: %v", err)
 	}
 	friendGroupID := socialutil.StringValue(group.Id)
+	workspaceName := socialutil.StringValue(group.WorkspaceName)
+	if workspaceName == "" {
+		t.Fatal("CreateFriendGroup workspace_name is empty")
+	}
+	if len(workspaces.created) != 1 || workspaces.created[0].Name != workspaceName || workspaces.created[0].WorkflowName != socialutil.ChatRoomWorkflowName {
+		t.Fatalf("created workspaces = %#v, want %q chatroom", workspaces.created, workspaceName)
+	}
 	if err := s.ACL.Authorize(ctx, acl.AuthorizeRequest{
 		Subject:    acl.PublicKeySubject("peer-a"),
 		Resource:   acl.FriendGroupResource(friendGroupID),
 		Permission: apitypes.ACLPermissionFriendGroupAdmin,
 	}); err != nil {
 		t.Fatalf("owner friend group admin authorize: %v", err)
+	}
+	if err := s.ACL.Authorize(ctx, acl.AuthorizeRequest{
+		Subject:    acl.PublicKeySubject("peer-a"),
+		Resource:   acl.WorkspaceResource(workspaceName),
+		Permission: apitypes.ACLPermissionWorkspaceUse,
+	}); err != nil {
+		t.Fatalf("owner workspace use authorize: %v", err)
 	}
 
 	if _, err := s.AddFriendGroupMember(ctx, "peer-a", rpcapi.FriendGroupMemberAddRequest{FriendGroupId: friendGroupID, PeerId: "peer-b", Role: rpcapi.FriendGroupMemberMutableRole("member")}); err != nil {
@@ -127,6 +144,13 @@ func TestMembersMaintainACLBindings(t *testing.T) {
 		Permission: apitypes.ACLPermissionFriendGroupUse,
 	}); err != nil {
 		t.Fatalf("member group use authorize: %v", err)
+	}
+	if err := s.ACL.Authorize(ctx, acl.AuthorizeRequest{
+		Subject:    acl.PublicKeySubject("peer-b"),
+		Resource:   acl.WorkspaceResource(workspaceName),
+		Permission: apitypes.ACLPermissionWorkspaceUse,
+	}); err != nil {
+		t.Fatalf("member workspace use authorize: %v", err)
 	}
 	if err := s.ACL.Authorize(ctx, acl.AuthorizeRequest{
 		Subject:    acl.PublicKeySubject("peer-b"),
@@ -156,6 +180,13 @@ func TestMembersMaintainACLBindings(t *testing.T) {
 		Permission: apitypes.ACLPermissionFriendGroupUse,
 	}); !errors.Is(err, acl.ErrDenied) {
 		t.Fatalf("deleted member group use authorize error = %v, want denied", err)
+	}
+	if err := s.ACL.Authorize(ctx, acl.AuthorizeRequest{
+		Subject:    acl.PublicKeySubject("peer-b"),
+		Resource:   acl.WorkspaceResource(workspaceName),
+		Permission: apitypes.ACLPermissionWorkspaceUse,
+	}); !errors.Is(err, acl.ErrDenied) {
+		t.Fatalf("deleted member workspace use authorize error = %v, want denied", err)
 	}
 }
 
@@ -196,6 +227,25 @@ func TestMemberRollsBackWhenACLWriteFails(t *testing.T) {
 		t.Fatalf("member role after failed put = %s, want member", socialutil.GroupRole(member))
 	}
 
+	s.ACL = failingWorkspaceACL{ACL: baseACL}
+	if _, err := s.AddFriendGroupMember(ctx, "peer-a", rpcapi.FriendGroupMemberAddRequest{FriendGroupId: friendGroupID, PeerId: "peer-b", Role: rpcapi.FriendGroupMemberMutableRole("admin")}); err == nil {
+		t.Fatal("AddFriendGroupMember with failing workspace ACL error = nil")
+	}
+	member, err = s.groupMember(ctx, friendGroupID, "peer-b")
+	if err != nil {
+		t.Fatalf("groupMember after failed workspace ACL: %v", err)
+	}
+	if socialutil.GroupRole(member) != rpcapi.FriendGroupMemberRoleMember {
+		t.Fatalf("member role after failed workspace ACL = %s, want member", socialutil.GroupRole(member))
+	}
+	if err := baseACL.Authorize(ctx, acl.AuthorizeRequest{
+		Subject:    acl.PublicKeySubject("peer-b"),
+		Resource:   acl.FriendGroupResource(friendGroupID),
+		Permission: apitypes.ACLPermissionFriendGroupAdmin,
+	}); !errors.Is(err, acl.ErrDenied) {
+		t.Fatalf("member group admin authorize after failed workspace ACL = %v, want denied", err)
+	}
+
 	s.ACL = failingACL{ACL: baseACL, failDelete: true}
 	if _, err := s.DeleteFriendGroupMember(ctx, "peer-a", rpcapi.FriendGroupMemberDeleteRequest{FriendGroupId: friendGroupID, Id: "peer-b"}); err == nil {
 		t.Fatal("DeleteFriendGroupMember with failing ACL error = nil")
@@ -209,12 +259,15 @@ func TestLifecycleDeletePathsAndPagination(t *testing.T) {
 	ctx := context.Background()
 	s := newTestServer(t)
 	s.ACL = newTestACL(t)
+	workspaces := &recordingWorkspaceService{}
+	s.Workspaces = workspaces
 
 	group, err := s.CreateFriendGroup(ctx, "peer-a", rpcapi.FriendGroupCreateRequest{Name: "room"})
 	if err != nil {
 		t.Fatalf("CreateFriendGroup: %v", err)
 	}
 	friendGroupID := socialutil.StringValue(group.Id)
+	workspaceName := socialutil.StringValue(group.WorkspaceName)
 	group, err = s.PutFriendGroup(ctx, "peer-a", rpcapi.FriendGroupPutRequest{Id: friendGroupID, Name: strPtr("renamed")})
 	if err != nil {
 		t.Fatalf("PutFriendGroup: %v", err)
@@ -250,6 +303,9 @@ func TestLifecycleDeletePathsAndPagination(t *testing.T) {
 	}
 	if socialutil.StringValue(deleted.Id) != friendGroupID {
 		t.Fatalf("DeleteFriendGroup id = %q, want %q", socialutil.StringValue(deleted.Id), friendGroupID)
+	}
+	if len(workspaces.deleted) != 1 || workspaces.deleted[0] != workspaceName {
+		t.Fatalf("deleted workspaces = %#v, want %q", workspaces.deleted, workspaceName)
 	}
 	if _, err := s.MessageAssets.Get(socialutil.StringValue(msg.AudioPath)); err == nil {
 		t.Fatal("group audio object still exists after group delete")
@@ -435,6 +491,75 @@ func TestCreateRollsBackPartialWrites(t *testing.T) {
 	if len(groups) != 0 {
 		t.Fatalf("groups after rollback = %#v, want empty", groups)
 	}
+
+	workspaces := &recordingWorkspaceService{}
+	s = newTestServer(t)
+	s.Groups = failingSetStore{Store: kv.NewMemory(nil)}
+	s.Workspaces = workspaces
+	if _, err := s.CreateFriendGroup(ctx, "peer-a", rpcapi.FriendGroupCreateRequest{Name: "room"}); err == nil {
+		t.Fatal("CreateFriendGroup with failing group store error = nil")
+	}
+	if len(workspaces.deleted) != 1 {
+		t.Fatalf("deleted workspaces after group write rollback = %#v, want one", workspaces.deleted)
+	}
+}
+
+func TestCreateHandlesWorkspaceFailures(t *testing.T) {
+	ctx := context.Background()
+	s := newTestServer(t)
+	s.Workspaces = failingWorkspaceService{createErr: errors.New("workspace store down")}
+	if _, err := s.CreateFriendGroup(ctx, "peer-a", rpcapi.FriendGroupCreateRequest{Name: "room"}); err == nil {
+		t.Fatal("CreateFriendGroup with workspace error = nil")
+	}
+
+	s = newTestServer(t)
+	s.Workspaces = failingWorkspaceService{
+		createResp: adminservice.CreateWorkspace500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", "failed")),
+	}
+	if _, err := s.CreateFriendGroup(ctx, "peer-a", rpcapi.FriendGroupCreateRequest{Name: "room"}); err == nil {
+		t.Fatal("CreateFriendGroup with workspace failure response = nil")
+	}
+
+	s = newTestServer(t)
+	s.ACL = newTestACL(t)
+	workspaces := &recordingWorkspaceService{}
+	s.Workspaces = workspaces
+	if created, err := s.ensureGroupWorkspace(ctx, "workspace-a", "peer-a"); err != nil || !created {
+		t.Fatalf("ensureGroupWorkspace create = %v, %v; want created", created, err)
+	}
+	if created, err := s.ensureGroupWorkspace(ctx, "workspace-a", "peer-b"); err != nil || created {
+		t.Fatalf("ensureGroupWorkspace existing = %v, %v; want existing", created, err)
+	}
+	if err := s.ACL.Authorize(ctx, acl.AuthorizeRequest{
+		Subject:    acl.PublicKeySubject("peer-b"),
+		Resource:   acl.WorkspaceResource("workspace-a"),
+		Permission: apitypes.ACLPermissionWorkspaceUse,
+	}); err != nil {
+		t.Fatalf("peer-b workspace use after existing workspace: %v", err)
+	}
+}
+
+func TestWorkspaceHelperFallbacks(t *testing.T) {
+	ctx := context.Background()
+	s := newTestServer(t)
+	id := "legacy-group"
+	if err := socialutil.WriteJSON(ctx, s.Groups, socialutil.GroupKey(id), rpcapi.FriendGroupObject{Id: &id}); err != nil {
+		t.Fatalf("write legacy group: %v", err)
+	}
+	workspaceName, err := s.workspaceName(ctx, id)
+	if err != nil {
+		t.Fatalf("workspaceName legacy group: %v", err)
+	}
+	if want := socialutil.GroupWorkspaceName(id); workspaceName != want {
+		t.Fatalf("workspaceName legacy group = %q, want %q", workspaceName, want)
+	}
+	if err := s.revokeWorkspace(ctx, workspaceName, "peer-a"); err != nil {
+		t.Fatalf("revokeWorkspace without ACL: %v", err)
+	}
+	s.Workspaces = failingWorkspaceService{}
+	if err := s.deleteWorkspace(ctx, workspaceName); err != nil {
+		t.Fatalf("deleteWorkspace missing workspace: %v", err)
+	}
 }
 
 func TestDeletePropagatesCleanupErrors(t *testing.T) {
@@ -575,6 +700,45 @@ func (s failingDeletePrefixStore) DeletePrefix(string) error {
 	return errors.New("forced delete prefix failure")
 }
 
+type recordingWorkspaceService struct {
+	created []adminservice.WorkspaceUpsert
+	deleted []string
+}
+
+func (s *recordingWorkspaceService) CreateWorkspace(_ context.Context, req adminservice.CreateWorkspaceRequestObject) (adminservice.CreateWorkspaceResponseObject, error) {
+	if req.Body == nil {
+		return adminservice.CreateWorkspace400JSONResponse(apitypes.NewErrorResponse("INVALID_WORKSPACE", "request body required")), nil
+	}
+	for _, workspace := range s.created {
+		if workspace.Name == req.Body.Name {
+			return adminservice.CreateWorkspace409JSONResponse(apitypes.NewErrorResponse("WORKSPACE_ALREADY_EXISTS", "exists")), nil
+		}
+	}
+	s.created = append(s.created, *req.Body)
+	return adminservice.CreateWorkspace200JSONResponse(apitypes.Workspace{Name: req.Body.Name, WorkflowName: req.Body.WorkflowName, Parameters: req.Body.Parameters}), nil
+}
+
+func (s *recordingWorkspaceService) DeleteWorkspace(_ context.Context, req adminservice.DeleteWorkspaceRequestObject) (adminservice.DeleteWorkspaceResponseObject, error) {
+	s.deleted = append(s.deleted, req.Name)
+	return adminservice.DeleteWorkspace200JSONResponse(apitypes.Workspace{Name: req.Name}), nil
+}
+
+type failingWorkspaceService struct {
+	createResp adminservice.CreateWorkspaceResponseObject
+	createErr  error
+}
+
+func (s failingWorkspaceService) CreateWorkspace(context.Context, adminservice.CreateWorkspaceRequestObject) (adminservice.CreateWorkspaceResponseObject, error) {
+	if s.createErr != nil {
+		return nil, s.createErr
+	}
+	return s.createResp, nil
+}
+
+func (s failingWorkspaceService) DeleteWorkspace(context.Context, adminservice.DeleteWorkspaceRequestObject) (adminservice.DeleteWorkspaceResponseObject, error) {
+	return adminservice.DeleteWorkspace404JSONResponse(apitypes.NewErrorResponse("WORKSPACE_NOT_FOUND", "missing")), nil
+}
+
 type failingACL struct {
 	ACL
 	failPut    bool
@@ -593,6 +757,17 @@ func (a failingACL) DeletePolicyBinding(ctx context.Context, id string) (apitype
 		return apitypes.ACLPolicyBinding{}, errors.New("forced delete policy binding failure")
 	}
 	return a.ACL.DeletePolicyBinding(ctx, id)
+}
+
+type failingWorkspaceACL struct {
+	ACL
+}
+
+func (a failingWorkspaceACL) PutPolicyBinding(ctx context.Context, id string, priority float64, policy apitypes.ACLPolicy) (apitypes.ACLPolicyBinding, error) {
+	if policy.Resource.Kind == apitypes.ACLResourceKindWorkspace {
+		return apitypes.ACLPolicyBinding{}, errors.New("forced workspace policy binding failure")
+	}
+	return a.ACL.PutPolicyBinding(ctx, id, priority, policy)
 }
 
 func newTestACL(t *testing.T) *acl.Server {

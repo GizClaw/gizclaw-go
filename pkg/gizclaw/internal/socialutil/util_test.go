@@ -3,6 +3,7 @@ package socialutil
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -101,6 +102,20 @@ func TestScalarHelpersAndRoles(t *testing.T) {
 	if got := RelationID(" peer-b ", "peer-a"); got != "peer-a:peer-b" {
 		t.Fatalf("RelationID = %q, want sorted relation", got)
 	}
+	if got := DirectWorkspaceName("peer-a:peer-b"); got == "" || got == DirectWorkspaceName("peer-a:peer-c") || !strings.HasPrefix(got, "social-direct-") {
+		t.Fatalf("DirectWorkspaceName returned unstable value %q", got)
+	}
+	if got := GroupWorkspaceName("group-a"); got == "" || !strings.HasPrefix(got, "social-group-") {
+		t.Fatalf("GroupWorkspaceName = %q", got)
+	}
+	params := ChatRoomWorkspaceParameters(apitypes.ChatRoomModeDirect)
+	typed, err := params.AsChatRoomWorkspaceParameters()
+	if err != nil {
+		t.Fatalf("AsChatRoomWorkspaceParameters() error = %v", err)
+	}
+	if typed.AgentType != apitypes.ChatRoomWorkspaceParametersAgentTypeChatroom || typed.Mode == nil || *typed.Mode != apitypes.ChatRoomModeDirect {
+		t.Fatalf("ChatRoomWorkspaceParameters = %#v", typed)
+	}
 	if got := NormalizePhone("+1 (555) 0100"); got != "15550100" {
 		t.Fatalf("NormalizePhone = %q, want digits only", got)
 	}
@@ -121,6 +136,13 @@ func TestScalarHelpersAndRoles(t *testing.T) {
 	}
 	if got := GroupACLBindingID("group/a", "peer b"); got != "social-friend-group:group%2Fa:peer+b" {
 		t.Fatalf("GroupACLBindingID = %q, want escaped id", got)
+	}
+	role, permissions := WorkspaceACLRole()
+	if role != WorkspaceMemberRoleName || len(permissions) != 2 || permissions[0] != apitypes.ACLPermissionWorkspaceRead || permissions[1] != apitypes.ACLPermissionWorkspaceUse {
+		t.Fatalf("WorkspaceACLRole = %q %#v", role, permissions)
+	}
+	if got := WorkspaceACLBindingID("workspace/a", "peer b"); got != "social-chatroom-workspace:workspace%2Fa:peer+b" {
+		t.Fatalf("WorkspaceACLBindingID = %q, want escaped id", got)
 	}
 }
 

@@ -14,7 +14,8 @@
           "bos",
           "eos",
           "text.delta",
-          "text.done"
+          "text.done",
+          "workspace.history.updated"
         ]
       },
       "PeerStreamKind": {
@@ -52,6 +53,10 @@
           "timestamp": {
             "type": "integer",
             "format": "int64"
+          },
+          "last_updated_at": {
+            "type": "string",
+            "format": "date-time"
           },
           "kind": {
             "$ref": "#/components/schemas/PeerStreamKind"

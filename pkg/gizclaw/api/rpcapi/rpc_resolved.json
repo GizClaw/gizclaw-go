@@ -172,6 +172,108 @@
         ],
         "type": "object"
       },
+      "ChatRoomMode": {
+        "enum": [
+          "direct",
+          "group"
+        ],
+        "type": "string"
+      },
+      "ChatRoomWorkflowHistorySpec": {
+        "additionalProperties": false,
+        "properties": {
+          "ttl": {
+            "description": "Unified retention duration for chat history entries and their assets.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ChatRoomWorkflowSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "history": {
+            "$ref": "#/components/schemas/ChatRoomWorkflowHistorySpec"
+          },
+          "transcript": {
+            "$ref": "#/components/schemas/ChatRoomWorkflowTranscriptSpec"
+          }
+        },
+        "required": [
+          "history"
+        ],
+        "type": "object"
+      },
+      "ChatRoomWorkflowTranscriptSpec": {
+        "additionalProperties": false,
+        "properties": {
+          "asr_model": {
+            "description": "GizClaw ASR model resource used to transcribe gear audio.",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Whether gear audio should be transcribed and written as text in workspace history.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ChatRoomWorkspaceHistoryParameters": {
+        "additionalProperties": false,
+        "properties": {
+          "ttl": {
+            "description": "Workspace-level retention override for chat history entries and their assets.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ChatRoomWorkspaceParameters": {
+        "additionalProperties": false,
+        "example": {
+          "agent_type": "chatroom",
+          "input": "push-to-talk",
+          "mode": "group"
+        },
+        "properties": {
+          "agent_type": {
+            "enum": [
+              "chatroom"
+            ],
+            "type": "string"
+          },
+          "history": {
+            "$ref": "#/components/schemas/ChatRoomWorkspaceHistoryParameters"
+          },
+          "input": {
+            "$ref": "#/components/schemas/WorkspaceInputMode"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ChatRoomMode"
+          },
+          "transcript": {
+            "$ref": "#/components/schemas/ChatRoomWorkspaceTranscriptParameters"
+          }
+        },
+        "required": [
+          "agent_type"
+        ],
+        "type": "object"
+      },
+      "ChatRoomWorkspaceTranscriptParameters": {
+        "additionalProperties": false,
+        "properties": {
+          "asr_model": {
+            "description": "Workspace-level ASR model override for gear audio transcription.",
+            "type": "string"
+          },
+          "enabled": {
+            "description": "Whether gear audio should be transcribed and written as text in workspace history.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
       "ClientGetIdentifiersRequest": {
         "additionalProperties": false,
         "properties": {},
@@ -1379,6 +1481,9 @@
           "updated_at": {
             "format": "date-time",
             "type": "string"
+          },
+          "workspace_name": {
+            "type": "string"
           }
         },
         "type": "object"
@@ -1456,6 +1561,9 @@
           },
           "updated_at": {
             "format": "date-time",
+            "type": "string"
+          },
+          "workspace_name": {
             "type": "string"
           }
         },
@@ -1574,6 +1682,9 @@
           },
           "updated_at": {
             "format": "date-time",
+            "type": "string"
+          },
+          "workspace_name": {
             "type": "string"
           }
         },
@@ -4045,7 +4156,8 @@
         "enum": [
           "flowcraft",
           "doubao-realtime",
-          "ast-translate"
+          "ast-translate",
+          "chatroom"
         ],
         "type": "string"
       },
@@ -4143,6 +4255,9 @@
         "properties": {
           "ast_translate": {
             "$ref": "#/components/schemas/ASTTranslateWorkflowSpec"
+          },
+          "chatroom": {
+            "$ref": "#/components/schemas/ChatRoomWorkflowSpec"
           },
           "doubao_realtime": {
             "$ref": "#/components/schemas/DoubaoRealtimeWorkflowSpec"
@@ -4359,6 +4474,7 @@
         "discriminator": {
           "mapping": {
             "ast-translate": "#/components/schemas/ASTTranslateWorkspaceParameters",
+            "chatroom": "#/components/schemas/ChatRoomWorkspaceParameters",
             "doubao-realtime": "#/components/schemas/DoubaoRealtimeWorkspaceParameters",
             "flowcraft": "#/components/schemas/FlowcraftWorkspaceParameters"
           },
@@ -4373,6 +4489,9 @@
           },
           {
             "$ref": "#/components/schemas/ASTTranslateWorkspaceParameters"
+          },
+          {
+            "$ref": "#/components/schemas/ChatRoomWorkspaceParameters"
           }
         ]
       },

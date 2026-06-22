@@ -19,6 +19,8 @@ import (
 
 const peerStreamEventVersion = 1
 
+const peerStreamEventHistoryUpdatedLabel = "workspace.history.updated"
+
 type peerStreamEventBroker struct {
 	mu      sync.RWMutex
 	writers map[io.Writer]*sync.Mutex
@@ -262,6 +264,14 @@ func peerStreamEventToChunk(event apitypes.PeerStreamEvent) (*genx.MessageChunk,
 	case apitypes.PeerStreamEventTypeEos:
 		ctrl.EndOfStream = true
 		return peerStreamEventControlChunk(ctrl, event), nil
+	case apitypes.PeerStreamEventTypeWorkspaceHistoryUpdated:
+		ctrl.Label = peerStreamEventHistoryUpdatedLabel
+		if event.LastUpdatedAt != nil {
+			ctrl.Timestamp = event.LastUpdatedAt.UTC().UnixMilli()
+		} else if event.Timestamp != nil {
+			ctrl.Timestamp = *event.Timestamp
+		}
+		return &genx.MessageChunk{Ctrl: ctrl}, nil
 	case apitypes.PeerStreamEventTypeTextDelta:
 		text := ""
 		if event.Text != nil {
@@ -310,6 +320,10 @@ func peerStreamEventsFromChunk(chunk *genx.MessageChunk) []apitypes.PeerStreamEv
 	if chunk.IsBeginOfStream() {
 		out = append(out, peerStreamEventFromChunk(chunk, apitypes.PeerStreamEventTypeBos, nil))
 	}
+	if chunk.Ctrl != nil && chunk.Ctrl.Label == peerStreamEventHistoryUpdatedLabel {
+		out = append(out, peerStreamEventFromChunk(chunk, apitypes.PeerStreamEventTypeWorkspaceHistoryUpdated, nil))
+		return out
+	}
 	if text, ok := chunk.Part.(genx.Text); ok {
 		value := string(text)
 		eventType := apitypes.PeerStreamEventTypeTextDelta
@@ -345,6 +359,10 @@ func peerStreamEventFromChunk(chunk *genx.MessageChunk, eventType apitypes.PeerS
 	}
 	if chunk.Ctrl.Timestamp != 0 {
 		event.Timestamp = &chunk.Ctrl.Timestamp
+		if eventType == apitypes.PeerStreamEventTypeWorkspaceHistoryUpdated {
+			lastUpdated := time.UnixMilli(chunk.Ctrl.Timestamp).UTC()
+			event.LastUpdatedAt = &lastUpdated
+		}
 	}
 	if kind := peerStreamKindFromChunk(chunk); kind != nil {
 		event.Kind = kind

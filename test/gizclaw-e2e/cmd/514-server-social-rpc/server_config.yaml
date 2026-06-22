@@ -71,6 +71,10 @@ stores:
     kind: objectstore
     storage: local-files
     prefix: friend-group-messages
+  agenthost:
+    kind: objectstore
+    storage: local-files
+    prefix: agenthost
 peers:
   store: peers
 credentials:

@@ -1,12 +1,13 @@
 package peersocialrpc_test
 
 import (
+	"context"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/GizClaw/gizclaw-go/pkg/genx"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	clitest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/cmd"
 )
@@ -14,6 +15,10 @@ import (
 func TestServerSocialRPCUserStory(t *testing.T) {
 	h := clitest.NewHarness(t, "514-server-social-rpc")
 	h.StartServerFromFixture("server_config.yaml")
+	h.CreateContext("admin-a").MustSucceed(t)
+	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
+	chatroomWorkflow := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "setup", "resources", "40-workflow-chatroom.json")
+	h.RunCLI("admin", "apply", "-f", chatroomWorkflow, "--context", "admin-a").MustSucceed(t)
 	for _, peer := range []string{"peer-a", "peer-b", "peer-c", "peer-d"} {
 		h.CreateContext(peer).MustSucceed(t)
 		h.RegisterContext(peer, "--sn", peer+"-sn").MustSucceed(t)
@@ -25,14 +30,24 @@ func TestServerSocialRPCUserStory(t *testing.T) {
 	assertFriendOTPFailureCases(t, h, peerB)
 	requestAB := createAcceptedFriendRequest(t, h, "peer-a", "peer-b", peerB, "123456")
 	requestAC := createAcceptedFriendRequest(t, h, "peer-a", "peer-c", peerC, "234567")
+	if stringValue(requestAB.WorkspaceName) == "" || stringValue(requestAC.WorkspaceName) == "" {
+		t.Fatalf("accepted friend workspaces are empty: ab=%#v ac=%#v", requestAB, requestAC)
+	}
 	assertFriendPagination(t, h, requestAB, requestAC)
 	assertRejectedFriendRequest(t, h, peerB)
+	assertChatWorkspaceHistory(t, h, "peer-a", "peer-b", stringValue(requestAB.WorkspaceName), "hello direct chat")
 
 	group := mustRunCLIJSON[rpcapi.FriendGroupCreateResponse](t, h, "connect", "friend-group", "create", "family", "--description", "voice room", "--context", "peer-a")
+	if stringValue(group.WorkspaceName) == "" {
+		t.Fatalf("friend_group.create workspace_name is empty: %#v", group)
+	}
 	secondFriendGroup := mustRunCLIJSON[rpcapi.FriendGroupCreateResponse](t, h, "connect", "friend-group", "create", "backup", "--context", "peer-a")
 	gotFriendGroup := mustRunCLIJSON[rpcapi.FriendGroupGetResponse](t, h, "connect", "friend-group", "get", stringValue(group.Id), "--context", "peer-a")
 	if stringValue(gotFriendGroup.Name) != "family" {
 		t.Fatalf("friend_group.get name = %q, want family", stringValue(gotFriendGroup.Name))
+	}
+	if stringValue(gotFriendGroup.WorkspaceName) != stringValue(group.WorkspaceName) {
+		t.Fatalf("friend_group.get workspace_name = %q, want %q", stringValue(gotFriendGroup.WorkspaceName), stringValue(group.WorkspaceName))
 	}
 	if result := h.RunCLI("connect", "friend-group", "get", stringValue(group.Id), "--context", "peer-d"); result.Err == nil {
 		t.Fatal("non-member unexpectedly read group")
@@ -56,20 +71,14 @@ func TestServerSocialRPCUserStory(t *testing.T) {
 		t.Fatalf("member c peer_id = %q, want %q", stringValue(memberC.PeerId), peerC)
 	}
 	assertFriendGroupMemberPagination(t, h, stringValue(group.Id))
-
-	firstMessage, secondMessage := sendTwoFriendGroupMessages(t, h, stringValue(group.Id))
-	gotMessage := mustRunCLIJSON[rpcapi.FriendGroupMessageGetResponse](t, h, "connect", "friend-group", "messages", "get", stringValue(group.Id), stringValue(secondMessage.Id), "--context", "peer-c")
-	if stringValue(gotMessage.AudioPath) == "" || gotMessage.AudioSizeBytes == nil || *gotMessage.AudioSizeBytes == 0 {
-		t.Fatalf("friend_group.messages.get = %#v", gotMessage)
-	}
-	assertFriendGroupMessagePagination(t, h, stringValue(group.Id), stringValue(secondMessage.Id), stringValue(firstMessage.Id))
-	assertNonMemberCannotUseFriendGroupMessages(t, h, stringValue(group.Id), stringValue(secondMessage.Id))
-	assertFriendGroupMessageTTLAndCleanup(t, h, stringValue(group.Id))
+	assertChatWorkspaceHistory(t, h, "peer-b", "peer-c", stringValue(group.WorkspaceName), "hello group chat")
+	assertWorkspaceHistoryDenied(t, h, "peer-d", stringValue(group.WorkspaceName))
 
 	deletedMember := mustRunCLIJSON[rpcapi.FriendGroupMemberDeleteResponse](t, h, "connect", "friend-group", "members", "delete", stringValue(group.Id), peerC, "--context", "peer-b")
 	if stringValue(deletedMember.PeerId) != peerC {
 		t.Fatalf("friend_group.members.delete peer_id = %q, want %q", stringValue(deletedMember.PeerId), peerC)
 	}
+	assertWorkspaceHistoryDenied(t, h, "peer-c", stringValue(group.WorkspaceName))
 	deletedFriendGroup := mustRunCLIJSON[rpcapi.FriendGroupDeleteResponse](t, h, "connect", "friend-group", "delete", stringValue(secondFriendGroup.Id), "--context", "peer-a")
 	if stringValue(deletedFriendGroup.Id) != stringValue(secondFriendGroup.Id) {
 		t.Fatalf("friend_group.delete id = %q, want %q", stringValue(deletedFriendGroup.Id), stringValue(secondFriendGroup.Id))
@@ -78,6 +87,7 @@ func TestServerSocialRPCUserStory(t *testing.T) {
 	if stringValue(deletedFriend.Id) != stringValue(requestAC.Id) {
 		t.Fatalf("friend.delete id = %q, want %q", stringValue(deletedFriend.Id), stringValue(requestAC.Id))
 	}
+	assertWorkspaceHistoryDenied(t, h, "peer-c", stringValue(requestAC.WorkspaceName))
 }
 
 func assertContactRPCs(t *testing.T, h *clitest.Harness) {
@@ -242,91 +252,6 @@ func assertFriendGroupMemberPagination(t *testing.T, h *clitest.Harness, friendG
 	}
 }
 
-func sendTwoFriendGroupMessages(t *testing.T, h *clitest.Harness, friendGroupID string) (rpcapi.FriendGroupMessageObject, rpcapi.FriendGroupMessageObject) {
-	t.Helper()
-
-	audioPath := filepath.Join(h.SandboxDir, "voice.opus")
-	if err := os.WriteFile(audioPath, []byte("opus"), 0o644); err != nil {
-		t.Fatalf("write audio fixture: %v", err)
-	}
-	first := mustRunCLIJSON[rpcapi.FriendGroupMessageSendResponse](t, h, "connect", "friend-group", "messages", "send", friendGroupID, "--audio-file", audioPath, "--context", "peer-b")
-	time.Sleep(time.Millisecond)
-	second := mustRunCLIJSON[rpcapi.FriendGroupMessageSendResponse](t, h, "connect", "friend-group", "messages", "send", friendGroupID, "--audio-file", audioPath, "--context", "peer-b")
-	return first, second
-}
-
-func assertFriendGroupMessagePagination(t *testing.T, h *clitest.Harness, friendGroupID, newestID, olderID string) {
-	t.Helper()
-
-	first := mustRunCLIJSON[rpcapi.FriendGroupMessageListResponse](t, h, "connect", "friend-group", "messages", "list", friendGroupID, "--limit", "1", "--context", "peer-a")
-	if len(first.Items) != 1 || stringValue(first.Items[0].Id) != newestID || !first.HasNext || first.NextCursor == nil {
-		t.Fatalf("friend group message first page = %#v, want newest %q", first, newestID)
-	}
-	second := mustRunCLIJSON[rpcapi.FriendGroupMessageListResponse](t, h, "connect", "friend-group", "messages", "list", friendGroupID, "--limit", "1", "--cursor", *first.NextCursor, "--context", "peer-a")
-	if len(second.Items) != 1 || stringValue(second.Items[0].Id) != olderID || second.HasNext {
-		t.Fatalf("friend group message second page = %#v, want older %q", second, olderID)
-	}
-}
-
-func assertNonMemberCannotUseFriendGroupMessages(t *testing.T, h *clitest.Harness, friendGroupID, messageID string) {
-	t.Helper()
-
-	if result := h.RunCLI("connect", "friend-group", "messages", "get", friendGroupID, messageID, "--context", "peer-d"); result.Err == nil {
-		t.Fatal("non-member unexpectedly read friend group message")
-	}
-	if result := h.RunCLI("connect", "friend-group", "messages", "list", friendGroupID, "--context", "peer-d"); result.Err == nil {
-		t.Fatal("non-member unexpectedly listed friend group messages")
-	}
-	audioPath := filepath.Join(h.SandboxDir, "non-member.opus")
-	if err := os.WriteFile(audioPath, []byte("opus"), 0o644); err != nil {
-		t.Fatalf("write non-member audio fixture: %v", err)
-	}
-	if result := h.RunCLI("connect", "friend-group", "messages", "send", friendGroupID, "--audio-file", audioPath, "--context", "peer-d"); result.Err == nil {
-		t.Fatal("non-member unexpectedly sent friend group message")
-	}
-}
-
-func assertFriendGroupMessageTTLAndCleanup(t *testing.T, h *clitest.Harness, friendGroupID string) {
-	t.Helper()
-
-	audioPath := filepath.Join(h.SandboxDir, "ttl.opus")
-	if err := os.WriteFile(audioPath, []byte("ttl"), 0o644); err != nil {
-		t.Fatalf("write ttl audio fixture: %v", err)
-	}
-	msg := mustRunCLIJSON[rpcapi.FriendGroupMessageSendResponse](t, h, "connect", "friend-group", "messages", "send", friendGroupID, "--audio-file", audioPath, "--ttl-seconds", "1", "--context", "peer-b")
-	if stringValue(msg.AudioPath) == "" {
-		t.Fatalf("ttl message audio_path is empty: %#v", msg)
-	}
-	objectPath := filepath.Join(h.ServerWorkspace, filepath.FromSlash("friend-group-messages/"+stringValue(msg.AudioPath)))
-	if _, err := os.Stat(objectPath); err != nil {
-		t.Fatalf("ttl audio object before expiry: %v", err)
-	}
-	time.Sleep(1500 * time.Millisecond)
-	if result := h.RunCLI("connect", "friend-group", "messages", "get", friendGroupID, stringValue(msg.Id), "--context", "peer-a"); result.Err == nil {
-		t.Fatal("expired friend group message unexpectedly returned from get")
-	}
-	list := mustRunCLIJSON[rpcapi.FriendGroupMessageListResponse](t, h, "connect", "friend-group", "messages", "list", friendGroupID, "--context", "peer-a")
-	for _, item := range list.Items {
-		if stringValue(item.Id) == stringValue(msg.Id) {
-			t.Fatalf("expired friend group message %q still appears in list", stringValue(msg.Id))
-		}
-	}
-	deadline := time.Now().Add(3 * time.Second)
-	for {
-		_, err := os.Stat(objectPath)
-		if os.IsNotExist(err) {
-			return
-		}
-		if err != nil {
-			t.Fatalf("stat ttl audio object: %v", err)
-		}
-		if time.Now().After(deadline) {
-			t.Fatalf("ttl audio object still exists after cleanup: %s", objectPath)
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
 func mustRunCLIJSON[T any](t *testing.T, h *clitest.Harness, args ...string) T {
 	t.Helper()
 
@@ -337,6 +262,119 @@ func mustRunCLIJSON[T any](t *testing.T, h *clitest.Harness, args ...string) T {
 		t.Fatalf("decode %q JSON: %v\nstdout:\n%s\nstderr:\n%s", args, err, result.Stdout, result.Stderr)
 	}
 	return out
+}
+
+func assertChatWorkspaceHistory(t *testing.T, h *clitest.Harness, writerContext, readerContext, workspaceName, text string) {
+	t.Helper()
+
+	writer := h.ConnectClientFromContext(writerContext)
+	defer writer.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	if _, err := writer.SetServerRunWorkspace(ctx, "social.chat.workspace.set", rpcapi.ServerSetRunWorkspaceRequest{WorkspaceName: workspaceName}); err != nil {
+		t.Fatalf("%s set run workspace %q: %v", writerContext, workspaceName, err)
+	}
+	state, err := writer.ReloadServerRunWorkspace(ctx, "social.chat.workspace.reload")
+	if err != nil {
+		t.Fatalf("%s reload run workspace %q: %v", writerContext, workspaceName, err)
+	}
+	if state.RuntimeState != rpcapi.PeerRunStatusStateRunning {
+		t.Fatalf("%s reload workspace state = %#v", writerContext, state)
+	}
+	out, err := writer.Transform(ctx, "chatroom", chatTextStream(text))
+	if err != nil {
+		t.Fatalf("%s transform chat text: %v", writerContext, err)
+	}
+	defer out.Close()
+
+	reader := h.ConnectClientFromContext(readerContext)
+	defer reader.Close()
+	entry := waitForWorkspaceHistoryText(t, ctx, reader, workspaceName, text)
+	got, err := reader.GetWorkspaceHistory(ctx, "social.chat.history.get", rpcapi.WorkspaceHistoryGetRequest{
+		WorkspaceName: workspaceName,
+		HistoryId:     entry.Id,
+	})
+	if err != nil {
+		t.Fatalf("%s workspace history get %q: %v", readerContext, entry.Id, err)
+	}
+	if got.Text != text || got.Type != rpcapi.PeerRunHistoryEntryTypeGear || got.GearId == nil || *got.GearId != h.ContextPublicKey(writerContext) {
+		t.Fatalf("workspace history get = %#v, want text %q from %s", got, text, writerContext)
+	}
+	play, err := writer.PlayServerRunWorkspaceHistory(ctx, "social.chat.history.play", rpcapi.ServerPlayRunWorkspaceHistoryRequest{HistoryId: entry.Id})
+	if err != nil {
+		t.Fatalf("%s workspace history play %q: %v", writerContext, entry.Id, err)
+	}
+	if !play.Accepted {
+		t.Fatalf("workspace history play = %#v, want accepted", play)
+	}
+}
+
+func assertWorkspaceHistoryDenied(t *testing.T, h *clitest.Harness, contextName, workspaceName string) {
+	t.Helper()
+
+	client := h.ConnectClientFromContext(contextName)
+	defer client.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := client.ListWorkspaceHistory(ctx, "social.chat.history.denied", rpcapi.WorkspaceHistoryListRequest{WorkspaceName: workspaceName}); err == nil {
+		t.Fatalf("%s unexpectedly listed workspace history for %q", contextName, workspaceName)
+	}
+}
+
+func waitForWorkspaceHistoryText(t *testing.T, ctx context.Context, client interface {
+	ListWorkspaceHistory(context.Context, string, rpcapi.WorkspaceHistoryListRequest) (*rpcapi.WorkspaceHistoryListResponse, error)
+}, workspaceName, text string) rpcapi.PeerRunHistoryEntry {
+	t.Helper()
+
+	deadline := time.Now().Add(5 * time.Second)
+	var lastErr error
+	for {
+		list, err := client.ListWorkspaceHistory(ctx, "social.chat.history.list", rpcapi.WorkspaceHistoryListRequest{WorkspaceName: workspaceName})
+		if err == nil {
+			for _, item := range list.Items {
+				if item.Text == text {
+					return item
+				}
+			}
+			lastErr = nil
+		} else {
+			lastErr = err
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("history text %q not found in workspace %q, last error: %v", text, workspaceName, lastErr)
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+func chatTextStream(text string) genx.Stream {
+	return &sliceStream{chunks: []*genx.MessageChunk{
+		{Role: genx.RoleUser, Name: "transcript", Part: genx.Text(text), Ctrl: &genx.StreamCtrl{StreamID: "chat-text", Label: "transcript"}},
+		{Role: genx.RoleUser, Name: "transcript", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "chat-text", Label: "transcript", EndOfStream: true}},
+	}}
+}
+
+type sliceStream struct {
+	chunks []*genx.MessageChunk
+}
+
+func (s *sliceStream) Next() (*genx.MessageChunk, error) {
+	if len(s.chunks) == 0 {
+		return nil, genx.ErrDone
+	}
+	chunk := s.chunks[0]
+	s.chunks = s.chunks[1:]
+	return chunk, nil
+}
+
+func (s *sliceStream) Close() error {
+	s.chunks = nil
+	return nil
+}
+
+func (s *sliceStream) CloseWithError(error) error {
+	s.chunks = nil
+	return nil
 }
 
 func stringValue(v *string) string {

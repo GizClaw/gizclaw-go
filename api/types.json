@@ -350,6 +350,9 @@
       "ASTTranslateWorkflowSpec": {
         "$ref": "./type/workflows/ast_translate.json#/components/schemas/ASTTranslateWorkflowSpec"
       },
+      "ChatRoomWorkflowSpec": {
+        "$ref": "./type/workflows/chatroom.json#/components/schemas/ChatRoomWorkflowSpec"
+      },
       "AgentSelection": {
         "$ref": "./type/agent_selection.json#/components/schemas/AgentSelection"
       },

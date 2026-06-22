@@ -29,6 +29,8 @@ const (
 	historyOggOpusChannels   = 1
 	historyReplayFrameDelay  = 20 * time.Millisecond
 	historyReplayInterrupted = "interrupted"
+	historyUpdatedLabel      = "workspace.history.updated"
+	historyUpdatedDelay      = 25 * time.Millisecond
 	defaultHistoryOutputKey  = "__default__"
 )
 
@@ -76,6 +78,10 @@ type historyOutput struct {
 	forwardMu          sync.Mutex
 	activeForward      map[historyForwardRouteKey]historyForwardRoute
 	interruptedForward map[historyForwardChunkKey]struct{}
+
+	notifyMu          sync.Mutex
+	notifyTimer       *time.Timer
+	notifyLastUpdated time.Time
 }
 
 type historyForwardRouteKey struct {
@@ -100,13 +106,8 @@ func (a *historyAgent) Transform(ctx context.Context, pattern string, input genx
 		return nil, fmt.Errorf("agenthost: history agent is nil")
 	}
 	outputKey := historyOutputKey(ctx)
-	recorder := newHistoryRecorder(a.history, historyGearID(ctx))
-	wrappedInput := &historyInputStream{Stream: input, ctx: ctx, recorder: recorder}
-	agentOutput, err := a.Agent.Transform(ctx, pattern, wrappedInput)
-	if err != nil {
-		return nil, err
-	}
 	output := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 256)
+	outputState := &historyOutput{output: output}
 	a.outputMu.Lock()
 	if a.outputs == nil {
 		a.outputs = make(map[string]*historyOutput)
@@ -114,10 +115,18 @@ func (a *historyAgent) Transform(ctx context.Context, pattern string, input genx
 	previous := a.outputs[outputKey]
 	if previous != nil {
 		previous.cancelReplay()
+		previous.cancelHistoryUpdated()
 	}
-	outputState := &historyOutput{output: output}
 	a.outputs[outputKey] = outputState
 	a.outputMu.Unlock()
+	recorder := newHistoryRecorder(a.history, historyGearID(ctx), a.notifyHistoryUpdated)
+	wrappedInput := &historyInputStream{Stream: input, ctx: ctx, recorder: recorder}
+	agentOutput, err := a.Agent.Transform(ctx, pattern, wrappedInput)
+	if err != nil {
+		a.clearOutput(outputKey, outputState)
+		_ = output.Abort(err)
+		return nil, err
+	}
 	go a.forwardOutput(ctx, outputKey, outputState, agentOutput, output, recorder)
 	return output.Stream(), nil
 }
@@ -239,6 +248,23 @@ func (a *historyAgent) currentOutput(ctx context.Context) (*historyOutput, strin
 	return state, fmt.Sprintf("history-replay-%d", time.Now().UnixNano()), true
 }
 
+func (a *historyAgent) notifyHistoryUpdated(lastUpdated time.Time) {
+	if a == nil {
+		return
+	}
+	a.outputMu.Lock()
+	states := make([]*historyOutput, 0, len(a.outputs))
+	for _, state := range a.outputs {
+		if state != nil {
+			states = append(states, state)
+		}
+	}
+	a.outputMu.Unlock()
+	for _, state := range states {
+		state.notifyHistoryUpdated(lastUpdated)
+	}
+}
+
 func (a *historyAgent) clearOutput(outputKey string, state *historyOutput) {
 	clearReplay := false
 	a.outputMu.Lock()
@@ -249,6 +275,7 @@ func (a *historyAgent) clearOutput(outputKey string, state *historyOutput) {
 	a.outputMu.Unlock()
 	if clearReplay {
 		state.cancelReplay()
+		state.cancelHistoryUpdated()
 		state.clearForwardOutput()
 	}
 }
@@ -526,6 +553,61 @@ func (o *historyOutput) cancelReplay() {
 	}
 }
 
+func (o *historyOutput) notifyHistoryUpdated(lastUpdated time.Time) {
+	if o == nil || o.output == nil {
+		return
+	}
+	lastUpdated = lastUpdated.UTC()
+	if lastUpdated.IsZero() {
+		lastUpdated = time.Now().UTC()
+	}
+	o.notifyMu.Lock()
+	if o.notifyLastUpdated.IsZero() || lastUpdated.After(o.notifyLastUpdated) {
+		o.notifyLastUpdated = lastUpdated
+	}
+	if o.notifyTimer == nil {
+		o.notifyTimer = time.AfterFunc(historyUpdatedDelay, o.flushHistoryUpdated)
+	}
+	o.notifyMu.Unlock()
+}
+
+func (o *historyOutput) flushHistoryUpdated() {
+	if o == nil || o.output == nil {
+		return
+	}
+	o.notifyMu.Lock()
+	lastUpdated := o.notifyLastUpdated
+	o.notifyLastUpdated = time.Time{}
+	o.notifyTimer = nil
+	o.notifyMu.Unlock()
+	if lastUpdated.IsZero() {
+		return
+	}
+	_ = o.output.Add(historyUpdatedChunk(lastUpdated))
+}
+
+func (o *historyOutput) cancelHistoryUpdated() {
+	if o == nil {
+		return
+	}
+	o.notifyMu.Lock()
+	if o.notifyTimer != nil {
+		o.notifyTimer.Stop()
+		o.notifyTimer = nil
+	}
+	o.notifyLastUpdated = time.Time{}
+	o.notifyMu.Unlock()
+}
+
+func historyUpdatedChunk(lastUpdated time.Time) *genx.MessageChunk {
+	return &genx.MessageChunk{
+		Ctrl: &genx.StreamCtrl{
+			Label:     historyUpdatedLabel,
+			Timestamp: lastUpdated.UTC().UnixMilli(),
+		},
+	}
+}
+
 func (o *historyOutput) isCurrentReplay(seq uint64) bool {
 	if o == nil {
 		return false
@@ -588,6 +670,7 @@ func (s *historyInputStream) Next() (*genx.MessageChunk, error) {
 type historyRecorder struct {
 	history *workspace.HistoryStore
 	gearID  string
+	notify  func(time.Time)
 
 	mu      sync.Mutex
 	pending map[string]*historyPendingEntry
@@ -606,10 +689,11 @@ type historyPendingEntry struct {
 	createdAt time.Time
 }
 
-func newHistoryRecorder(history *workspace.HistoryStore, gearID string) *historyRecorder {
+func newHistoryRecorder(history *workspace.HistoryStore, gearID string, notify func(time.Time)) *historyRecorder {
 	return &historyRecorder{
 		history: history,
 		gearID:  strings.TrimSpace(gearID),
+		notify:  notify,
 		pending: make(map[string]*historyPendingEntry),
 	}
 }
@@ -819,8 +903,14 @@ func (r *historyRecorder) flush(ctx context.Context, key string) error {
 			Data:     pcmAsset,
 		}
 	}
-	_, err := r.history.Append(ctx, req)
-	return err
+	stored, err := r.history.Append(ctx, req)
+	if err != nil {
+		return err
+	}
+	if r.notify != nil {
+		r.notify(stored.CreatedAt)
+	}
+	return nil
 }
 
 func historyAudioReplayChunks(role genx.Role, name, streamID, label, mimeType string, data []byte) ([]*genx.MessageChunk, error) {

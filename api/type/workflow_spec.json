@@ -13,7 +13,8 @@
         "enum": [
           "flowcraft",
           "doubao-realtime",
-          "ast-translate"
+          "ast-translate",
+          "chatroom"
         ]
       },
       "WorkflowSpec": {
@@ -33,6 +34,9 @@
           },
           "ast_translate": {
             "$ref": "./workflows/ast_translate.json#/components/schemas/ASTTranslateWorkflowSpec"
+          },
+          "chatroom": {
+            "$ref": "./workflows/chatroom.json#/components/schemas/ChatRoomWorkflowSpec"
           }
         },
         "additionalProperties": false

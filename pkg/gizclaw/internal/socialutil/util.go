@@ -30,6 +30,8 @@ const (
 	GroupOwnerRoleName      = "social-friend-group-owner"
 	GroupAdminRoleName      = "social-friend-group-admin"
 	GroupMemberRoleName     = "social-friend-group-member"
+	WorkspaceMemberRoleName = "social-chatroom-member"
+	ChatRoomWorkflowName    = "chatroom"
 )
 
 var (
@@ -198,6 +200,24 @@ func RelationID(a, b string) string {
 	return parts[0] + ":" + parts[1]
 }
 
+func DirectWorkspaceName(relationID string) string {
+	return "social-direct-" + shortHash(strings.TrimSpace(relationID))
+}
+
+func GroupWorkspaceName(friendGroupID string) string {
+	return "social-group-" + shortHash(strings.TrimSpace(friendGroupID))
+}
+
+func ChatRoomWorkspaceParameters(mode apitypes.ChatRoomMode) *apitypes.WorkspaceParameters {
+	input := apitypes.WorkspaceInputModePushToTalk
+	var params apitypes.WorkspaceParameters
+	_ = params.FromChatRoomWorkspaceParameters(apitypes.ChatRoomWorkspaceParameters{
+		Input: &input,
+		Mode:  &mode,
+	})
+	return &params
+}
+
 func FriendRequestVisible(item rpcapi.FriendRequestObject, owner, box string) bool {
 	in := StringValue(item.ToPeerId) == owner
 	out := StringValue(item.FromPeerId) == owner
@@ -244,6 +264,22 @@ func GroupACLRole(role rpcapi.FriendGroupMemberRole) (string, apitypes.ACLPermis
 
 func GroupACLBindingID(friendGroupID, peerID string) string {
 	return "social-friend-group:" + EscapeStoreSegment(strings.TrimSpace(friendGroupID)) + ":" + EscapeStoreSegment(strings.TrimSpace(peerID))
+}
+
+func WorkspaceACLRole() (string, apitypes.ACLPermissionList) {
+	return WorkspaceMemberRoleName, apitypes.ACLPermissionList{
+		apitypes.ACLPermissionWorkspaceRead,
+		apitypes.ACLPermissionWorkspaceUse,
+	}
+}
+
+func WorkspaceACLBindingID(workspaceName, peerID string) string {
+	return "social-chatroom-workspace:" + EscapeStoreSegment(strings.TrimSpace(workspaceName)) + ":" + EscapeStoreSegment(strings.TrimSpace(peerID))
+}
+
+func shortHash(value string) string {
+	sum := sha256.Sum256([]byte(value))
+	return hex.EncodeToString(sum[:])[:20]
 }
 
 func MessageExpired(item rpcapi.FriendGroupMessageObject, now time.Time) bool {

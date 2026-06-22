@@ -1133,6 +1133,9 @@
           "state": {
             "$ref": "#/components/schemas/FriendRequestState"
           },
+          "workspace_name": {
+            "type": "string"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -1252,6 +1255,9 @@
           "request_id": {
             "type": "string"
           },
+          "workspace_name": {
+            "type": "string"
+          },
           "created_at": {
             "type": "string",
             "format": "date-time"
@@ -1325,6 +1331,9 @@
             "type": "string"
           },
           "created_by_peer_id": {
+            "type": "string"
+          },
+          "workspace_name": {
             "type": "string"
           },
           "created_at": {

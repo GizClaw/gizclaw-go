@@ -203,6 +203,126 @@ func TestHistoryAgentRecordsInputPCMAudioAsOggOpus(t *testing.T) {
 	}
 }
 
+func TestHistoryAgentEmitsHistoryUpdatedNotification(t *testing.T) {
+	history := workspace.NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
+	agentOutput := newBlockingHistoryStream()
+	agent := wrapHistoryAgent(historyInputDrainingAgent{
+		historyTestAgent: historyTestAgent{output: agentOutput},
+	}, history)
+	before := time.Now().Add(-time.Second).UTC()
+	out, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks(
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text("hello"), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript"}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript", EndOfStream: true}},
+	))
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	chunk, err := out.Next()
+	if err != nil {
+		t.Fatalf("Next history updated: %v", err)
+	}
+	after := time.Now().Add(time.Second).UTC()
+	if chunk.Ctrl == nil || chunk.Ctrl.Label != historyUpdatedLabel {
+		t.Fatalf("history updated chunk = %#v", chunk)
+	}
+	updated := time.UnixMilli(chunk.Ctrl.Timestamp).UTC()
+	if updated.Before(before) || updated.After(after) {
+		t.Fatalf("history updated timestamp = %s, want between %s and %s", updated, before, after)
+	}
+	_ = agentOutput.Close()
+}
+
+func TestHistoryAgentBroadcastsHistoryUpdatedNotification(t *testing.T) {
+	history := workspace.NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
+	base := &historyAsyncInputDrainingAgent{}
+	agent := wrapHistoryAgent(base, history)
+	inputA := NewInputStream(4)
+	inputB := NewInputStream(4)
+	outA, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", inputA)
+	if err != nil {
+		t.Fatalf("Transform gear-a error = %v", err)
+	}
+	outB, err := agent.Transform(withHistoryGearID(context.Background(), "gear-b"), "demo", inputB)
+	if err != nil {
+		t.Fatalf("Transform gear-b error = %v", err)
+	}
+	defer outA.Close()
+	defer outB.Close()
+	defer inputA.Close()
+	defer inputB.Close()
+	defer base.closeAll()
+
+	if err := inputA.Push(context.Background(), &genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text("hello"), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript"}}); err != nil {
+		t.Fatalf("inputA Push text: %v", err)
+	}
+	if err := inputA.Push(context.Background(), &genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript", EndOfStream: true}}); err != nil {
+		t.Fatalf("inputA Push eos: %v", err)
+	}
+	expectHistoryUpdatedChunk(t, outA)
+	expectHistoryUpdatedChunk(t, outB)
+}
+
+func expectHistoryUpdatedChunk(t *testing.T, stream genx.Stream) {
+	t.Helper()
+	ch := make(chan *genx.MessageChunk, 1)
+	errCh := make(chan error, 1)
+	go func() {
+		chunk, err := stream.Next()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		ch <- chunk
+	}()
+	select {
+	case err := <-errCh:
+		t.Fatalf("Next history updated error = %v", err)
+	case chunk := <-ch:
+		if chunk.Ctrl == nil || chunk.Ctrl.Label != historyUpdatedLabel || chunk.Ctrl.Timestamp == 0 {
+			t.Fatalf("history updated chunk = %#v", chunk)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for history updated chunk")
+	}
+}
+
+func TestHistoryOutputCoalescesHistoryUpdatedNotifications(t *testing.T) {
+	builder := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 4)
+	output := &historyOutput{output: builder}
+	first := time.Date(2026, 6, 22, 12, 0, 0, 0, time.UTC)
+	second := first.Add(time.Second)
+	output.notifyHistoryUpdated(first)
+	output.notifyHistoryUpdated(second)
+
+	stream := builder.Stream()
+	chunk, err := stream.Next()
+	if err != nil {
+		t.Fatalf("Next history updated: %v", err)
+	}
+	if chunk.Ctrl == nil || chunk.Ctrl.Label != historyUpdatedLabel || chunk.Ctrl.Timestamp != second.UnixMilli() {
+		t.Fatalf("history updated chunk = %#v, want timestamp %d", chunk, second.UnixMilli())
+	}
+
+	result := make(chan error, 1)
+	go func() {
+		chunk, err := stream.Next()
+		if err == nil {
+			result <- errors.New("unexpected second history updated chunk: " + chunk.Ctrl.Label)
+			return
+		}
+		result <- err
+	}()
+	select {
+	case err := <-result:
+		t.Fatalf("unexpected second notification result = %v", err)
+	case <-time.After(historyUpdatedDelay * 2):
+	}
+	_ = stream.Close()
+	if err := <-result; !IsStreamDone(err) && !errors.Is(err, io.ErrClosedPipe) {
+		t.Fatalf("stream close error = %v", err)
+	}
+}
+
 func historyTestPCMFrame(samples int) []byte {
 	data := make([]byte, samples*2)
 	for i := range samples {
@@ -805,6 +925,62 @@ func (a *historyMultiOutputAgent) Recall(context.Context, apitypes.PeerRunRecall
 }
 
 func (a *historyMultiOutputAgent) closeAll() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	for _, output := range a.outputs {
+		_ = output.Close()
+	}
+}
+
+type historyAsyncInputDrainingAgent struct {
+	mu      sync.Mutex
+	outputs []*blockingHistoryStream
+}
+
+func (a *historyAsyncInputDrainingAgent) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
+	output := newBlockingHistoryStream()
+	a.mu.Lock()
+	a.outputs = append(a.outputs, output)
+	a.mu.Unlock()
+	go func() {
+		defer input.Close()
+		for {
+			if err := ctx.Err(); err != nil {
+				return
+			}
+			_, err := input.Next()
+			if IsStreamDone(err) {
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return output, nil
+}
+
+func (a *historyAsyncInputDrainingAgent) Status(context.Context) (apitypes.PeerRunWorkspaceState, error) {
+	return apitypes.PeerRunWorkspaceState{RuntimeState: apitypes.PeerRunStatusStateRunning}, nil
+}
+
+func (a *historyAsyncInputDrainingAgent) ListHistory(context.Context, apitypes.PeerRunHistoryListRequest) (apitypes.PeerRunHistoryListResponse, error) {
+	return apitypes.PeerRunHistoryListResponse{}, nil
+}
+
+func (a *historyAsyncInputDrainingAgent) PlayHistory(context.Context, apitypes.PeerRunHistoryPlayRequest) (apitypes.PeerRunHistoryPlayResponse, error) {
+	return apitypes.PeerRunHistoryPlayResponse{}, nil
+}
+
+func (a *historyAsyncInputDrainingAgent) MemoryStats(context.Context, apitypes.PeerRunMemoryStatsRequest) (apitypes.PeerRunMemoryStatsResponse, error) {
+	return apitypes.PeerRunMemoryStatsResponse{}, nil
+}
+
+func (a *historyAsyncInputDrainingAgent) Recall(context.Context, apitypes.PeerRunRecallRequest) (apitypes.PeerRunRecallResponse, error) {
+	return apitypes.PeerRunRecallResponse{}, nil
+}
+
+func (a *historyAsyncInputDrainingAgent) closeAll() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	for _, output := range a.outputs {

@@ -358,6 +358,8 @@ func (s *Server) init() error {
 	friendServer := &friend.Server{
 		Requests:     friendRequestStore,
 		Friends:      friendStore,
+		Workspaces:   workspaceServer,
+		ACL:          aclServer,
 		FriendOTPTTL: s.FriendOTPTTL,
 	}
 	friendGroupServer := &friendgroup.Server{
@@ -366,6 +368,7 @@ func (s *Server) init() error {
 		Messages:             friendGroupMessageStore,
 		MessageAssets:        s.FriendGroupMessageAssets,
 		ACL:                  aclServer,
+		Workspaces:           workspaceServer,
 		MessageDefaultTTL:    s.FriendGroupMessageDefaultTTL,
 		MessageMaxTTL:        s.FriendGroupMessageMaxTTL,
 		MessageMaxAudioBytes: s.FriendGroupMessageMaxBytes,

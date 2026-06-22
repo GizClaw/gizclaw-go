@@ -171,6 +171,70 @@ func TestServerAcceptsEmptyFlowcraftSpec(t *testing.T) {
 	}
 }
 
+func TestServerAcceptsChatRoomWorkflowSpec(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	ctx := context.Background()
+	doc := mustDocument(t, `{
+		"metadata": {
+			"name": "chatroom"
+		},
+		"spec": {
+			"driver": "chatroom",
+			"chatroom": {
+				"history": {
+					"ttl": "168h"
+				},
+				"transcript": {
+					"enabled": true,
+					"asr_model": "e2e-asr"
+				}
+			}
+		}
+	}`)
+
+	resp, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc})
+	if err != nil {
+		t.Fatalf("CreateWorkflow(chatroom) error = %v", err)
+	}
+	created, ok := resp.(adminservice.CreateWorkflow200JSONResponse)
+	if !ok {
+		t.Fatalf("CreateWorkflow(chatroom) response = %#v", resp)
+	}
+	got := apitypes.WorkflowDocument(created)
+	if got.Spec.Driver != apitypes.WorkflowDriverChatroom || got.Spec.Chatroom == nil {
+		t.Fatalf("CreateWorkflow(chatroom) spec = %#v", got.Spec)
+	}
+	if got.Spec.Chatroom.History.Ttl == nil || *got.Spec.Chatroom.History.Ttl != "168h" {
+		t.Fatalf("CreateWorkflow(chatroom) history = %#v", got.Spec.Chatroom.History)
+	}
+}
+
+func TestServerRejectsInvalidChatRoomWorkflowSpec(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	ctx := context.Background()
+	cases := map[string]apitypes.WorkflowDocument{
+		"missing chatroom": mustDocument(t, `{
+			"metadata": {"name": "missing-chatroom"},
+			"spec": {
+				"driver": "chatroom"
+			}
+		}`),
+	}
+	for name, doc := range cases {
+		resp, err := srv.CreateWorkflow(ctx, adminservice.CreateWorkflowRequestObject{Body: &doc})
+		if err != nil {
+			t.Fatalf("CreateWorkflow(%s) error = %v", name, err)
+		}
+		if _, ok := resp.(adminservice.CreateWorkflow400JSONResponse); !ok {
+			t.Fatalf("CreateWorkflow(%s) response = %#v", name, resp)
+		}
+	}
+}
+
 func TestServerCreateWorkflowRequiresName(t *testing.T) {
 	t.Parallel()
 

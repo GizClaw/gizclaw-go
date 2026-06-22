@@ -45,6 +45,39 @@ func (e ASTTranslateWorkspaceParametersAgentType) Valid() bool {
 	}
 }
 
+// Defines values for ChatRoomMode.
+const (
+	ChatRoomModeDirect ChatRoomMode = "direct"
+	ChatRoomModeGroup  ChatRoomMode = "group"
+)
+
+// Valid indicates whether the value is a known member of the ChatRoomMode enum.
+func (e ChatRoomMode) Valid() bool {
+	switch e {
+	case ChatRoomModeDirect:
+		return true
+	case ChatRoomModeGroup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChatRoomWorkspaceParametersAgentType.
+const (
+	ChatRoomWorkspaceParametersAgentTypeChatroom ChatRoomWorkspaceParametersAgentType = "chatroom"
+)
+
+// Valid indicates whether the value is a known member of the ChatRoomWorkspaceParametersAgentType enum.
+func (e ChatRoomWorkspaceParametersAgentType) Valid() bool {
+	switch e {
+	case ChatRoomWorkspaceParametersAgentTypeChatroom:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DashScopeTenantModelProviderDataApiMode.
 const (
 	DashScopeTenantModelProviderDataApiModeChatCompletions DashScopeTenantModelProviderDataApiMode = "chat_completions"
@@ -738,6 +771,7 @@ func (e WalletTransactionObjectReason) Valid() bool {
 // Defines values for WorkflowDriver.
 const (
 	WorkflowDriverAstTranslate   WorkflowDriver = "ast-translate"
+	WorkflowDriverChatroom       WorkflowDriver = "chatroom"
 	WorkflowDriverDoubaoRealtime WorkflowDriver = "doubao-realtime"
 	WorkflowDriverFlowcraft      WorkflowDriver = "flowcraft"
 )
@@ -746,6 +780,8 @@ const (
 func (e WorkflowDriver) Valid() bool {
 	switch e {
 	case WorkflowDriverAstTranslate:
+		return true
+	case WorkflowDriverChatroom:
 		return true
 	case WorkflowDriverDoubaoRealtime:
 		return true
@@ -847,6 +883,57 @@ type ASTTranslateWorkspaceParametersAgentType string
 // AgentSelection defines model for AgentSelection.
 type AgentSelection struct {
 	WorkspaceName string `json:"workspace_name"`
+}
+
+// ChatRoomMode defines model for ChatRoomMode.
+type ChatRoomMode string
+
+// ChatRoomWorkflowHistorySpec defines model for ChatRoomWorkflowHistorySpec.
+type ChatRoomWorkflowHistorySpec struct {
+	// Ttl Unified retention duration for chat history entries and their assets.
+	Ttl *string `json:"ttl,omitempty"`
+}
+
+// ChatRoomWorkflowSpec defines model for ChatRoomWorkflowSpec.
+type ChatRoomWorkflowSpec struct {
+	History    ChatRoomWorkflowHistorySpec     `json:"history"`
+	Transcript *ChatRoomWorkflowTranscriptSpec `json:"transcript,omitempty"`
+}
+
+// ChatRoomWorkflowTranscriptSpec defines model for ChatRoomWorkflowTranscriptSpec.
+type ChatRoomWorkflowTranscriptSpec struct {
+	// AsrModel GizClaw ASR model resource used to transcribe gear audio.
+	AsrModel *string `json:"asr_model,omitempty"`
+
+	// Enabled Whether gear audio should be transcribed and written as text in workspace history.
+	Enabled *bool `json:"enabled,omitempty"`
+}
+
+// ChatRoomWorkspaceHistoryParameters defines model for ChatRoomWorkspaceHistoryParameters.
+type ChatRoomWorkspaceHistoryParameters struct {
+	// Ttl Workspace-level retention override for chat history entries and their assets.
+	Ttl *string `json:"ttl,omitempty"`
+}
+
+// ChatRoomWorkspaceParameters defines model for ChatRoomWorkspaceParameters.
+type ChatRoomWorkspaceParameters struct {
+	AgentType  ChatRoomWorkspaceParametersAgentType   `json:"agent_type"`
+	History    *ChatRoomWorkspaceHistoryParameters    `json:"history,omitempty"`
+	Input      *WorkspaceInputMode                    `json:"input,omitempty"`
+	Mode       *ChatRoomMode                          `json:"mode,omitempty"`
+	Transcript *ChatRoomWorkspaceTranscriptParameters `json:"transcript,omitempty"`
+}
+
+// ChatRoomWorkspaceParametersAgentType defines model for ChatRoomWorkspaceParameters.AgentType.
+type ChatRoomWorkspaceParametersAgentType string
+
+// ChatRoomWorkspaceTranscriptParameters defines model for ChatRoomWorkspaceTranscriptParameters.
+type ChatRoomWorkspaceTranscriptParameters struct {
+	// AsrModel Workspace-level ASR model override for gear audio transcription.
+	AsrModel *string `json:"asr_model,omitempty"`
+
+	// Enabled Whether gear audio should be transcribed and written as text in workspace history.
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 // ClientGetIdentifiersRequest defines model for ClientGetIdentifiersRequest.
@@ -1368,6 +1455,7 @@ type FriendGroupObject struct {
 	Id              *string    `json:"id,omitempty"`
 	Name            *string    `json:"name,omitempty"`
 	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
+	WorkspaceName   *string    `json:"workspace_name,omitempty"`
 }
 
 // FriendGroupPutRequest defines model for FriendGroupPutRequest.
@@ -1395,11 +1483,12 @@ type FriendListResponse struct {
 
 // FriendObject defines model for FriendObject.
 type FriendObject struct {
-	CreatedAt *time.Time `json:"created_at,omitempty"`
-	Id        *string    `json:"id,omitempty"`
-	PeerId    *string    `json:"peer_id,omitempty"`
-	RequestId *string    `json:"request_id,omitempty"`
-	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+	CreatedAt     *time.Time `json:"created_at,omitempty"`
+	Id            *string    `json:"id,omitempty"`
+	PeerId        *string    `json:"peer_id,omitempty"`
+	RequestId     *string    `json:"request_id,omitempty"`
+	UpdatedAt     *time.Time `json:"updated_at,omitempty"`
+	WorkspaceName *string    `json:"workspace_name,omitempty"`
 }
 
 // FriendRequestAcceptRequest defines model for FriendRequestAcceptRequest.
@@ -1440,14 +1529,15 @@ type FriendRequestListResponse struct {
 
 // FriendRequestObject defines model for FriendRequestObject.
 type FriendRequestObject struct {
-	CreatedAt   *time.Time          `json:"created_at,omitempty"`
-	FromPeerId  *string             `json:"from_peer_id,omitempty"`
-	Id          *string             `json:"id,omitempty"`
-	Message     *string             `json:"message,omitempty"`
-	RespondedAt *time.Time          `json:"responded_at,omitempty"`
-	State       *FriendRequestState `json:"state,omitempty"`
-	ToPeerId    *string             `json:"to_peer_id,omitempty"`
-	UpdatedAt   *time.Time          `json:"updated_at,omitempty"`
+	CreatedAt     *time.Time          `json:"created_at,omitempty"`
+	FromPeerId    *string             `json:"from_peer_id,omitempty"`
+	Id            *string             `json:"id,omitempty"`
+	Message       *string             `json:"message,omitempty"`
+	RespondedAt   *time.Time          `json:"responded_at,omitempty"`
+	State         *FriendRequestState `json:"state,omitempty"`
+	ToPeerId      *string             `json:"to_peer_id,omitempty"`
+	UpdatedAt     *time.Time          `json:"updated_at,omitempty"`
+	WorkspaceName *string             `json:"workspace_name,omitempty"`
 }
 
 // FriendRequestRejectRequest defines model for FriendRequestRejectRequest.
@@ -2270,6 +2360,7 @@ type WorkflowPutResponse = WorkflowDocument
 // WorkflowSpec defines model for WorkflowSpec.
 type WorkflowSpec struct {
 	AstTranslate   *ASTTranslateWorkflowSpec   `json:"ast_translate,omitempty"`
+	Chatroom       *ChatRoomWorkflowSpec       `json:"chatroom,omitempty"`
 	DoubaoRealtime *DoubaoRealtimeWorkflowSpec `json:"doubao_realtime,omitempty"`
 	Driver         WorkflowDriver              `json:"driver"`
 	Flowcraft      *FlowcraftWorkflowSpec      `json:"flowcraft,omitempty"`
@@ -7386,6 +7477,34 @@ func (t *WorkspaceParameters) MergeASTTranslateWorkspaceParameters(v ASTTranslat
 	return err
 }
 
+// AsChatRoomWorkspaceParameters returns the union data inside the WorkspaceParameters as a ChatRoomWorkspaceParameters
+func (t WorkspaceParameters) AsChatRoomWorkspaceParameters() (ChatRoomWorkspaceParameters, error) {
+	var body ChatRoomWorkspaceParameters
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromChatRoomWorkspaceParameters overwrites any union data inside the WorkspaceParameters as the provided ChatRoomWorkspaceParameters
+func (t *WorkspaceParameters) FromChatRoomWorkspaceParameters(v ChatRoomWorkspaceParameters) error {
+	v.AgentType = "chatroom"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeChatRoomWorkspaceParameters performs a merge with any union data inside the WorkspaceParameters, using the provided ChatRoomWorkspaceParameters
+func (t *WorkspaceParameters) MergeChatRoomWorkspaceParameters(v ChatRoomWorkspaceParameters) error {
+	v.AgentType = "chatroom"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
 func (t WorkspaceParameters) Discriminator() (string, error) {
 	var discriminator struct {
 		Discriminator string `json:"agent_type"`
@@ -7402,6 +7521,8 @@ func (t WorkspaceParameters) ValueByDiscriminator() (interface{}, error) {
 	switch discriminator {
 	case "ast-translate":
 		return t.AsASTTranslateWorkspaceParameters()
+	case "chatroom":
+		return t.AsChatRoomWorkspaceParameters()
 	case "doubao-realtime":
 		return t.AsDoubaoRealtimeWorkspaceParameters()
 	case "flowcraft":

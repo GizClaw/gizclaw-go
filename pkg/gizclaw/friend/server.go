@@ -8,14 +8,30 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/internal/socialutil"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
+type WorkspaceService interface {
+	CreateWorkspace(context.Context, adminservice.CreateWorkspaceRequestObject) (adminservice.CreateWorkspaceResponseObject, error)
+	DeleteWorkspace(context.Context, adminservice.DeleteWorkspaceRequestObject) (adminservice.DeleteWorkspaceResponseObject, error)
+}
+
+type ACL interface {
+	PutRole(context.Context, string, apitypes.ACLPermissionList) (apitypes.ACLRole, error)
+	PutPolicyBinding(context.Context, string, float64, apitypes.ACLPolicy) (apitypes.ACLPolicyBinding, error)
+	DeletePolicyBinding(context.Context, string) (apitypes.ACLPolicyBinding, error)
+}
+
 type Server struct {
-	Requests kv.Store
-	Friends  kv.Store
+	Requests   kv.Store
+	Friends    kv.Store
+	Workspaces WorkspaceService
+	ACL        ACL
 
 	FriendOTPTTL time.Duration
 
@@ -169,6 +185,9 @@ func (s *Server) DeleteFriend(ctx context.Context, owner string, req rpcapi.Frie
 	if err != nil {
 		return rpcapi.FriendObject{}, err
 	}
+	if err := s.deleteDirectChatWorkspace(ctx, owner, item); err != nil {
+		return rpcapi.FriendObject{}, err
+	}
 	other := socialutil.StringValue(item.PeerId)
 	if err := store.BatchDelete(ctx, []kv.Key{socialutil.FriendKey(owner, req.Id), socialutil.FriendKey(other, req.Id)}); err != nil {
 		return rpcapi.FriendObject{}, err
@@ -206,14 +225,29 @@ func (s *Server) transitionRequest(ctx context.Context, owner, id string, next r
 	item.State = &next
 	item.UpdatedAt = &now
 	item.RespondedAt = &now
+	var rollbackWorkspace func()
 	if next == rpcapi.FriendRequestStateAccepted {
+		workspaceName, rollback, err := s.ensureDirectChatWorkspace(ctx, item)
+		if err != nil {
+			return rpcapi.FriendRequestObject{}, err
+		}
+		rollbackWorkspace = rollback
+		if workspaceName != "" {
+			item.WorkspaceName = &workspaceName
+		}
 		if err := s.createFriendRows(ctx, item); err != nil {
+			if rollbackWorkspace != nil {
+				rollbackWorkspace()
+			}
 			return rpcapi.FriendRequestObject{}, err
 		}
 	}
 	if err := socialutil.WriteJSON(ctx, store, socialutil.FriendRequestKey(id), item); err != nil {
 		if next == rpcapi.FriendRequestStateAccepted {
 			rollbackErr := s.deleteFriendRows(ctx, item)
+			if rollbackWorkspace != nil {
+				rollbackWorkspace()
+			}
 			return rpcapi.FriendRequestObject{}, errors.Join(err, rollbackErr)
 		}
 		return rpcapi.FriendRequestObject{}, err
@@ -231,7 +265,7 @@ func (s *Server) createFriendRows(ctx context.Context, req rpcapi.FriendRequestO
 	now := s.now()
 	entries := make([]kv.Entry, 0, 2)
 	for _, row := range []struct{ owner, peer string }{{from, to}, {to, from}} {
-		item := rpcapi.FriendObject{Id: &rel, PeerId: &row.peer, RequestId: &requestID, CreatedAt: &now, UpdatedAt: &now}
+		item := rpcapi.FriendObject{Id: &rel, PeerId: &row.peer, RequestId: &requestID, WorkspaceName: req.WorkspaceName, CreatedAt: &now, UpdatedAt: &now}
 		data, err := json.Marshal(item)
 		if err != nil {
 			return err
@@ -249,6 +283,114 @@ func (s *Server) deleteFriendRows(ctx context.Context, req rpcapi.FriendRequestO
 	from, to := socialutil.StringValue(req.FromPeerId), socialutil.StringValue(req.ToPeerId)
 	rel := socialutil.RelationID(from, to)
 	return store.BatchDelete(ctx, []kv.Key{socialutil.FriendKey(from, rel), socialutil.FriendKey(to, rel)})
+}
+
+func (s *Server) ensureDirectChatWorkspace(ctx context.Context, req rpcapi.FriendRequestObject) (string, func(), error) {
+	from, to := socialutil.StringValue(req.FromPeerId), socialutil.StringValue(req.ToPeerId)
+	if from == "" || to == "" {
+		return "", nil, errors.New("social: friend request peers are required")
+	}
+	workspaceName := socialutil.DirectWorkspaceName(socialutil.RelationID(from, to))
+	created := false
+	if s.Workspaces != nil {
+		body := adminservice.WorkspaceUpsert{
+			Name:         workspaceName,
+			WorkflowName: socialutil.ChatRoomWorkflowName,
+			Parameters:   socialutil.ChatRoomWorkspaceParameters(apitypes.ChatRoomModeDirect),
+		}
+		resp, err := s.Workspaces.CreateWorkspace(ctx, adminservice.CreateWorkspaceRequestObject{Body: &body})
+		if err != nil {
+			return "", nil, err
+		}
+		switch resp.(type) {
+		case adminservice.CreateWorkspace200JSONResponse:
+			created = true
+		case adminservice.CreateWorkspace409JSONResponse:
+		default:
+			return "", nil, errors.New("social: create direct chat workspace failed")
+		}
+	}
+	if err := s.grantWorkspace(ctx, workspaceName, from, to); err != nil {
+		if created {
+			_ = s.deleteWorkspace(ctx, workspaceName)
+		}
+		return "", nil, err
+	}
+	rollback := func() {
+		_ = s.revokeWorkspace(ctx, workspaceName, from, to)
+		if created {
+			_ = s.deleteWorkspace(ctx, workspaceName)
+		}
+	}
+	return workspaceName, rollback, nil
+}
+
+func (s *Server) deleteDirectChatWorkspace(ctx context.Context, owner string, item rpcapi.FriendObject) error {
+	other := socialutil.StringValue(item.PeerId)
+	workspaceName := socialutil.StringValue(item.WorkspaceName)
+	if workspaceName == "" {
+		workspaceName = socialutil.DirectWorkspaceName(socialutil.StringValue(item.Id))
+	}
+	if err := s.revokeWorkspace(ctx, workspaceName, owner, other); err != nil {
+		return err
+	}
+	return s.deleteWorkspace(ctx, workspaceName)
+}
+
+func (s *Server) grantWorkspace(ctx context.Context, workspaceName string, peers ...string) error {
+	if s == nil || s.ACL == nil {
+		return nil
+	}
+	roleName, permissions := socialutil.WorkspaceACLRole()
+	if _, err := s.ACL.PutRole(ctx, roleName, permissions); err != nil {
+		return err
+	}
+	for _, peerID := range peers {
+		peerID = strings.TrimSpace(peerID)
+		if peerID == "" {
+			continue
+		}
+		if _, err := s.ACL.PutPolicyBinding(ctx, socialutil.WorkspaceACLBindingID(workspaceName, peerID), 0, apitypes.ACLPolicy{
+			Subject:  acl.PublicKeySubject(peerID),
+			Resource: acl.WorkspaceResource(workspaceName),
+			Role:     roleName,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Server) revokeWorkspace(ctx context.Context, workspaceName string, peers ...string) error {
+	if s == nil || s.ACL == nil {
+		return nil
+	}
+	for _, peerID := range peers {
+		peerID = strings.TrimSpace(peerID)
+		if peerID == "" {
+			continue
+		}
+		if _, err := s.ACL.DeletePolicyBinding(ctx, socialutil.WorkspaceACLBindingID(workspaceName, peerID)); err != nil && !errors.Is(err, acl.ErrPolicyBindingNotFound) {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Server) deleteWorkspace(ctx context.Context, workspaceName string) error {
+	if s == nil || s.Workspaces == nil {
+		return nil
+	}
+	resp, err := s.Workspaces.DeleteWorkspace(ctx, adminservice.DeleteWorkspaceRequestObject{Name: workspaceName})
+	if err != nil {
+		return err
+	}
+	switch resp.(type) {
+	case adminservice.DeleteWorkspace200JSONResponse, adminservice.DeleteWorkspace404JSONResponse:
+		return nil
+	default:
+		return errors.New("social: delete direct chat workspace failed")
+	}
 }
 
 func (s *Server) consumeOTP(ctx context.Context, peerID, code string) error {

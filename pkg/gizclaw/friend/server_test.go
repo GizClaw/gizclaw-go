@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/acl"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/internal/socialutil"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -61,6 +64,9 @@ func TestRequestRequiresDeviceOTPAndCreatesSymmetricFriend(t *testing.T) {
 	if accepted.State == nil || *accepted.State != rpcapi.FriendRequestStateAccepted {
 		t.Fatalf("accepted state = %v", accepted.State)
 	}
+	if accepted.WorkspaceName == nil || *accepted.WorkspaceName == "" {
+		t.Fatalf("accepted workspace_name = %#v, want value", accepted.WorkspaceName)
+	}
 	acceptedAgain, err := s.AcceptFriendRequest(ctx, "peer-b", rpcapi.FriendRequestAcceptRequest{Id: socialutil.StringValue(req.Id)})
 	if err != nil {
 		t.Fatalf("AcceptFriendRequest accepted request: %v", err)
@@ -76,12 +82,62 @@ func TestRequestRequiresDeviceOTPAndCreatesSymmetricFriend(t *testing.T) {
 		if len(friends.Items) != 1 {
 			t.Fatalf("ListFriends(%s) len = %d, want 1", peer, len(friends.Items))
 		}
+		if friends.Items[0].WorkspaceName == nil || *friends.Items[0].WorkspaceName != *accepted.WorkspaceName {
+			t.Fatalf("ListFriends(%s) workspace_name = %#v, want %q", peer, friends.Items[0].WorkspaceName, *accepted.WorkspaceName)
+		}
 	}
 	if err := s.ReportFriendOTP(ctx, "peer-b", "444444"); err != nil {
 		t.Fatalf("ReportFriendOTP already friends: %v", err)
 	}
 	if _, err := s.CreateFriendRequest(ctx, "peer-a", rpcapi.FriendRequestCreateRequest{ToPeerId: "peer-b", Code: "444444"}); err == nil {
 		t.Fatal("CreateFriendRequest already friends error = nil")
+	}
+}
+
+func TestAcceptAndDeleteMaintainChatWorkspace(t *testing.T) {
+	ctx := context.Background()
+	s := newTestServer()
+	workspaces := &recordingWorkspaceService{}
+	aclSvc := &recordingACL{}
+	s.Workspaces = workspaces
+	s.ACL = aclSvc
+
+	if err := s.ReportFriendOTP(ctx, "peer-b", "123456"); err != nil {
+		t.Fatalf("ReportFriendOTP: %v", err)
+	}
+	req, err := s.CreateFriendRequest(ctx, "peer-a", rpcapi.FriendRequestCreateRequest{ToPeerId: "peer-b", Code: "123456"})
+	if err != nil {
+		t.Fatalf("CreateFriendRequest: %v", err)
+	}
+	accepted, err := s.AcceptFriendRequest(ctx, "peer-b", rpcapi.FriendRequestAcceptRequest{Id: socialutil.StringValue(req.Id)})
+	if err != nil {
+		t.Fatalf("AcceptFriendRequest: %v", err)
+	}
+	workspaceName := socialutil.StringValue(accepted.WorkspaceName)
+	if workspaceName == "" {
+		t.Fatal("accepted workspace_name is empty")
+	}
+	if len(workspaces.created) != 1 || workspaces.created[0].Name != workspaceName || workspaces.created[0].WorkflowName != socialutil.ChatRoomWorkflowName {
+		t.Fatalf("created workspaces = %#v, want %q chatroom", workspaces.created, workspaceName)
+	}
+	if err := aclSvc.authorizeWorkspace(workspaceName, "peer-a"); err != nil {
+		t.Fatalf("peer-a workspace authorize: %v", err)
+	}
+	if err := aclSvc.authorizeWorkspace(workspaceName, "peer-b"); err != nil {
+		t.Fatalf("peer-b workspace authorize: %v", err)
+	}
+
+	if _, err := s.DeleteFriend(ctx, "peer-a", rpcapi.FriendDeleteRequest{Id: socialutil.RelationID("peer-a", "peer-b")}); err != nil {
+		t.Fatalf("DeleteFriend: %v", err)
+	}
+	if len(workspaces.deleted) != 1 || workspaces.deleted[0] != workspaceName {
+		t.Fatalf("deleted workspaces = %#v, want %q", workspaces.deleted, workspaceName)
+	}
+	if err := aclSvc.authorizeWorkspace(workspaceName, "peer-a"); !errors.Is(err, acl.ErrDenied) {
+		t.Fatalf("peer-a workspace authorize after delete = %v, want denied", err)
+	}
+	if err := aclSvc.authorizeWorkspace(workspaceName, "peer-b"); !errors.Is(err, acl.ErrDenied) {
+		t.Fatalf("peer-b workspace authorize after delete = %v, want denied", err)
 	}
 }
 
@@ -276,6 +332,74 @@ type failingGetStore struct {
 
 func (s failingGetStore) Get(context.Context, kv.Key) ([]byte, error) {
 	return nil, errors.New("forced get failure")
+}
+
+type recordingWorkspaceService struct {
+	created []adminservice.WorkspaceUpsert
+	deleted []string
+}
+
+func (s *recordingWorkspaceService) CreateWorkspace(_ context.Context, req adminservice.CreateWorkspaceRequestObject) (adminservice.CreateWorkspaceResponseObject, error) {
+	if req.Body == nil {
+		return adminservice.CreateWorkspace400JSONResponse(apitypes.NewErrorResponse("INVALID_WORKSPACE", "request body required")), nil
+	}
+	for _, workspace := range s.created {
+		if workspace.Name == req.Body.Name {
+			return adminservice.CreateWorkspace409JSONResponse(apitypes.NewErrorResponse("WORKSPACE_ALREADY_EXISTS", "exists")), nil
+		}
+	}
+	s.created = append(s.created, *req.Body)
+	return adminservice.CreateWorkspace200JSONResponse(apitypes.Workspace{Name: req.Body.Name, WorkflowName: req.Body.WorkflowName, Parameters: req.Body.Parameters}), nil
+}
+
+func (s *recordingWorkspaceService) DeleteWorkspace(_ context.Context, req adminservice.DeleteWorkspaceRequestObject) (adminservice.DeleteWorkspaceResponseObject, error) {
+	s.deleted = append(s.deleted, req.Name)
+	return adminservice.DeleteWorkspace200JSONResponse(apitypes.Workspace{Name: req.Name}), nil
+}
+
+type recordingACL struct {
+	roles    map[string]apitypes.ACLPermissionList
+	bindings map[string]apitypes.ACLPolicy
+}
+
+func (a *recordingACL) PutRole(_ context.Context, name string, permissions apitypes.ACLPermissionList) (apitypes.ACLRole, error) {
+	if a.roles == nil {
+		a.roles = make(map[string]apitypes.ACLPermissionList)
+	}
+	a.roles[name] = permissions
+	return apitypes.ACLRole{Name: name, Permissions: permissions}, nil
+}
+
+func (a *recordingACL) PutPolicyBinding(_ context.Context, id string, _ float64, policy apitypes.ACLPolicy) (apitypes.ACLPolicyBinding, error) {
+	if a.bindings == nil {
+		a.bindings = make(map[string]apitypes.ACLPolicy)
+	}
+	a.bindings[id] = policy
+	return apitypes.ACLPolicyBinding{Id: id, Policy: policy}, nil
+}
+
+func (a *recordingACL) DeletePolicyBinding(_ context.Context, id string) (apitypes.ACLPolicyBinding, error) {
+	if a.bindings == nil {
+		return apitypes.ACLPolicyBinding{}, acl.ErrPolicyBindingNotFound
+	}
+	policy, ok := a.bindings[id]
+	if !ok {
+		return apitypes.ACLPolicyBinding{}, acl.ErrPolicyBindingNotFound
+	}
+	delete(a.bindings, id)
+	return apitypes.ACLPolicyBinding{Id: id, Policy: policy}, nil
+}
+
+func (a *recordingACL) authorizeWorkspace(workspaceName string, peerID string) error {
+	id := socialutil.WorkspaceACLBindingID(workspaceName, peerID)
+	policy, ok := a.bindings[id]
+	if !ok {
+		return acl.ErrDenied
+	}
+	if policy.Resource.Kind != apitypes.ACLResourceKindWorkspace || policy.Resource.Id != workspaceName || policy.Subject.Kind != apitypes.ACLSubjectKindPk || policy.Subject.Id != peerID {
+		return errors.New("unexpected workspace ACL policy")
+	}
+	return nil
 }
 
 func strPtr(v string) *string {

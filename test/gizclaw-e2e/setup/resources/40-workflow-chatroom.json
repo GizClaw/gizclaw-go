@@ -1,0 +1,20 @@
+{
+  "apiVersion": "gizclaw.admin/v1alpha1",
+  "kind": "Workflow",
+  "metadata": {
+    "name": "chatroom",
+    "description": "Default workspace-backed social chat workflow"
+  },
+  "spec": {
+    "driver": "chatroom",
+    "chatroom": {
+      "history": {
+        "ttl": "168h"
+      },
+      "transcript": {
+        "enabled": true,
+        "asr_model": "${GIZCLAW_E2E_ASR_MODEL:-e2e-asr}"
+      }
+    }
+  }
+}
