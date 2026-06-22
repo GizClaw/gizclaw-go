@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ import (
 	clitest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/cmd"
 )
 
-func TestServerSocialRPCUserStory(t *testing.T) {
+func TestServerSocialRPCSimulatorStories(t *testing.T) {
 	h := clitest.NewHarness(t, "514-server-social-rpc")
 	h.StartServerFromFixture("server_config.yaml")
 	h.CreateContext("admin-a").MustSucceed(t)
@@ -37,7 +38,13 @@ func TestServerSocialRPCUserStory(t *testing.T) {
 	}
 	assertFriendPagination(t, h, requestAB, requestAC)
 	assertRejectedFriendRequest(t, h, peerB)
-	assertChatWorkspaceHistory(t, h, "peer-a", "peer-b", stringValue(requestAB.WorkspaceName), "hello direct chat")
+	t.Run("friend direct chat", func(t *testing.T) {
+		assertChatWorkspaceHistory(t, h, "peer-a", "peer-b", stringValue(requestAB.WorkspaceName), []string{
+			"hello direct chat round one",
+			"hello direct chat round two",
+			"hello direct chat round three",
+		})
+	})
 
 	group := mustRunCLIJSON[rpcapi.FriendGroupCreateResponse](t, h, "connect", "friend-group", "create", "family", "--description", "voice room", "--context", "peer-a")
 	if stringValue(group.WorkspaceName) == "" {
@@ -73,7 +80,13 @@ func TestServerSocialRPCUserStory(t *testing.T) {
 		t.Fatalf("member c peer_id = %q, want %q", stringValue(memberC.PeerId), peerC)
 	}
 	assertFriendGroupMemberPagination(t, h, stringValue(group.Id))
-	assertChatWorkspaceHistory(t, h, "peer-b", "peer-c", stringValue(group.WorkspaceName), "hello group chat")
+	t.Run("group chat", func(t *testing.T) {
+		assertChatWorkspaceHistory(t, h, "peer-b", "peer-c", stringValue(group.WorkspaceName), []string{
+			"hello group chat round one",
+			"hello group chat round two",
+			"hello group chat round three",
+		})
+	})
 	assertWorkspaceHistoryDenied(t, h, "peer-d", stringValue(group.WorkspaceName))
 
 	deletedMember := mustRunCLIJSON[rpcapi.FriendGroupMemberDeleteResponse](t, h, "connect", "friend-group", "members", "delete", stringValue(group.Id), peerC, "--context", "peer-b")
@@ -266,14 +279,17 @@ func mustRunCLIJSON[T any](t *testing.T, h *clitest.Harness, args ...string) T {
 	return out
 }
 
-func assertChatWorkspaceHistory(t *testing.T, h *clitest.Harness, writerContext, readerContext, workspaceName, text string) {
+func assertChatWorkspaceHistory(t *testing.T, h *clitest.Harness, writerContext, readerContext, workspaceName string, texts []string) {
 	t.Helper()
+	if len(texts) < 3 {
+		t.Fatalf("social chat history test needs at least 3 rounds, got %d", len(texts))
+	}
 
 	writer := h.ConnectClientFromContext(writerContext)
 	defer writer.Close()
 	reader := h.ConnectClientFromContext(readerContext)
 	defer reader.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if _, err := reader.SetServerRunWorkspace(ctx, "social.chat.reader.workspace.set", rpcapi.ServerSetRunWorkspaceRequest{WorkspaceName: workspaceName}); err != nil {
 		t.Fatalf("%s set run workspace %q: %v", readerContext, workspaceName, err)
@@ -304,6 +320,25 @@ func assertChatWorkspaceHistory(t *testing.T, h *clitest.Harness, writerContext,
 	if state.RuntimeState != rpcapi.PeerRunStatusStateRunning {
 		t.Fatalf("%s reload workspace state = %#v", writerContext, state)
 	}
+
+	entries := make([]rpcapi.PeerRunHistoryEntry, 0, len(texts))
+	for i, text := range texts {
+		if i > 0 {
+			updatedCh = waitForWorkspaceHistoryUpdated(readerOut)
+		}
+		entries = append(entries, sendChatTextAndWaitForHistory(t, ctx, h, writer, reader, readerOut, updatedCh, writerContext, readerContext, workspaceName, text))
+	}
+	assertWorkspaceHistoryResumeOrder(t, ctx, reader, workspaceName, entries)
+}
+
+func sendChatTextAndWaitForHistory(t *testing.T, ctx context.Context, h *clitest.Harness, writer, reader interface {
+	Transform(context.Context, string, genx.Stream) (genx.Stream, error)
+	GetWorkspaceHistory(context.Context, string, rpcapi.WorkspaceHistoryGetRequest) (*rpcapi.WorkspaceHistoryGetResponse, error)
+	ListWorkspaceHistory(context.Context, string, rpcapi.WorkspaceHistoryListRequest) (*rpcapi.WorkspaceHistoryListResponse, error)
+	PlayServerRunWorkspaceHistory(context.Context, string, rpcapi.ServerPlayRunWorkspaceHistoryRequest) (*rpcapi.ServerPlayRunWorkspaceHistoryResponse, error)
+}, replayStream genx.Stream, updatedCh <-chan error, writerContext, readerContext, workspaceName, text string) rpcapi.PeerRunHistoryEntry {
+	t.Helper()
+
 	out, err := writer.Transform(ctx, "chatroom", chatTextStream(text))
 	if err != nil {
 		t.Fatalf("%s transform chat text: %v", writerContext, err)
@@ -330,13 +365,139 @@ func assertChatWorkspaceHistory(t *testing.T, h *clitest.Harness, writerContext,
 	if got.Text != text || got.Type != rpcapi.PeerRunHistoryEntryTypeGear || got.GearId == nil || *got.GearId != h.ContextPublicKey(writerContext) {
 		t.Fatalf("workspace history get = %#v, want text %q from %s", got, text, writerContext)
 	}
-	play, err := writer.PlayServerRunWorkspaceHistory(ctx, "social.chat.history.play", rpcapi.ServerPlayRunWorkspaceHistoryRequest{HistoryId: entry.Id})
+	play, err := reader.PlayServerRunWorkspaceHistory(ctx, "social.chat.history.play", rpcapi.ServerPlayRunWorkspaceHistoryRequest{HistoryId: entry.Id})
 	if err != nil {
-		t.Fatalf("%s workspace history play %q: %v", writerContext, entry.Id, err)
+		t.Fatalf("%s workspace history play %q: %v", readerContext, entry.Id, err)
 	}
 	if !play.Accepted {
 		t.Fatalf("workspace history play = %#v, want accepted", play)
 	}
+	waitForWorkspaceHistoryReplayText(t, ctx, replayStream, entry.Id, text)
+	return entry
+}
+
+func assertWorkspaceHistoryResumeOrder(t *testing.T, ctx context.Context, client interface {
+	ListWorkspaceHistory(context.Context, string, rpcapi.WorkspaceHistoryListRequest) (*rpcapi.WorkspaceHistoryListResponse, error)
+}, workspaceName string, entries []rpcapi.PeerRunHistoryEntry) {
+	t.Helper()
+	if len(entries) < 2 {
+		t.Fatalf("workspace history resume order needs at least 2 entries, got %d", len(entries))
+	}
+
+	limit := 1
+	asc := rpcapi.WorkspaceHistoryListRequestOrderAsc
+	desc := rpcapi.WorkspaceHistoryListRequestOrderDesc
+	for i := 0; i+1 < len(entries); i++ {
+		first := entries[i]
+		second := entries[i+1]
+		next, err := client.ListWorkspaceHistory(ctx, "social.chat.history.list.next", rpcapi.WorkspaceHistoryListRequest{
+			WorkspaceName: workspaceName,
+			Cursor:        &first.Id,
+			Order:         &asc,
+			Limit:         &limit,
+		})
+		if err != nil {
+			t.Fatalf("workspace history list next after %q: %v", first.Id, err)
+		}
+		if len(next.Items) != 1 || next.Items[0].Id != second.Id {
+			t.Fatalf("workspace history next page = %+v, want %q after %q", next, second.Id, first.Id)
+		}
+
+		prev, err := client.ListWorkspaceHistory(ctx, "social.chat.history.list.prev", rpcapi.WorkspaceHistoryListRequest{
+			WorkspaceName: workspaceName,
+			Cursor:        &second.Id,
+			Order:         &desc,
+			Limit:         &limit,
+		})
+		if err != nil {
+			t.Fatalf("workspace history list previous before %q: %v", second.Id, err)
+		}
+		if len(prev.Items) != 1 || prev.Items[0].Id != first.Id {
+			t.Fatalf("workspace history previous page = %+v, want %q before %q", prev, first.Id, second.Id)
+		}
+	}
+
+	latest, err := client.ListWorkspaceHistory(ctx, "social.chat.history.list.latest", rpcapi.WorkspaceHistoryListRequest{
+		WorkspaceName: workspaceName,
+		Order:         &desc,
+		Limit:         &limit,
+	})
+	if err != nil {
+		t.Fatalf("workspace history list latest desc: %v", err)
+	}
+	last := entries[len(entries)-1]
+	if len(latest.Items) != 1 || latest.Items[0].Id != last.Id {
+		t.Fatalf("workspace history latest desc page = %+v, want %q", latest, last.Id)
+	}
+}
+
+func waitForWorkspaceHistoryReplayText(t *testing.T, ctx context.Context, stream genx.Stream, historyID string, want string) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	boundStreamID := ""
+	var got strings.Builder
+	for {
+		chunk, err := nextWorkspaceHistoryReplayChunk(ctx, stream)
+		if err != nil {
+			t.Fatalf("history replay %q stream read: %v", historyID, err)
+		}
+		if !socialChatReplayStreamChunk(chunk, &boundStreamID) {
+			continue
+		}
+		if chunk.Ctrl != nil && strings.TrimSpace(chunk.Ctrl.Error) != "" {
+			t.Fatalf("history replay %q stream %q returned error %q", historyID, boundStreamID, chunk.Ctrl.Error)
+		}
+		if text, ok := chunk.Part.(genx.Text); ok {
+			got.WriteString(string(text))
+		}
+		if chunk.IsEndOfStream() {
+			if got.String() != want {
+				t.Fatalf("history replay %q text = %q, want %q", historyID, got.String(), want)
+			}
+			return
+		}
+	}
+}
+
+func nextWorkspaceHistoryReplayChunk(ctx context.Context, stream genx.Stream) (*genx.MessageChunk, error) {
+	type result struct {
+		chunk *genx.MessageChunk
+		err   error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		chunk, err := stream.Next()
+		ch <- result{chunk: chunk, err: err}
+	}()
+	select {
+	case got := <-ch:
+		if got.err != nil {
+			return nil, got.err
+		}
+		return got.chunk, nil
+	case <-ctx.Done():
+		_ = stream.CloseWithError(ctx.Err())
+		return nil, ctx.Err()
+	}
+}
+
+func socialChatReplayStreamChunk(chunk *genx.MessageChunk, boundStreamID *string) bool {
+	if chunk == nil || chunk.Ctrl == nil {
+		return false
+	}
+	streamID := strings.TrimSpace(chunk.Ctrl.StreamID)
+	if boundStreamID != nil && strings.TrimSpace(*boundStreamID) != "" {
+		return streamID == *boundStreamID
+	}
+	if !strings.HasPrefix(streamID, "history-replay-") {
+		return false
+	}
+	if boundStreamID != nil {
+		*boundStreamID = streamID
+	}
+	return true
 }
 
 func waitForWorkspaceHistoryUpdated(stream genx.Stream) <-chan error {

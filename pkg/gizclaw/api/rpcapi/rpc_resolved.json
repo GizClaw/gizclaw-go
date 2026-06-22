@@ -2219,6 +2219,13 @@
           "limit": {
             "minimum": 1,
             "type": "integer"
+          },
+          "order": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
           }
         },
         "type": "object"
@@ -4419,6 +4426,13 @@
           "limit": {
             "minimum": 1,
             "type": "integer"
+          },
+          "order": {
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "type": "string"
           },
           "workspace_name": {
             "minLength": 1,

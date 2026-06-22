@@ -27,6 +27,9 @@ type PeerStream struct {
 	mu   sync.Mutex
 	err  error
 	push func(context.Context, *genx.MessageChunk) error
+
+	audioRouteMu sync.RWMutex
+	audioRoute   genx.StreamCtrl
 }
 
 type peerPacketWriter interface {
@@ -156,10 +159,12 @@ func (s *PeerStream) readEvents() {
 			_ = s.CloseWithError(err)
 			return
 		}
+		s.observeAudioRouteBeforeOutput(chunk)
 		if err := s.pushOutput(chunk); err != nil {
 			_ = s.CloseWithError(err)
 			return
 		}
+		s.observeAudioRouteAfterOutput(chunk)
 	}
 }
 
@@ -176,6 +181,7 @@ func (s *PeerStream) readPackets() {
 			if !ok {
 				continue
 			}
+			chunk = s.bindStampedOpusRoute(chunk)
 			if err := s.pushOutput(chunk); err != nil {
 				_ = s.CloseWithError(err)
 				return
@@ -194,6 +200,60 @@ func (s *PeerStream) pushOutput(chunk *genx.MessageChunk) error {
 	case s.out <- chunk:
 		return nil
 	}
+}
+
+func (s *PeerStream) observeAudioRouteBeforeOutput(chunk *genx.MessageChunk) {
+	if s == nil || !chunk.IsBeginOfStream() || !peerStreamChunkIsOpusControl(chunk) {
+		return
+	}
+	route := genx.StreamCtrl{}
+	if chunk.Ctrl != nil {
+		route.StreamID = chunk.Ctrl.StreamID
+		route.Label = chunk.Ctrl.Label
+	}
+	s.audioRouteMu.Lock()
+	s.audioRoute = route
+	s.audioRouteMu.Unlock()
+}
+
+func (s *PeerStream) observeAudioRouteAfterOutput(chunk *genx.MessageChunk) {
+	if s == nil || !chunk.IsEndOfStream() || !peerStreamChunkIsOpusControl(chunk) {
+		return
+	}
+	s.audioRouteMu.Lock()
+	s.audioRoute = genx.StreamCtrl{}
+	s.audioRouteMu.Unlock()
+}
+
+func (s *PeerStream) bindStampedOpusRoute(chunk *genx.MessageChunk) *genx.MessageChunk {
+	if s == nil || chunk == nil {
+		return chunk
+	}
+	s.audioRouteMu.RLock()
+	route := s.audioRoute
+	s.audioRouteMu.RUnlock()
+	if route.StreamID == "" && route.Label == "" {
+		return chunk
+	}
+	next := chunk.Clone()
+	if next.Ctrl == nil {
+		next.Ctrl = &genx.StreamCtrl{}
+	}
+	if route.StreamID != "" {
+		next.Ctrl.StreamID = route.StreamID
+	}
+	if route.Label != "" {
+		next.Ctrl.Label = route.Label
+	}
+	return next
+}
+
+func peerStreamChunkIsOpusControl(chunk *genx.MessageChunk) bool {
+	if chunk == nil {
+		return false
+	}
+	blob, ok := chunk.Part.(*genx.Blob)
+	return ok && isOpusBlob(blob)
 }
 
 func (s *PeerStream) closeErr() error {

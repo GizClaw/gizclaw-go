@@ -375,6 +375,24 @@ func (e PeerRunHistoryEntryType) Valid() bool {
 	}
 }
 
+// Defines values for PeerRunHistoryListRequestOrder.
+const (
+	PeerRunHistoryListRequestOrderAsc  PeerRunHistoryListRequestOrder = "asc"
+	PeerRunHistoryListRequestOrderDesc PeerRunHistoryListRequestOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the PeerRunHistoryListRequestOrder enum.
+func (e PeerRunHistoryListRequestOrder) Valid() bool {
+	switch e {
+	case PeerRunHistoryListRequestOrderAsc:
+		return true
+	case PeerRunHistoryListRequestOrderDesc:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PeerRunStatusState.
 const (
 	PeerRunStatusStateError    PeerRunStatusState = "error"
@@ -786,6 +804,24 @@ func (e WorkflowDriver) Valid() bool {
 	case WorkflowDriverDoubaoRealtime:
 		return true
 	case WorkflowDriverFlowcraft:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WorkspaceHistoryListRequestOrder.
+const (
+	WorkspaceHistoryListRequestOrderAsc  WorkspaceHistoryListRequestOrder = "asc"
+	WorkspaceHistoryListRequestOrderDesc WorkspaceHistoryListRequestOrder = "desc"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceHistoryListRequestOrder enum.
+func (e WorkspaceHistoryListRequestOrder) Valid() bool {
+	switch e {
+	case WorkspaceHistoryListRequestOrderAsc:
+		return true
+	case WorkspaceHistoryListRequestOrderDesc:
 		return true
 	default:
 		return false
@@ -1750,9 +1786,13 @@ type PeerRunHistoryEntryType string
 
 // PeerRunHistoryListRequest defines model for PeerRunHistoryListRequest.
 type PeerRunHistoryListRequest struct {
-	Cursor *string `json:"cursor,omitempty"`
-	Limit  *int    `json:"limit,omitempty"`
+	Cursor *string                         `json:"cursor,omitempty"`
+	Limit  *int                            `json:"limit,omitempty"`
+	Order  *PeerRunHistoryListRequestOrder `json:"order,omitempty"`
 }
+
+// PeerRunHistoryListRequestOrder defines model for PeerRunHistoryListRequest.Order.
+type PeerRunHistoryListRequestOrder string
 
 // PeerRunHistoryListResponse defines model for PeerRunHistoryListResponse.
 type PeerRunHistoryListResponse struct {
@@ -2427,10 +2467,14 @@ type WorkspaceHistoryGetResponse = PeerRunHistoryEntry
 
 // WorkspaceHistoryListRequest defines model for WorkspaceHistoryListRequest.
 type WorkspaceHistoryListRequest struct {
-	Cursor        *string `json:"cursor,omitempty"`
-	Limit         *int    `json:"limit,omitempty"`
-	WorkspaceName string  `json:"workspace_name"`
+	Cursor        *string                           `json:"cursor,omitempty"`
+	Limit         *int                              `json:"limit,omitempty"`
+	Order         *WorkspaceHistoryListRequestOrder `json:"order,omitempty"`
+	WorkspaceName string                            `json:"workspace_name"`
 }
+
+// WorkspaceHistoryListRequestOrder defines model for WorkspaceHistoryListRequest.Order.
+type WorkspaceHistoryListRequestOrder string
 
 // WorkspaceHistoryListResponse defines model for WorkspaceHistoryListResponse.
 type WorkspaceHistoryListResponse = PeerRunHistoryListResponse

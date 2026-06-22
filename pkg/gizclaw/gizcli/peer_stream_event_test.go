@@ -209,14 +209,52 @@ func TestPeerStreamNextReadsEventsAndOpus(t *testing.T) {
 		t.Fatalf("EOS chunk = %#v, want error %q", chunk, errorMessage)
 	}
 
+	streamID := "history-replay-1"
+	label := "transcript"
+	audioKind := apitypes.PeerStreamKindAudio
+	mimeType := "audio/opus"
+	if err := WritePeerStreamEvent(serverSide, apitypes.PeerStreamEvent{
+		Type:     apitypes.PeerStreamEventTypeBos,
+		StreamId: &streamID,
+		Label:    &label,
+		Kind:     &audioKind,
+		MimeType: &mimeType,
+	}); err != nil {
+		t.Fatalf("WritePeerStreamEvent(audio BOS) error = %v", err)
+	}
+	chunk, err = stream.Next()
+	if err != nil {
+		t.Fatalf("Next(audio BOS) error = %v", err)
+	}
+	if !chunk.IsBeginOfStream() || chunk.Ctrl.StreamID != streamID || chunk.Ctrl.Label != label {
+		t.Fatalf("audio BOS chunk = %#v", chunk)
+	}
+
 	packets <- stampedopus.Pack(456, []byte{0x04, 0x05})
 	chunk, err = stream.Next()
 	if err != nil {
 		t.Fatalf("Next(packet) error = %v", err)
 	}
 	blob := chunk.Part.(*genx.Blob)
-	if blob.MIMEType != "audio/opus" || !bytes.Equal(blob.Data, []byte{0x04, 0x05}) || chunk.Ctrl.Timestamp != 456 {
+	if blob.MIMEType != "audio/opus" || !bytes.Equal(blob.Data, []byte{0x04, 0x05}) || chunk.Ctrl.Timestamp != 456 || chunk.Ctrl.StreamID != streamID || chunk.Ctrl.Label != label {
 		t.Fatalf("packet chunk = %#v", chunk)
+	}
+
+	if err := WritePeerStreamEvent(serverSide, apitypes.PeerStreamEvent{
+		Type:     apitypes.PeerStreamEventTypeEos,
+		StreamId: &streamID,
+		Label:    &label,
+		Kind:     &audioKind,
+		MimeType: &mimeType,
+	}); err != nil {
+		t.Fatalf("WritePeerStreamEvent(audio EOS) error = %v", err)
+	}
+	chunk, err = stream.Next()
+	if err != nil {
+		t.Fatalf("Next(audio EOS) error = %v", err)
+	}
+	if !chunk.IsEndOfStream() || chunk.Ctrl.StreamID != streamID || chunk.Ctrl.Label != label {
+		t.Fatalf("audio EOS chunk = %#v", chunk)
 	}
 }
 

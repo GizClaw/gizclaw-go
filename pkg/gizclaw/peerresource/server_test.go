@@ -292,22 +292,45 @@ func TestServerWorkspaceHistoryRPC(t *testing.T) {
 		Name:         "workspace-history",
 		WorkflowName: "flow-history",
 	})))
+	createdAt := time.Date(2026, 6, 22, 10, 0, 0, 0, time.UTC)
 	entry, err := workspaceServer.AppendWorkspaceHistory(context.Background(), "workspace-history", workspace.AppendHistoryRequest{
-		Type:  "agent",
-		Name:  "assistant",
-		Text:  "历史回复",
-		Asset: &workspace.AppendHistoryAsset{MIMEType: "audio/opus", Data: []byte("opus")},
+		Type:      "agent",
+		Name:      "assistant",
+		Text:      "历史回复",
+		CreatedAt: createdAt,
+		Asset:     &workspace.AppendHistoryAsset{MIMEType: "audio/opus", Data: []byte("opus")},
 	})
 	if err != nil {
 		t.Fatalf("AppendWorkspaceHistory() error = %v", err)
 	}
+	latest, err := workspaceServer.AppendWorkspaceHistory(context.Background(), "workspace-history", workspace.AppendHistoryRequest{
+		Type:      "agent",
+		Name:      "assistant",
+		Text:      "最新回复",
+		CreatedAt: createdAt.Add(time.Second),
+	})
+	if err != nil {
+		t.Fatalf("AppendWorkspaceHistory(latest) error = %v", err)
+	}
 
+	limit := 1
 	list := callRPC(t, srv, "workspace-history-list", rpcapi.RPCMethodServerWorkspaceHistoryList, rpcParams(t, (*rpcapi.RPCRequest_Params).FromWorkspaceHistoryListRequest, rpcapi.WorkspaceHistoryListRequest{
 		WorkspaceName: "workspace-history",
+		Limit:         &limit,
 	}))
 	listResult := mustResult(t, list.Result.AsWorkspaceHistoryListResponse)
 	if len(listResult.Items) != 1 || listResult.Items[0].Id != entry.ID || listResult.Items[0].Text != "历史回复" {
 		t.Fatalf("workspace.history.list = %+v", listResult)
+	}
+	desc := rpcapi.WorkspaceHistoryListRequestOrderDesc
+	list = callRPC(t, srv, "workspace-history-list-desc", rpcapi.RPCMethodServerWorkspaceHistoryList, rpcParams(t, (*rpcapi.RPCRequest_Params).FromWorkspaceHistoryListRequest, rpcapi.WorkspaceHistoryListRequest{
+		WorkspaceName: "workspace-history",
+		Limit:         &limit,
+		Order:         &desc,
+	}))
+	listResult = mustResult(t, list.Result.AsWorkspaceHistoryListResponse)
+	if len(listResult.Items) != 1 || listResult.Items[0].Id != latest.ID || listResult.Items[0].Text != "最新回复" {
+		t.Fatalf("workspace.history.list desc = %+v", listResult)
 	}
 
 	get := callRPC(t, srv, "workspace-history-get", rpcapi.RPCMethodServerWorkspaceHistoryGet, rpcParams(t, (*rpcapi.RPCRequest_Params).FromWorkspaceHistoryGetRequest, rpcapi.WorkspaceHistoryGetRequest{

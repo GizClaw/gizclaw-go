@@ -269,25 +269,45 @@ func (s *HistoryStore) listInternal(ctx context.Context, req apitypes.PeerRunHis
 	if req.Cursor != nil {
 		cursor = strings.TrimSpace(*req.Cursor)
 	}
+	order := apitypes.PeerRunHistoryListRequestOrderAsc
+	if req.Order != nil {
+		order = *req.Order
+	}
+	if !order.Valid() {
+		return nil, false, nil, fmt.Errorf("workspace history: unsupported order %q", order)
+	}
+	desc := order == apitypes.PeerRunHistoryListRequestOrderDesc
 	objects, err := s.Objects.List(s.entryPrefix())
 	if err != nil {
 		return nil, false, nil, err
 	}
 	sort.Slice(objects, func(i, j int) bool {
+		if desc {
+			return objects[i].Name > objects[j].Name
+		}
 		return objects[i].Name < objects[j].Name
 	})
 	out := make([]HistoryEntry, 0, limit)
-	var afterCursor bool
-	hasCursor := cursor != ""
 	for _, obj := range objects {
-		id := strings.TrimSuffix(path.Base(obj.Name), ".json")
-		if hasCursor && !afterCursor {
-			afterCursor = id == cursor
-			continue
+		id, err := url.PathUnescape(strings.TrimSuffix(path.Base(obj.Name), ".json"))
+		if err != nil {
+			return nil, false, nil, fmt.Errorf("workspace history: decode history id %q: %w", obj.Name, err)
+		}
+		if cursor != "" {
+			if desc {
+				if id >= cursor {
+					continue
+				}
+			} else if id <= cursor {
+				continue
+			}
 		}
 		entry, err := s.readEntry(obj.Name)
 		if err != nil {
 			return nil, false, nil, err
+		}
+		if entry.ID != id {
+			return nil, false, nil, fmt.Errorf("workspace history: entry id %q does not match object id %q", entry.ID, id)
 		}
 		if s.entryExpired(entry) {
 			if err := s.deleteEntry(entry); err != nil {

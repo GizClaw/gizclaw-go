@@ -481,9 +481,15 @@ func (s *Server) handleWorkspaceHistoryList(ctx context.Context, req *rpcapi.RPC
 	if !ok {
 		return invalidParams(req.Id)
 	}
+	var order *apitypes.PeerRunHistoryListRequestOrder
+	if params.Order != nil {
+		converted := apitypes.PeerRunHistoryListRequestOrder(*params.Order)
+		order = &converted
+	}
 	list, err := history.ListWorkspaceHistory(ctx, acl.PublicKeySubject(s.Caller.String()), params.WorkspaceName, apitypes.PeerRunHistoryListRequest{
 		Cursor: params.Cursor,
 		Limit:  params.Limit,
+		Order:  order,
 	})
 	if err != nil {
 		return authOrBadRequest(req.Id, err)

@@ -541,6 +541,13 @@ func TestHistoryAgentPlayInjectsReplayOutput(t *testing.T) {
 	if _, err := out.Next(); err != nil {
 		t.Fatalf("Next replay text eos: %v", err)
 	}
+	audioBOS, err := out.Next()
+	if err != nil {
+		t.Fatalf("Next replay audio bos: %v", err)
+	}
+	if audioBOS.Ctrl == nil || !audioBOS.Ctrl.BeginOfStream || audioBOS.Ctrl.StreamID == "" || audioBOS.Ctrl.Label != "assistant" {
+		t.Fatalf("replay audio bos = %#v", audioBOS)
+	}
 	audioChunk, err := out.Next()
 	if err != nil {
 		t.Fatalf("Next replay audio: %v", err)
@@ -714,6 +721,11 @@ func TestHistoryAgentPlayInterruptsPreviousReplay(t *testing.T) {
 	}
 	if _, err := out.Next(); err != nil {
 		t.Fatalf("Next first text eos: %v", err)
+	}
+	if audioBOS, err := out.Next(); err != nil {
+		t.Fatalf("Next first audio bos: %v", err)
+	} else if audioBOS.Ctrl == nil || !audioBOS.Ctrl.BeginOfStream {
+		t.Fatalf("first audio bos = %#v", audioBOS)
 	}
 	if audio, err := out.Next(); err != nil {
 		t.Fatalf("Next first audio: %v", err)

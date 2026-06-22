@@ -934,7 +934,13 @@ func historyAudioReplayChunks(role genx.Role, name, streamID, label, mimeType st
 			{Role: role, Name: name, Part: &genx.Blob{MIMEType: mimeType}, Ctrl: &genx.StreamCtrl{StreamID: streamID, Label: label, EndOfStream: true}},
 		}, nil
 	}
-	chunks := make([]*genx.MessageChunk, 0, len(frames)+1)
+	chunks := make([]*genx.MessageChunk, 0, len(frames)+2)
+	chunks = append(chunks, &genx.MessageChunk{
+		Role: role,
+		Name: name,
+		Part: &genx.Blob{MIMEType: "audio/opus"},
+		Ctrl: &genx.StreamCtrl{StreamID: streamID, Label: label, BeginOfStream: true},
+	})
 	for _, frame := range frames {
 		if len(frame) == 0 {
 			continue

@@ -76,6 +76,62 @@ func TestHistoryStoreAppendListAndReadAsset(t *testing.T) {
 	}
 }
 
+func TestHistoryStoreListSupportsDescAndMissingCursorBoundary(t *testing.T) {
+	store := NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
+	base := time.Date(2026, 6, 21, 12, 0, 0, 0, time.UTC)
+	ctx := context.Background()
+
+	oldest, err := store.Append(ctx, AppendHistoryRequest{Type: "agent", Name: "agent", Text: "oldest", CreatedAt: base})
+	if err != nil {
+		t.Fatalf("Append oldest: %v", err)
+	}
+	middle, err := store.Append(ctx, AppendHistoryRequest{Type: "agent", Name: "agent", Text: "middle", CreatedAt: base.Add(time.Second)})
+	if err != nil {
+		t.Fatalf("Append middle: %v", err)
+	}
+	newest, err := store.Append(ctx, AppendHistoryRequest{Type: "agent", Name: "agent", Text: "newest", CreatedAt: base.Add(2 * time.Second)})
+	if err != nil {
+		t.Fatalf("Append newest: %v", err)
+	}
+	if err := store.Objects.Delete(store.entryObjectName(middle.ID)); err != nil {
+		t.Fatalf("Delete middle entry: %v", err)
+	}
+
+	limit := 1
+	resp, err := store.List(ctx, apitypes.PeerRunHistoryListRequest{Cursor: &middle.ID, Limit: &limit})
+	if err != nil {
+		t.Fatalf("List asc after missing cursor: %v", err)
+	}
+	if len(resp.Items) != 1 || resp.Items[0].Id != newest.ID {
+		t.Fatalf("asc after missing cursor = %+v, want newest %q", resp, newest.ID)
+	}
+
+	desc := apitypes.PeerRunHistoryListRequestOrderDesc
+	resp, err = store.List(ctx, apitypes.PeerRunHistoryListRequest{Cursor: &middle.ID, Limit: &limit, Order: &desc})
+	if err != nil {
+		t.Fatalf("List desc before missing cursor: %v", err)
+	}
+	if len(resp.Items) != 1 || resp.Items[0].Id != oldest.ID {
+		t.Fatalf("desc before missing cursor = %+v, want oldest %q", resp, oldest.ID)
+	}
+
+	resp, err = store.List(ctx, apitypes.PeerRunHistoryListRequest{Limit: &limit, Order: &desc})
+	if err != nil {
+		t.Fatalf("List latest desc page: %v", err)
+	}
+	if !resp.HasNext || resp.NextCursor == nil || *resp.NextCursor != newest.ID || len(resp.Items) != 1 || resp.Items[0].Id != newest.ID {
+		t.Fatalf("latest desc page = %+v, want first item and next cursor %q", resp, newest.ID)
+	}
+}
+
+func TestHistoryStoreListRejectsUnsupportedOrder(t *testing.T) {
+	store := NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
+	order := apitypes.PeerRunHistoryListRequestOrder("sideways")
+	if _, err := store.List(context.Background(), apitypes.PeerRunHistoryListRequest{Order: &order}); err == nil || !strings.Contains(err.Error(), "unsupported order") {
+		t.Fatalf("List unsupported order error = %v", err)
+	}
+}
+
 func TestHistoryStoreValidatesGearAndAgentSource(t *testing.T) {
 	store := NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
 	ctx := context.Background()
