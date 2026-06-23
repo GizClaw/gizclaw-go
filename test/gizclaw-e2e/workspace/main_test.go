@@ -49,6 +49,16 @@ func TestWorkspaceCaseAppliesInputMode(t *testing.T) {
 	if got.Workspace != "demo-workflow-realtime-roundtrip" {
 		t.Fatalf("realtime workspace = %q", got.Workspace)
 	}
+	got, err = workspaceCaseRealtimeAutoSplit.applyConfig(got)
+	if err != nil {
+		t.Fatalf("applyConfig(realtime-auto-split-history) error = %v", err)
+	}
+	if got.workspaceMode() != "realtime" {
+		t.Fatalf("realtime auto split workspace mode = %q", got.workspaceMode())
+	}
+	if got.Workspace != "demo-workflow-realtime-auto-split-history" {
+		t.Fatalf("realtime auto split workspace = %q", got.Workspace)
+	}
 	got, err = workspaceCasePushToTalkInterrupt.applyConfig(got)
 	if err != nil {
 		t.Fatalf("applyConfig(push) error = %v", err)
@@ -84,6 +94,68 @@ func TestWorkspaceCaseAppliesInputMode(t *testing.T) {
 	}
 	if parsed, err := parseWorkspaceCase("history-replay"); err != nil || parsed != workspaceCaseHistoryReplay {
 		t.Fatalf("parseWorkspaceCase(history-replay) = %q/%v", parsed, err)
+	}
+	if parsed, err := parseWorkspaceCase("realtime-auto-split-history"); err != nil || parsed != workspaceCaseRealtimeAutoSplit {
+		t.Fatalf("parseWorkspaceCase(realtime-auto-split-history) = %q/%v", parsed, err)
+	}
+}
+
+func TestRealtimeAutoSplitHistoryReplayPolicy(t *testing.T) {
+	doubao := &personaDriver{cfg: config{Agent: "Doubao-Realtime"}}
+	if doubao.realtimeAutoSplitRequiresReplay() {
+		t.Fatal("doubao realtime auto split should not require user history replay audio")
+	}
+	ast := &personaDriver{cfg: config{Agent: "ast-translate"}}
+	if !ast.realtimeAutoSplitRequiresReplay() {
+		t.Fatal("ast translate auto split should require user history replay audio")
+	}
+
+	items := []rpcapi.PeerRunHistoryEntry{
+		{Id: "old", Name: "transcript", Text: "旧消息", Type: rpcapi.PeerRunHistoryEntryTypeGear, ReplayAvailable: true},
+		{Id: "text-only", Name: "transcript", Text: "第一段", Type: rpcapi.PeerRunHistoryEntryTypeGear, ReplayAvailable: false},
+		{Id: "replayable", Name: "transcript", Text: "第二段", Type: rpcapi.PeerRunHistoryEntryTypeGear, ReplayAvailable: true},
+		{Id: "agent", Name: "assistant", Text: "回复", Type: rpcapi.PeerRunHistoryEntryTypeAgent, ReplayAvailable: true},
+	}
+	before := map[string]struct{}{"old": {}}
+	textOnlyAllowed := filterRealtimeAutoSplitGearHistory(items, before, false)
+	if len(textOnlyAllowed) != 2 || textOnlyAllowed[0].Id != "text-only" || textOnlyAllowed[1].Id != "replayable" {
+		t.Fatalf("text-only filter = %#v, want text-only and replayable", textOnlyAllowed)
+	}
+	replayRequired := filterRealtimeAutoSplitGearHistory(items, before, true)
+	if len(replayRequired) != 1 || replayRequired[0].Id != "replayable" {
+		t.Fatalf("replay-required filter = %#v, want replayable only", replayRequired)
+	}
+	if !isRealtimeAutoSplitIgnoredEventError("interrupted") {
+		t.Fatal("realtime auto split should ignore assistant interrupted events")
+	}
+	if isRealtimeAutoSplitIgnoredEventError("other") {
+		t.Fatal("realtime auto split ignored a non-interrupt error")
+	}
+}
+
+func TestMatchRealtimeAutoSplitHistoryRequiresOrder(t *testing.T) {
+	items := []rpcapi.PeerRunHistoryEntry{
+		{Id: "2", Text: "klmnopqrst"},
+		{Id: "1", Text: "abcdefghij"},
+	}
+	_, err := matchRealtimeAutoSplitHistory([]string{"abcdefghij", "klmnopqrst"}, items)
+	if err == nil {
+		t.Fatal("matchRealtimeAutoSplitHistory accepted out-of-order history")
+	}
+}
+
+func TestMatchRealtimeAutoSplitHistoryAllowsExtraEntriesBetweenSegments(t *testing.T) {
+	items := []rpcapi.PeerRunHistoryEntry{
+		{Id: "1", Text: "第一段自动切分测试"},
+		{Id: "extra", Text: "中间插入的其他历史"},
+		{Id: "2", Text: "第二段自动切分测试"},
+	}
+	matched, err := matchRealtimeAutoSplitHistory([]string{"第一段自动切分测试", "第二段自动切分测试"}, items)
+	if err != nil {
+		t.Fatalf("matchRealtimeAutoSplitHistory() error = %v", err)
+	}
+	if len(matched) != 2 || matched[0].Id != "1" || matched[1].Id != "2" {
+		t.Fatalf("matched = %#v, want ordered expected entries", matched)
 	}
 }
 

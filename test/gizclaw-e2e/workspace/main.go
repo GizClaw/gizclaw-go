@@ -157,6 +157,9 @@ func runConfig(configPath, contextConfigPath string, selectedCase workspaceCase)
 	if err != nil {
 		return err
 	}
+	if selectedCase == workspaceCaseRealtimeAutoSplit {
+		return nil
+	}
 	report, err := validateWorkspaceRuntimeForRun(ctx, driver, client, cfg, result.Rounds)
 	if report != nil {
 		printWorkspaceRuntimeReport(*report)

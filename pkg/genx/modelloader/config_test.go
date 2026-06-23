@@ -349,7 +349,7 @@ func TestRegisterSpeechSchemaValidation(t *testing.T) {
 	}
 }
 
-func TestRegisterDoubaoASRIgnoresTransportAudioDefaults(t *testing.T) {
+func TestRegisterDoubaoASRUsesFixedTransportAudioDefaults(t *testing.T) {
 	oldDefaultMux := transformers.DefaultMux
 	oldASRMux := transformers.ASRMux
 	transformers.DefaultMux = transformers.NewMux()

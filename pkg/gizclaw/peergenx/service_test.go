@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
@@ -370,6 +371,60 @@ func TestDefaultBuilderBuildsVolcASRTransformer(t *testing.T) {
 	}
 }
 
+func TestDefaultBuilderBuildsVolcASRTransformerFromParams(t *testing.T) {
+	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
+		Model: &apitypes.Model{
+			Id:   "asr",
+			Kind: apitypes.ModelKindAsr,
+			ProviderData: mustVolcModelProviderData(t, apitypes.VolcTenantModelProviderData{
+				ResourceId: stringPtr("volc.bigasr.sauc.duration"),
+			}),
+		},
+		Tenant: Tenant{
+			Kind: "volc-tenant",
+			Volc: &apitypes.VolcTenant{
+				Name:           "main",
+				CredentialName: "volc-token",
+			},
+		},
+		Credential: apitypes.Credential{
+			Name: "volc-token",
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "tok"}),
+		},
+		Params: map[string]any{
+			"format":          "pcm",
+			"sample_rate":     24000,
+			"channels":        1,
+			"bits":            16,
+			"language":        "ja-JP",
+			"result_type":     "full",
+			"emit_interim":    true,
+			"realtime_pacing": false,
+		},
+	})
+	if err != nil {
+		t.Fatalf("BuildTransformer() error = %v", err)
+	}
+	if got := transformerStringField(t, tf, "format"); got != "pcm" {
+		t.Fatalf("ASR format = %q, want pcm", got)
+	}
+	if got := transformerIntField(t, tf, "sampleRate"); got != 24000 {
+		t.Fatalf("ASR sampleRate = %d, want 24000", got)
+	}
+	if got := transformerStringField(t, tf, "language"); got != "ja-JP" {
+		t.Fatalf("ASR language = %q, want ja-JP", got)
+	}
+	if got := transformerStringField(t, tf, "resultType"); got != "full" {
+		t.Fatalf("ASR resultType = %q, want full", got)
+	}
+	if !transformerBoolField(t, tf, "emitInterim") {
+		t.Fatal("ASR emitInterim = false, want true")
+	}
+	if transformerBoolField(t, tf, "realtimePacing") {
+		t.Fatal("ASR realtimePacing = true, want false")
+	}
+}
+
 func TestDefaultBuilderBuildsVolcRealtimeTransformer(t *testing.T) {
 	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
 		Model: &apitypes.Model{
@@ -480,6 +535,7 @@ func TestDefaultBuilderBuildsVolcRealtimeTransformerFromWorkflowParams(t *testin
 			"speaking_style":     "自然",
 			"character_manifest": "友好",
 			"vad_window_ms":      200,
+			"mode":               "realtime",
 		},
 	})
 	if err != nil {
@@ -535,6 +591,33 @@ func TestDefaultBuilderBuildsVolcRealtimeTransformerFromWorkflowParams(t *testin
 	}
 	if got := transformerIntField(t, tf, "vadWindowMs"); got != 200 {
 		t.Fatalf("realtime vadWindowMs = %d, want 200", got)
+	}
+	if got := transformerStringField(t, tf, "mode"); got != "realtime" {
+		t.Fatalf("realtime mode = %q, want realtime", got)
+	}
+}
+
+func TestDefaultBuilderRejectsUnsupportedVolcRealtimeMode(t *testing.T) {
+	_, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
+		Model: &apitypes.Model{
+			Id:   "dialog",
+			Kind: apitypes.ModelKindRealtime,
+		},
+		Tenant: Tenant{
+			Kind: "volc-tenant",
+			Volc: &apitypes.VolcTenant{
+				Name:           "main",
+				CredentialName: "volc-token",
+			},
+		},
+		Credential: apitypes.Credential{
+			Name: "volc-token",
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "realtime-key"}),
+		},
+		Params: map[string]any{"mode": "bad"},
+	})
+	if err == nil || !strings.Contains(err.Error(), `doubao realtime mode "bad"`) {
+		t.Fatalf("BuildTransformer() error = %v, want unsupported mode", err)
 	}
 }
 

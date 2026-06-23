@@ -8,6 +8,7 @@ import (
 	"io"
 	"iter"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GizClaw/doubao-speech-go"
@@ -156,10 +157,12 @@ func (t *DoubaoASTTranslate) transformLoop(parent context.Context, input genx.St
 
 	var session doubaoASTTranslateSession
 	var recvDone chan error
+	var recvStart chan struct{}
 	var streamID string
 	var rawOpusDecoder *opus.Decoder
 	var sessionStartedAt time.Time
 	var sentAudioDuration time.Duration
+	historyAudio := newASTTranslateHistoryAudioBuffer()
 	defer func() {
 		if rawOpusDecoder != nil {
 			_ = rawOpusDecoder.Close()
@@ -184,13 +187,22 @@ func (t *DoubaoASTTranslate) transformLoop(parent context.Context, input genx.St
 		if streamID == "" {
 			streamID = genx.NewStreamID()
 		}
+		historyAudio.reset()
 		sessionStartedAt = time.Time{}
 		sentAudioDuration = 0
 		done := make(chan error, 1)
+		start := make(chan struct{})
 		recvDone = done
-		go func(activeStreamID string) {
-			done <- t.forwardEvents(output, next, activeStreamID)
-		}(streamID)
+		recvStart = start
+		go func(activeStreamID string, start <-chan struct{}) {
+			select {
+			case <-ctx.Done():
+				done <- ctx.Err()
+				return
+			case <-start:
+			}
+			done <- t.forwardEvents(output, next, activeStreamID, historyAudio)
+		}(streamID, start)
 		return nil
 	}
 
@@ -233,6 +245,10 @@ func (t *DoubaoASTTranslate) transformLoop(parent context.Context, input genx.St
 		done := recvDone
 		session = nil
 		recvDone = nil
+		if recvStart != nil {
+			close(recvStart)
+			recvStart = nil
+		}
 		if err := active.Finish(ctx); err != nil {
 			_ = active.Close()
 			return err
@@ -304,6 +320,11 @@ func (t *DoubaoASTTranslate) transformLoop(parent context.Context, input genx.St
 		if err := startSession(id); err != nil {
 			output.CloseWithError(err)
 			return
+		}
+		historyAudio.appendChunk(chunk, id)
+		if recvStart != nil {
+			close(recvStart)
+			recvStart = nil
 		}
 		for audioChunk := range splitDoubaoASRAudio(audio, t.audioChunkSize()) {
 			if err := sendAudio(audioChunk); err != nil {
@@ -384,10 +405,25 @@ func (t *DoubaoASTTranslate) audioChunkSize() int {
 	return doubaoASTTranslateSourceSampleRate * doubaoASTTranslateSourceChannels * (doubaoASTTranslateSourceBits / 8) / 10
 }
 
-func (t *DoubaoASTTranslate) forwardEvents(output *bufferStream, session doubaoASTTranslateSession, streamID string) error {
+func (t *DoubaoASTTranslate) forwardEvents(output *bufferStream, session doubaoASTTranslateSession, streamID string, historyAudio *astTranslateHistoryAudioBuffer) error {
 	source := astTranslateTextState{role: genx.RoleUser, label: doubaoASTTranslateTranscriptLabel, streamID: streamID}
 	translation := astTranslateTextState{role: genx.RoleModel, label: doubaoASTTranslateAssistantLabel, streamID: streamID}
 	audio := astTranslateAudioState{streamID: streamID, mimeType: "audio/opus", decoder: newASTOggOpusFrameDecoder()}
+	segment := 0
+	ensureSegment := func() string {
+		if segment == 0 {
+			segment = 1
+		}
+		id := astTranslateSegmentStreamID(streamID, segment)
+		source.streamID = id
+		translation.streamID = id
+		audio.streamID = id
+		return id
+	}
+	startSegment := func() string {
+		segment++
+		return ensureSegment()
+	}
 	defer func() {
 		_ = source.close(output, "")
 		_ = translation.close(output, "")
@@ -405,30 +441,51 @@ func (t *DoubaoASTTranslate) forwardEvents(output *bufferStream, session doubaoA
 		}
 		switch event.Type {
 		case doubaospeech.ASTEventSourceSubtitleStart:
+			if source.active {
+				if err := source.close(output, ""); err != nil {
+					return err
+				}
+			}
+			startSegment()
 			if err := source.open(output); err != nil {
 				return err
 			}
 		case doubaospeech.ASTEventSourceSubtitleResponse:
+			ensureSegment()
 			if err := source.addToken(output, event.Text); err != nil {
 				return err
 			}
 		case doubaospeech.ASTEventSourceSubtitleEnd:
+			id := ensureSegment()
 			if err := source.addFinal(output, event.Text); err != nil {
 				return err
 			}
+			if err := historyAudio.emitSegment(output, id, event.StartTimeMS, event.EndTimeMS); err != nil {
+				return err
+			}
+			if err := source.close(output, ""); err != nil {
+				return err
+			}
 		case doubaospeech.ASTEventTranslationSubtitleStart:
+			ensureSegment()
 			if err := translation.open(output); err != nil {
 				return err
 			}
 		case doubaospeech.ASTEventTranslationSubtitleResponse:
+			ensureSegment()
 			if err := translation.addToken(output, event.Text); err != nil {
 				return err
 			}
 		case doubaospeech.ASTEventTranslationSubtitleEnd:
+			ensureSegment()
 			if err := translation.addFinal(output, event.Text); err != nil {
 				return err
 			}
+			if err := translation.close(output, ""); err != nil {
+				return err
+			}
 		case doubaospeech.ASTEventTTSSentenceStart:
+			ensureSegment()
 			if err := audio.open(output); err != nil {
 				return err
 			}
@@ -444,6 +501,9 @@ func (t *DoubaoASTTranslate) forwardEvents(output *bufferStream, session doubaoA
 					return err
 				}
 			}
+			if err := audio.close(output, ""); err != nil {
+				return err
+			}
 		case doubaospeech.ASTEventSessionFinished:
 			return nil
 		case doubaospeech.ASTEventSessionCanceled, doubaospeech.ASTEventSessionFailed:
@@ -454,6 +514,60 @@ func (t *DoubaoASTTranslate) forwardEvents(output *bufferStream, session doubaoA
 		}
 	}
 	return nil
+}
+
+func astTranslateSegmentStreamID(base string, segment int) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		base = "audio"
+	}
+	if segment <= 1 {
+		return base
+	}
+	return fmt.Sprintf("%s:ast:%d", base, segment)
+}
+
+type astTranslateHistoryAudioBuffer struct {
+	mu   sync.Mutex
+	opus timestampedHistoryAudioBuffer
+}
+
+func newASTTranslateHistoryAudioBuffer() *astTranslateHistoryAudioBuffer {
+	return &astTranslateHistoryAudioBuffer{}
+}
+
+func (b *astTranslateHistoryAudioBuffer) reset() {
+	if b == nil {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.opus.reset()
+}
+
+func (b *astTranslateHistoryAudioBuffer) appendChunk(chunk *genx.MessageChunk, streamID string) {
+	if b == nil || chunk == nil {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.opus.append(chunk, streamID)
+}
+
+func (b *astTranslateHistoryAudioBuffer) emitSegment(output *bufferStream, streamID string, startMS, endMS int) error {
+	if b == nil {
+		return nil
+	}
+	b.mu.Lock()
+	chunks := b.opus.segment(startMS, endMS)
+	b.mu.Unlock()
+	for _, chunk := range chunks {
+		if chunk.Ctrl == nil {
+			chunk.Ctrl = &genx.StreamCtrl{}
+		}
+		chunk.Ctrl.StreamID = streamID
+	}
+	return pushHistoryAudioSegment(output, streamID, chunks)
 }
 
 type astTranslateTextState struct {

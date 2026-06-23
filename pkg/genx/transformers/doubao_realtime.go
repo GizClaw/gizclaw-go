@@ -466,50 +466,39 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 		return acceptAssistant.Load() && responseEpoch.Load() == epoch
 	}
 
-	// StreamID management - queue for correlating input to output
-	var streamIDMu sync.Mutex
-	var streamIDQueue []string
-	var inputStreamID string
-	var responseStreamID string
-
-	pushStreamID := func(id string) {
-		streamIDMu.Lock()
-		defer streamIDMu.Unlock()
-		streamIDQueue = append(streamIDQueue, id)
-		inputStreamID = id
-		slog.Debug("doubao: pushed streamID", "id", id, "queueLen", len(streamIDQueue))
-	}
-
-	popStreamIDForResponse := func() {
-		streamIDMu.Lock()
-		defer streamIDMu.Unlock()
-		if len(streamIDQueue) > 0 {
-			responseStreamID = streamIDQueue[0]
-			streamIDQueue = streamIDQueue[1:]
-			slog.Debug("doubao: popped streamID for response", "id", responseStreamID)
-		} else {
-			// Generate a new StreamID if queue is empty
-			responseStreamID = genx.NewStreamID()
-			slog.Debug("doubao: generated new streamID for response", "id", responseStreamID)
-		}
-	}
-
-	getResponseStreamID := func() string {
-		streamIDMu.Lock()
-		defer streamIDMu.Unlock()
-		return responseStreamID
-	}
-	getInputStreamID := func() string {
-		streamIDMu.Lock()
-		defer streamIDMu.Unlock()
-		return inputStreamID
-	}
+	streamIDs := newDoubaoRealtimeStreamIDs(t.mode)
 
 	// Start goroutine to receive events
 	eventsDone := make(chan struct{})
 	go func() {
-		defer close(eventsDone)
 		lastTranscriptText := ""
+		transcriptOpen := false
+		closeInputSegment := func() error {
+			inputStreamID := streamIDs.endInputSegment()
+			doneChunk := &genx.MessageChunk{
+				Role: genx.RoleUser,
+				Part: genx.Text(""),
+				Ctrl: &genx.StreamCtrl{
+					StreamID:    inputStreamID,
+					Label:       doubaoRealtimeTranscriptLabel,
+					EndOfStream: true,
+				},
+			}
+			if err := output.Push(doneChunk); err != nil {
+				return err
+			}
+			lastTranscriptText = ""
+			transcriptOpen = false
+			return nil
+		}
+		defer func() {
+			if t.mode == DoubaoRealtimeModeRealtime && transcriptOpen {
+				if err := closeInputSegment(); err != nil {
+					output.CloseWithError(err)
+				}
+			}
+			close(eventsDone)
+		}()
 		for event, err := range session.Recv() {
 			if err != nil {
 				if restarting.Load() {
@@ -532,7 +521,7 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 			slog.Debug("doubao: received event", "type", event.Type, "text", event.Text, "audioLen", len(event.Audio))
 
 			// Get StreamID for this response
-			streamID := getResponseStreamID()
+			streamID := streamIDs.response()
 
 			// Handle different event types
 			switch event.Type {
@@ -552,17 +541,27 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 				slog.Info("doubao: ASR response", "text", text)
 				if text != "" {
 					delta := realtimeTextDelta(lastTranscriptText, text)
-					lastTranscriptText = text
 					if delta == "" {
 						continue
 					}
+					if t.mode == DoubaoRealtimeModeRealtime && !transcriptOpen && !realtimeTextHasSemantic(delta) {
+						lastTranscriptText = ""
+						continue
+					}
+					lastTranscriptText = text
 					outChunk := &genx.MessageChunk{
 						Role: genx.RoleUser,
 						Part: genx.Text(delta),
-						Ctrl: &genx.StreamCtrl{StreamID: getInputStreamID(), Label: doubaoRealtimeTranscriptLabel},
+						Ctrl: &genx.StreamCtrl{StreamID: streamIDs.input(), Label: doubaoRealtimeTranscriptLabel},
 					}
 					if err := output.Push(outChunk); err != nil {
 						return
+					}
+					transcriptOpen = true
+					if t.mode == DoubaoRealtimeModeRealtime && realtimeASRResponseEndsSegment(event, delta) {
+						if err := closeInputSegment(); err != nil {
+							return
+						}
 					}
 				}
 
@@ -571,20 +570,14 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 				slog.Info("doubao: ASR ended")
 				acceptAssistant.Store(true)
 				responseEpoch.Add(1)
-				doneChunk := &genx.MessageChunk{
-					Role: genx.RoleUser,
-					Part: genx.Text(""),
-					Ctrl: &genx.StreamCtrl{
-						StreamID:    getInputStreamID(),
-						Label:       doubaoRealtimeTranscriptLabel,
-						EndOfStream: true,
-					},
+				switch {
+				case t.mode == DoubaoRealtimeModePushToTalk || transcriptOpen:
+					if err := closeInputSegment(); err != nil {
+						return
+					}
+				case streamIDs.response() == "":
+					streamIDs.endInputSegment()
 				}
-				if err := output.Push(doneChunk); err != nil {
-					return
-				}
-				lastTranscriptText = ""
-				popStreamIDForResponse()
 
 			case doubaospeech.EventTTSStarted:
 				if !acceptAssistant.Load() {
@@ -760,16 +753,24 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 				restarting.Store(true)
 				return chunk.Clone(), nil
 			}
-			pushStreamID(chunk.Ctrl.StreamID)
+			streamIDs.beginInput(chunk.Ctrl.StreamID)
 			slog.Info("doubao: received BOS", "streamID", chunk.Ctrl.StreamID)
 			continue
 		}
 
 		// Handle EOS according to the configured input mode.
 		if chunk.IsEndOfStream() {
-			streamID := chunkInputStreamID(chunk, getInputStreamID())
+			streamID := streamIDs.serviceInput(chunk)
 			if t.mode == DoubaoRealtimeModePushToTalk {
-				slog.Info("doubao: received EOS, ending ASR", "streamID", streamID, "audioSent", audioSent)
+				historyStreamID := streamIDs.historyInput(chunk)
+				slog.Info("doubao: received EOS, ending ASR", "streamID", streamID, "historyStreamID", historyStreamID, "audioSent", audioSent)
+				mimeType := ""
+				if blob, ok := chunk.Part.(*genx.Blob); ok {
+					mimeType = blob.MIMEType
+				}
+				if err := output.Push(historyUserAudioEOSChunk(historyStreamID, mimeType)); err != nil {
+					return nil, err
+				}
 				if err := session.EndASR(context.Background()); err != nil {
 					slog.Error("doubao: end ASR error", "error", err)
 					return nil, err
@@ -791,7 +792,13 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 			}
 			// Send audio blob
 			if len(p.Data) > 0 {
-				streamID := chunkInputStreamID(chunk, getInputStreamID())
+				streamID := streamIDs.serviceInput(chunk)
+				historyStreamID := streamIDs.historyInput(chunk)
+				if t.mode != DoubaoRealtimeModeRealtime {
+					if err := output.Push(historyUserAudioChunk(chunk, historyStreamID)); err != nil {
+						return nil, err
+					}
+				}
 				audioInput, err := audioInputs.streamForBlob(streamID, p)
 				if err != nil {
 					slog.Error("doubao: prepare audio error", "error", err)
@@ -1017,6 +1024,32 @@ func realtimeNormalizeText(text string) string {
 	return b.String()
 }
 
+func realtimeTextHasSemantic(text string) bool {
+	return realtimeNormalizeText(text) != ""
+}
+
+func realtimeASRResponseEndsSegment(event *doubaospeech.RealtimeEvent, delta string) bool {
+	if event == nil || !realtimeTextHasSemantic(delta) {
+		return false
+	}
+	for _, result := range event.Results {
+		text := strings.TrimSpace(result.Text)
+		if text == "" {
+			text = strings.TrimSpace(event.Text)
+		}
+		if text == "" {
+			text = strings.TrimSpace(delta)
+		}
+		if !result.IsInterim && realtimeTextHasSemantic(text) {
+			return true
+		}
+	}
+	if event.IsFinal {
+		return true
+	}
+	return false
+}
+
 type doubaoRealtimeAudioInput struct {
 	format    string
 	transcode bool
@@ -1113,6 +1146,132 @@ func chunkInputStreamID(chunk *genx.MessageChunk, fallback string) string {
 		}
 	}
 	return fallback
+}
+
+type doubaoRealtimeStreamIDs struct {
+	mu sync.Mutex
+
+	mode       DoubaoRealtimeMode
+	baseInput  string
+	inputID    string
+	responseID string
+	segment    int
+}
+
+func newDoubaoRealtimeStreamIDs(mode DoubaoRealtimeMode) *doubaoRealtimeStreamIDs {
+	return &doubaoRealtimeStreamIDs{mode: mode}
+}
+
+func (s *doubaoRealtimeStreamIDs) beginInput(id string) {
+	if s == nil {
+		return
+	}
+	id = strings.TrimSpace(id)
+	if id == "" {
+		id = "audio"
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.baseInput = id
+	s.segment = 1
+	s.inputID = s.inputForSegmentLocked()
+}
+
+func (s *doubaoRealtimeStreamIDs) input() string {
+	if s == nil {
+		return ""
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if strings.TrimSpace(s.inputID) == "" {
+		s.inputID = s.inputForSegmentLocked()
+	}
+	return s.inputID
+}
+
+func (s *doubaoRealtimeStreamIDs) response() string {
+	if s == nil {
+		return ""
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.responseID
+}
+
+func (s *doubaoRealtimeStreamIDs) serviceInput(chunk *genx.MessageChunk) string {
+	if s == nil {
+		return chunkInputStreamID(chunk, "")
+	}
+	s.mu.Lock()
+	s.ensureBaseFromChunkLocked(chunk)
+	base := s.baseInput
+	s.mu.Unlock()
+	return chunkInputStreamID(chunk, base)
+}
+
+func (s *doubaoRealtimeStreamIDs) historyInput(chunk *genx.MessageChunk) string {
+	if s == nil {
+		return chunkInputStreamID(chunk, "")
+	}
+	if s.mode != DoubaoRealtimeModeRealtime {
+		return chunkInputStreamID(chunk, s.input())
+	}
+	s.mu.Lock()
+	s.ensureBaseFromChunkLocked(chunk)
+	s.mu.Unlock()
+	current := s.input()
+	if strings.TrimSpace(current) != "" {
+		return current
+	}
+	return chunkInputStreamID(chunk, "")
+}
+
+func (s *doubaoRealtimeStreamIDs) endInputSegment() string {
+	if s == nil {
+		return ""
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if strings.TrimSpace(s.inputID) == "" {
+		s.inputID = s.inputForSegmentLocked()
+	}
+	ended := s.inputID
+	s.responseID = ended
+	if s.mode == DoubaoRealtimeModeRealtime {
+		s.segment++
+		s.inputID = s.inputForSegmentLocked()
+	}
+	return ended
+}
+
+func (s *doubaoRealtimeStreamIDs) ensureBaseFromChunkLocked(chunk *genx.MessageChunk) {
+	if s == nil || strings.TrimSpace(s.baseInput) != "" {
+		return
+	}
+	id := chunkInputStreamID(chunk, "")
+	if strings.TrimSpace(id) == "" {
+		return
+	}
+	s.baseInput = id
+	if s.segment <= 0 {
+		s.segment = 1
+	}
+	s.inputID = s.inputForSegmentLocked()
+}
+
+func (s *doubaoRealtimeStreamIDs) inputForSegmentLocked() string {
+	base := strings.TrimSpace(s.baseInput)
+	if base == "" {
+		base = "audio"
+	}
+	if s.mode != DoubaoRealtimeModeRealtime {
+		return base
+	}
+	segment := s.segment
+	if segment <= 0 {
+		segment = 1
+	}
+	return fmt.Sprintf("%s:rt:%d", base, segment)
 }
 
 func newDoubaoRealtimeAudioInput(format string, sampleRate, channels int, transcode bool) *doubaoRealtimeAudioInput {

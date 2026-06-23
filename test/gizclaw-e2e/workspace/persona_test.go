@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/ogg"
+	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/opus"
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
@@ -87,6 +88,9 @@ func TestTextHelpers(t *testing.T) {
 	}
 	if err := assertTextSimilar("same", "你好测试", "你好，测试。", 1); err != nil {
 		t.Fatalf("assertTextSimilar() error = %v", err)
+	}
+	if err := assertTextSimilar("contained", "第一段自动切分测试", "the third paragraph 第一段自动切分测试。", 1); err != nil {
+		t.Fatalf("assertTextSimilar(contained) error = %v", err)
 	}
 	if err := assertTextSimilar("different", "你好测试", "天气不错", 0.9); err == nil {
 		t.Fatal("assertTextSimilar() succeeded for unrelated text")
@@ -577,22 +581,32 @@ func TestAssistantASRFrameChunksMergesShortTail(t *testing.T) {
 }
 
 func TestVerifyAssistantAudioASRSplitsFailedLargeChunk(t *testing.T) {
-	frames := make([][]byte, assistantASRMinRetryFrames*2)
-	for i := range frames {
-		frames[i] = []byte{byte(i)}
+	if !opus.IsRuntimeSupported() {
+		t.Skip("requires native opus runtime")
+	}
+	frames, err := opusPacketsFromPCM16LE(
+		silencePCM16Mono16K(time.Duration(assistantASRMinRetryFrames*2)*20*time.Millisecond),
+		16000,
+		1,
+	)
+	if err != nil {
+		t.Fatalf("opusPacketsFromPCM16LE: %v", err)
+	}
+	if len(frames) != assistantASRMinRetryFrames*2 {
+		t.Fatalf("frames = %d, want %d", len(frames), assistantASRMinRetryFrames*2)
 	}
 	var sawBase, sawLeft, sawRight bool
 	driver := &personaDriver{
 		cfg: config{OutputDir: t.TempDir()},
 		transcribeAudioFile: func(_ context.Context, path string) (string, error) {
 			switch filepath.Base(path) {
-			case "round-01-assistant.ogg":
+			case "round-01-assistant.wav":
 				sawBase = true
 				return "", errors.New("transcription failed")
-			case "round-01-assistanta.ogg":
+			case "round-01-assistanta.wav":
 				sawLeft = true
 				return "你好", nil
-			case "round-01-assistantb.ogg":
+			case "round-01-assistantb.wav":
 				sawRight = true
 				return "测试", nil
 			default:

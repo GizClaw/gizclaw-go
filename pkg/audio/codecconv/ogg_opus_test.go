@@ -77,6 +77,29 @@ func buildOGGOpusStream(t *testing.T, sampleRate, channels int, frame []int16) [
 	return buildPacketStream(t, opusHeadPacket(sampleRate, channels), opusTagsPacket("codecconv-test"), packet)
 }
 
+func buildOpusPackets(t *testing.T, sampleRate, channels, count int) [][]byte {
+	t.Helper()
+
+	enc, err := opus.NewEncoder(sampleRate, channels, opus.ApplicationAudio)
+	if err != nil {
+		t.Fatalf("NewEncoder: %v", err)
+	}
+	defer func() {
+		_ = enc.Close()
+	}()
+
+	frameSize := sampleRate / 50
+	out := make([][]byte, 0, count)
+	for range count {
+		packet, err := enc.Encode(buildAudioFrame(frameSize, channels), frameSize)
+		if err != nil {
+			t.Fatalf("Encode: %v", err)
+		}
+		out = append(out, packet)
+	}
+	return out
+}
+
 func TestOggToPCM(t *testing.T) {
 	raw := buildOGGOpusStream(t, 16000, 1, buildAudioFrame(320, 1))
 
@@ -193,6 +216,9 @@ func TestPCMToOggOpusEncoderBuffersAndPads(t *testing.T) {
 	if len(packets) != 3 || !IsOpusHeadPacket(packets[0].Data) || !IsOpusTagsPacket(packets[1].Data) || len(packets[2].Data) == 0 {
 		t.Fatalf("packets = %+v", packets)
 	}
+	if packets[2].GranulePosition != 960 {
+		t.Fatalf("audio granule = %d, want 960", packets[2].GranulePosition)
+	}
 }
 
 func TestPCMToOggOpusEncoderErrors(t *testing.T) {
@@ -236,6 +262,63 @@ func TestOpusPacketsToOggAndOggOpusPackets(t *testing.T) {
 	}
 	if len(got) != 2 || !bytes.Equal(got[0], []byte{1, 2, 3}) || !bytes.Equal(got[1], []byte{4, 5}) {
 		t.Fatalf("packets = %#v", got)
+	}
+}
+
+func TestOpusPacketsToOggUsesOpusGranuleClock(t *testing.T) {
+	if !opus.IsRuntimeSupported() {
+		t.Skip("requires native opus runtime")
+	}
+	packets := buildOpusPackets(t, 16000, 1, 3)
+
+	var out bytes.Buffer
+	if err := OpusPacketsToOgg(&out, 16000, 1, packets); err != nil {
+		t.Fatalf("OpusPacketsToOgg: %v", err)
+	}
+	oggPackets, err := ogg.ReadAllPackets(bytes.NewReader(out.Bytes()))
+	if err != nil {
+		t.Fatalf("ReadAllPackets: %v", err)
+	}
+	var audioGranules []uint64
+	for _, packet := range oggPackets {
+		if IsOpusHeadPacket(packet.Data) || IsOpusTagsPacket(packet.Data) {
+			continue
+		}
+		audioGranules = append(audioGranules, packet.GranulePosition)
+	}
+	want := []uint64{960, 1920, 2880}
+	if len(audioGranules) != len(want) {
+		t.Fatalf("audio granules = %#v, want %#v", audioGranules, want)
+	}
+	for i := range want {
+		if audioGranules[i] != want[i] {
+			t.Fatalf("audio granules = %#v, want %#v", audioGranules, want)
+		}
+	}
+}
+
+func TestOpusPacketRTPTicks(t *testing.T) {
+	tests := []struct {
+		name   string
+		packet []byte
+		want   uint32
+	}{
+		{name: "empty defaults to twenty milliseconds", packet: nil, want: 960},
+		{name: "silk ten milliseconds", packet: []byte{0x00}, want: 480},
+		{name: "silk sixty milliseconds", packet: []byte{0x18}, want: 2880},
+		{name: "hybrid twenty milliseconds", packet: []byte{0x78}, want: 960},
+		{name: "celt two point five milliseconds", packet: []byte{0x80}, want: 120},
+		{name: "celt twenty milliseconds", packet: []byte{0x98}, want: 960},
+		{name: "two cbr frames", packet: []byte{0x99}, want: 1920},
+		{name: "arbitrary frame count", packet: []byte{0x9b, 0x03}, want: 2880},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := OpusPacketRTPTicks(tt.packet); got != tt.want {
+				t.Fatalf("OpusPacketRTPTicks() = %d, want %d", got, tt.want)
+			}
+		})
 	}
 }
 

@@ -74,11 +74,11 @@ func (a agent) Transform(ctx context.Context, _ string, input genx.Stream) (genx
 	if input == nil {
 		return nil, fmt.Errorf("chatroom: input stream is required")
 	}
-	builder := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 1)
+	builder := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 64)
 	if a.cfg.transcriptEnabled {
 		go a.transcribeInput(ctx, input, builder)
 	} else {
-		go drainInput(ctx, input, builder)
+		go forwardTextInput(ctx, input, builder)
 	}
 	return builder.Stream(), nil
 }
@@ -95,18 +95,65 @@ func mergeWorkspaceTranscriptConfig(cfg *config, params apitypes.ChatRoomWorkspa
 	}
 }
 
-func drainInput(ctx context.Context, input genx.Stream, builder *genx.StreamBuilder) {
+func forwardTextInput(ctx context.Context, input genx.Stream, builder *genx.StreamBuilder) {
 	defer input.Close()
+	streamID := defaultInputStreamID
+	textOpen := false
+	textStreamID := ""
+	flushText := func() error {
+		if !textOpen {
+			return nil
+		}
+		if err := builder.Add(textChunk(textStreamID, "", true)); err != nil {
+			return err
+		}
+		textOpen = false
+		textStreamID = ""
+		return nil
+	}
 	for {
 		if err := ctx.Err(); err != nil {
 			_ = builder.Abort(err)
 			return
 		}
-		_, err := input.Next()
+		chunk, err := input.Next()
 		switch {
 		case err == nil:
+			if chunk == nil {
+				continue
+			}
+			nextStreamID := streamID
+			if chunk.Ctrl != nil && strings.TrimSpace(chunk.Ctrl.StreamID) != "" {
+				nextStreamID = strings.TrimSpace(chunk.Ctrl.StreamID)
+			}
+			if textOpen && textStreamID != "" && nextStreamID != textStreamID {
+				if err := flushText(); err != nil {
+					_ = builder.Abort(err)
+					return
+				}
+			}
+			streamID = nextStreamID
+			text, ok := chunk.Part.(genx.Text)
+			if ok && text != "" {
+				textOpen = true
+				textStreamID = streamID
+				if err := builder.Add(textChunk(streamID, string(text), false)); err != nil {
+					_ = builder.Abort(err)
+					return
+				}
+			}
+			if chunk.IsEndOfStream() && ok {
+				if err := flushText(); err != nil {
+					_ = builder.Abort(err)
+					return
+				}
+			}
 			continue
 		case isStreamDone(err):
+			if err := flushText(); err != nil {
+				_ = builder.Abort(err)
+				return
+			}
 			_ = builder.Done(genx.Usage{})
 			return
 		default:
@@ -122,6 +169,20 @@ func (a agent) transcribeInput(ctx context.Context, input genx.Stream, output *g
 	var asr genx.Stream
 	var readDone chan error
 	streamID := &lockedString{value: defaultInputStreamID}
+	lastAudioMIME := "audio/opus"
+	textOpen := false
+	textStreamID := ""
+	flushText := func() error {
+		if !textOpen {
+			return nil
+		}
+		if err := output.Add(textChunk(textStreamID, "", true)); err != nil {
+			return err
+		}
+		textOpen = false
+		textStreamID = ""
+		return nil
+	}
 	startASR := func() error {
 		if readDone != nil {
 			return nil
@@ -158,8 +219,16 @@ func (a agent) transcribeInput(ctx context.Context, input genx.Stream, output *g
 				_ = output.Abort(err)
 				return
 			}
+			if err := flushText(); err != nil {
+				_ = output.Abort(err)
+				return
+			}
 			if !audioSeen {
 				_ = output.Done(genx.Usage{})
+				return
+			}
+			if err := output.Add(historyAudioEOSChunk(streamID.Get(), lastAudioMIME)); err != nil {
+				_ = output.Abort(err)
 				return
 			}
 			if err := asrInput.Done(genx.Usage{}); err != nil {
@@ -176,13 +245,41 @@ func (a agent) transcribeInput(ctx context.Context, input genx.Stream, output *g
 		if chunk == nil {
 			continue
 		}
+		nextStreamID := streamID.Get()
 		if chunk.Ctrl != nil && strings.TrimSpace(chunk.Ctrl.StreamID) != "" {
-			streamID.Set(strings.TrimSpace(chunk.Ctrl.StreamID))
+			nextStreamID = strings.TrimSpace(chunk.Ctrl.StreamID)
+		}
+		if textOpen && textStreamID != "" && nextStreamID != textStreamID {
+			if err := flushText(); err != nil {
+				_ = output.Abort(err)
+				return
+			}
+		}
+		streamID.Set(nextStreamID)
+		if text, ok := chunk.Part.(genx.Text); ok {
+			if text != "" {
+				textOpen = true
+				textStreamID = streamID.Get()
+				if err := output.Add(textChunk(streamID.Get(), string(text), false)); err != nil {
+					_ = output.Abort(err)
+					return
+				}
+			}
+			if chunk.IsEndOfStream() {
+				if err := flushText(); err != nil {
+					_ = output.Abort(err)
+					return
+				}
+			}
+			continue
 		}
 		if !isAudioChunk(chunk) {
 			continue
 		}
 		audioSeen = true
+		if blob, ok := chunk.Part.(*genx.Blob); ok && strings.TrimSpace(blob.MIMEType) != "" {
+			lastAudioMIME = blob.MIMEType
+		}
 		if err := startASR(); err != nil {
 			_ = output.Abort(err)
 			return
@@ -193,6 +290,10 @@ func (a agent) transcribeInput(ctx context.Context, input genx.Stream, output *g
 		}
 		if strings.TrimSpace(next.Ctrl.StreamID) == "" {
 			next.Ctrl.StreamID = streamID.Get()
+		}
+		if err := output.Add(historyAudioChunk(next, streamID.Get())); err != nil {
+			_ = output.Abort(err)
+			return
 		}
 		if err := asrInput.Add(next); err != nil {
 			_ = output.Abort(err)
@@ -211,6 +312,31 @@ func (a agent) transcribeInput(ctx context.Context, input genx.Stream, output *g
 			return
 		}
 	}
+}
+
+func historyAudioChunk(chunk *genx.MessageChunk, streamID string) *genx.MessageChunk {
+	next := chunk.Clone()
+	next.Role = genx.RoleUser
+	next.Name = transcriptLabel
+	if next.Ctrl == nil {
+		next.Ctrl = &genx.StreamCtrl{}
+	}
+	if strings.TrimSpace(streamID) == "" {
+		streamID = defaultInputStreamID
+	}
+	next.Ctrl.StreamID = streamID
+	next.Ctrl.Label = genx.HistoryUserAudioLabel
+	return next
+}
+
+func historyAudioEOSChunk(streamID, mimeType string) *genx.MessageChunk {
+	if strings.TrimSpace(mimeType) == "" {
+		mimeType = "audio/opus"
+	}
+	return historyAudioChunk(&genx.MessageChunk{
+		Part: &genx.Blob{MIMEType: mimeType},
+		Ctrl: &genx.StreamCtrl{StreamID: streamID, EndOfStream: true},
+	}, streamID)
 }
 
 func readTranscript(ctx context.Context, asr genx.Stream, output *genx.StreamBuilder, streamID *lockedString) error {

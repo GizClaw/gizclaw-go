@@ -13,6 +13,12 @@ const (
 	RoleTool  Role = "tool"
 )
 
+const (
+	// HistoryUserAudioLabel marks user audio chunks that should be recorded by
+	// workspace history but should not be forwarded as regular peer output.
+	HistoryUserAudioLabel = "history.user_audio"
+)
+
 var (
 	_ Payload = (Contents)(nil)
 	_ Payload = (*ToolCall)(nil)

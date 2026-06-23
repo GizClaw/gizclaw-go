@@ -15,6 +15,7 @@ const (
 	workspaceCasePushToTalkInterrupt workspaceCase = "push-to-talk-interrupt"
 	workspaceCaseRealtimeRoundtrip   workspaceCase = "realtime-roundtrip"
 	workspaceCaseRealtimeInterrupt   workspaceCase = "realtime-interrupt"
+	workspaceCaseRealtimeAutoSplit   workspaceCase = "realtime-auto-split-history"
 	workspaceCaseHistoryReplay       workspaceCase = "history-replay"
 	workspaceCaseHumanReview         workspaceCase = "human-review"
 )
@@ -24,6 +25,7 @@ var supportedWorkspaceCases = []workspaceCase{
 	workspaceCasePushToTalkInterrupt,
 	workspaceCaseRealtimeRoundtrip,
 	workspaceCaseRealtimeInterrupt,
+	workspaceCaseRealtimeAutoSplit,
 	workspaceCaseHistoryReplay,
 	workspaceCaseHumanReview,
 }
@@ -68,7 +70,7 @@ func (c workspaceCase) applyConfig(cfg config) (config, error) {
 		if c == workspaceCaseHumanReview && cfg.Rounds < 3 {
 			cfg.Rounds = 3
 		}
-	case workspaceCaseRealtimeRoundtrip, workspaceCaseRealtimeInterrupt:
+	case workspaceCaseRealtimeRoundtrip, workspaceCaseRealtimeInterrupt, workspaceCaseRealtimeAutoSplit:
 		cfg.Workflow.Parameters.Input = string(rpcapi.WorkspaceInputModeRealtime)
 	default:
 		return config{}, fmt.Errorf("unsupported workspace case %q", c)
@@ -114,6 +116,8 @@ func (d *personaDriver) runCase(ctx context.Context, selected workspaceCase) (wo
 	case workspaceCaseRealtimeInterrupt:
 		interrupts, err := d.runRealtimeInterrupt(ctx)
 		return workspaceCaseResult{Interrupts: interrupts}, err
+	case workspaceCaseRealtimeAutoSplit:
+		return workspaceCaseResult{}, d.runRealtimeAutoSplitHistory(ctx)
 	case workspaceCaseHistoryReplay:
 		rounds, err := d.runPushToTalkRoundtrip(ctx)
 		return workspaceCaseResult{Rounds: rounds}, err

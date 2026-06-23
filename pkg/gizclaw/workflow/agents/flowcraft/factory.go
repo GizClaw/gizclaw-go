@@ -881,8 +881,9 @@ type flowcraftActiveTurn struct {
 }
 
 type flowcraftTranscriptTurn struct {
-	streamID   string
-	transcript string
+	streamID     string
+	transcript   string
+	historyAudio []*genx.MessageChunk
 }
 
 func (a *agent) startFlowcraftTurn(ctx context.Context, output *genx.StreamBuilder, turn flowcraftInputTurn) *flowcraftActiveTurn {
@@ -904,12 +905,19 @@ func (a *agent) startFlowcraftTurn(ctx context.Context, output *genx.StreamBuild
 	}
 }
 
-func (a *agent) startFlowcraftTranscriptTurn(ctx context.Context, output *genx.StreamBuilder, streamID, transcript string, emitTranscript bool) *flowcraftActiveTurn {
+func (a *agent) startFlowcraftTranscriptTurn(ctx context.Context, output *genx.StreamBuilder, streamID, transcript string, emitTranscript bool, historyAudio ...*genx.MessageChunk) *flowcraftActiveTurn {
 	streamID = strings.TrimSpace(streamID)
 	if streamID == "" {
 		streamID = genx.NewStreamID()
 	}
 	epoch := a.setActiveOutput(output, streamID)
+	if len(historyAudio) > 0 {
+		if err := a.addOutput(output, epoch, historyAudio...); err != nil {
+			done := make(chan error, 1)
+			done <- err
+			return &flowcraftActiveTurn{streamID: streamID, epoch: epoch, cancel: func() {}, done: done}
+		}
+	}
 	if emitTranscript {
 		if err := a.addOutput(output, epoch,
 			textChunk(genx.RoleUser, transcriptLabel, streamID, transcriptLabel, strings.TrimSpace(transcript), false),
@@ -993,6 +1001,7 @@ func (a *agent) runRealtime(ctx context.Context, input genx.Stream, output *genx
 	defer func() { _ = asr.Close() }()
 
 	streamIDState := &lockedString{value: defaultInputStreamID}
+	historyAudio := &realtimeHistoryAudioBuffer{}
 	feedDone := make(chan feedASRResult, 1)
 	go func() {
 		feedDone <- feedRealtimeASRInput(ctx, input, asrInput, streamIDState)
@@ -1013,12 +1022,13 @@ func (a *agent) runRealtime(ctx context.Context, input genx.Stream, output *genx
 		}
 		turn := pending[0]
 		pending = pending[1:]
-		current = a.startFlowcraftTranscriptTurn(ctx, output, turn.streamID, turn.transcript, true)
+		current = a.startFlowcraftTranscriptTurn(ctx, output, turn.streamID, turn.transcript, true, turn.historyAudio...)
 	}
-	queueTranscript := func(text string) {
+	queueTranscript := func(text string, asrStreamID string) {
 		realtimeTurnIndex++
 		streamID := realtimeTurnStreamID(streamIDState.Get(), realtimeTurnIndex)
-		turn := flowcraftTranscriptTurn{streamID: streamID, transcript: text}
+		audio := historyAudio.drain(asrStreamID, streamID)
+		turn := flowcraftTranscriptTurn{streamID: streamID, transcript: text, historyAudio: audio}
 		if current != nil {
 			current.cancel()
 			_ = a.interruptOutput(output, current.streamID, current.epoch)
@@ -1038,6 +1048,7 @@ func (a *agent) runRealtime(ctx context.Context, input genx.Stream, output *genx
 		current = nil
 	}
 	var asrTranscript string
+	var asrTranscriptStreamID string
 	asrTranscriptOpen := false
 	failCurrent := func(err error) bool {
 		if err == nil || isFlowcraftInputDone(err) || errors.Is(err, context.Canceled) {
@@ -1055,9 +1066,15 @@ func (a *agent) runRealtime(ctx context.Context, input genx.Stream, output *genx
 		if chunk == nil {
 			return
 		}
+		asrStreamID := realtimeASRStreamID(chunk, streamIDState.Get())
+		if chunk.Ctrl != nil && strings.TrimSpace(chunk.Ctrl.Label) == genx.HistoryUserAudioLabel {
+			historyAudio.append(chunk, asrStreamID)
+			return
+		}
 		if chunk.IsBeginOfStream() {
 			interruptCurrent()
 			asrTranscript = ""
+			asrTranscriptStreamID = asrStreamID
 			asrTranscriptOpen = true
 			return
 		}
@@ -1072,8 +1089,9 @@ func (a *agent) runRealtime(ctx context.Context, input genx.Stream, output *genx
 				return
 			}
 			if transcript != "" {
-				queueTranscript(transcript)
+				queueTranscript(transcript, asrTranscriptStreamID)
 			}
+			asrTranscriptStreamID = ""
 			return
 		}
 		text, ok := chunk.Part.(genx.Text)
@@ -1081,10 +1099,13 @@ func (a *agent) runRealtime(ctx context.Context, input genx.Stream, output *genx
 			return
 		}
 		if asrTranscriptOpen {
+			if asrTranscriptStreamID == "" {
+				asrTranscriptStreamID = asrStreamID
+			}
 			asrTranscript = mergeTranscript(asrTranscript, string(text))
 			return
 		}
-		queueTranscript(string(text))
+		queueTranscript(string(text), asrStreamID)
 	}
 
 	for {
@@ -1569,7 +1590,10 @@ func (a *agent) transcribeInputTurn(ctx context.Context, input genx.Stream, outp
 	streamIDState := &lockedString{value: defaultStreamID}
 	feedDone := make(chan feedASRResult, 1)
 	go func() {
-		result := feedASRInput(ctx, input, asrInput, streamIDState, defaultStreamID)
+		emitHistoryAudio := func(chunk *genx.MessageChunk) error {
+			return a.addOutput(output, epoch, userAudioHistoryChunk(chunk, streamIDState.Get()))
+		}
+		result := feedASRInput(ctx, input, asrInput, streamIDState, defaultStreamID, emitHistoryAudio)
 		feedDone <- result
 	}()
 
@@ -1778,12 +1802,15 @@ type feedASRResult struct {
 	err      error
 }
 
-func feedASRInput(ctx context.Context, input genx.Stream, asrInput *genx.StreamBuilder, streamIDState *lockedString, defaultStreamID string) feedASRResult {
+type historyAudioEmitter func(*genx.MessageChunk) error
+
+func feedASRInput(ctx context.Context, input genx.Stream, asrInput *genx.StreamBuilder, streamIDState *lockedString, defaultStreamID string, emitHistoryAudio historyAudioEmitter) feedASRResult {
 	streamID := strings.TrimSpace(defaultStreamID)
 	if streamID == "" {
 		streamID = defaultInputStreamID
 	}
 	audioSeen := false
+	lastAudioMIME := "audio/pcm"
 	fail := func(err error) feedASRResult {
 		_ = asrInput.Unexpected(genx.Usage{}, err)
 		return feedASRResult{streamID: streamID, err: err}
@@ -1805,6 +1832,11 @@ func feedASRInput(ctx context.Context, input genx.Stream, asrInput *genx.StreamB
 				if !audioSeen {
 					return feedASRResult{streamID: streamID, err: io.EOF}
 				}
+				if emitHistoryAudio != nil {
+					if err := emitHistoryAudio(userAudioHistoryEOSChunk(streamID, lastAudioMIME)); err != nil {
+						return feedASRResult{streamID: streamID, err: err}
+					}
+				}
 				return feedASRResult{streamID: streamID}
 			}
 			return fail(err)
@@ -1818,14 +1850,20 @@ func feedASRInput(ctx context.Context, input genx.Stream, asrInput *genx.StreamB
 		}
 		if blob, ok := chunk.Part.(*genx.Blob); ok && isAudioMIME(blob.MIMEType) && len(blob.Data) > 0 {
 			audioSeen = true
+			lastAudioMIME = blob.MIMEType
 			if err := asrInput.Add(chunk.Clone()); err != nil {
 				return feedASRResult{streamID: streamID, err: err}
+			}
+			if emitHistoryAudio != nil {
+				if err := emitHistoryAudio(chunk); err != nil {
+					return feedASRResult{streamID: streamID, err: err}
+				}
 			}
 		}
 		if chunk.IsEndOfStream() {
 			eos := chunk.Clone()
 			if _, ok := eos.Part.(*genx.Blob); !ok {
-				eos.Part = &genx.Blob{MIMEType: "audio/pcm"}
+				eos.Part = &genx.Blob{MIMEType: lastAudioMIME}
 			}
 			if eos.Ctrl == nil {
 				eos.Ctrl = &genx.StreamCtrl{}
@@ -1836,6 +1874,11 @@ func feedASRInput(ctx context.Context, input genx.Stream, asrInput *genx.StreamB
 			eos.Ctrl.EndOfStream = true
 			if err := asrInput.Add(eos); err != nil {
 				return feedASRResult{streamID: streamID, err: err}
+			}
+			if emitHistoryAudio != nil {
+				if err := emitHistoryAudio(eos); err != nil {
+					return feedASRResult{streamID: streamID, err: err}
+				}
 			}
 			if err := asrInput.Done(genx.Usage{}); err != nil {
 				return feedASRResult{streamID: streamID, err: err}
@@ -1897,6 +1940,100 @@ func feedRealtimeASRInput(ctx context.Context, input genx.Stream, asrInput *genx
 			return feedASRResult{streamID: streamID, err: err}
 		}
 	}
+}
+
+type realtimeHistoryAudioBuffer struct {
+	mu       sync.Mutex
+	byStream map[string][]*genx.MessageChunk
+}
+
+func (b *realtimeHistoryAudioBuffer) append(chunk *genx.MessageChunk, streamID string) {
+	if b == nil || chunk == nil {
+		return
+	}
+	if _, ok := chunk.Part.(*genx.Blob); !ok {
+		return
+	}
+	streamID = strings.TrimSpace(streamID)
+	if streamID == "" {
+		streamID = defaultInputStreamID
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.byStream == nil {
+		b.byStream = make(map[string][]*genx.MessageChunk)
+	}
+	b.byStream[streamID] = append(b.byStream[streamID], userAudioHistoryChunk(chunk, streamID))
+}
+
+func (b *realtimeHistoryAudioBuffer) drain(sourceStreamID string, targetStreamID string) []*genx.MessageChunk {
+	if b == nil {
+		return nil
+	}
+	sourceStreamID = strings.TrimSpace(sourceStreamID)
+	if sourceStreamID == "" {
+		sourceStreamID = defaultInputStreamID
+	}
+	b.mu.Lock()
+	chunks := b.byStream[sourceStreamID]
+	delete(b.byStream, sourceStreamID)
+	b.mu.Unlock()
+	if len(chunks) == 0 {
+		return nil
+	}
+	out := make([]*genx.MessageChunk, 0, len(chunks))
+	for _, chunk := range chunks {
+		if chunk == nil {
+			continue
+		}
+		next := userAudioHistoryChunk(chunk, targetStreamID)
+		next.Ctrl.EndOfStream = chunk.IsEndOfStream()
+		out = append(out, next)
+	}
+	return out
+}
+
+func userAudioHistoryChunk(chunk *genx.MessageChunk, streamID string) *genx.MessageChunk {
+	if strings.TrimSpace(streamID) == "" {
+		streamID = defaultInputStreamID
+	}
+	next := chunk.Clone()
+	next.Role = genx.RoleUser
+	next.Name = transcriptLabel
+	if next.Ctrl == nil {
+		next.Ctrl = &genx.StreamCtrl{}
+	}
+	next.Ctrl.StreamID = streamID
+	next.Ctrl.Label = genx.HistoryUserAudioLabel
+	return next
+}
+
+func userAudioHistoryEOSChunk(streamID, mimeType string) *genx.MessageChunk {
+	if strings.TrimSpace(streamID) == "" {
+		streamID = defaultInputStreamID
+	}
+	if strings.TrimSpace(mimeType) == "" {
+		mimeType = "audio/pcm"
+	}
+	return &genx.MessageChunk{
+		Role: genx.RoleUser,
+		Name: transcriptLabel,
+		Part: &genx.Blob{MIMEType: mimeType},
+		Ctrl: &genx.StreamCtrl{StreamID: streamID, Label: genx.HistoryUserAudioLabel, EndOfStream: true},
+	}
+}
+
+func realtimeASRStreamID(chunk *genx.MessageChunk, fallback string) string {
+	if chunk != nil && chunk.Ctrl != nil {
+		if streamID := strings.TrimSpace(chunk.Ctrl.StreamID); streamID != "" {
+			return streamID
+		}
+	}
+	fallback = strings.TrimSpace(fallback)
+	if fallback == "" {
+		return defaultInputStreamID
+	}
+	return fallback
 }
 
 func realtimeTurnStreamID(prefix string, index int) string {

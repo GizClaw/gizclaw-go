@@ -25,6 +25,12 @@ func (d *personaDriver) verifyHistoryReplay(ctx context.Context, item rpcapi.Pee
 	if expected == "" {
 		return stats, fmt.Errorf("history item %q has no display text", item.Id)
 	}
+	expectedLabel := "assistant"
+	isTextDone := isAssistantTextDoneEvent
+	if item.Type == rpcapi.PeerRunHistoryEntryTypeGear {
+		expectedLabel = "transcript"
+		isTextDone = isTranscriptDoneEvent
+	}
 	var text strings.Builder
 	var frames [][]byte
 	textDone := false
@@ -45,7 +51,7 @@ func (d *personaDriver) verifyHistoryReplay(ctx context.Context, item rpcapi.Pee
 		case received := <-d.transport.events:
 			event := received.event
 			label := eventLabel(event)
-			if label != "assistant" {
+			if label != expectedLabel {
 				trace.add("skip event label=%s type=%s stream=%s text=%q error=%s", label, event.Type, eventStreamID(event), eventText(event), eventError(event))
 				continue
 			}
@@ -62,7 +68,7 @@ func (d *personaDriver) verifyHistoryReplay(ctx context.Context, item rpcapi.Pee
 				fmt.Printf("workspace_progress event=history_replay_audio_done workspace=%s stream=%s after_play=%s packets=%d bytes=%d\n", d.cfg.Workspace, eventStreamID(event), time.Since(start).Truncate(time.Millisecond), stats.DownlinkPackets, totalFrameBytes(frames))
 				continue
 			}
-			if isAssistantTextDoneEvent(event) {
+			if isTextDone(event) {
 				textDone = true
 				fmt.Printf("workspace_progress event=history_replay_text_done workspace=%s stream=%s after_play=%s chars=%d\n", d.cfg.Workspace, eventStreamID(event), time.Since(start).Truncate(time.Millisecond), runeCount(text.String()))
 				continue

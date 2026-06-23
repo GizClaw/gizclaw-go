@@ -8,6 +8,7 @@ import (
 	"io"
 	"iter"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GizClaw/doubao-speech-go"
@@ -229,6 +230,9 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 	var sessionConfig doubaoASRSessionConfig
 	var sessionStartedAt time.Time
 	var sentAudioDuration time.Duration
+	var historyAudio *doubaoASRHistoryAudioBuffer
+	var activeStreamID string
+	var sessionSourceChunk *genx.MessageChunk
 	var rawOpusDecoder *opus.Decoder
 	defer func() {
 		if rawOpusDecoder != nil {
@@ -237,7 +241,27 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 	}()
 
 	// Helper to start a new ASR session
-	startSession := func(cfg doubaoASRSessionConfig) error {
+	sourceChunkForStream := func(chunk *genx.MessageChunk, streamID string) *genx.MessageChunk {
+		if chunk == nil {
+			chunk = &genx.MessageChunk{}
+		} else {
+			chunk = chunk.Clone()
+		}
+		if chunk.Ctrl == nil {
+			chunk.Ctrl = &genx.StreamCtrl{}
+		}
+		chunk.Ctrl.StreamID = streamID
+		return chunk
+	}
+	resolveStreamID := func(chunk *genx.MessageChunk) string {
+		streamID := chunkInputStreamID(chunk, activeStreamID)
+		if strings.TrimSpace(streamID) == "" {
+			streamID = "audio"
+		}
+		return streamID
+	}
+
+	startSession := func(cfg doubaoASRSessionConfig, sourceChunk *genx.MessageChunk) error {
 		var err error
 		openSession := t.openSession
 		if t.newSession != nil {
@@ -250,10 +274,15 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 		sessionConfig = cfg
 		sessionStartedAt = time.Time{}
 		sentAudioDuration = 0
+		historyAudio = nil
+		if t.emitInterim {
+			historyAudio = newDoubaoASRHistoryAudioBuffer(cfg)
+		}
+		sessionSourceChunk = sourceChunk
 		resultsCh = make(chan *genx.MessageChunk, 100)
 		resultsDone = make(chan error, 1)
 		resultsForwarded = make(chan struct{})
-		go t.receiveResults(session, lastChunk, resultsCh, resultsDone)
+		go t.receiveResults(session, sessionSourceChunk, historyAudio, resultsCh, resultsDone)
 		// Forward results to output as they arrive
 		go func() {
 			defer close(resultsForwarded)
@@ -316,6 +345,8 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 		session.Close()
 		session = nil
 		sessionConfig = doubaoASRSessionConfig{}
+		historyAudio = nil
+		sessionSourceChunk = nil
 		return err
 	}
 
@@ -332,9 +363,19 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 				return
 			}
 			// EOF: finish current session
+			hadSession := session != nil
+			sourceChunk := sessionSourceChunk
+			if sourceChunk == nil {
+				sourceChunk = lastChunk
+			}
 			if err := finishSession(); err != nil {
 				output.CloseWithError(err)
 				return
+			}
+			if hadSession && !t.emitInterim {
+				if err := output.Push(transcriptTextChunk(sourceChunk, "", true)); err != nil {
+					return
+				}
 			}
 			return
 		}
@@ -344,19 +385,30 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 		}
 
 		lastChunk = chunk
+		if chunk.IsBeginOfStream() && chunk.Ctrl != nil && strings.TrimSpace(chunk.Ctrl.StreamID) != "" {
+			activeStreamID = strings.TrimSpace(chunk.Ctrl.StreamID)
+		}
 
 		// Check for EoS marker with audio MIME type
 		if chunk.IsEndOfStream() {
 			if blob, ok := chunk.Part.(*genx.Blob); ok && isAudioMIME(blob.MIMEType) {
+				historyStreamID := resolveStreamID(chunk)
+				sourceChunk := sessionSourceChunk
+				if sourceChunk == nil {
+					sourceChunk = sourceChunkForStream(chunk, historyStreamID)
+				}
+				if !t.emitInterim {
+					if err := output.Push(historyUserAudioEOSChunk(historyStreamID, blob.MIMEType)); err != nil {
+						return
+					}
+				}
 				// Audio EoS: finish current session, emit text EoS
 				if err := finishSession(); err != nil {
 					output.CloseWithError(err)
 					return
 				}
 				if !t.emitInterim {
-					eosChunk := genx.NewTextEndOfStream()
-					eosChunk.Role = lastChunk.Role
-					eosChunk.Name = lastChunk.Name
+					eosChunk := transcriptTextChunk(sourceChunk, "", true)
 					if err := output.Push(eosChunk); err != nil {
 						return
 					}
@@ -372,6 +424,15 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 
 		// Handle audio blob
 		if blob, ok := chunk.Part.(*genx.Blob); ok && isAudioMIME(blob.MIMEType) {
+			historyStreamID := resolveStreamID(chunk)
+			if activeStreamID == "" {
+				activeStreamID = historyStreamID
+			}
+			if len(blob.Data) > 0 && !t.emitInterim {
+				if err := output.Push(historyUserAudioChunk(chunk, historyStreamID)); err != nil {
+					return
+				}
+			}
 			var target *doubaoASRSessionConfig
 			if session != nil {
 				target = &sessionConfig
@@ -386,12 +447,15 @@ func (t *DoubaoASRSAUC) transformLoop(input genx.Stream, output *bufferStream) {
 			}
 			// Start session on first audio chunk after MIME-based format detection.
 			if session == nil {
-				if err := startSession(cfg); err != nil {
+				if err := startSession(cfg, sourceChunkForStream(chunk, historyStreamID)); err != nil {
 					output.CloseWithError(err)
 					return
 				}
 			}
 			if len(audioData) > 0 {
+				if historyAudio != nil {
+					historyAudio.appendChunk(chunk, historyStreamID, audioData, cfg)
+				}
 				for audio := range splitDoubaoASRAudio(audioData, t.audioChunkSize(cfg)) {
 					if len(pendingAudio) > 0 {
 						if err := sendAudio(pendingAudio, false); err != nil {
@@ -434,6 +498,10 @@ func (t *DoubaoASRSAUC) prepareAudioBlob(blob *genx.Blob, target *doubaoASRSessi
 		cfg = cfg.withPCM()
 		return blob.Data, cfg, nil
 	}
+	if isASRWAVMIME(mimeType) {
+		cfg = cfg.withWAV()
+		return blob.Data, cfg, nil
+	}
 	if cfg.isPCM() && isOggAudioMIME(mimeType) {
 		var pcm bytes.Buffer
 		if _, err := codecconv.OggToPCM(&pcm, bytes.NewReader(blob.Data), opus.OpusSampleRate(cfg.sampleRate)); err != nil {
@@ -462,6 +530,20 @@ func (t *DoubaoASRSAUC) defaultSessionConfig() doubaoASRSessionConfig {
 
 func (c doubaoASRSessionConfig) withPCM() doubaoASRSessionConfig {
 	c.format = "pcm"
+	if c.sampleRate <= 0 {
+		c.sampleRate = 16000
+	}
+	if c.channels <= 0 {
+		c.channels = 1
+	}
+	if c.bits <= 0 {
+		c.bits = 16
+	}
+	return c
+}
+
+func (c doubaoASRSessionConfig) withWAV() doubaoASRSessionConfig {
+	c.format = "wav"
 	if c.sampleRate <= 0 {
 		c.sampleRate = 16000
 	}
@@ -519,7 +601,7 @@ func (t *DoubaoASRSAUC) audioChunkSize(cfg doubaoASRSessionConfig) int {
 		}
 		return sampleRate * bytesPerSample * channels / 10
 	}
-	return 256
+	return 0
 }
 
 func audioDuration(data []byte, cfg doubaoASRSessionConfig) time.Duration {
@@ -540,6 +622,168 @@ func audioDuration(data []byte, cfg doubaoASRSessionConfig) time.Duration {
 		return 0
 	}
 	return time.Duration(len(data)) * time.Second / time.Duration(bytesPerSecond)
+}
+
+type doubaoASRHistoryAudioBuffer struct {
+	mu      sync.Mutex
+	cfg     doubaoASRSessionConfig
+	pcm     []byte
+	opus    timestampedHistoryAudioBuffer
+	hasOpus bool
+}
+
+func newDoubaoASRHistoryAudioBuffer(cfg doubaoASRSessionConfig) *doubaoASRHistoryAudioBuffer {
+	return &doubaoASRHistoryAudioBuffer{cfg: cfg.withPCM()}
+}
+
+func (b *doubaoASRHistoryAudioBuffer) appendChunk(chunk *genx.MessageChunk, streamID string, data []byte, cfg doubaoASRSessionConfig) {
+	if b == nil || len(data) == 0 {
+		return
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if chunk != nil {
+		if blob, ok := chunk.Part.(*genx.Blob); ok && blob != nil && baseAudioMIME(blob.MIMEType) == "audio/opus" {
+			b.opus.append(chunk, streamID)
+			b.hasOpus = true
+			return
+		}
+	}
+	if cfg.isPCM() {
+		b.pcm = append(b.pcm, data...)
+	}
+}
+
+func (b *doubaoASRHistoryAudioBuffer) emitSegment(resultsCh chan<- *genx.MessageChunk, streamID string, startMS, endMS int) {
+	if b == nil || resultsCh == nil {
+		return
+	}
+	if b.hasOpus {
+		chunks := b.opusSegment(streamID, startMS, endMS)
+		if len(chunks) == 0 {
+			return
+		}
+		for _, chunk := range chunks {
+			resultsCh <- chunk
+		}
+		resultsCh <- historyUserAudioEOSChunk(streamID, "audio/opus")
+		return
+	}
+	data, mimeType := b.segment(startMS, endMS)
+	if len(data) == 0 {
+		return
+	}
+	resultsCh <- &genx.MessageChunk{
+		Role: genx.RoleUser,
+		Name: "transcript",
+		Part: &genx.Blob{MIMEType: mimeType, Data: data},
+		Ctrl: &genx.StreamCtrl{StreamID: streamID, Label: genx.HistoryUserAudioLabel},
+	}
+	resultsCh <- historyUserAudioEOSChunk(streamID, mimeType)
+}
+
+func (b *doubaoASRHistoryAudioBuffer) opusSegment(streamID string, startMS, endMS int) []*genx.MessageChunk {
+	if b == nil {
+		return nil
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	chunks := b.opus.segment(startMS, endMS)
+	for _, chunk := range chunks {
+		if chunk.Ctrl == nil {
+			chunk.Ctrl = &genx.StreamCtrl{}
+		}
+		chunk.Ctrl.StreamID = streamID
+	}
+	return chunks
+}
+
+func (b *doubaoASRHistoryAudioBuffer) segment(startMS, endMS int) ([]byte, string) {
+	if b == nil || endMS <= startMS {
+		return nil, ""
+	}
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	bytesPerSecond := b.bytesPerSecond()
+	frameBytes := b.frameBytes()
+	if bytesPerSecond <= 0 || frameBytes <= 0 {
+		return nil, ""
+	}
+	start := int((int64(max(startMS, 0)) * int64(bytesPerSecond)) / 1000)
+	end := int((int64(endMS) * int64(bytesPerSecond)) / 1000)
+	start = alignPCMOffset(start, frameBytes)
+	end = alignPCMOffset(end, frameBytes)
+	if start < 0 {
+		start = 0
+	}
+	if end > len(b.pcm) {
+		end = alignPCMOffset(len(b.pcm), frameBytes)
+	}
+	if start >= end {
+		return nil, b.mimeType()
+	}
+	return append([]byte(nil), b.pcm[start:end]...), b.mimeType()
+}
+
+func (b *doubaoASRHistoryAudioBuffer) bytesPerSecond() int {
+	if b == nil {
+		return 0
+	}
+	return b.cfg.sampleRate * b.cfg.channels * b.bytesPerSample()
+}
+
+func (b *doubaoASRHistoryAudioBuffer) frameBytes() int {
+	if b == nil {
+		return 0
+	}
+	return b.cfg.channels * b.bytesPerSample()
+}
+
+func (b *doubaoASRHistoryAudioBuffer) bytesPerSample() int {
+	if b == nil {
+		return 0
+	}
+	bytesPerSample := b.cfg.bits / 8
+	if bytesPerSample <= 0 {
+		return 2
+	}
+	return bytesPerSample
+}
+
+func (b *doubaoASRHistoryAudioBuffer) mimeType() string {
+	if b == nil {
+		return "audio/pcm"
+	}
+	sampleRate := b.cfg.sampleRate
+	if sampleRate <= 0 {
+		sampleRate = 16000
+	}
+	channels := b.cfg.channels
+	if channels <= 0 {
+		channels = 1
+	}
+	return fmt.Sprintf("audio/L16; rate=%d; channels=%d", sampleRate, channels)
+}
+
+func alignPCMOffset(offset, frameBytes int) int {
+	if frameBytes <= 0 {
+		return offset
+	}
+	return offset - offset%frameBytes
+}
+
+func transcriptTextChunk(chunk *genx.MessageChunk, text string, eos bool) *genx.MessageChunk {
+	streamID := ""
+	if chunk != nil && chunk.Ctrl != nil {
+		streamID = strings.TrimSpace(chunk.Ctrl.StreamID)
+	}
+	streamID = asrSegmentStreamID(streamID, 1)
+	return &genx.MessageChunk{
+		Role: genx.RoleUser,
+		Name: "transcript",
+		Part: genx.Text(text),
+		Ctrl: &genx.StreamCtrl{StreamID: streamID, Label: "transcript", EndOfStream: eos},
+	}
 }
 
 func (t *DoubaoASRSAUC) decodeMP3ToPCM(data []byte, cfg doubaoASRSessionConfig) ([]byte, error) {
@@ -608,7 +852,10 @@ func decodeRawOpusToPCM(data []byte, cfg doubaoASRSessionConfig, decoder **opus.
 func splitDoubaoASRAudio(data []byte, chunkSize int) iter.Seq[[]byte] {
 	return func(yield func([]byte) bool) {
 		if chunkSize <= 0 {
-			chunkSize = 256
+			if len(data) > 0 {
+				yield(data)
+			}
+			return
 		}
 		for offset := 0; offset < len(data); offset += chunkSize {
 			end := min(offset+chunkSize, len(data))
@@ -619,7 +866,7 @@ func splitDoubaoASRAudio(data []byte, chunkSize int) iter.Seq[[]byte] {
 	}
 }
 
-func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx.MessageChunk, resultsCh chan<- *genx.MessageChunk, done chan<- error) {
+func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx.MessageChunk, historyAudio *doubaoASRHistoryAudioBuffer, resultsCh chan<- *genx.MessageChunk, done chan<- error) {
 	defer close(resultsCh)
 
 	// Track processed utterances by identity. SAUC utterance timestamps are not
@@ -633,6 +880,11 @@ func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx
 	lastFinal := false
 	transcriptOpen := false
 	transcriptDefinite := false
+	transcriptSegment := 1
+	baseStreamID := ""
+	if lastChunk != nil && lastChunk.Ctrl != nil {
+		baseStreamID = strings.TrimSpace(lastChunk.Ctrl.StreamID)
+	}
 
 	streamCtrl := func(begin, end bool, errText string) *genx.StreamCtrl {
 		ctrl := &genx.StreamCtrl{
@@ -641,9 +893,7 @@ func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx
 			EndOfStream:   end,
 			Error:         errText,
 		}
-		if lastChunk != nil && lastChunk.Ctrl != nil {
-			ctrl.StreamID = lastChunk.Ctrl.StreamID
-		}
+		ctrl.StreamID = asrSegmentStreamID(baseStreamID, transcriptSegment)
 		return ctrl
 	}
 	emitTranscriptBOS := func() {
@@ -651,11 +901,9 @@ func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx
 			return
 		}
 		outChunk := &genx.MessageChunk{
+			Role: genx.RoleUser,
+			Name: "transcript",
 			Ctrl: streamCtrl(true, false, ""),
-		}
-		if lastChunk != nil {
-			outChunk.Role = lastChunk.Role
-			outChunk.Name = lastChunk.Name
 		}
 		resultsCh <- outChunk
 		transcriptOpen = true
@@ -671,21 +919,29 @@ func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx
 			emitTranscriptBOS()
 		}
 		outChunk := &genx.MessageChunk{
+			Role: genx.RoleUser,
+			Name: "transcript",
 			Part: genx.Text(text),
-		}
-		if t.emitInterim {
-			outChunk.Ctrl = streamCtrl(false, false, "")
-		}
-		if lastChunk != nil {
-			outChunk.Role = lastChunk.Role
-			outChunk.Name = lastChunk.Name
+			Ctrl: streamCtrl(false, false, ""),
 		}
 		resultsCh <- outChunk
 		if definite {
 			transcriptDefinite = true
 		}
 	}
-	closeTranscript := func(errText string) {
+	var closeTranscript func(string)
+	emitDefiniteUtterance := func(text string, startTime, endTime int) {
+		text = strings.TrimSpace(text)
+		if text == "" {
+			return
+		}
+		streamID := asrSegmentStreamID(baseStreamID, transcriptSegment)
+		if t.emitInterim && historyAudio != nil {
+			historyAudio.emitSegment(resultsCh, streamID, startTime, endTime)
+		}
+		emitTranscriptText(text, true)
+	}
+	closeTranscript = func(errText string) {
 		if !t.emitInterim || !transcriptOpen {
 			return
 		}
@@ -693,17 +949,18 @@ func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx
 			errText = "asr transcript ended before definite result"
 		}
 		outChunk := &genx.MessageChunk{
+			Role: genx.RoleUser,
+			Name: "transcript",
 			Part: genx.Text(""),
 			Ctrl: streamCtrl(false, true, errText),
-		}
-		if lastChunk != nil {
-			outChunk.Role = lastChunk.Role
-			outChunk.Name = lastChunk.Name
 		}
 		resultsCh <- outChunk
 		transcriptOpen = false
 		transcriptDefinite = false
 		lastInterimText = ""
+		if errText == "" {
+			transcriptSegment++
+		}
 	}
 
 	for result, err := range session.Recv() {
@@ -727,7 +984,7 @@ func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx
 						continue
 					}
 					seenUtterances[key] = struct{}{}
-					emitTranscriptText(utt.Text, true)
+					emitDefiniteUtterance(utt.Text, utt.StartTime, utt.EndTime)
 					textCount++
 					emittedResultText = true
 					closeTranscript("")
@@ -765,6 +1022,17 @@ func (t *DoubaoASRSAUC) receiveResults(session doubaoASRSession, lastChunk *genx
 	done <- nil
 }
 
+func asrSegmentStreamID(base string, segment int) string {
+	base = strings.TrimSpace(base)
+	if base == "" {
+		base = "audio"
+	}
+	if segment <= 1 {
+		return base
+	}
+	return fmt.Sprintf("%s:asr:%d", base, segment)
+}
+
 // isAudioMIME checks if a MIME type is audio
 func isAudioMIME(mimeType string) bool {
 	return strings.HasPrefix(baseAudioMIME(mimeType), "audio/")
@@ -783,6 +1051,11 @@ func isASRMP3MIME(mimeType string) bool {
 func isASRPCMMIME(mimeType string) bool {
 	mimeType = baseAudioMIME(mimeType)
 	return strings.HasPrefix(mimeType, "audio/l16") || mimeType == "audio/pcm" || mimeType == "audio/x-pcm"
+}
+
+func isASRWAVMIME(mimeType string) bool {
+	mimeType = baseAudioMIME(mimeType)
+	return mimeType == "audio/wav" || mimeType == "audio/wave" || mimeType == "audio/x-wav"
 }
 
 func isASROpusMIME(mimeType string) bool {

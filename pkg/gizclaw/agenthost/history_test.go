@@ -149,21 +149,19 @@ func TestHistoryAgentSkipsGearHistoryWithoutGearID(t *testing.T) {
 	}
 }
 
-func TestHistoryAgentRecordsInputPCMAudioAsOggOpus(t *testing.T) {
+func TestHistoryAgentRecordsOutputHistoryPCMAudioAsOggOpus(t *testing.T) {
 	if !opus.IsRuntimeSupported() {
 		t.Skip("requires native opus runtime")
 	}
 	history := workspace.NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
-	agent := wrapHistoryAgent(historyInputDrainingAgent{
-		historyTestAgent: historyTestAgent{output: historyStreamFromChunks()},
-	}, history)
 	pcmFrame := historyTestPCMFrame(320)
+	agent := wrapHistoryAgent(historyTestAgent{output: historyStreamFromChunks(
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/pcm", Data: pcmFrame[:300]}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: genx.HistoryUserAudioLabel}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/pcm", Data: pcmFrame[300:]}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: genx.HistoryUserAudioLabel}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/pcm"}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: genx.HistoryUserAudioLabel, EndOfStream: true}},
+	)}, history)
 
-	out, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks(
-		&genx.MessageChunk{Part: &genx.Blob{MIMEType: "audio/pcm", Data: pcmFrame[:300]}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "input"}},
-		&genx.MessageChunk{Part: &genx.Blob{MIMEType: "audio/pcm", Data: pcmFrame[300:]}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "input"}},
-		&genx.MessageChunk{Part: &genx.Blob{MIMEType: "audio/pcm"}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "input", EndOfStream: true}},
-	))
+	out, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks())
 	if err != nil {
 		t.Fatalf("Transform() error = %v", err)
 	}
@@ -206,25 +204,16 @@ func TestHistoryAgentRecordsInputPCMAudioAsOggOpus(t *testing.T) {
 func TestHistoryAgentEmitsHistoryUpdatedNotification(t *testing.T) {
 	history := workspace.NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
 	agentOutput := newBlockingHistoryStream()
-	agent := wrapHistoryAgent(historyInputDrainingAgent{
-		historyTestAgent: historyTestAgent{output: agentOutput},
-	}, history)
+	agent := wrapHistoryAgent(historyTestAgent{output: agentOutput}, history)
 	before := time.Now().Add(-time.Second).UTC()
-	out, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks(
-		&genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text("hello"), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript"}},
-		&genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript", EndOfStream: true}},
-	))
+	out, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks())
 	if err != nil {
 		t.Fatalf("Transform() error = %v", err)
 	}
-	chunk, err := out.Next()
-	if err != nil {
-		t.Fatalf("Next history updated: %v", err)
-	}
+	agentOutput.ch <- &genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text("hello"), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript"}}
+	agentOutput.ch <- &genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript", EndOfStream: true}}
+	chunk := expectHistoryUpdatedChunk(t, out)
 	after := time.Now().Add(time.Second).UTC()
-	if chunk.Ctrl == nil || chunk.Ctrl.Label != historyUpdatedLabel {
-		t.Fatalf("history updated chunk = %#v", chunk)
-	}
 	updated := time.UnixMilli(chunk.Ctrl.Timestamp).UTC()
 	if updated.Before(before) || updated.After(after) {
 		t.Fatalf("history updated timestamp = %s, want between %s and %s", updated, before, after)
@@ -234,56 +223,62 @@ func TestHistoryAgentEmitsHistoryUpdatedNotification(t *testing.T) {
 
 func TestHistoryAgentBroadcastsHistoryUpdatedNotification(t *testing.T) {
 	history := workspace.NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
-	base := &historyAsyncInputDrainingAgent{}
+	base := &historyMultiOutputAgent{}
 	agent := wrapHistoryAgent(base, history)
-	inputA := NewInputStream(4)
-	inputB := NewInputStream(4)
-	outA, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", inputA)
+	outA, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks())
 	if err != nil {
 		t.Fatalf("Transform gear-a error = %v", err)
 	}
-	outB, err := agent.Transform(withHistoryGearID(context.Background(), "gear-b"), "demo", inputB)
+	outB, err := agent.Transform(withHistoryGearID(context.Background(), "gear-b"), "demo", historyStreamFromChunks())
 	if err != nil {
 		t.Fatalf("Transform gear-b error = %v", err)
 	}
 	defer outA.Close()
 	defer outB.Close()
-	defer inputA.Close()
-	defer inputB.Close()
 	defer base.closeAll()
 
-	if err := inputA.Push(context.Background(), &genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text("hello"), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript"}}); err != nil {
-		t.Fatalf("inputA Push text: %v", err)
+	base.mu.Lock()
+	outputA := base.outputs[0]
+	base.mu.Unlock()
+	outputA.ch <- &genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text("hello"), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript"}}
+	outputA.ch <- &genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript", EndOfStream: true}}
+	if chunk := expectHistoryUpdatedChunk(t, outA); chunk.Ctrl.Timestamp == 0 {
+		t.Fatalf("gear-a history updated chunk = %#v", chunk)
 	}
-	if err := inputA.Push(context.Background(), &genx.MessageChunk{Role: genx.RoleUser, Name: "gear", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "s1", Label: "transcript", EndOfStream: true}}); err != nil {
-		t.Fatalf("inputA Push eos: %v", err)
+	if chunk := expectHistoryUpdatedChunk(t, outB); chunk.Ctrl.Timestamp == 0 {
+		t.Fatalf("gear-b history updated chunk = %#v", chunk)
 	}
-	expectHistoryUpdatedChunk(t, outA)
-	expectHistoryUpdatedChunk(t, outB)
 }
 
-func expectHistoryUpdatedChunk(t *testing.T, stream genx.Stream) {
+func expectHistoryUpdatedChunk(t *testing.T, stream genx.Stream) *genx.MessageChunk {
 	t.Helper()
 	ch := make(chan *genx.MessageChunk, 1)
 	errCh := make(chan error, 1)
 	go func() {
-		chunk, err := stream.Next()
-		if err != nil {
-			errCh <- err
-			return
+		for {
+			chunk, err := stream.Next()
+			if err != nil {
+				errCh <- err
+				return
+			}
+			if chunk != nil && chunk.Ctrl != nil && chunk.Ctrl.Label == historyUpdatedLabel {
+				ch <- chunk
+				return
+			}
 		}
-		ch <- chunk
 	}()
 	select {
 	case err := <-errCh:
 		t.Fatalf("Next history updated error = %v", err)
 	case chunk := <-ch:
-		if chunk.Ctrl == nil || chunk.Ctrl.Label != historyUpdatedLabel || chunk.Ctrl.Timestamp == 0 {
+		if chunk.Ctrl.Timestamp == 0 {
 			t.Fatalf("history updated chunk = %#v", chunk)
 		}
+		return chunk
 	case <-time.After(time.Second):
 		t.Fatal("timed out waiting for history updated chunk")
 	}
+	return nil
 }
 
 func TestHistoryOutputCoalescesHistoryUpdatedNotifications(t *testing.T) {
@@ -387,31 +382,35 @@ func TestHistoryAgentRecordsOutputAudioAsOggOpus(t *testing.T) {
 	}
 }
 
-func TestHistoryAgentMergesInputAudioWithTranscript(t *testing.T) {
+func TestHistoryAgentMergesOutputHistoryAudioWithTranscript(t *testing.T) {
 	history := workspace.NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
-	agent := wrapHistoryAgent(historyInputDrainingAgent{
-		historyTestAgent: historyTestAgent{output: historyStreamFromChunks(
-			&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: genx.Text("hello"), Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "transcript"}},
-			&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "transcript", EndOfStream: true}},
-		)},
-	}, history)
+	agent := wrapHistoryAgent(historyTestAgent{output: historyStreamFromChunks(
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/opus", Data: []byte{1, 2, 3}}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: genx.HistoryUserAudioLabel}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/opus", Data: []byte{4, 5}}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: genx.HistoryUserAudioLabel}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/opus"}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: genx.HistoryUserAudioLabel, EndOfStream: true}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: genx.Text("hello"), Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "transcript"}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "transcript", EndOfStream: true}},
+	)}, history)
 
-	out, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks(
-		&genx.MessageChunk{Part: &genx.Blob{MIMEType: "audio/opus", Data: []byte{1, 2, 3}}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "workspacetest"}},
-		&genx.MessageChunk{Part: &genx.Blob{MIMEType: "audio/opus", Data: []byte{4, 5}}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "workspacetest"}},
-		&genx.MessageChunk{Part: &genx.Blob{MIMEType: "audio/opus"}, Ctrl: &genx.StreamCtrl{StreamID: "audio", Label: "workspacetest", EndOfStream: true}},
-	))
+	out, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks())
 	if err != nil {
 		t.Fatalf("Transform() error = %v", err)
 	}
+	var forwardedAudio bool
 	for {
-		_, err := out.Next()
+		chunk, err := out.Next()
 		if IsStreamDone(err) {
 			break
 		}
 		if err != nil {
 			t.Fatalf("Next() error = %v", err)
 		}
+		if chunk != nil && chunk.Ctrl != nil && chunk.Ctrl.Label == genx.HistoryUserAudioLabel {
+			forwardedAudio = true
+		}
+	}
+	if forwardedAudio {
+		t.Fatal("history-only user audio was forwarded to peer output")
 	}
 	resp, err := agent.ListHistory(context.Background(), apitypes.PeerRunHistoryListRequest{})
 	if err != nil {
@@ -442,6 +441,55 @@ func TestHistoryAgentMergesInputAudioWithTranscript(t *testing.T) {
 	}
 	if len(packets) != 4 || !bytes.Equal(packets[2].Data, []byte{1, 2, 3}) || !bytes.Equal(packets[3].Data, []byte{4, 5}) {
 		t.Fatalf("ogg packets = %+v", packets)
+	}
+}
+
+func TestHistoryAgentRecordsOutputHistoryAudioByStreamID(t *testing.T) {
+	history := workspace.NewHistoryStore(objectstore.Dir(t.TempDir()), "demo")
+	agent := wrapHistoryAgent(historyTestAgent{output: historyStreamFromChunks(
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/opus", Data: []byte{1, 2, 3}}, Ctrl: &genx.StreamCtrl{StreamID: "audio:rt:1", Label: genx.HistoryUserAudioLabel}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: genx.Text("first"), Ctrl: &genx.StreamCtrl{StreamID: "audio:rt:1", Label: "transcript"}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/opus"}, Ctrl: &genx.StreamCtrl{StreamID: "audio:rt:1", Label: genx.HistoryUserAudioLabel, EndOfStream: true}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "audio:rt:1", Label: "transcript", EndOfStream: true}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/opus", Data: []byte{4, 5, 6}}, Ctrl: &genx.StreamCtrl{StreamID: "audio:rt:2", Label: genx.HistoryUserAudioLabel}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: genx.Text("second"), Ctrl: &genx.StreamCtrl{StreamID: "audio:rt:2", Label: "transcript"}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: &genx.Blob{MIMEType: "audio/opus"}, Ctrl: &genx.StreamCtrl{StreamID: "audio:rt:2", Label: genx.HistoryUserAudioLabel, EndOfStream: true}},
+		&genx.MessageChunk{Role: genx.RoleUser, Name: "transcript", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "audio:rt:2", Label: "transcript", EndOfStream: true}},
+	)}, history)
+
+	out, err := agent.Transform(withHistoryGearID(context.Background(), "gear-a"), "demo", historyStreamFromChunks())
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	for {
+		_, err := out.Next()
+		if IsStreamDone(err) {
+			break
+		}
+		if err != nil {
+			t.Fatalf("Next() error = %v", err)
+		}
+	}
+	order := apitypes.PeerRunHistoryListRequestOrderAsc
+	resp, err := agent.ListHistory(context.Background(), apitypes.PeerRunHistoryListRequest{Order: &order})
+	if err != nil {
+		t.Fatalf("ListHistory() error = %v", err)
+	}
+	if len(resp.Items) != 2 {
+		t.Fatalf("history items = %+v", resp.Items)
+	}
+	for i, want := range []string{"first", "second"} {
+		item := resp.Items[i]
+		if item.Type != apitypes.PeerRunHistoryEntryTypeGear || item.GearId == nil || *item.GearId != "gear-a" || item.Name != "transcript" || item.Text != want || !item.ReplayAvailable {
+			t.Fatalf("history item[%d] = %+v", i, item)
+		}
+		entry, err := history.Get(context.Background(), item.Id)
+		if err != nil {
+			t.Fatalf("Get history[%d]: %v", i, err)
+		}
+		if len(entry.Assets) != 1 || entry.Assets[0].MIMEType != "audio/ogg; codecs=opus" {
+			t.Fatalf("history assets[%d] = %+v", i, entry.Assets)
+		}
 	}
 }
 

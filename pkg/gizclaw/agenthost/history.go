@@ -120,8 +120,7 @@ func (a *historyAgent) Transform(ctx context.Context, pattern string, input genx
 	a.outputs[outputKey] = outputState
 	a.outputMu.Unlock()
 	recorder := newHistoryRecorder(a.history, historyGearID(ctx), a.notifyHistoryUpdated)
-	wrappedInput := &historyInputStream{Stream: input, ctx: ctx, recorder: recorder}
-	agentOutput, err := a.Agent.Transform(ctx, pattern, wrappedInput)
+	agentOutput, err := a.Agent.Transform(ctx, pattern, input)
 	if err != nil {
 		a.clearOutput(outputKey, outputState)
 		_ = output.Abort(err)
@@ -212,6 +211,14 @@ func (a *historyAgent) forwardOutput(ctx context.Context, outputKey string, outp
 			return
 		}
 		if chunk == nil {
+			continue
+		}
+		if historyOutputOnlyChunk(chunk) {
+			if err := recorder.ObserveOutput(ctx, chunk); err != nil {
+				a.clearOutput(outputKey, outputState)
+				_ = output.Abort(err)
+				return
+			}
 			continue
 		}
 		if outputState.observeForwardChunk(chunk) {
@@ -646,27 +653,6 @@ func historyReplayNeedsPace(chunk *genx.MessageChunk) bool {
 	return ok && len(blob.Data) > 0 && baseHistoryMIME(blob.MIMEType) == "audio/opus"
 }
 
-type historyInputStream struct {
-	genx.Stream
-	ctx      context.Context
-	recorder *historyRecorder
-}
-
-func (s *historyInputStream) Next() (*genx.MessageChunk, error) {
-	chunk, err := s.Stream.Next()
-	if err == nil && chunk != nil {
-		if recordErr := s.recorder.ObserveInput(s.ctx, chunk); recordErr != nil {
-			return nil, recordErr
-		}
-	}
-	if err != nil {
-		if flushErr := s.recorder.FlushReady(s.ctx); flushErr != nil {
-			return nil, flushErr
-		}
-	}
-	return chunk, err
-}
-
 type historyRecorder struct {
 	history *workspace.HistoryStore
 	gearID  string
@@ -698,13 +684,6 @@ func newHistoryRecorder(history *workspace.HistoryStore, gearID string, notify f
 	}
 }
 
-func (r *historyRecorder) ObserveInput(ctx context.Context, chunk *genx.MessageChunk) error {
-	if r == nil || strings.TrimSpace(r.gearID) == "" {
-		return nil
-	}
-	return r.observe(ctx, chunk, historyEntryTypeGear, r.gearID)
-}
-
 func (r *historyRecorder) ObserveOutput(ctx context.Context, chunk *genx.MessageChunk) error {
 	typ := historyEntryTypeAgent
 	gearID := ""
@@ -720,12 +699,6 @@ func (r *historyRecorder) ObserveOutput(ctx context.Context, chunk *genx.Message
 
 func (r *historyRecorder) Flush(ctx context.Context) error {
 	return r.flushMatching(ctx, nil)
-}
-
-func (r *historyRecorder) FlushReady(ctx context.Context) error {
-	return r.flushMatching(ctx, func(entry *historyPendingEntry) bool {
-		return deferGearAudioEntry(entry)
-	})
 }
 
 func (r *historyRecorder) flushMatching(ctx context.Context, keep func(*historyPendingEntry) bool) error {
@@ -802,6 +775,13 @@ func (r *historyRecorder) observe(ctx context.Context, chunk *genx.MessageChunk,
 		}
 	}
 	return nil
+}
+
+func historyOutputOnlyChunk(chunk *genx.MessageChunk) bool {
+	return chunk != nil &&
+		chunk.Role == genx.RoleUser &&
+		chunk.Ctrl != nil &&
+		strings.TrimSpace(chunk.Ctrl.Label) == genx.HistoryUserAudioLabel
 }
 
 func historyGearTranscriptChunk(chunk *genx.MessageChunk) *genx.MessageChunk {

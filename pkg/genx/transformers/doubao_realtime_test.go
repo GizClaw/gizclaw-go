@@ -119,6 +119,81 @@ func TestChunkInputStreamIDUsesActiveStreamForDirectAudio(t *testing.T) {
 	}
 }
 
+func TestDoubaoRealtimeStreamIDsSplitRealtimeTranscript(t *testing.T) {
+	ids := newDoubaoRealtimeStreamIDs(DoubaoRealtimeModeRealtime)
+	ids.beginInput("turn-1")
+	chunk := &genx.MessageChunk{Ctrl: &genx.StreamCtrl{StreamID: "turn-1"}}
+
+	if got := ids.serviceInput(chunk); got != "turn-1" {
+		t.Fatalf("service input = %q, want base stream", got)
+	}
+	if got := ids.input(); got != "turn-1:rt:1" {
+		t.Fatalf("transcript input = %q, want first realtime segment", got)
+	}
+	if got := ids.endInputSegment(); got != "turn-1:rt:1" {
+		t.Fatalf("ended segment = %q, want first realtime segment", got)
+	}
+	if got := ids.response(); got != "turn-1:rt:1" {
+		t.Fatalf("response stream = %q, want first realtime segment", got)
+	}
+	if got := ids.input(); got != "turn-1:rt:2" {
+		t.Fatalf("next transcript input = %q, want second realtime segment", got)
+	}
+	if got := ids.endInputSegment(); got != "turn-1:rt:2" {
+		t.Fatalf("second ended segment = %q, want second realtime segment", got)
+	}
+	if got := ids.response(); got != "turn-1:rt:2" {
+		t.Fatalf("second response stream = %q, want second realtime segment", got)
+	}
+}
+
+func TestDoubaoRealtimeStreamIDsKeepPushToTalkInput(t *testing.T) {
+	ids := newDoubaoRealtimeStreamIDs(DoubaoRealtimeModePushToTalk)
+	ids.beginInput("turn-1")
+	chunk := &genx.MessageChunk{Ctrl: &genx.StreamCtrl{StreamID: "turn-1"}}
+
+	if got := ids.historyInput(chunk); got != "turn-1" {
+		t.Fatalf("push-to-talk history input = %q, want base stream", got)
+	}
+	if got := ids.endInputSegment(); got != "turn-1" {
+		t.Fatalf("push-to-talk ended segment = %q, want base stream", got)
+	}
+	if got := ids.historyInput(chunk); got != "turn-1" {
+		t.Fatalf("push-to-talk next history input = %q, want same base stream", got)
+	}
+}
+
+func TestDoubaoRealtimeStreamIDsInferRealtimeInputWithoutBOS(t *testing.T) {
+	ids := newDoubaoRealtimeStreamIDs(DoubaoRealtimeModeRealtime)
+	chunk := &genx.MessageChunk{Ctrl: &genx.StreamCtrl{StreamID: "turn-1"}}
+
+	if got := ids.serviceInput(chunk); got != "turn-1" {
+		t.Fatalf("service input = %q, want chunk stream", got)
+	}
+	if got := ids.input(); got != "turn-1:rt:1" {
+		t.Fatalf("transcript input = %q, want chunk-derived realtime segment", got)
+	}
+}
+
+func TestRealtimeASRResponseEndsSegment(t *testing.T) {
+	if !realtimeASRResponseEndsSegment(&doubaospeech.RealtimeEvent{
+		Results: []doubaospeech.RealtimeASRResult{{Text: "第一段", IsInterim: false}},
+	}, "第一段") {
+		t.Fatal("final ASR result did not end segment")
+	}
+	if realtimeASRResponseEndsSegment(&doubaospeech.RealtimeEvent{
+		Results: []doubaospeech.RealtimeASRResult{{Text: "第一", IsInterim: true}},
+	}, "第一") {
+		t.Fatal("interim ASR response ended segment")
+	}
+	if realtimeASRResponseEndsSegment(&doubaospeech.RealtimeEvent{IsFinal: true, Text: "。"}, "。") {
+		t.Fatal("punctuation-only ASR response ended segment")
+	}
+	if realtimeASRResponseEndsSegment(&doubaospeech.RealtimeEvent{Text: "第二段"}, "第二段") {
+		t.Fatal("ASR response without final marker ended segment")
+	}
+}
+
 func TestDoubaoRealtimeAudioInputEncodesSpeechOpusSilence(t *testing.T) {
 	if !opus.IsRuntimeSupported() {
 		t.Skip("native opus runtime is not available")

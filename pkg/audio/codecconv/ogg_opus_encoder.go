@@ -10,7 +10,10 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/opus"
 )
 
-const defaultOggOpusSerial = 0x67636846
+const (
+	defaultOggOpusSerial = 0x67636846
+	opusGranuleRate      = 48000
+)
 
 // PCMToOggOpusEncoder incrementally encodes PCM16LE bytes into an Ogg/Opus stream.
 type PCMToOggOpusEncoder struct {
@@ -100,7 +103,7 @@ func (e *PCMToOggOpusEncoder) Close() error {
 	if len(e.packet) == 0 {
 		return fmt.Errorf("codecconv: pcm to ogg opus encoder has no opus frames")
 	}
-	e.granule += uint64(e.frameSize)
+	e.granule += pcmFrameOpusGranuleTicks(e.frameSize, e.sampleRate)
 	if _, err := e.ogg.WritePacket(e.packet, e.granule, true); err != nil {
 		return err
 	}
@@ -117,7 +120,7 @@ func (e *PCMToOggOpusEncoder) encodeFrame(data []byte) error {
 		return nil
 	}
 	if len(e.packet) != 0 {
-		e.granule += uint64(e.frameSize)
+		e.granule += pcmFrameOpusGranuleTicks(e.frameSize, e.sampleRate)
 		if _, err := e.ogg.WritePacket(e.packet, e.granule, false); err != nil {
 			return err
 		}
@@ -156,7 +159,7 @@ func OpusPacketsToOgg(w io.Writer, sampleRate, channels int, packets [][]byte) e
 	if _, err := stream.WritePacket(OpusTagsPacket("gizclaw"), 0, false); err != nil {
 		return err
 	}
-	frameSize := sampleRate / 50
+	var granule uint64
 	audioPackets := 0
 	for _, packet := range packets {
 		if len(packet) == 0 {
@@ -164,12 +167,80 @@ func OpusPacketsToOgg(w io.Writer, sampleRate, channels int, packets [][]byte) e
 		}
 		audioPackets++
 		eos := audioPackets == totalAudioPackets
-		granule := uint64(audioPackets * frameSize)
+		granule += uint64(OpusPacketRTPTicks(packet))
 		if _, err := stream.WritePacket(packet, granule, eos); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func pcmFrameOpusGranuleTicks(frameSize, sampleRate int) uint64 {
+	if frameSize <= 0 || sampleRate <= 0 {
+		return 0
+	}
+	return uint64(frameSize * opusGranuleRate / sampleRate)
+}
+
+// OpusPacketRTPTicks reports the packet duration in the 48 kHz Opus RTP clock.
+func OpusPacketRTPTicks(packet []byte) uint32 {
+	if len(packet) == 0 {
+		return 960
+	}
+	tocConfig := packet[0] >> 3
+	var ticks uint32
+	switch {
+	case tocConfig < 12:
+		switch tocConfig % 4 {
+		case 0:
+			ticks = 480
+		case 1:
+			ticks = 960
+		case 2:
+			ticks = 1920
+		default:
+			ticks = 2880
+		}
+	case tocConfig < 16:
+		if tocConfig%2 == 0 {
+			ticks = 480
+		} else {
+			ticks = 960
+		}
+	default:
+		switch tocConfig % 4 {
+		case 0:
+			ticks = 120
+		case 1:
+			ticks = 240
+		case 2:
+			ticks = 480
+		default:
+			ticks = 960
+		}
+	}
+	return ticks * uint32(opusPacketFrameCount(packet))
+}
+
+func opusPacketFrameCount(packet []byte) int {
+	if len(packet) == 0 {
+		return 0
+	}
+	switch packet[0] & 0x03 {
+	case 0:
+		return 1
+	case 1, 2:
+		return 2
+	default:
+		if len(packet) < 2 {
+			return 1
+		}
+		count := int(packet[1] & 0x3f)
+		if count == 0 {
+			return 1
+		}
+		return count
+	}
 }
 
 func nonEmptyPacketCount(packets [][]byte) int {

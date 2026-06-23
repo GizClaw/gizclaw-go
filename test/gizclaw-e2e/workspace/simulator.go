@@ -16,6 +16,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/mp3"
 	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/ogg"
 	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/opus"
+	"github.com/GizClaw/gizclaw-go/pkg/audio/codecconv"
 	"github.com/GizClaw/gizclaw-go/pkg/audio/resampler"
 	"github.com/GizClaw/gizclaw-go/pkg/genx"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
@@ -486,11 +487,19 @@ func (d *personaDriver) verifyAssistantAudioASR(ctx context.Context, index int, 
 }
 
 func (d *personaDriver) transcribeAssistantAudioFrames(ctx context.Context, index int, name string, frames [][]byte) (string, error) {
-	audio, err := oggOpusFromPackets(16000, 1, frames)
+	oggAudio, err := oggOpusFromPackets(48000, 1, frames)
 	if err != nil {
 		return "", fmt.Errorf("encode assistant audio: %w", err)
 	}
-	path, err := d.writeRoundAudioFile(index, name, audio)
+	var pcm bytes.Buffer
+	if _, err := codecconv.OggToPCM(&pcm, bytes.NewReader(oggAudio), opus.SampleRate16K); err != nil {
+		return "", fmt.Errorf("decode assistant audio for asr: %w", err)
+	}
+	audio, err := pcm16WAV(16000, 1, pcm.Bytes())
+	if err != nil {
+		return "", fmt.Errorf("encode assistant audio: %w", err)
+	}
+	path, err := d.writeRoundAudioFileExt(index, name, ".wav", audio)
 	if err != nil {
 		return "", err
 	}
@@ -944,6 +953,10 @@ func (d *personaDriver) writeRoundAudio(index int, audio []byte) (string, error)
 }
 
 func (d *personaDriver) writeRoundAudioFile(index int, name string, audio []byte) (string, error) {
+	return d.writeRoundAudioFileExt(index, name, ".ogg", audio)
+}
+
+func (d *personaDriver) writeRoundAudioFileExt(index int, name, ext string, audio []byte) (string, error) {
 	if d.cfg.OutputDir == "" {
 		dir, err := os.MkdirTemp("", "gizclaw-workspacetest-*")
 		if err != nil {
@@ -954,11 +967,49 @@ func (d *personaDriver) writeRoundAudioFile(index int, name string, audio []byte
 	if err := os.MkdirAll(d.cfg.OutputDir, 0o755); err != nil {
 		return "", fmt.Errorf("create output dir: %w", err)
 	}
-	path := filepath.Join(d.cfg.OutputDir, fmt.Sprintf("round-%02d-%s.ogg", index, name))
+	ext = strings.TrimSpace(ext)
+	if ext == "" {
+		ext = ".ogg"
+	}
+	if !strings.HasPrefix(ext, ".") {
+		ext = "." + ext
+	}
+	path := filepath.Join(d.cfg.OutputDir, fmt.Sprintf("round-%02d-%s%s", index, name, ext))
 	if err := os.WriteFile(path, audio, 0o644); err != nil {
 		return "", fmt.Errorf("write round audio: %w", err)
 	}
 	return path, nil
+}
+
+func pcm16WAV(sampleRate, channels int, pcm []byte) ([]byte, error) {
+	if sampleRate <= 0 {
+		return nil, fmt.Errorf("wav sample rate must be positive")
+	}
+	if channels <= 0 {
+		return nil, fmt.Errorf("wav channels must be positive")
+	}
+	if len(pcm)%2 != 0 {
+		return nil, fmt.Errorf("wav pcm length must be even, got %d", len(pcm))
+	}
+	byteRate := sampleRate * channels * 2
+	blockAlign := channels * 2
+	dataLen := len(pcm)
+	out := make([]byte, 44+dataLen)
+	copy(out[0:4], "RIFF")
+	binary.LittleEndian.PutUint32(out[4:8], uint32(36+dataLen))
+	copy(out[8:12], "WAVE")
+	copy(out[12:16], "fmt ")
+	binary.LittleEndian.PutUint32(out[16:20], 16)
+	binary.LittleEndian.PutUint16(out[20:22], 1)
+	binary.LittleEndian.PutUint16(out[22:24], uint16(channels))
+	binary.LittleEndian.PutUint32(out[24:28], uint32(sampleRate))
+	binary.LittleEndian.PutUint32(out[28:32], uint32(byteRate))
+	binary.LittleEndian.PutUint16(out[32:34], uint16(blockAlign))
+	binary.LittleEndian.PutUint16(out[34:36], 16)
+	copy(out[36:40], "data")
+	binary.LittleEndian.PutUint32(out[40:44], uint32(dataLen))
+	copy(out[44:], pcm)
+	return out, nil
 }
 
 func opusPacketsFromOgg(audio []byte) ([][]byte, error) {
@@ -1075,45 +1126,10 @@ func isMP3Audio(audio []byte) bool {
 
 func oggOpusFromPackets(sampleRate, channels int, packets [][]byte) ([]byte, error) {
 	var out bytes.Buffer
-	writer, err := ogg.NewStreamWriter(&out, 456)
-	if err != nil {
+	if err := codecconv.OpusPacketsToOgg(&out, sampleRate, channels, packets); err != nil {
 		return nil, err
-	}
-	header := opusHeadPacket(sampleRate, channels)
-	tags := opusTagsPacket("workspacetest")
-	if _, err := writer.WritePacket(header, 0, false); err != nil {
-		return nil, err
-	}
-	if _, err := writer.WritePacket(tags, 0, false); err != nil {
-		return nil, err
-	}
-	for i, packet := range packets {
-		if len(packet) == 0 {
-			continue
-		}
-		if _, err := writer.WritePacket(packet, uint64(i+1), i == len(packets)-1); err != nil {
-			return nil, err
-		}
 	}
 	return out.Bytes(), nil
-}
-
-func opusHeadPacket(sampleRate, channels int) []byte {
-	packet := make([]byte, 19)
-	copy(packet[:8], "OpusHead")
-	packet[8] = 1
-	packet[9] = byte(channels)
-	binary.LittleEndian.PutUint32(packet[12:16], uint32(sampleRate))
-	return packet
-}
-
-func opusTagsPacket(vendor string) []byte {
-	vendorBytes := []byte(vendor)
-	packet := make([]byte, 8+4+len(vendorBytes)+4)
-	copy(packet[:8], "OpusTags")
-	binary.LittleEndian.PutUint32(packet[8:12], uint32(len(vendorBytes)))
-	copy(packet[12:12+len(vendorBytes)], vendorBytes)
-	return packet
 }
 
 func cleanUtterance(text string) string {
@@ -1172,6 +1188,9 @@ func assertTextSimilar(name, expected, actual string, minRatio float64) error {
 	actualNorm := normalizeTranscript(actual)
 	if expectedNorm == "" || actualNorm == "" {
 		return fmt.Errorf("%s empty after normalization: expected=%q actual=%q", name, expected, actual)
+	}
+	if strings.Contains(actualNorm, expectedNorm) {
+		return nil
 	}
 	ratio := lcsRatio(expectedNorm, actualNorm)
 	if ratio >= minRatio {

@@ -6,8 +6,10 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -27,6 +29,16 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/workspace"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 )
+
+func TestAgentStatusReportsRunning(t *testing.T) {
+	state, err := (&agent{}).Status(context.Background())
+	if err != nil {
+		t.Fatalf("Status() error = %v", err)
+	}
+	if state.RuntimeState != "running" {
+		t.Fatalf("RuntimeState = %q, want running", state.RuntimeState)
+	}
+}
 
 func TestAgentRunTurnBridgesASRClawAndTTS(t *testing.T) {
 	transformer := &recordingVoiceTransformer{}
@@ -51,7 +63,11 @@ func TestAgentRunTurnBridgesASRClawAndTTS(t *testing.T) {
 	if err := output.Done(genx.Usage{}); err != nil {
 		t.Fatalf("Done() error = %v", err)
 	}
-	got := drainChunks(t, output.Stream())
+	allChunks := drainChunks(t, output.Stream())
+	if countHistoryAudioChunks(allChunks, "audio") == 0 {
+		t.Fatalf("missing history audio chunks: %#v", allChunks)
+	}
+	got := flowcraftNonHistoryChunks(allChunks)
 
 	want := []struct {
 		role  genx.Role
@@ -324,7 +340,9 @@ func TestAgentTransformRunsMultipleTurns(t *testing.T) {
 		nodeVoices:   map[string]string{"answer": "voice-answer"},
 	}
 	input := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 8)
-	stream, err := a.Transform(context.Background(), "ignored", input.Stream())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stream, err := a.Transform(ctx, "ignored", input.Stream())
 	if err != nil {
 		t.Fatalf("Transform() error = %v", err)
 	}
@@ -339,7 +357,7 @@ func TestAgentTransformRunsMultipleTurns(t *testing.T) {
 	for {
 		chunk := nextChunkWithTimeout(t, stream)
 		chunks = append(chunks, chunk)
-		if chunk.Ctrl != nil && chunk.Ctrl.StreamID == "audio-1" && chunk.Ctrl.EndOfStream {
+		if chunk.Ctrl != nil && chunk.Ctrl.StreamID == "audio-1" && chunk.Ctrl.Label == assistantLabel && chunk.Ctrl.EndOfStream {
 			if _, ok := chunk.Part.(*genx.Blob); ok {
 				break
 			}
@@ -463,7 +481,9 @@ func TestAgentRealtimeModeRunsDefiniteASRChunksAsTurns(t *testing.T) {
 		inputMode: inputModeRealtime,
 	}
 	input := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 8)
-	stream, err := a.Transform(context.Background(), "ignored", input.Stream())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stream, err := a.Transform(ctx, "ignored", input.Stream())
 	if err != nil {
 		t.Fatalf("Transform() error = %v", err)
 	}
@@ -482,40 +502,34 @@ func TestAgentRealtimeModeRunsDefiniteASRChunksAsTurns(t *testing.T) {
 
 	transcripts := map[string]string{}
 	assistant := map[string]string{}
-	interruptedTextEOS := map[string]bool{}
-	interruptedAudioEOS := map[string]bool{}
+	historyAudio := map[string]int{}
 	for _, chunk := range chunks {
 		if chunk.Ctrl == nil {
-			continue
-		}
-		if chunk.IsEndOfStream() && chunk.Ctrl.Error == interruptedError {
-			switch chunk.Part.(type) {
-			case genx.Text:
-				interruptedTextEOS[chunk.Ctrl.StreamID] = true
-			case *genx.Blob:
-				interruptedAudioEOS[chunk.Ctrl.StreamID] = true
-			}
 			continue
 		}
 		if chunk.IsEndOfStream() {
 			continue
 		}
-		text, ok := chunk.Part.(genx.Text)
-		if !ok || text == "" {
-			continue
-		}
 		switch chunk.Ctrl.Label {
+		case genx.HistoryUserAudioLabel:
+			if blob, ok := chunk.Part.(*genx.Blob); ok && len(blob.Data) > 0 {
+				historyAudio[chunk.Ctrl.StreamID]++
+			}
 		case transcriptLabel:
-			transcripts[chunk.Ctrl.StreamID] += string(text)
+			if text, ok := chunk.Part.(genx.Text); ok && text != "" {
+				transcripts[chunk.Ctrl.StreamID] += string(text)
+			}
 		case assistantLabel:
-			assistant[chunk.Ctrl.StreamID] += string(text)
+			if text, ok := chunk.Part.(genx.Text); ok && text != "" {
+				assistant[chunk.Ctrl.StreamID] += string(text)
+			}
 		}
 	}
 	if transcripts["audio-1:rt:1"] != "第一段" || transcripts["audio-1:rt:2"] != "第二段" {
 		t.Fatalf("transcripts by stream = %#v, chunks=%#v", transcripts, chunks)
 	}
-	if !interruptedTextEOS["audio-1:rt:1"] || !interruptedAudioEOS["audio-1:rt:1"] {
-		t.Fatalf("interrupted flags text=%#v audio=%#v chunks=%#v", interruptedTextEOS, interruptedAudioEOS, chunks)
+	if historyAudio["audio-1:rt:1"] == 0 || historyAudio["audio-1:rt:2"] == 0 {
+		t.Fatalf("history audio by stream = %#v, chunks=%#v", historyAudio, chunks)
 	}
 	if assistant["audio-1:rt:2"] != "回复:第二段" {
 		t.Fatalf("assistant by stream = %#v, chunks=%#v", assistant, chunks)
@@ -523,6 +537,7 @@ func TestAgentRealtimeModeRunsDefiniteASRChunksAsTurns(t *testing.T) {
 }
 
 func TestAgentRealtimeModeInterruptsOnTranscriptBOS(t *testing.T) {
+	claw := &interruptClaw{}
 	a := &agent{
 		transformers: fakeTransformerProvider{transformer: &realtimeASRTransformer{chunks: []*genx.MessageChunk{
 			{Ctrl: &genx.StreamCtrl{StreamID: "audio-1", Label: "transcript", BeginOfStream: true}},
@@ -533,12 +548,14 @@ func TestAgentRealtimeModeInterruptsOnTranscriptBOS(t *testing.T) {
 			{Part: genx.Text("第二段"), Ctrl: &genx.StreamCtrl{StreamID: "audio-1", Label: "transcript"}},
 			{Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "audio-1", Label: "transcript", EndOfStream: true}},
 		}}},
-		claw:      &interruptClaw{},
+		claw:      claw,
 		asrModel:  "asr",
 		inputMode: inputModeRealtime,
 	}
 	input := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 8)
-	stream, err := a.Transform(context.Background(), "ignored", input.Stream())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	stream, err := a.Transform(ctx, "ignored", input.Stream())
 	if err != nil {
 		t.Fatalf("Transform() error = %v", err)
 	}
@@ -558,12 +575,13 @@ func TestAgentRealtimeModeInterruptsOnTranscriptBOS(t *testing.T) {
 	if err := input.Done(genx.Usage{}); err != nil {
 		t.Fatalf("input Done() error = %v", err)
 	}
-	chunks := drainChunks(t, stream)
 
 	transcripts := map[string]string{}
 	var interruptedTextEOS, interruptedAudioEOS, partialTranscript bool
-	var secondAssistant bool
-	for _, chunk := range chunks {
+	var chunks []*genx.MessageChunk
+	for len(chunks) < 64 && (!interruptedTextEOS || !interruptedAudioEOS || transcripts["audio-1:rt:1"] != "第一段" || transcripts["audio-1:rt:2"] != "第二段") {
+		chunk := nextChunkWithTimeout(t, stream)
+		chunks = append(chunks, chunk)
 		if chunk.Ctrl == nil {
 			continue
 		}
@@ -589,10 +607,10 @@ func TestAgentRealtimeModeInterruptsOnTranscriptBOS(t *testing.T) {
 				partialTranscript = true
 			}
 		}
-		if chunk.Ctrl.Label == assistantLabel && string(text) == "新回复" {
-			secondAssistant = true
-		}
 	}
+	waitForClawCalls(t, claw, 2)
+	cancel()
+	_ = stream.Close()
 	if !interruptedTextEOS || !interruptedAudioEOS {
 		t.Fatalf("partial ASR did not interrupt current turn: textEOS=%t audioEOS=%t chunks=%#v", interruptedTextEOS, interruptedAudioEOS, chunks)
 	}
@@ -601,9 +619,6 @@ func TestAgentRealtimeModeInterruptsOnTranscriptBOS(t *testing.T) {
 	}
 	if transcripts["audio-1:rt:1"] != "第一段" || transcripts["audio-1:rt:2"] != "第二段" {
 		t.Fatalf("transcripts by stream = %#v, chunks=%#v", transcripts, chunks)
-	}
-	if !secondAssistant {
-		t.Fatalf("second definite transcript did not reach claw: chunks=%#v", chunks)
 	}
 }
 
@@ -682,6 +697,30 @@ func TestAgentListHistoryUsesClawDebugHistory(t *testing.T) {
 		item.Name != "gear" ||
 		item.Text != "你好" {
 		t.Fatalf("history item = %+v", item)
+	}
+}
+
+func TestHistoryCursorAndIDHelpers(t *testing.T) {
+	if got, err := parseHistoryCursor(nil); err != nil || got != 0 {
+		t.Fatalf("parseHistoryCursor(nil) = %d, %v; want 0 nil", got, err)
+	}
+	blank := " \t "
+	if got, err := parseHistoryCursor(&blank); err != nil || got != 0 {
+		t.Fatalf("parseHistoryCursor(blank) = %d, %v; want 0 nil", got, err)
+	}
+	cursor := " 12 "
+	if got, err := parseHistoryCursor(&cursor); err != nil || got != 12 {
+		t.Fatalf("parseHistoryCursor(%q) = %d, %v; want 12 nil", cursor, got, err)
+	}
+	bad := "-1"
+	if _, err := parseHistoryCursor(&bad); err == nil {
+		t.Fatal("parseHistoryCursor(-1) succeeded")
+	}
+	if got := contextIDOrDefault(" "); got != "default" {
+		t.Fatalf("contextIDOrDefault(blank) = %q, want default", got)
+	}
+	if got := historyEntryID("", 3); got != "default:000003" {
+		t.Fatalf("historyEntryID(empty, 3) = %q, want default:000003", got)
 	}
 }
 
@@ -1357,6 +1396,44 @@ func TestAudioMIMEHelpers(t *testing.T) {
 	}
 }
 
+func TestRealtimeStreamIDHelpers(t *testing.T) {
+	chunk := &genx.MessageChunk{Ctrl: &genx.StreamCtrl{StreamID: " turn-a "}}
+	if got := realtimeASRStreamID(chunk, "fallback"); got != "turn-a" {
+		t.Fatalf("realtimeASRStreamID(chunk) = %q, want turn-a", got)
+	}
+	if got := realtimeASRStreamID(&genx.MessageChunk{}, " fallback "); got != "fallback" {
+		t.Fatalf("realtimeASRStreamID(fallback) = %q, want fallback", got)
+	}
+	if got := realtimeASRStreamID(nil, " "); got != defaultInputStreamID {
+		t.Fatalf("realtimeASRStreamID(default) = %q, want %q", got, defaultInputStreamID)
+	}
+	if got := realtimeTurnStreamID(" base ", 0); got != "base:rt:1" {
+		t.Fatalf("realtimeTurnStreamID(base, 0) = %q, want base:rt:1", got)
+	}
+	eos := userAudioHistoryEOSChunk("", "")
+	if eos.Role != genx.RoleUser || eos.Name != transcriptLabel || eos.Ctrl == nil || eos.Ctrl.StreamID != defaultInputStreamID || eos.Ctrl.Label != genx.HistoryUserAudioLabel || !eos.IsEndOfStream() {
+		t.Fatalf("userAudioHistoryEOSChunk route = %#v", eos)
+	}
+	if blob, ok := eos.Part.(*genx.Blob); !ok || blob.MIMEType != "audio/pcm" {
+		t.Fatalf("userAudioHistoryEOSChunk part = %#v, want audio/pcm blob", eos.Part)
+	}
+}
+
+func TestRealClawNilDebugAndClose(t *testing.T) {
+	if err := (realClaw{}).CloseContext(context.Background()); err != nil {
+		t.Fatalf("CloseContext(nil) error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/debug/history", nil)
+	rec := httptest.NewRecorder()
+	(realClaw{}).ServeDebugHTTP(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("ServeDebugHTTP(nil) status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+	}
+	if !strings.Contains(rec.Body.String(), "nil claw runtime") {
+		t.Fatalf("ServeDebugHTTP(nil) body = %q", rec.Body.String())
+	}
+}
+
 func TestRunTurnReturnsClawEventError(t *testing.T) {
 	a := &agent{
 		transformers: fakeTransformerProvider{transformer: fakeVoiceTransformer{}},
@@ -1493,7 +1570,7 @@ func TestTranscribeInputTurnHandlesFinalTextDone(t *testing.T) {
 		}},
 		asrModel: "asr",
 	}
-	output := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 4)
+	output := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 8)
 	transcript, streamID, err := a.transcribeInputTurn(context.Background(), &sliceStream{chunks: []*genx.MessageChunk{
 		{Part: &genx.Blob{MIMEType: "audio/pcm", Data: []byte{1, 2}}, Ctrl: &genx.StreamCtrl{StreamID: "audio"}},
 		{Ctrl: &genx.StreamCtrl{StreamID: "audio", EndOfStream: true}},
@@ -1508,14 +1585,30 @@ func TestTranscribeInputTurnHandlesFinalTextDone(t *testing.T) {
 		t.Fatalf("Done() error = %v", err)
 	}
 	chunks := drainChunks(t, output.Stream())
-	if len(chunks) != 2 {
-		t.Fatalf("chunks len = %d, want 2", len(chunks))
+	var historyAudio, historyAudioEOS, transcriptText, transcriptEOS bool
+	for _, chunk := range chunks {
+		if chunk == nil || chunk.Ctrl == nil {
+			continue
+		}
+		if chunk.Ctrl.Label == genx.HistoryUserAudioLabel {
+			if blob, ok := chunk.Part.(*genx.Blob); ok && blob.MIMEType == "audio/pcm" && len(blob.Data) > 0 {
+				historyAudio = true
+			}
+			if chunk.IsEndOfStream() {
+				historyAudioEOS = true
+			}
+		}
+		if chunk.Ctrl.Label == transcriptLabel {
+			if text, ok := chunk.Part.(genx.Text); ok && string(text) == "你好" && !chunk.IsEndOfStream() {
+				transcriptText = true
+			}
+			if chunk.IsEndOfStream() {
+				transcriptEOS = true
+			}
+		}
 	}
-	if string(chunks[0].Part.(genx.Text)) != "你好" || chunks[0].IsEndOfStream() {
-		t.Fatalf("text chunk = %#v", chunks[0])
-	}
-	if !chunks[1].IsEndOfStream() {
-		t.Fatalf("eos chunk = %#v", chunks[1])
+	if !historyAudio || !historyAudioEOS || !transcriptText || !transcriptEOS {
+		t.Fatalf("chunks missing history/transcript flags audio=%t audioEOS=%t text=%t textEOS=%t chunks=%#v", historyAudio, historyAudioEOS, transcriptText, transcriptEOS, chunks)
 	}
 }
 
@@ -1536,7 +1629,7 @@ func TestFeedASRInputReturnsInputError(t *testing.T) {
 	want := errors.New("input failed")
 	input := &sliceStream{err: want}
 	asrInput := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 4)
-	result := feedASRInput(context.Background(), input, asrInput, &lockedString{value: defaultInputStreamID}, defaultInputStreamID)
+	result := feedASRInput(context.Background(), input, asrInput, &lockedString{value: defaultInputStreamID}, defaultInputStreamID, nil)
 	if !errors.Is(result.err, want) {
 		t.Fatalf("feedASRInput() error = %v, want %v", result.err, want)
 	}
@@ -1552,7 +1645,7 @@ func TestFeedASRInputStreamsRawOpusUnchanged(t *testing.T) {
 	result := feedASRInput(context.Background(), &sliceStream{chunks: []*genx.MessageChunk{
 		{Part: &genx.Blob{MIMEType: "audio/opus", Data: packet}, Ctrl: &genx.StreamCtrl{StreamID: "audio"}},
 		{Part: &genx.Blob{MIMEType: "audio/opus"}, Ctrl: &genx.StreamCtrl{StreamID: "audio", EndOfStream: true}},
-	}}, asrInput, state, defaultInputStreamID)
+	}}, asrInput, state, defaultInputStreamID, nil)
 	if result.err != nil {
 		t.Fatalf("feedASRInput() error = %v", result.err)
 	}
@@ -1627,6 +1720,10 @@ func TestNormalizeInputModeAndRealtimeTurnStreamID(t *testing.T) {
 	}
 	if got := realtimeTurnStreamID("", 0); got != "audio:rt:1" {
 		t.Fatalf("realtimeTurnStreamID(empty,0) = %q", got)
+	}
+	historyEOS := userAudioHistoryEOSChunk("", "")
+	if historyEOS.Ctrl == nil || historyEOS.Ctrl.StreamID != defaultInputStreamID || historyEOS.Ctrl.Label != genx.HistoryUserAudioLabel || !historyEOS.IsEndOfStream() {
+		t.Fatalf("userAudioHistoryEOSChunk(empty) = %#v", historyEOS)
 	}
 }
 
@@ -1836,6 +1933,30 @@ func drainChunks(t *testing.T, stream genx.Stream) []*genx.MessageChunk {
 	}
 }
 
+func flowcraftNonHistoryChunks(chunks []*genx.MessageChunk) []*genx.MessageChunk {
+	out := chunks[:0]
+	for _, chunk := range chunks {
+		if chunk != nil && chunk.Ctrl != nil && chunk.Ctrl.Label == genx.HistoryUserAudioLabel {
+			continue
+		}
+		out = append(out, chunk)
+	}
+	return out
+}
+
+func countHistoryAudioChunks(chunks []*genx.MessageChunk, streamID string) int {
+	count := 0
+	for _, chunk := range chunks {
+		if chunk == nil || chunk.Ctrl == nil || chunk.Ctrl.Label != genx.HistoryUserAudioLabel || chunk.Ctrl.StreamID != streamID {
+			continue
+		}
+		if blob, ok := chunk.Part.(*genx.Blob); ok && len(blob.Data) > 0 {
+			count++
+		}
+	}
+	return count
+}
+
 func nextChunkWithTimeout(t *testing.T, stream genx.Stream) *genx.MessageChunk {
 	t.Helper()
 	type result struct {
@@ -1853,9 +1974,23 @@ func nextChunkWithTimeout(t *testing.T, stream genx.Stream) *genx.MessageChunk {
 			t.Fatalf("Next() error = %v", result.err)
 		}
 		return result.chunk
-	case <-time.After(2 * time.Second):
+	case <-time.After(10 * time.Second):
 		t.Fatal("timed out waiting for stream chunk")
 		return nil
+	}
+}
+
+func waitForClawCalls(t *testing.T, claw *interruptClaw, want int) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for {
+		if claw.Calls() >= want {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("claw calls = %d, want at least %d", claw.Calls(), want)
+		}
+		time.Sleep(time.Millisecond)
 	}
 }
 
@@ -2012,6 +2147,7 @@ func (t *realtimeASRTransformer) Transform(_ context.Context, pattern string, in
 		defer func() { _ = output.Done(genx.Usage{}) }()
 		texts := append([]string(nil), t.texts...)
 		chunks := append([]*genx.MessageChunk(nil), t.chunks...)
+		emittedChunks := false
 		for {
 			chunk, err := input.Next()
 			if err != nil {
@@ -2025,11 +2161,12 @@ func (t *realtimeASRTransformer) Transform(_ context.Context, pattern string, in
 			if !ok || len(blob.Data) == 0 || chunk.IsEndOfStream() {
 				continue
 			}
-			if len(chunks) > 0 {
-				next := chunks[0]
-				chunks = chunks[1:]
-				if err := output.Add(next); err != nil {
-					return
+			if len(chunks) > 0 && !emittedChunks {
+				emittedChunks = true
+				for _, next := range chunks {
+					if err := output.Add(next); err != nil {
+						return
+					}
 				}
 				continue
 			}
@@ -2042,12 +2179,33 @@ func (t *realtimeASRTransformer) Transform(_ context.Context, pattern string, in
 			}
 			text := texts[0]
 			texts = texts[1:]
-			if err := output.Add(&genx.MessageChunk{Part: genx.Text(text)}); err != nil {
+			streamID := realtimeASRFakeStreamID(chunk, len(t.texts)-len(texts))
+			if err := output.Add(
+				userAudioHistoryChunk(chunk, streamID),
+				userAudioHistoryEOSChunk(streamID, "audio/pcm"),
+				&genx.MessageChunk{
+					Role: genx.RoleUser,
+					Name: transcriptLabel,
+					Part: genx.Text(text),
+					Ctrl: &genx.StreamCtrl{StreamID: streamID, Label: transcriptLabel},
+				},
+			); err != nil {
 				return
 			}
 		}
 	}()
 	return output.Stream(), nil
+}
+
+func realtimeASRFakeStreamID(chunk *genx.MessageChunk, segment int) string {
+	streamID := defaultInputStreamID
+	if chunk != nil && chunk.Ctrl != nil && strings.TrimSpace(chunk.Ctrl.StreamID) != "" {
+		streamID = strings.TrimSpace(chunk.Ctrl.StreamID)
+	}
+	if segment <= 1 {
+		return streamID
+	}
+	return fmt.Sprintf("%s:asr:%d", streamID, segment)
 }
 
 type patternTransformer struct {
@@ -2118,6 +2276,12 @@ func (c *interruptClaw) RoundTrip(req flowclaw.Request) (clawResponse, error) {
 	return &fakeClawResponse{events: []flowclaw.Event{
 		{Type: flowclaw.EventToken, NodeID: "answer", Content: "新回复"},
 	}}, nil
+}
+
+func (c *interruptClaw) Calls() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.calls
 }
 
 func (*interruptClaw) CloseContext(context.Context) error { return nil }

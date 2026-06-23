@@ -85,7 +85,7 @@ func TestFactoryRejectsInvalidSpec(t *testing.T) {
 	}
 }
 
-func TestAgentTransformDrainsInputWithoutOutput(t *testing.T) {
+func TestAgentTransformForwardsTextInputAsTranscript(t *testing.T) {
 	agent, err := (Factory{}).NewAgent(context.Background(), agenthost.Spec{
 		Workflow: validWorkflow(),
 	})
@@ -96,6 +96,50 @@ func TestAgentTransformDrainsInputWithoutOutput(t *testing.T) {
 		chunks: []*genx.MessageChunk{
 			{Role: genx.RoleUser, Part: genx.Text("hello")},
 			genx.NewTextEndOfStream(),
+		},
+		doneErr: genx.ErrDone,
+	}
+	output, err := agent.Transform(context.Background(), "demo", input)
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	defer output.Close()
+	chunk, err := output.Next()
+	if err != nil {
+		t.Fatalf("output.Next() text error = %v", err)
+	}
+	if chunk.Role != genx.RoleUser || chunk.Name != transcriptLabel || chunk.Ctrl == nil || chunk.Ctrl.Label != transcriptLabel || chunk.Ctrl.StreamID != defaultInputStreamID || chunk.Part != genx.Text("hello") || chunk.IsEndOfStream() {
+		t.Fatalf("text chunk = %#v", chunk)
+	}
+	chunk, err = output.Next()
+	if err != nil {
+		t.Fatalf("output.Next() eos error = %v", err)
+	}
+	if chunk.Role != genx.RoleUser || chunk.Name != transcriptLabel || chunk.Ctrl == nil || chunk.Ctrl.Label != transcriptLabel || chunk.Ctrl.StreamID != defaultInputStreamID || !chunk.IsEndOfStream() {
+		t.Fatalf("text EOS = %#v", chunk)
+	}
+	if chunk, err := output.Next(); !errors.Is(err, genx.ErrDone) || chunk != nil {
+		t.Fatalf("output.Next() = %#v, %v; want ErrDone", chunk, err)
+	}
+	if !input.waitClosed(100 * time.Millisecond) {
+		t.Fatal("input stream was not closed")
+	}
+	if input.nexts != 3 {
+		t.Fatalf("input Next calls = %d, want 3", input.nexts)
+	}
+}
+
+func TestAgentTransformDrainsAudioInputWhenTranscriptDisabled(t *testing.T) {
+	agent, err := (Factory{}).NewAgent(context.Background(), agenthost.Spec{
+		Workflow: validWorkflow(),
+	})
+	if err != nil {
+		t.Fatalf("NewAgent() error = %v", err)
+	}
+	input := &recordingStream{
+		chunks: []*genx.MessageChunk{
+			{Role: genx.RoleUser, Part: &genx.Blob{MIMEType: "audio/opus", Data: []byte{1, 2, 3}}, Ctrl: &genx.StreamCtrl{StreamID: "audio"}},
+			{Role: genx.RoleUser, Part: &genx.Blob{MIMEType: "audio/opus"}, Ctrl: &genx.StreamCtrl{StreamID: "audio", EndOfStream: true}},
 		},
 		doneErr: genx.ErrDone,
 	}
@@ -189,7 +233,7 @@ func TestWorkspaceTranscriptOverrideModel(t *testing.T) {
 	}
 }
 
-func TestAgentTransformTranscriptIgnoresTextOnlyInput(t *testing.T) {
+func TestAgentTransformTranscriptForwardsTextOnlyInput(t *testing.T) {
 	transformer := &scriptedASRTransformer{text: "unused"}
 	agent, err := (Factory{Transformer: transformer}).NewAgent(context.Background(), agenthost.Spec{
 		Workflow: validWorkflowWithTranscript("asr", true),
@@ -208,6 +252,21 @@ func TestAgentTransformTranscriptIgnoresTextOnlyInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Transform() error = %v", err)
 	}
+	defer output.Close()
+	chunk, err := output.Next()
+	if err != nil {
+		t.Fatalf("output.Next() text error = %v", err)
+	}
+	if chunk.Role != genx.RoleUser || chunk.Name != transcriptLabel || chunk.Ctrl == nil || chunk.Ctrl.Label != transcriptLabel || chunk.Ctrl.StreamID != defaultInputStreamID || chunk.Part != genx.Text("hello") || chunk.IsEndOfStream() {
+		t.Fatalf("text chunk = %#v", chunk)
+	}
+	chunk, err = output.Next()
+	if err != nil {
+		t.Fatalf("output.Next() eos error = %v", err)
+	}
+	if chunk.Role != genx.RoleUser || chunk.Name != transcriptLabel || chunk.Ctrl == nil || chunk.Ctrl.Label != transcriptLabel || chunk.Ctrl.StreamID != defaultInputStreamID || !chunk.IsEndOfStream() {
+		t.Fatalf("text EOS = %#v", chunk)
+	}
 	if chunk, err := output.Next(); !isStreamDone(err) || chunk != nil {
 		t.Fatalf("output.Next() = %#v, %v; want done", chunk, err)
 	}
@@ -216,6 +275,52 @@ func TestAgentTransformTranscriptIgnoresTextOnlyInput(t *testing.T) {
 	}
 	if !input.waitClosed(100 * time.Millisecond) {
 		t.Fatal("input stream was not closed")
+	}
+}
+
+func TestAgentTransformTranscriptClosesMultipleTextStreams(t *testing.T) {
+	transformer := &scriptedASRTransformer{text: "unused"}
+	agent, err := (Factory{Transformer: transformer}).NewAgent(context.Background(), agenthost.Spec{
+		Workflow: validWorkflowWithTranscript("asr", true),
+	})
+	if err != nil {
+		t.Fatalf("NewAgent() error = %v", err)
+	}
+	input := &recordingStream{
+		chunks: []*genx.MessageChunk{
+			{Role: genx.RoleUser, Name: "transcript", Part: genx.Text("one"), Ctrl: &genx.StreamCtrl{StreamID: "text-1", Label: "transcript"}},
+			{Role: genx.RoleUser, Name: "transcript", Part: genx.Text(""), Ctrl: &genx.StreamCtrl{StreamID: "text-1", Label: "transcript", EndOfStream: true}},
+			{Role: genx.RoleUser, Name: "transcript", Part: genx.Text("two"), Ctrl: &genx.StreamCtrl{StreamID: "text-2", Label: "transcript"}},
+		},
+		doneErr: genx.ErrDone,
+	}
+	output, err := agent.Transform(context.Background(), "demo", input)
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	defer output.Close()
+	chunks := drainOutput(t, output)
+	if transformer.pattern != "" {
+		t.Fatalf("ASR pattern = %q, want no ASR call", transformer.pattern)
+	}
+	if len(chunks) != 4 {
+		t.Fatalf("chunks len = %d, want 4: %#v", len(chunks), chunks)
+	}
+	want := []struct {
+		streamID string
+		text     genx.Text
+		eos      bool
+	}{
+		{streamID: "text-1", text: "one"},
+		{streamID: "text-1", eos: true},
+		{streamID: "text-2", text: "two"},
+		{streamID: "text-2", eos: true},
+	}
+	for i, tc := range want {
+		chunk := chunks[i]
+		if chunk.Role != genx.RoleUser || chunk.Name != transcriptLabel || chunk.Ctrl == nil || chunk.Ctrl.Label != transcriptLabel || chunk.Ctrl.StreamID != tc.streamID || chunk.IsEndOfStream() != tc.eos || chunk.Part != tc.text {
+			t.Fatalf("chunk[%d] = %#v, want stream=%q text=%q eos=%t", i, chunk, tc.streamID, tc.text, tc.eos)
+		}
 	}
 }
 
@@ -289,14 +394,76 @@ func TestAgentTransformTranscribesAudioInput(t *testing.T) {
 	if len(transformer.audio) != 1 || string(transformer.audio[0]) != string([]byte{1, 2, 3}) {
 		t.Fatalf("ASR audio = %#v", transformer.audio)
 	}
-	if len(chunks) != 2 {
-		t.Fatalf("output chunks = %#v, want transcript text and EOS", chunks)
+	var historyAudio, historyAudioEOS, transcriptText, transcriptEOS bool
+	for _, chunk := range chunks {
+		if chunk == nil || chunk.Ctrl == nil {
+			continue
+		}
+		if chunk.Role != genx.RoleUser || chunk.Name != transcriptLabel || chunk.Ctrl.StreamID != "turn-a" {
+			t.Fatalf("unexpected output chunk route = %#v", chunk)
+		}
+		switch chunk.Ctrl.Label {
+		case genx.HistoryUserAudioLabel:
+			if blob, ok := chunk.Part.(*genx.Blob); ok && blob.MIMEType == "audio/opus" && len(blob.Data) > 0 {
+				historyAudio = true
+			}
+			if chunk.IsEndOfStream() {
+				historyAudioEOS = true
+			}
+		case transcriptLabel:
+			if text, ok := chunk.Part.(genx.Text); ok && text == "hello" && !chunk.IsEndOfStream() {
+				transcriptText = true
+			}
+			if chunk.IsEndOfStream() {
+				transcriptEOS = true
+			}
+		default:
+			t.Fatalf("unexpected output label = %#v", chunk)
+		}
 	}
-	if chunks[0].Role != genx.RoleUser || chunks[0].Name != transcriptLabel || chunks[0].Ctrl == nil || chunks[0].Ctrl.Label != transcriptLabel || chunks[0].Ctrl.StreamID != "turn-a" || chunks[0].Part != genx.Text("hello") {
-		t.Fatalf("transcript chunk = %#v", chunks[0])
+	if !historyAudio || !historyAudioEOS || !transcriptText || !transcriptEOS {
+		t.Fatalf("output chunks missing flags audio=%t audioEOS=%t transcript=%t transcriptEOS=%t chunks=%#v", historyAudio, historyAudioEOS, transcriptText, transcriptEOS, chunks)
 	}
-	if !chunks[1].IsEndOfStream() || chunks[1].Role != genx.RoleUser || chunks[1].Ctrl == nil || chunks[1].Ctrl.StreamID != "turn-a" {
-		t.Fatalf("transcript EOS = %#v", chunks[1])
+	if !input.waitClosed(100 * time.Millisecond) {
+		t.Fatal("input stream was not closed")
+	}
+}
+
+func TestAgentTransformTranscribesAudioInputAddsHistoryEOSOnInputDone(t *testing.T) {
+	transformer := &scriptedASRTransformer{text: "hello"}
+	agent, err := (Factory{Transformer: transformer}).NewAgent(context.Background(), agenthost.Spec{
+		Workflow: validWorkflowWithTranscript("asr", true),
+	})
+	if err != nil {
+		t.Fatalf("NewAgent() error = %v", err)
+	}
+	input := &recordingStream{
+		chunks: []*genx.MessageChunk{
+			{Role: genx.RoleUser, Part: &genx.Blob{MIMEType: " audio/ogg ; codecs=opus ", Data: []byte{1, 2, 3}}, Ctrl: &genx.StreamCtrl{StreamID: "turn-a", Label: "input"}},
+		},
+		doneErr: genx.ErrDone,
+	}
+	output, err := agent.Transform(context.Background(), "demo", input)
+	if err != nil {
+		t.Fatalf("Transform() error = %v", err)
+	}
+	chunks := drainOutput(t, output)
+	var historyEOS *genx.MessageChunk
+	for _, chunk := range chunks {
+		if chunk != nil && chunk.Ctrl != nil && chunk.Ctrl.Label == genx.HistoryUserAudioLabel && chunk.IsEndOfStream() {
+			historyEOS = chunk
+			break
+		}
+	}
+	if historyEOS == nil {
+		t.Fatalf("history audio EOS missing: %#v", chunks)
+	}
+	blob, ok := historyEOS.Part.(*genx.Blob)
+	if !ok || blob.MIMEType != " audio/ogg ; codecs=opus " || len(blob.Data) != 0 {
+		t.Fatalf("history audio EOS part = %#v, want empty original MIME blob", historyEOS.Part)
+	}
+	if historyEOS.Role != genx.RoleUser || historyEOS.Name != transcriptLabel || historyEOS.Ctrl.StreamID != "turn-a" {
+		t.Fatalf("history audio EOS route = %#v", historyEOS)
 	}
 	if !input.waitClosed(100 * time.Millisecond) {
 		t.Fatal("input stream was not closed")
@@ -319,6 +486,32 @@ func TestChunkHelpers(t *testing.T) {
 	}
 	if got := baseMIME(" Audio/OGG ; codecs=opus "); got != "audio/ogg" {
 		t.Fatalf("baseMIME = %q, want audio/ogg", got)
+	}
+	eos := historyAudioEOSChunk("", "")
+	if eos.Role != genx.RoleUser || eos.Name != transcriptLabel || eos.Ctrl == nil || eos.Ctrl.StreamID != defaultInputStreamID || eos.Ctrl.Label != genx.HistoryUserAudioLabel || !eos.IsEndOfStream() {
+		t.Fatalf("historyAudioEOSChunk default route = %#v", eos)
+	}
+	if blob, ok := eos.Part.(*genx.Blob); !ok || blob.MIMEType != "audio/opus" {
+		t.Fatalf("historyAudioEOSChunk default part = %#v, want audio/opus blob", eos.Part)
+	}
+}
+
+func TestReadTranscriptReportsASRReadError(t *testing.T) {
+	want := errors.New("asr read failed")
+	output := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 2)
+	err := readTranscript(context.Background(), &recordingStream{doneErr: want}, output, &lockedString{value: "turn-a"})
+	if err == nil || !strings.Contains(err.Error(), "read ASR") || !errors.Is(err, want) {
+		t.Fatalf("readTranscript() error = %v, want wrapped ASR error", err)
+	}
+}
+
+func TestReadTranscriptHonorsContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	output := genx.NewStreamBuilder((&genx.ModelContextBuilder{}).Build(), 2)
+	err := readTranscript(ctx, &recordingStream{}, output, &lockedString{value: "turn-a"})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("readTranscript(canceled) error = %v, want context.Canceled", err)
 	}
 }
 
