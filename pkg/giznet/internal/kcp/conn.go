@@ -220,7 +220,7 @@ func NewKCPConn(conv uint32, output func([]byte)) *KCPConn {
 	session.SetNoDelay(kcpNoDelay, kcpUpdateIntervalMs, kcpFastResend, kcpNoCongestionControl)
 	session.SetWindowSize(kcpSendWindow, kcpRecvWindow)
 	session.SetMtu(kcpMTU)
-	session.SetACKNoDelay(false)
+	session.SetACKNoDelay(true)
 	session.SetWriteDelay(false)
 
 	c := &KCPConn{
@@ -423,8 +423,8 @@ const (
 	kcpUpdateIntervalMs    = 10
 	kcpFastResend          = 2
 	kcpNoCongestionControl = 0
-	kcpSendWindow          = 512
-	kcpRecvWindow          = 512
+	kcpSendWindow          = 64
+	kcpRecvWindow          = 64
 )
 
 const kcpDefaultIdleTimeout = 5 * time.Minute
