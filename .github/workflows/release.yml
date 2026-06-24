@@ -11,12 +11,20 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  linux-amd64:
-    name: Linux amd64 Release Binary
-    runs-on: ubuntu-24.04
+  linux:
+    name: Linux ${{ matrix.arch }} Release Binary
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     permissions:
-      contents: write
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -26,44 +34,121 @@ jobs:
       - name: Ensure Git LFS assets are available
         run: git lfs pull
 
-      - name: Build gizclaw Linux amd64 binary
-        run: ./build/build-linux-amd64.sh
+      - name: Build gizclaw Linux ${{ matrix.arch }} binary
+        env:
+          PLATFORM: linux/${{ matrix.arch }}
+        run: ./build/build-linux.sh
 
       - name: Verify release binary on Ubuntu 24.04
         run: |
-          file .tmp/deploy/gizclaw-linux-amd64
-          docker run --rm --platform linux/amd64 \
+          file .tmp/deploy/gizclaw-linux-${{ matrix.arch }}
+          docker run --rm --platform linux/${{ matrix.arch }} \
             -v "$PWD/.tmp/deploy:/out:ro" \
             ubuntu:24.04 \
-            sh -lc 'ldd /out/gizclaw-linux-amd64 && /out/gizclaw-linux-amd64 --help >/dev/null'
+            sh -lc 'ldd /out/gizclaw-linux-${{ matrix.arch }} && /out/gizclaw-linux-${{ matrix.arch }} --help >/dev/null'
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gizclaw-linux-amd64
-          path: .tmp/deploy/gizclaw-linux-amd64
+          name: gizclaw-linux-${{ matrix.arch }}
+          path: .tmp/deploy/gizclaw-linux-${{ matrix.arch }}
           if-no-files-found: error
 
+  darwin:
+    name: Darwin arm64 Release Binary
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Ensure Git LFS assets are available
+        run: git lfs pull
+
+      - name: Verify arm64 macOS runner
+        run: test "$(uname -m)" = "arm64"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install UI dependencies
+        run: |
+          npm ci
+          npm ci --prefix cmd/ui
+
+      - name: Generate UI assets
+        run: go generate ./cmd/ui/admin ./cmd/ui/play
+
+      - name: Build gizclaw Darwin arm64 binary
+        env:
+          CGO_ENABLED: "1"
+          GOOS: darwin
+          GOARCH: arm64
+        run: |
+          mkdir -p .tmp/deploy
+          go build -trimpath -o .tmp/deploy/gizclaw-darwin-arm64 ./cmd/gizclaw
+
+      - name: Verify release binary on macOS
+        run: |
+          file .tmp/deploy/gizclaw-darwin-arm64
+          .tmp/deploy/gizclaw-darwin-arm64 --help >/dev/null
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gizclaw-darwin-arm64
+          path: .tmp/deploy/gizclaw-darwin-arm64
+          if-no-files-found: error
+
+  publish:
+    name: Publish Release
+    needs:
+      - linux
+      - darwin
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: .tmp/release
+
       - name: Publish GitHub Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           short_sha="${GITHUB_SHA::7}"
           tag="main-build-${GITHUB_RUN_NUMBER}-${short_sha}"
-          asset=".tmp/deploy/gizclaw-linux-amd64"
-          asset_name="gizclaw-linux-amd64"
-          gh release create "$tag" "$asset#$asset_name" \
-            --target "$GITHUB_SHA" \
-            --title "main build ${short_sha}" \
-            --notes "Automated release for ${GITHUB_SHA}."
+          assets=(
+            ".tmp/release/gizclaw-linux-amd64/gizclaw-linux-amd64#gizclaw-linux-amd64" \
+            ".tmp/release/gizclaw-linux-arm64/gizclaw-linux-arm64#gizclaw-linux-arm64" \
+            ".tmp/release/gizclaw-darwin-arm64/gizclaw-darwin-arm64#gizclaw-darwin-arm64"
+          )
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${assets[@]}" --clobber
+          else
+            gh release create "$tag" "${assets[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "main build ${short_sha}" \
+              --notes "Automated release for ${GITHUB_SHA}."
+          fi
 
       - name: Prune old automated releases
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          retain=10
+          retain=20
           mapfile -t old_tags < <(
             gh release list --limit 100 --order desc --json tagName \
               --jq '.[] | select(.tagName | startswith("main-build-")) | .tagName' \

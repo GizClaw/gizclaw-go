@@ -9,19 +9,30 @@ fi
 
 flavor="${1:-}"
 platform="${PLATFORM:-linux/amd64}"
-image="${IMAGE:-gizclaw-go:linux-amd64-build}"
-output="${OUTPUT:-${repo_root}/.tmp/deploy/gizclaw-linux-amd64}"
+case "$platform" in
+  linux/amd64 | linux/arm64) ;;
+  *)
+    echo "unsupported PLATFORM: $platform" >&2
+    exit 2
+    ;;
+esac
+
+target_os="${platform%%/*}"
+target_arch="${platform##*/}"
+platform_slug="${target_os}-${target_arch}"
+image="${IMAGE:-gizclaw-go:${platform_slug}-build}"
+output="${OUTPUT:-${repo_root}/.tmp/deploy/gizclaw-${platform_slug}}"
 
 export DOCKER_BUILDKIT="${DOCKER_BUILDKIT:-1}"
 
 case "$flavor" in
   "")
     base_dockerfile="$repo_root/build/Dockerfile.base"
-    base_image="${BASE_IMAGE:-gizclaw-go:linux-amd64-base}"
+    base_image="${BASE_IMAGE:-gizclaw-go:${platform_slug}-base}"
     ;;
   cn)
     base_dockerfile="$repo_root/build/Dockerfile.cn.base"
-    base_image="${BASE_IMAGE:-gizclaw-go:linux-amd64-cn-base}"
+    base_image="${BASE_IMAGE:-gizclaw-go:${platform_slug}-cn-base}"
     ;;
   *)
     echo "usage: $0 [cn]" >&2
@@ -40,6 +51,8 @@ docker build \
 docker build \
   --platform "$platform" \
   --build-arg BASE_IMAGE="$base_image" \
+  --build-arg TARGETOS="$target_os" \
+  --build-arg TARGETARCH="$target_arch" \
   --target artifact \
   -f "$repo_root/build/Dockerfile" \
   -t "$image" \
