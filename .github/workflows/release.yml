@@ -126,6 +126,7 @@ jobs:
       - name: Publish GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           short_sha="${GITHUB_SHA::7}"
           tag="main-build-${GITHUB_RUN_NUMBER}-${short_sha}"
@@ -147,6 +148,7 @@ jobs:
       - name: Prune old automated releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
           retain=20
           mapfile -t old_tags < <(
