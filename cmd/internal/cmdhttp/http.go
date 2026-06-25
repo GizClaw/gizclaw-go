@@ -25,7 +25,10 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 )
 
-const uiAPIProxyTimeout = 30 * time.Second
+const (
+	uiAPIProxyTimeout       = 5 * time.Second
+	playWorkspaceRPCTimeout = 30 * time.Second
+)
 
 var playOpenAIHTTPClient = func(c *gizcli.Client) *http.Client {
 	return c.HTTPClient(gizcli.ServiceOpenAI)
@@ -945,7 +948,7 @@ func playWorkspaceRPCContext(r *http.Request) (context.Context, context.CancelFu
 	if _, ok := ctx.Deadline(); ok {
 		return ctx, func() {}
 	}
-	return context.WithTimeout(ctx, uiAPIProxyTimeout)
+	return context.WithTimeout(ctx, playWorkspaceRPCTimeout)
 }
 
 func playWorkspaceHTTPError(w http.ResponseWriter, status int, message string) {

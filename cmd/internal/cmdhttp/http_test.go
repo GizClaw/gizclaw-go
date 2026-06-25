@@ -405,6 +405,32 @@ func TestUIAPIProxySetUsesExistingClient(t *testing.T) {
 	}
 }
 
+func TestUIAPIProxyDefaultTimeoutStaysShorterThanPlayWorkspaceRPC(t *testing.T) {
+	proxy := newUIAPIProxy(func() (uiAPIProxyClient, error) {
+		t.Fatal("timeout check should not dial")
+		return nil, errors.New("unexpected dial")
+	}, 0)
+	if proxy.timeout != uiAPIProxyTimeout {
+		t.Fatalf("proxy timeout = %v, want %v", proxy.timeout, uiAPIProxyTimeout)
+	}
+	if uiAPIProxyTimeout >= playWorkspaceRPCTimeout {
+		t.Fatalf("ui proxy timeout = %v should stay shorter than play workspace RPC timeout = %v", uiAPIProxyTimeout, playWorkspaceRPCTimeout)
+	}
+}
+
+func TestPlayWorkspaceRPCContextUsesWorkspaceTimeout(t *testing.T) {
+	ctx, cancel := playWorkspaceRPCContext(httptest.NewRequest(http.MethodGet, "/peer-run/workspace", nil))
+	defer cancel()
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		t.Fatal("play workspace RPC context has no deadline")
+	}
+	remaining := time.Until(deadline)
+	if remaining < playWorkspaceRPCTimeout-time.Second || remaining > playWorkspaceRPCTimeout {
+		t.Fatalf("play workspace RPC timeout remaining = %v, want about %v", remaining, playWorkspaceRPCTimeout)
+	}
+}
+
 func TestUIAPIProxyInvalidatesCanceledClient(t *testing.T) {
 	fake := &fakeUIAPIProxyClient{
 		handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
