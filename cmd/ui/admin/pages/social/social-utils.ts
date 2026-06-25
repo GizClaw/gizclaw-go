@@ -14,6 +14,10 @@ export function friendDetailPath(friend: AdminFriendObject): string {
   return `/social/friends/${encodeURIComponent(friend.owner_public_key)}/${encodeURIComponent(friend.id)}`;
 }
 
+export function friendRelationID(a: string, b: string): string {
+  return [a.trim(), b.trim()].sort().join(":");
+}
+
 export function friendGroupDetailPath(group: FriendGroupObject): string {
   return `/social/friend-groups/${encodeURIComponent(group.id ?? "")}`;
 }

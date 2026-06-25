@@ -2,7 +2,7 @@ import { Plus, RefreshCw, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { createFriendGroup, deleteFriendGroup, listFriendGroups, type FriendGroupObject } from "@gizclaw/adminservice";
+import { createFriendGroup, deleteFriendGroup, getFriendGroup, listFriendGroups, type FriendGroupObject } from "@gizclaw/adminservice";
 import { expectData, toMessage } from "../../components/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,12 +39,22 @@ export function FriendGroupsListPage(): JSX.Element {
   const create = async (): Promise<void> => {
     setBusy("create");
     setNotice(null);
+    const groupID = name.trim();
     try {
-      const group = await expectData(createFriendGroup({ body: { name: name.trim(), description: description.trim() || undefined } }));
+      const group = await expectData(createFriendGroup({ body: { name: groupID, description: description.trim() || undefined } }));
       setName("");
       setDescription("");
       navigate(friendGroupDetailPath(group));
     } catch (err) {
+      try {
+        const group = await expectData(getFriendGroup({ path: { id: groupID } }));
+        setName("");
+        setDescription("");
+        navigate(friendGroupDetailPath(group));
+        return;
+      } catch {
+        // Keep the original create error when the group was not created.
+      }
       setNotice({ message: toMessage(err), tone: "error" });
     } finally {
       setBusy("");

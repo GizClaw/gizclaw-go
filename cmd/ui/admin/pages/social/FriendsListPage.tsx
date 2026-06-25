@@ -2,7 +2,7 @@ import { Plus, RefreshCw, UsersRound } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { createFriend, deleteFriend, listFriends, type AdminFriendObject } from "@gizclaw/adminservice";
+import { createFriend, deleteFriend, getFriend, listFriends, type AdminFriendObject } from "@gizclaw/adminservice";
 import { expectData, toMessage } from "../../components/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import { FormField } from "../../components/form-field";
 import { PageHeader, PageSummaryCard } from "../../components/page-layout";
 import { useCursorListPage } from "../../hooks/useCursorListPage";
 import { formatDate, formatShortKey } from "../../lib/format";
-import { friendDetailPath, socialPeerLabel, socialWorkspaceName } from "./social-utils";
+import { friendDetailPath, friendRelationID, socialPeerLabel, socialWorkspaceName } from "./social-utils";
 
 export function FriendsListPage(): JSX.Element {
   const navigate = useNavigate();
@@ -38,12 +38,23 @@ export function FriendsListPage(): JSX.Element {
   const create = async (): Promise<void> => {
     setBusy("create");
     setNotice(null);
+    const owner = ownerPublicKey.trim();
+    const peer = peerPublicKey.trim();
     try {
-      const friend = await expectData(createFriend({ body: { owner_public_key: ownerPublicKey.trim(), peer_public_key: peerPublicKey.trim() } }));
+      const friend = await expectData(createFriend({ body: { owner_public_key: owner, peer_public_key: peer } }));
       setOwnerPublicKey("");
       setPeerPublicKey("");
       navigate(friendDetailPath(friend));
     } catch (err) {
+      try {
+        const friend = await expectData(getFriend({ path: { ownerPublicKey: owner, id: friendRelationID(owner, peer) } }));
+        setOwnerPublicKey("");
+        setPeerPublicKey("");
+        navigate(friendDetailPath(friend));
+        return;
+      } catch {
+        // Keep the original create error when the relation was not created.
+      }
       setNotice({ message: toMessage(err), tone: "error" });
     } finally {
       setBusy("");
