@@ -342,22 +342,30 @@ func TestAdminSocialHandlersUseDomainServices(t *testing.T) {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	adminservice.RegisterHandlers(app, adminservice.NewStrictHandler(&adminService{Friends: friendService, FriendGroups: groupService}, nil))
 
-	rec := serveAdminJSON(app, http.MethodPost, "/peers/peer-a/friends", `{"peer_public_key":"peer-b"}`)
+	rec := serveAdminJSON(app, http.MethodPost, "/social/friends", `{"owner_public_key":"peer-a","peer_public_key":"peer-b"}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("POST friend status = %d body=%s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(rec.Body.String(), `"peer_public_key":"peer-b"`) || !strings.Contains(rec.Body.String(), `"workspace_name":"social-direct-`) {
+	if !strings.Contains(rec.Body.String(), `"owner_public_key":"peer-a"`) || !strings.Contains(rec.Body.String(), `"peer_public_key":"peer-b"`) || !strings.Contains(rec.Body.String(), `"workspace_name":"social-direct-`) {
 		t.Fatalf("POST friend body = %s", rec.Body.String())
+	}
+	rec = serveAdminAsset(app, http.MethodGet, "/social/friends?limit=1", "")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"owner_public_key":"peer-a"`) || !strings.Contains(rec.Body.String(), `"has_next":true`) {
+		t.Fatalf("GET social friends status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	rec = serveAdminAsset(app, http.MethodGet, "/social/friends/peer-a/peer-a:peer-b", "")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"owner_public_key":"peer-a"`) {
+		t.Fatalf("GET social friend status=%d body=%s", rec.Code, rec.Body.String())
 	}
 	rec = serveAdminAsset(app, http.MethodGet, "/peers/peer-b/friends", "")
 	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), `"peer_public_key":"peer-a"`) {
 		t.Fatalf("GET peer-b friends status=%d body=%s", rec.Code, rec.Body.String())
 	}
-	rec = serveAdminAsset(app, http.MethodDelete, "/peers/peer-a/friends/peer-a:peer-b", "")
+	rec = serveAdminAsset(app, http.MethodDelete, "/social/friends/peer-a/peer-a:peer-b", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("DELETE friend status = %d body=%s", rec.Code, rec.Body.String())
 	}
-	rec = serveAdminAsset(app, http.MethodGet, "/peers/peer-a/friends/peer-a:peer-b", "")
+	rec = serveAdminAsset(app, http.MethodGet, "/social/friends/peer-a/peer-a:peer-b", "")
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("GET deleted friend status = %d body=%s", rec.Code, rec.Body.String())
 	}

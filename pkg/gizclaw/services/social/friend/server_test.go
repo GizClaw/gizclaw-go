@@ -222,18 +222,78 @@ func TestAdminCreateFriendMaintainsRowsAndChatWorkspace(t *testing.T) {
 	if socialutil.StringValue(duplicate.Id) != relationID || len(workspaces.created) != 1 {
 		t.Fatalf("duplicate = %#v created=%#v, want existing row without new workspace", duplicate, workspaces.created)
 	}
+	adminPage, err := s.AdminListFriends(ctx, nil, socialutil.IntPtr(1))
+	if err != nil {
+		t.Fatalf("AdminListFriends first page: %v", err)
+	}
+	if len(adminPage.Items) != 1 || !adminPage.HasNext || adminPage.NextCursor == nil {
+		t.Fatalf("AdminListFriends first page = %#v, want one row with next cursor", adminPage)
+	}
+	if adminPage.Items[0].OwnerPublicKey == "" || adminPage.Items[0].PeerPublicKey == "" || adminPage.Items[0].Id != relationID {
+		t.Fatalf("AdminListFriends item = %#v", adminPage.Items[0])
+	}
+	nextPage, err := s.AdminListFriends(ctx, adminPage.NextCursor, socialutil.IntPtr(10))
+	if err != nil {
+		t.Fatalf("AdminListFriends next page: %v", err)
+	}
+	if len(nextPage.Items) != 1 || nextPage.HasNext {
+		t.Fatalf("AdminListFriends next page = %#v, want final single row", nextPage)
+	}
+	adminRow, err := s.AdminGetFriend(ctx, "peer-a", relationID)
+	if err != nil {
+		t.Fatalf("AdminGetFriend: %v", err)
+	}
+	if adminRow.OwnerPublicKey != "peer-a" || adminRow.PeerPublicKey != "peer-b" || adminRow.WorkspaceName != workspaceName {
+		t.Fatalf("AdminGetFriend row = %#v", adminRow)
+	}
 	if _, err := s.AdminCreateFriend(ctx, "peer-a", "peer-a"); err == nil {
 		t.Fatal("AdminCreateFriend self error = nil")
 	}
 
-	if _, err := s.DeleteFriend(ctx, "peer-a", rpcapi.FriendDeleteRequest{Id: relationID}); err != nil {
-		t.Fatalf("DeleteFriend: %v", err)
+	deleted, err := s.AdminDeleteFriend(ctx, "peer-a", relationID)
+	if err != nil {
+		t.Fatalf("AdminDeleteFriend: %v", err)
+	}
+	if deleted.OwnerPublicKey != "peer-a" || deleted.PeerPublicKey != "peer-b" {
+		t.Fatalf("AdminDeleteFriend row = %#v", deleted)
 	}
 	if _, err := s.GetFriendRelation(ctx, "peer-a", relationID); !errors.Is(err, kv.ErrNotFound) {
 		t.Fatalf("peer-a row after delete error = %v, want not found", err)
 	}
 	if _, err := s.GetFriendRelation(ctx, "peer-b", relationID); !errors.Is(err, kv.ErrNotFound) {
 		t.Fatalf("peer-b row after delete error = %v, want not found", err)
+	}
+}
+
+func TestAdminFriendResourceWrappersAndCursorHelpers(t *testing.T) {
+	ctx := context.Background()
+	s := newTestServer()
+
+	created, err := s.AdminCreateFriendResource(ctx, " peer-c ", "peer-d")
+	if err != nil {
+		t.Fatalf("AdminCreateFriendResource: %v", err)
+	}
+	if created.OwnerPublicKey != "peer-c" || created.PeerPublicKey != "peer-d" || created.Id != socialutil.RelationID("peer-c", "peer-d") {
+		t.Fatalf("AdminCreateFriendResource row = %#v", created)
+	}
+	if created.WorkspaceName != socialutil.DirectWorkspaceName(created.Id) {
+		t.Fatalf("AdminCreateFriendResource workspace = %q, want direct workspace", created.WorkspaceName)
+	}
+	page, err := s.AdminListFriends(ctx, stringPtr("malformed/cursor/value"), socialutil.IntPtr(10))
+	if err != nil {
+		t.Fatalf("AdminListFriends malformed cursor: %v", err)
+	}
+	if len(page.Items) != 2 {
+		t.Fatalf("AdminListFriends malformed cursor items = %#v, want both owner-view rows", page.Items)
+	}
+	if owner, ok := adminFriendOwner(kv.Key{"friends"}); ok || owner != "" {
+		t.Fatalf("adminFriendOwner short key = %q, %t; want empty false", owner, ok)
+	}
+	if cursor := adminFriendCursor(kv.Key{"friends"}); cursor != "" {
+		t.Fatalf("adminFriendCursor short key = %q, want empty", cursor)
+	}
+	if after := adminFriendCursorAfter("/missing-owner"); after != nil {
+		t.Fatalf("adminFriendCursorAfter malformed = %#v, want nil", after)
 	}
 }
 
@@ -272,6 +332,18 @@ func TestConfigurationAndValidationErrors(t *testing.T) {
 	}
 	if _, err := empty.ListFriends(ctx, "peer-a", rpcapi.FriendListRequest{}); err == nil {
 		t.Fatal("ListFriends without store error = nil")
+	}
+	if _, err := empty.AdminListFriends(ctx, nil, nil); err == nil {
+		t.Fatal("AdminListFriends without store error = nil")
+	}
+	if _, err := empty.AdminCreateFriendResource(ctx, "peer-a", "peer-b"); err == nil {
+		t.Fatal("AdminCreateFriendResource without store error = nil")
+	}
+	if _, err := empty.AdminGetFriend(ctx, "peer-a", "peer-a:peer-b"); err == nil {
+		t.Fatal("AdminGetFriend without store error = nil")
+	}
+	if _, err := empty.AdminDeleteFriend(ctx, "peer-a", "peer-a:peer-b"); err == nil {
+		t.Fatal("AdminDeleteFriend without store error = nil")
 	}
 
 	s := newTestServer()
@@ -322,6 +394,10 @@ func newTestServer() *Server {
 			return "id-" + string(rune('a'+nextID-1))
 		},
 	}
+}
+
+func stringPtr(value string) *string {
+	return &value
 }
 
 type failingBatchSetStore struct {

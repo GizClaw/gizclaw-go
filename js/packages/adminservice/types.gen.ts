@@ -234,6 +234,54 @@ export type BadgeList = {
     items: Array<Badge>;
 };
 
+export type AdminFriendObject = {
+    owner_public_key: string;
+    id: string;
+    peer_public_key: string;
+    workspace_name: string;
+    created_at?: string;
+    updated_at?: string;
+};
+
+export type AdminFriendListResponse = {
+    has_next: boolean;
+    next_cursor?: string | null;
+    items: Array<AdminFriendObject>;
+};
+
+export type AdminSocialFriendCreateRequest = {
+    owner_public_key: string;
+    peer_public_key: string;
+};
+
+export type AdminFriendCreateRequest = {
+    peer_public_key: string;
+};
+
+export type AdminFriendGroupCreateRequest = {
+    name: string;
+    description?: string;
+};
+
+export type AdminFriendGroupPutRequest = {
+    name?: string;
+    description?: string;
+};
+
+export type AdminFriendGroupMemberCreateRequest = {
+    peer_public_key: string;
+    role: FriendGroupMemberRole;
+};
+
+export type AdminFriendGroupMemberPutRequest = {
+    role: FriendGroupMemberRole;
+};
+
+export type AdminFriendGroupInviteTokenPutRequest = {
+    invite_token: string;
+    expires_at: string;
+};
+
 export type AclPolicyBindingResource = {
     apiVersion: ResourceApiVersion;
     kind: 'ACLPolicyBinding';
@@ -436,6 +484,63 @@ export type WorkspaceResource = {
     kind: 'Workspace';
     metadata: ResourceMetadata;
     spec: WorkspaceSpec;
+};
+
+export type FriendGroupInviteTokenClearResponse = {
+    [key: string]: never;
+};
+
+export type FriendGroupInviteTokenGetResponse = {
+    invite_token?: string;
+    expires_at?: string;
+};
+
+export type FriendGroupListResponse = {
+    items: Array<FriendGroupObject>;
+    has_next: boolean;
+    next_cursor?: string;
+};
+
+export type FriendGroupMemberListResponse = {
+    items: Array<FriendGroupMemberObject>;
+    has_next: boolean;
+    next_cursor?: string;
+};
+
+export type FriendGroupMemberObject = {
+    id?: string;
+    friend_group_id?: string;
+    peer_public_key?: string;
+    role?: FriendGroupMemberRole;
+    created_at?: string;
+    updated_at?: string;
+};
+
+export type FriendGroupMemberRole = 'owner' | 'admin' | 'member';
+
+export type FriendGroupObject = {
+    id?: string;
+    name?: string;
+    description?: string;
+    created_by_peer_public_key?: string;
+    workspace_name?: string;
+    created_at?: string;
+    updated_at?: string;
+    my_role?: FriendGroupMemberRole;
+};
+
+export type FriendListResponse = {
+    items: Array<FriendObject>;
+    has_next: boolean;
+    next_cursor?: string;
+};
+
+export type FriendObject = {
+    id?: string;
+    peer_public_key?: string;
+    workspace_name?: string;
+    created_at?: string;
+    updated_at?: string;
 };
 
 /**
@@ -920,6 +1025,27 @@ export type PeerLabel = {
 export type PeerRegistrationStatus = 'unspecified' | 'active' | 'blocked';
 
 export type PeerRole = 'unspecified' | 'admin' | 'server' | 'client';
+
+export type PeerRunHistoryEntry = {
+    id: string;
+    type: 'gear' | 'agent';
+    /**
+     * Originating gear id. Required for gear entries and omitted for agent entries.
+     */
+    gear_id?: string;
+    name: string;
+    text: string;
+    created_at: string;
+    replay_available: boolean;
+};
+
+export type PeerRunHistoryListResponse = {
+    available: boolean;
+    items: Array<PeerRunHistoryEntry>;
+    has_next: boolean;
+    next_cursor?: string;
+    message?: string;
+};
 
 export type PetSpecies = {
     id: string;
@@ -1561,6 +1687,633 @@ export type PutResourceResponses = {
 };
 
 export type PutResourceResponse = PutResourceResponses[keyof PutResourceResponses];
+
+export type ListFriendsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Cursor returned by the previous list response.
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return.
+         */
+        limit?: number;
+    };
+    url: '/social/friends';
+};
+
+export type ListFriendsErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListFriendsError = ListFriendsErrors[keyof ListFriendsErrors];
+
+export type ListFriendsResponses = {
+    /**
+     * Global friend row list
+     */
+    200: AdminFriendListResponse;
+};
+
+export type ListFriendsResponse = ListFriendsResponses[keyof ListFriendsResponses];
+
+export type CreateFriendData = {
+    body: AdminSocialFriendCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/social/friends';
+};
+
+export type CreateFriendErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateFriendError = CreateFriendErrors[keyof CreateFriendErrors];
+
+export type CreateFriendResponses = {
+    /**
+     * Created friend relation
+     */
+    200: AdminFriendObject;
+};
+
+export type CreateFriendResponse = CreateFriendResponses[keyof CreateFriendResponses];
+
+export type DeleteFriendData = {
+    body?: never;
+    path: {
+        /**
+         * Owner peer public key
+         */
+        ownerPublicKey: string;
+        /**
+         * Friend relation id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friends/{ownerPublicKey}/{id}';
+};
+
+export type DeleteFriendErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteFriendError = DeleteFriendErrors[keyof DeleteFriendErrors];
+
+export type DeleteFriendResponses = {
+    /**
+     * Deleted friend row
+     */
+    200: AdminFriendObject;
+};
+
+export type DeleteFriendResponse = DeleteFriendResponses[keyof DeleteFriendResponses];
+
+export type GetFriendData = {
+    body?: never;
+    path: {
+        /**
+         * Owner peer public key
+         */
+        ownerPublicKey: string;
+        /**
+         * Friend relation id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friends/{ownerPublicKey}/{id}';
+};
+
+export type GetFriendErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetFriendError = GetFriendErrors[keyof GetFriendErrors];
+
+export type GetFriendResponses = {
+    /**
+     * Friend row
+     */
+    200: AdminFriendObject;
+};
+
+export type GetFriendResponse = GetFriendResponses[keyof GetFriendResponses];
+
+export type ListFriendGroupsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Cursor returned by the previous list response.
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return.
+         */
+        limit?: number;
+    };
+    url: '/social/friend-groups';
+};
+
+export type ListFriendGroupsErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListFriendGroupsError = ListFriendGroupsErrors[keyof ListFriendGroupsErrors];
+
+export type ListFriendGroupsResponses = {
+    /**
+     * Friend group list
+     */
+    200: FriendGroupListResponse;
+};
+
+export type ListFriendGroupsResponse = ListFriendGroupsResponses[keyof ListFriendGroupsResponses];
+
+export type CreateFriendGroupData = {
+    body: AdminFriendGroupCreateRequest;
+    path?: never;
+    query?: never;
+    url: '/social/friend-groups';
+};
+
+export type CreateFriendGroupErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateFriendGroupError = CreateFriendGroupErrors[keyof CreateFriendGroupErrors];
+
+export type CreateFriendGroupResponses = {
+    /**
+     * Created friend group
+     */
+    200: FriendGroupObject;
+};
+
+export type CreateFriendGroupResponse = CreateFriendGroupResponses[keyof CreateFriendGroupResponses];
+
+export type DeleteFriendGroupData = {
+    body?: never;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}';
+};
+
+export type DeleteFriendGroupErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteFriendGroupError = DeleteFriendGroupErrors[keyof DeleteFriendGroupErrors];
+
+export type DeleteFriendGroupResponses = {
+    /**
+     * Deleted friend group
+     */
+    200: FriendGroupObject;
+};
+
+export type DeleteFriendGroupResponse = DeleteFriendGroupResponses[keyof DeleteFriendGroupResponses];
+
+export type GetFriendGroupData = {
+    body?: never;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}';
+};
+
+export type GetFriendGroupErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetFriendGroupError = GetFriendGroupErrors[keyof GetFriendGroupErrors];
+
+export type GetFriendGroupResponses = {
+    /**
+     * Friend group
+     */
+    200: FriendGroupObject;
+};
+
+export type GetFriendGroupResponse = GetFriendGroupResponses[keyof GetFriendGroupResponses];
+
+export type PutFriendGroupData = {
+    body: AdminFriendGroupPutRequest;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}';
+};
+
+export type PutFriendGroupErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutFriendGroupError = PutFriendGroupErrors[keyof PutFriendGroupErrors];
+
+export type PutFriendGroupResponses = {
+    /**
+     * Updated friend group
+     */
+    200: FriendGroupObject;
+};
+
+export type PutFriendGroupResponse = PutFriendGroupResponses[keyof PutFriendGroupResponses];
+
+export type ListFriendGroupMembersData = {
+    body?: never;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+    };
+    query?: {
+        /**
+         * Cursor returned by the previous list response.
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return.
+         */
+        limit?: number;
+    };
+    url: '/social/friend-groups/{id}/members';
+};
+
+export type ListFriendGroupMembersErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListFriendGroupMembersError = ListFriendGroupMembersErrors[keyof ListFriendGroupMembersErrors];
+
+export type ListFriendGroupMembersResponses = {
+    /**
+     * Friend group member list
+     */
+    200: FriendGroupMemberListResponse;
+};
+
+export type ListFriendGroupMembersResponse = ListFriendGroupMembersResponses[keyof ListFriendGroupMembersResponses];
+
+export type CreateFriendGroupMemberData = {
+    body: AdminFriendGroupMemberCreateRequest;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}/members';
+};
+
+export type CreateFriendGroupMemberErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreateFriendGroupMemberError = CreateFriendGroupMemberErrors[keyof CreateFriendGroupMemberErrors];
+
+export type CreateFriendGroupMemberResponses = {
+    /**
+     * Created friend group member
+     */
+    200: FriendGroupMemberObject;
+};
+
+export type CreateFriendGroupMemberResponse = CreateFriendGroupMemberResponses[keyof CreateFriendGroupMemberResponses];
+
+export type DeleteFriendGroupMemberData = {
+    body?: never;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+        /**
+         * Member peer public key
+         */
+        publicKey: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}/members/{publicKey}';
+};
+
+export type DeleteFriendGroupMemberErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteFriendGroupMemberError = DeleteFriendGroupMemberErrors[keyof DeleteFriendGroupMemberErrors];
+
+export type DeleteFriendGroupMemberResponses = {
+    /**
+     * Deleted friend group member
+     */
+    200: FriendGroupMemberObject;
+};
+
+export type DeleteFriendGroupMemberResponse = DeleteFriendGroupMemberResponses[keyof DeleteFriendGroupMemberResponses];
+
+export type PutFriendGroupMemberData = {
+    body: AdminFriendGroupMemberPutRequest;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+        /**
+         * Member peer public key
+         */
+        publicKey: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}/members/{publicKey}';
+};
+
+export type PutFriendGroupMemberErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutFriendGroupMemberError = PutFriendGroupMemberErrors[keyof PutFriendGroupMemberErrors];
+
+export type PutFriendGroupMemberResponses = {
+    /**
+     * Updated friend group member
+     */
+    200: FriendGroupMemberObject;
+};
+
+export type PutFriendGroupMemberResponse = PutFriendGroupMemberResponses[keyof PutFriendGroupMemberResponses];
+
+export type DeleteFriendGroupInviteTokenData = {
+    body?: never;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}/invite-token';
+};
+
+export type DeleteFriendGroupInviteTokenErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeleteFriendGroupInviteTokenError = DeleteFriendGroupInviteTokenErrors[keyof DeleteFriendGroupInviteTokenErrors];
+
+export type DeleteFriendGroupInviteTokenResponses = {
+    /**
+     * Deleted friend group invite token
+     */
+    200: FriendGroupInviteTokenClearResponse;
+};
+
+export type DeleteFriendGroupInviteTokenResponse = DeleteFriendGroupInviteTokenResponses[keyof DeleteFriendGroupInviteTokenResponses];
+
+export type GetFriendGroupInviteTokenData = {
+    body?: never;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}/invite-token';
+};
+
+export type GetFriendGroupInviteTokenErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetFriendGroupInviteTokenError = GetFriendGroupInviteTokenErrors[keyof GetFriendGroupInviteTokenErrors];
+
+export type GetFriendGroupInviteTokenResponses = {
+    /**
+     * Friend group invite token
+     */
+    200: FriendGroupInviteTokenGetResponse;
+};
+
+export type GetFriendGroupInviteTokenResponse = GetFriendGroupInviteTokenResponses[keyof GetFriendGroupInviteTokenResponses];
+
+export type PutFriendGroupInviteTokenData = {
+    body: AdminFriendGroupInviteTokenPutRequest;
+    path: {
+        /**
+         * Friend group id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/social/friend-groups/{id}/invite-token';
+};
+
+export type PutFriendGroupInviteTokenErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type PutFriendGroupInviteTokenError = PutFriendGroupInviteTokenErrors[keyof PutFriendGroupInviteTokenErrors];
+
+export type PutFriendGroupInviteTokenResponses = {
+    /**
+     * Friend group invite token
+     */
+    200: FriendGroupInviteTokenGetResponse;
+};
+
+export type PutFriendGroupInviteTokenResponse = PutFriendGroupInviteTokenResponses[keyof PutFriendGroupInviteTokenResponses];
 
 export type DownloadPetSpeciesPixaData = {
     body?: never;
@@ -4354,6 +5107,141 @@ export type PutWorkspaceResponses = {
 
 export type PutWorkspaceResponse = PutWorkspaceResponses[keyof PutWorkspaceResponses];
 
+export type ListWorkspaceHistoryData = {
+    body?: never;
+    path: {
+        /**
+         * Workspace name
+         */
+        name: string;
+    };
+    query?: {
+        /**
+         * Cursor returned by the previous list response.
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return.
+         */
+        limit?: number;
+        /**
+         * History ordering.
+         */
+        order?: 'asc' | 'desc';
+    };
+    url: '/workspaces/{name}/history';
+};
+
+export type ListWorkspaceHistoryErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListWorkspaceHistoryError = ListWorkspaceHistoryErrors[keyof ListWorkspaceHistoryErrors];
+
+export type ListWorkspaceHistoryResponses = {
+    /**
+     * Workspace history list
+     */
+    200: PeerRunHistoryListResponse;
+};
+
+export type ListWorkspaceHistoryResponse = ListWorkspaceHistoryResponses[keyof ListWorkspaceHistoryResponses];
+
+export type GetWorkspaceHistoryData = {
+    body?: never;
+    path: {
+        /**
+         * Workspace name
+         */
+        name: string;
+        /**
+         * Workspace history id
+         */
+        historyId: string;
+    };
+    query?: never;
+    url: '/workspaces/{name}/history/{historyId}';
+};
+
+export type GetWorkspaceHistoryErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetWorkspaceHistoryError = GetWorkspaceHistoryErrors[keyof GetWorkspaceHistoryErrors];
+
+export type GetWorkspaceHistoryResponses = {
+    /**
+     * Workspace history entry
+     */
+    200: PeerRunHistoryEntry;
+};
+
+export type GetWorkspaceHistoryResponse = GetWorkspaceHistoryResponses[keyof GetWorkspaceHistoryResponses];
+
+export type DownloadWorkspaceHistoryAudioData = {
+    body?: never;
+    path: {
+        /**
+         * Workspace name
+         */
+        name: string;
+        /**
+         * Workspace history id
+         */
+        historyId: string;
+    };
+    query?: never;
+    url: '/workspaces/{name}/history/{historyId}/audio.ogg';
+};
+
+export type DownloadWorkspaceHistoryAudioErrors = {
+    /**
+     * Invalid history audio request
+     */
+    400: ErrorResponse;
+    /**
+     * Workspace history audio not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DownloadWorkspaceHistoryAudioError = DownloadWorkspaceHistoryAudioErrors[keyof DownloadWorkspaceHistoryAudioErrors];
+
+export type DownloadWorkspaceHistoryAudioResponses = {
+    /**
+     * Workspace history audio asset
+     */
+    200: Blob | File;
+};
+
+export type DownloadWorkspaceHistoryAudioResponse = DownloadWorkspaceHistoryAudioResponses[keyof DownloadWorkspaceHistoryAudioResponses];
+
 export type ListPeersData = {
     body?: never;
     path?: never;
@@ -4749,6 +5637,175 @@ export type GetPeerRuntimeResponses = {
 };
 
 export type GetPeerRuntimeResponse = GetPeerRuntimeResponses[keyof GetPeerRuntimeResponses];
+
+export type ListPeerFriendsData = {
+    body?: never;
+    path: {
+        /**
+         * Peer public key
+         */
+        publicKey: string;
+    };
+    query?: {
+        /**
+         * Cursor returned by the previous list response.
+         */
+        cursor?: string;
+        /**
+         * Maximum number of items to return.
+         */
+        limit?: number;
+    };
+    url: '/peers/{publicKey}/friends';
+};
+
+export type ListPeerFriendsErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type ListPeerFriendsError = ListPeerFriendsErrors[keyof ListPeerFriendsErrors];
+
+export type ListPeerFriendsResponses = {
+    /**
+     * Friend list
+     */
+    200: FriendListResponse;
+};
+
+export type ListPeerFriendsResponse = ListPeerFriendsResponses[keyof ListPeerFriendsResponses];
+
+export type CreatePeerFriendData = {
+    body: AdminFriendCreateRequest;
+    path: {
+        /**
+         * Peer public key
+         */
+        publicKey: string;
+    };
+    query?: never;
+    url: '/peers/{publicKey}/friends';
+};
+
+export type CreatePeerFriendErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type CreatePeerFriendError = CreatePeerFriendErrors[keyof CreatePeerFriendErrors];
+
+export type CreatePeerFriendResponses = {
+    /**
+     * Created friend relation
+     */
+    200: FriendObject;
+};
+
+export type CreatePeerFriendResponse = CreatePeerFriendResponses[keyof CreatePeerFriendResponses];
+
+export type DeletePeerFriendData = {
+    body?: never;
+    path: {
+        /**
+         * Peer public key
+         */
+        publicKey: string;
+        /**
+         * Friend relation id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/peers/{publicKey}/friends/{id}';
+};
+
+export type DeletePeerFriendErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type DeletePeerFriendError = DeletePeerFriendErrors[keyof DeletePeerFriendErrors];
+
+export type DeletePeerFriendResponses = {
+    /**
+     * Deleted friend relation
+     */
+    200: FriendObject;
+};
+
+export type DeletePeerFriendResponse = DeletePeerFriendResponses[keyof DeletePeerFriendResponses];
+
+export type GetPeerFriendData = {
+    body?: never;
+    path: {
+        /**
+         * Peer public key
+         */
+        publicKey: string;
+        /**
+         * Friend relation id
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/peers/{publicKey}/friends/{id}';
+};
+
+export type GetPeerFriendErrors = {
+    /**
+     * Invalid request
+     */
+    400: ErrorResponse;
+    /**
+     * Resource not found
+     */
+    404: ErrorResponse;
+    /**
+     * Internal error
+     */
+    500: ErrorResponse;
+};
+
+export type GetPeerFriendError = GetPeerFriendErrors[keyof GetPeerFriendErrors];
+
+export type GetPeerFriendResponses = {
+    /**
+     * Friend relation
+     */
+    200: FriendObject;
+};
+
+export type GetPeerFriendResponse = GetPeerFriendResponses[keyof GetPeerFriendResponses];
 
 export type ListPetSpeciesData = {
     body?: never;

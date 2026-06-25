@@ -33,6 +33,10 @@ import { ACLPolicyBindingDetailPage } from "./pages/settings/ACLPolicyBindingDet
 import { ACLRoleDetailPage } from "./pages/settings/ACLRoleDetailPage";
 import { ACLViewDetailPage } from "./pages/settings/ACLViewDetailPage";
 import { ResourcesPage } from "./pages/resources/ResourcesPage";
+import { FriendDetailPage } from "./pages/social/FriendDetailPage";
+import { FriendGroupDetailPage } from "./pages/social/FriendGroupDetailPage";
+import { FriendGroupsListPage } from "./pages/social/FriendGroupsListPage";
+import { FriendsListPage } from "./pages/social/FriendsListPage";
 
 export function AppRoutes(): JSX.Element {
   return (
@@ -70,6 +74,10 @@ export function AppRoutes(): JSX.Element {
         <Route element={<BadgesPage />} path="business/badges" />
         <Route element={<BadgeDetailPage />} path="business/badges/:id" />
         <Route element={<ResourcesPage />} path="resources" />
+        <Route element={<FriendsListPage />} path="social/friends" />
+        <Route element={<FriendDetailPage />} path="social/friends/:ownerPublicKey/:id" />
+        <Route element={<FriendGroupsListPage />} path="social/friend-groups" />
+        <Route element={<FriendGroupDetailPage />} path="social/friend-groups/:id" />
         <Route element={<ACLPage />} path="settings/acl" />
         <Route element={<ACLPolicyBindingDetailPage />} path="settings/acl/policy-bindings/:id" />
         <Route element={<ACLRoleDetailPage />} path="settings/acl/roles/:name" />

@@ -21,6 +21,83 @@ type adminWorkspaceHistoryService interface {
 	AdminReadWorkspaceHistoryAudio(context.Context, string, string) (io.ReadCloser, int64, error)
 }
 
+func (s *adminService) ListFriends(ctx context.Context, request adminservice.ListFriendsRequestObject) (adminservice.ListFriendsResponseObject, error) {
+	if s == nil || s.Friends == nil {
+		return adminservice.ListFriends500JSONResponse(apitypes.NewErrorResponse("SOCIAL_FRIEND_SERVICE_NOT_CONFIGURED", "friend service is not configured")), nil
+	}
+	resp, err := s.Friends.AdminListFriends(ctx, request.Params.Cursor, request.Params.Limit)
+	if err != nil {
+		status, body := adminSocialError(err)
+		switch status {
+		case http.StatusInternalServerError:
+			return adminservice.ListFriends500JSONResponse(body), nil
+		default:
+			return adminservice.ListFriends400JSONResponse(body), nil
+		}
+	}
+	return adminservice.ListFriends200JSONResponse(resp), nil
+}
+
+func (s *adminService) CreateFriend(ctx context.Context, request adminservice.CreateFriendRequestObject) (adminservice.CreateFriendResponseObject, error) {
+	if s == nil || s.Friends == nil {
+		return adminservice.CreateFriend500JSONResponse(apitypes.NewErrorResponse("SOCIAL_FRIEND_SERVICE_NOT_CONFIGURED", "friend service is not configured")), nil
+	}
+	if request.Body == nil {
+		return adminservice.CreateFriend400JSONResponse(apitypes.NewErrorResponse("INVALID_FRIEND", "request body is required")), nil
+	}
+	item, err := s.Friends.AdminCreateFriendResource(ctx, request.Body.OwnerPublicKey, request.Body.PeerPublicKey)
+	if err != nil {
+		status, body := adminSocialError(err)
+		switch status {
+		case http.StatusNotFound:
+			return adminservice.CreateFriend404JSONResponse(body), nil
+		case http.StatusInternalServerError:
+			return adminservice.CreateFriend500JSONResponse(body), nil
+		default:
+			return adminservice.CreateFriend400JSONResponse(body), nil
+		}
+	}
+	return adminservice.CreateFriend200JSONResponse(item), nil
+}
+
+func (s *adminService) GetFriend(ctx context.Context, request adminservice.GetFriendRequestObject) (adminservice.GetFriendResponseObject, error) {
+	if s == nil || s.Friends == nil {
+		return adminservice.GetFriend500JSONResponse(apitypes.NewErrorResponse("SOCIAL_FRIEND_SERVICE_NOT_CONFIGURED", "friend service is not configured")), nil
+	}
+	item, err := s.Friends.AdminGetFriend(ctx, request.OwnerPublicKey, request.Id)
+	if err != nil {
+		status, body := adminSocialError(err)
+		switch status {
+		case http.StatusNotFound:
+			return adminservice.GetFriend404JSONResponse(body), nil
+		case http.StatusInternalServerError:
+			return adminservice.GetFriend500JSONResponse(body), nil
+		default:
+			return adminservice.GetFriend400JSONResponse(body), nil
+		}
+	}
+	return adminservice.GetFriend200JSONResponse(item), nil
+}
+
+func (s *adminService) DeleteFriend(ctx context.Context, request adminservice.DeleteFriendRequestObject) (adminservice.DeleteFriendResponseObject, error) {
+	if s == nil || s.Friends == nil {
+		return adminservice.DeleteFriend500JSONResponse(apitypes.NewErrorResponse("SOCIAL_FRIEND_SERVICE_NOT_CONFIGURED", "friend service is not configured")), nil
+	}
+	item, err := s.Friends.AdminDeleteFriend(ctx, request.OwnerPublicKey, request.Id)
+	if err != nil {
+		status, body := adminSocialError(err)
+		switch status {
+		case http.StatusNotFound:
+			return adminservice.DeleteFriend404JSONResponse(body), nil
+		case http.StatusInternalServerError:
+			return adminservice.DeleteFriend500JSONResponse(body), nil
+		default:
+			return adminservice.DeleteFriend400JSONResponse(body), nil
+		}
+	}
+	return adminservice.DeleteFriend200JSONResponse(item), nil
+}
+
 func (s *adminService) ListPeerFriends(ctx context.Context, request adminservice.ListPeerFriendsRequestObject) (adminservice.ListPeerFriendsResponseObject, error) {
 	if s == nil || s.Friends == nil {
 		return adminservice.ListPeerFriends500JSONResponse(apitypes.NewErrorResponse("SOCIAL_FRIEND_SERVICE_NOT_CONFIGURED", "friend service is not configured")), nil

@@ -32,6 +32,8 @@ func adminSidebarNavigationStories() []Story {
 				{label: "Models", heading: "Models", path: "/ai/models"},
 				{label: "Workflows", heading: "Workflows", path: "/ai/workflows"},
 				{label: "Workspaces", heading: "Workspaces", path: "/ai/workspaces"},
+				{label: "Friends", heading: "Friends", path: "/social/friends"},
+				{label: "Friend Groups", heading: "Friend Groups", path: "/social/friend-groups"},
 				{label: "Access Control", heading: "Access Control", path: "/settings/acl"},
 			} {
 				page.ClickNavigationLink(destination.label)

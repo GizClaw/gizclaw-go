@@ -165,6 +165,66 @@ func (s *Server) AdminCreateFriend(ctx context.Context, owner string, peerPublic
 	return friend, nil
 }
 
+func (s *Server) AdminListFriends(ctx context.Context, cursor *string, limit *int) (adminservice.AdminFriendListResponse, error) {
+	store, err := s.friendsStore()
+	if err != nil {
+		return adminservice.AdminFriendListResponse{}, err
+	}
+	_, pageLimit := socialutil.NormalizeListParams("", socialutil.IntValue(limit))
+	entries, err := kv.ListAfter(ctx, store, socialutil.FriendsRoot, adminFriendCursorAfter(socialutil.StringValue(cursor)), pageLimit+1)
+	if err != nil {
+		return adminservice.AdminFriendListResponse{}, err
+	}
+	hasNext := len(entries) > pageLimit
+	if hasNext {
+		entries = entries[:pageLimit]
+	}
+	items := make([]adminservice.AdminFriendObject, 0, len(entries))
+	for _, entry := range entries {
+		owner, ok := adminFriendOwner(entry.Key)
+		if !ok {
+			continue
+		}
+		var item rpcapi.FriendObject
+		if err := json.Unmarshal(entry.Value, &item); err != nil {
+			return adminservice.AdminFriendListResponse{}, err
+		}
+		items = append(items, adminFriendObject(owner, item))
+	}
+	var next *string
+	if hasNext && len(entries) > 0 {
+		cursor := adminFriendCursor(entries[len(entries)-1].Key)
+		if cursor != "" {
+			next = &cursor
+		}
+	}
+	return adminservice.AdminFriendListResponse{Items: items, HasNext: hasNext, NextCursor: next}, nil
+}
+
+func (s *Server) AdminCreateFriendResource(ctx context.Context, owner string, peerPublicKey string) (adminservice.AdminFriendObject, error) {
+	item, err := s.AdminCreateFriend(ctx, owner, peerPublicKey)
+	if err != nil {
+		return adminservice.AdminFriendObject{}, err
+	}
+	return adminFriendObject(strings.TrimSpace(owner), item), nil
+}
+
+func (s *Server) AdminGetFriend(ctx context.Context, owner, id string) (adminservice.AdminFriendObject, error) {
+	item, err := s.GetFriendRelation(ctx, owner, id)
+	if err != nil {
+		return adminservice.AdminFriendObject{}, err
+	}
+	return adminFriendObject(strings.TrimSpace(owner), item), nil
+}
+
+func (s *Server) AdminDeleteFriend(ctx context.Context, owner, id string) (adminservice.AdminFriendObject, error) {
+	item, err := s.DeleteFriend(ctx, owner, rpcapi.FriendDeleteRequest{Id: strings.TrimSpace(id)})
+	if err != nil {
+		return adminservice.AdminFriendObject{}, err
+	}
+	return adminFriendObject(strings.TrimSpace(owner), item), nil
+}
+
 func (s *Server) ListFriends(ctx context.Context, owner string, req rpcapi.FriendListRequest) (rpcapi.FriendListResponse, error) {
 	store, err := s.friendsStore()
 	if err != nil {
@@ -210,6 +270,43 @@ func (s *Server) GetFriendRelation(ctx context.Context, owner, id string) (rpcap
 		return rpcapi.FriendObject{}, err
 	}
 	return socialutil.ReadJSONValue[rpcapi.FriendObject](ctx, store, socialutil.FriendKey(owner, id))
+}
+
+func adminFriendObject(owner string, item rpcapi.FriendObject) adminservice.AdminFriendObject {
+	return adminservice.AdminFriendObject{
+		OwnerPublicKey: strings.TrimSpace(owner),
+		Id:             socialutil.StringValue(item.Id),
+		PeerPublicKey:  socialutil.StringValue(item.PeerPublicKey),
+		WorkspaceName:  socialutil.StringValue(item.WorkspaceName),
+		CreatedAt:      item.CreatedAt,
+		UpdatedAt:      item.UpdatedAt,
+	}
+}
+
+func adminFriendOwner(key kv.Key) (string, bool) {
+	if len(key) < 3 {
+		return "", false
+	}
+	return socialutil.UnescapeStoreSegment(key[1]), true
+}
+
+func adminFriendCursor(key kv.Key) string {
+	if len(key) < 3 {
+		return ""
+	}
+	return key[1] + "/" + key[2]
+}
+
+func adminFriendCursorAfter(cursor string) kv.Key {
+	cursor = strings.TrimSpace(cursor)
+	if cursor == "" {
+		return nil
+	}
+	parts := strings.Split(cursor, "/")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return nil
+	}
+	return append(append(kv.Key{}, socialutil.FriendsRoot...), parts[0], parts[1])
 }
 
 func (s *Server) createFriendRows(ctx context.Context, from, to, workspaceName string) (rpcapi.FriendObject, error) {

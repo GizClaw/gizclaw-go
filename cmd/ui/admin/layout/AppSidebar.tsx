@@ -13,6 +13,7 @@ import {
   PawPrint,
   ServerCog,
   ShieldCheck,
+  UsersRound,
   Workflow,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -72,6 +73,13 @@ const sections: NavSection[] = [
       { href: "/ai/models", icon: Cpu, label: "Models" },
       { href: "/ai/workflows", icon: Workflow, label: "Workflows" },
       { href: "/ai/workspaces", icon: FolderKanban, label: "Workspaces" },
+    ],
+  },
+  {
+    label: "Social",
+    items: [
+      { href: "/social/friends", icon: UsersRound, label: "Friends" },
+      { href: "/social/friend-groups", icon: UsersRound, label: "Friend Groups" },
     ],
   },
   {

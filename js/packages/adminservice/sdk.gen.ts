@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApplyResourceData, ApplyResourceErrors, ApplyResourceResponses, ApprovePeerData, ApprovePeerErrors, ApprovePeerResponses, BlockPeerData, BlockPeerErrors, BlockPeerResponses, CreateAclPolicyBindingData, CreateAclPolicyBindingErrors, CreateAclPolicyBindingResponses, CreateAclRoleData, CreateAclRoleErrors, CreateAclRoleResponses, CreateAclViewData, CreateAclViewErrors, CreateAclViewResponses, CreateCredentialData, CreateCredentialErrors, CreateCredentialResponses, CreateDashScopeTenantData, CreateDashScopeTenantErrors, CreateDashScopeTenantResponses, CreateFirmwareData, CreateFirmwareErrors, CreateFirmwareResponses, CreateGeminiTenantData, CreateGeminiTenantErrors, CreateGeminiTenantResponses, CreateMiniMaxTenantData, CreateMiniMaxTenantErrors, CreateMiniMaxTenantResponses, CreateModelData, CreateModelErrors, CreateModelResponses, CreateOpenAiTenantData, CreateOpenAiTenantErrors, CreateOpenAiTenantResponses, CreateVoiceData, CreateVoiceErrors, CreateVoiceResponses, CreateVolcTenantData, CreateVolcTenantErrors, CreateVolcTenantResponses, CreateWorkflowData, CreateWorkflowErrors, CreateWorkflowResponses, CreateWorkspaceData, CreateWorkspaceErrors, CreateWorkspaceResponses, DeleteAclPolicyBindingData, DeleteAclPolicyBindingErrors, DeleteAclPolicyBindingResponses, DeleteAclRoleData, DeleteAclRoleErrors, DeleteAclRoleResponses, DeleteAclViewData, DeleteAclViewErrors, DeleteAclViewResponses, DeleteCredentialData, DeleteCredentialErrors, DeleteCredentialResponses, DeleteDashScopeTenantData, DeleteDashScopeTenantErrors, DeleteDashScopeTenantResponses, DeleteFirmwareData, DeleteFirmwareErrors, DeleteFirmwareResponses, DeleteGeminiTenantData, DeleteGeminiTenantErrors, DeleteGeminiTenantResponses, DeleteMiniMaxTenantData, DeleteMiniMaxTenantErrors, DeleteMiniMaxTenantResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteOpenAiTenantData, DeleteOpenAiTenantErrors, DeleteOpenAiTenantResponses, DeletePeerData, DeletePeerErrors, DeletePeerResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, DeleteVoiceData, DeleteVoiceErrors, DeleteVoiceResponses, DeleteVolcTenantData, DeleteVolcTenantErrors, DeleteVolcTenantResponses, DeleteWorkflowData, DeleteWorkflowErrors, DeleteWorkflowResponses, DeleteWorkspaceData, DeleteWorkspaceErrors, DeleteWorkspaceResponses, DownloadBadgeIconData, DownloadBadgeIconErrors, DownloadBadgeIconResponses, DownloadPetSpeciesPixaData, DownloadPetSpeciesPixaErrors, DownloadPetSpeciesPixaResponses, FindPubKeyByImeiData, FindPubKeyByImeiErrors, FindPubKeyByImeiResponses, FindPubKeyBySnData, FindPubKeyBySnErrors, FindPubKeyBySnResponses, GetAclPolicyBindingData, GetAclPolicyBindingErrors, GetAclPolicyBindingResponses, GetAclRoleData, GetAclRoleErrors, GetAclRoleResponses, GetAclViewData, GetAclViewErrors, GetAclViewResponses, GetCredentialData, GetCredentialErrors, GetCredentialResponses, GetDashScopeTenantData, GetDashScopeTenantErrors, GetDashScopeTenantResponses, GetFirmwareData, GetFirmwareErrors, GetFirmwareResponses, GetGeminiTenantData, GetGeminiTenantErrors, GetGeminiTenantResponses, GetMiniMaxTenantData, GetMiniMaxTenantErrors, GetMiniMaxTenantResponses, GetModelData, GetModelErrors, GetModelResponses, GetOpenAiTenantData, GetOpenAiTenantErrors, GetOpenAiTenantResponses, GetPeerConfigData, GetPeerConfigErrors, GetPeerConfigResponses, GetPeerData, GetPeerErrors, GetPeerInfoData, GetPeerInfoErrors, GetPeerInfoResponses, GetPeerResponses, GetPeerRuntimeData, GetPeerRuntimeResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetVoiceData, GetVoiceErrors, GetVoiceResponses, GetVolcTenantData, GetVolcTenantErrors, GetVolcTenantResponses, GetWorkflowData, GetWorkflowErrors, GetWorkflowResponses, GetWorkspaceData, GetWorkspaceErrors, GetWorkspaceResponses, ListAclPolicyBindingsData, ListAclPolicyBindingsErrors, ListAclPolicyBindingsResponses, ListAclRolesData, ListAclRolesErrors, ListAclRolesResponses, ListAclViewsData, ListAclViewsErrors, ListAclViewsResponses, ListBadgesData, ListBadgesErrors, ListBadgesResponses, ListCredentialsData, ListCredentialsErrors, ListCredentialsResponses, ListDashScopeTenantsData, ListDashScopeTenantsErrors, ListDashScopeTenantsResponses, ListFirmwaresData, ListFirmwaresErrors, ListFirmwaresResponses, ListGeminiTenantsData, ListGeminiTenantsErrors, ListGeminiTenantsResponses, ListMiniMaxTenantsData, ListMiniMaxTenantsErrors, ListMiniMaxTenantsResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListOpenAiTenantsData, ListOpenAiTenantsErrors, ListOpenAiTenantsResponses, ListPeersData, ListPeersErrors, ListPeersResponses, ListPetSpeciesData, ListPetSpeciesErrors, ListPetSpeciesResponses, ListVoicesData, ListVoicesErrors, ListVoicesResponses, ListVolcTenantsData, ListVolcTenantsErrors, ListVolcTenantsResponses, ListWorkflowsData, ListWorkflowsErrors, ListWorkflowsResponses, ListWorkspacesData, ListWorkspacesErrors, ListWorkspacesResponses, PutAclPolicyBindingData, PutAclPolicyBindingErrors, PutAclPolicyBindingResponses, PutAclRoleData, PutAclRoleErrors, PutAclRoleResponses, PutAclViewData, PutAclViewErrors, PutAclViewResponses, PutCredentialData, PutCredentialErrors, PutCredentialResponses, PutDashScopeTenantData, PutDashScopeTenantErrors, PutDashScopeTenantResponses, PutFirmwareData, PutFirmwareErrors, PutFirmwareResponses, PutGeminiTenantData, PutGeminiTenantErrors, PutGeminiTenantResponses, PutMiniMaxTenantData, PutMiniMaxTenantErrors, PutMiniMaxTenantResponses, PutModelData, PutModelErrors, PutModelResponses, PutOpenAiTenantData, PutOpenAiTenantErrors, PutOpenAiTenantResponses, PutPeerConfigData, PutPeerConfigErrors, PutPeerConfigResponses, PutPeerInfoData, PutPeerInfoErrors, PutPeerInfoResponses, PutResourceData, PutResourceErrors, PutResourceResponses, PutVoiceData, PutVoiceErrors, PutVoiceResponses, PutVolcTenantData, PutVolcTenantErrors, PutVolcTenantResponses, PutWorkflowData, PutWorkflowErrors, PutWorkflowResponses, PutWorkspaceData, PutWorkspaceErrors, PutWorkspaceResponses, RefreshPeerData, RefreshPeerErrors, RefreshPeerResponses, ReleaseFirmwareData, ReleaseFirmwareErrors, ReleaseFirmwareResponses, RollbackFirmwareData, RollbackFirmwareErrors, RollbackFirmwareResponses, SyncMiniMaxTenantVoicesData, SyncMiniMaxTenantVoicesErrors, SyncMiniMaxTenantVoicesResponses, SyncVolcTenantVoicesData, SyncVolcTenantVoicesErrors, SyncVolcTenantVoicesResponses, UploadBadgeIconData, UploadBadgeIconErrors, UploadBadgeIconResponses, UploadFirmwareBinData, UploadFirmwareBinErrors, UploadFirmwareBinResponses, UploadPetSpeciesPixaData, UploadPetSpeciesPixaErrors, UploadPetSpeciesPixaResponses } from './types.gen';
+import type { ApplyResourceData, ApplyResourceErrors, ApplyResourceResponses, ApprovePeerData, ApprovePeerErrors, ApprovePeerResponses, BlockPeerData, BlockPeerErrors, BlockPeerResponses, CreateAclPolicyBindingData, CreateAclPolicyBindingErrors, CreateAclPolicyBindingResponses, CreateAclRoleData, CreateAclRoleErrors, CreateAclRoleResponses, CreateAclViewData, CreateAclViewErrors, CreateAclViewResponses, CreateCredentialData, CreateCredentialErrors, CreateCredentialResponses, CreateDashScopeTenantData, CreateDashScopeTenantErrors, CreateDashScopeTenantResponses, CreateFirmwareData, CreateFirmwareErrors, CreateFirmwareResponses, CreateFriendData, CreateFriendErrors, CreateFriendGroupData, CreateFriendGroupErrors, CreateFriendGroupMemberData, CreateFriendGroupMemberErrors, CreateFriendGroupMemberResponses, CreateFriendGroupResponses, CreateFriendResponses, CreateGeminiTenantData, CreateGeminiTenantErrors, CreateGeminiTenantResponses, CreateMiniMaxTenantData, CreateMiniMaxTenantErrors, CreateMiniMaxTenantResponses, CreateModelData, CreateModelErrors, CreateModelResponses, CreateOpenAiTenantData, CreateOpenAiTenantErrors, CreateOpenAiTenantResponses, CreatePeerFriendData, CreatePeerFriendErrors, CreatePeerFriendResponses, CreateVoiceData, CreateVoiceErrors, CreateVoiceResponses, CreateVolcTenantData, CreateVolcTenantErrors, CreateVolcTenantResponses, CreateWorkflowData, CreateWorkflowErrors, CreateWorkflowResponses, CreateWorkspaceData, CreateWorkspaceErrors, CreateWorkspaceResponses, DeleteAclPolicyBindingData, DeleteAclPolicyBindingErrors, DeleteAclPolicyBindingResponses, DeleteAclRoleData, DeleteAclRoleErrors, DeleteAclRoleResponses, DeleteAclViewData, DeleteAclViewErrors, DeleteAclViewResponses, DeleteCredentialData, DeleteCredentialErrors, DeleteCredentialResponses, DeleteDashScopeTenantData, DeleteDashScopeTenantErrors, DeleteDashScopeTenantResponses, DeleteFirmwareData, DeleteFirmwareErrors, DeleteFirmwareResponses, DeleteFriendData, DeleteFriendErrors, DeleteFriendGroupData, DeleteFriendGroupErrors, DeleteFriendGroupInviteTokenData, DeleteFriendGroupInviteTokenErrors, DeleteFriendGroupInviteTokenResponses, DeleteFriendGroupMemberData, DeleteFriendGroupMemberErrors, DeleteFriendGroupMemberResponses, DeleteFriendGroupResponses, DeleteFriendResponses, DeleteGeminiTenantData, DeleteGeminiTenantErrors, DeleteGeminiTenantResponses, DeleteMiniMaxTenantData, DeleteMiniMaxTenantErrors, DeleteMiniMaxTenantResponses, DeleteModelData, DeleteModelErrors, DeleteModelResponses, DeleteOpenAiTenantData, DeleteOpenAiTenantErrors, DeleteOpenAiTenantResponses, DeletePeerData, DeletePeerErrors, DeletePeerFriendData, DeletePeerFriendErrors, DeletePeerFriendResponses, DeletePeerResponses, DeleteResourceData, DeleteResourceErrors, DeleteResourceResponses, DeleteVoiceData, DeleteVoiceErrors, DeleteVoiceResponses, DeleteVolcTenantData, DeleteVolcTenantErrors, DeleteVolcTenantResponses, DeleteWorkflowData, DeleteWorkflowErrors, DeleteWorkflowResponses, DeleteWorkspaceData, DeleteWorkspaceErrors, DeleteWorkspaceResponses, DownloadBadgeIconData, DownloadBadgeIconErrors, DownloadBadgeIconResponses, DownloadPetSpeciesPixaData, DownloadPetSpeciesPixaErrors, DownloadPetSpeciesPixaResponses, DownloadWorkspaceHistoryAudioData, DownloadWorkspaceHistoryAudioErrors, DownloadWorkspaceHistoryAudioResponses, FindPubKeyByImeiData, FindPubKeyByImeiErrors, FindPubKeyByImeiResponses, FindPubKeyBySnData, FindPubKeyBySnErrors, FindPubKeyBySnResponses, GetAclPolicyBindingData, GetAclPolicyBindingErrors, GetAclPolicyBindingResponses, GetAclRoleData, GetAclRoleErrors, GetAclRoleResponses, GetAclViewData, GetAclViewErrors, GetAclViewResponses, GetCredentialData, GetCredentialErrors, GetCredentialResponses, GetDashScopeTenantData, GetDashScopeTenantErrors, GetDashScopeTenantResponses, GetFirmwareData, GetFirmwareErrors, GetFirmwareResponses, GetFriendData, GetFriendErrors, GetFriendGroupData, GetFriendGroupErrors, GetFriendGroupInviteTokenData, GetFriendGroupInviteTokenErrors, GetFriendGroupInviteTokenResponses, GetFriendGroupResponses, GetFriendResponses, GetGeminiTenantData, GetGeminiTenantErrors, GetGeminiTenantResponses, GetMiniMaxTenantData, GetMiniMaxTenantErrors, GetMiniMaxTenantResponses, GetModelData, GetModelErrors, GetModelResponses, GetOpenAiTenantData, GetOpenAiTenantErrors, GetOpenAiTenantResponses, GetPeerConfigData, GetPeerConfigErrors, GetPeerConfigResponses, GetPeerData, GetPeerErrors, GetPeerFriendData, GetPeerFriendErrors, GetPeerFriendResponses, GetPeerInfoData, GetPeerInfoErrors, GetPeerInfoResponses, GetPeerResponses, GetPeerRuntimeData, GetPeerRuntimeResponses, GetResourceData, GetResourceErrors, GetResourceResponses, GetVoiceData, GetVoiceErrors, GetVoiceResponses, GetVolcTenantData, GetVolcTenantErrors, GetVolcTenantResponses, GetWorkflowData, GetWorkflowErrors, GetWorkflowResponses, GetWorkspaceData, GetWorkspaceErrors, GetWorkspaceHistoryData, GetWorkspaceHistoryErrors, GetWorkspaceHistoryResponses, GetWorkspaceResponses, ListAclPolicyBindingsData, ListAclPolicyBindingsErrors, ListAclPolicyBindingsResponses, ListAclRolesData, ListAclRolesErrors, ListAclRolesResponses, ListAclViewsData, ListAclViewsErrors, ListAclViewsResponses, ListBadgesData, ListBadgesErrors, ListBadgesResponses, ListCredentialsData, ListCredentialsErrors, ListCredentialsResponses, ListDashScopeTenantsData, ListDashScopeTenantsErrors, ListDashScopeTenantsResponses, ListFirmwaresData, ListFirmwaresErrors, ListFirmwaresResponses, ListFriendGroupMembersData, ListFriendGroupMembersErrors, ListFriendGroupMembersResponses, ListFriendGroupsData, ListFriendGroupsErrors, ListFriendGroupsResponses, ListFriendsData, ListFriendsErrors, ListFriendsResponses, ListGeminiTenantsData, ListGeminiTenantsErrors, ListGeminiTenantsResponses, ListMiniMaxTenantsData, ListMiniMaxTenantsErrors, ListMiniMaxTenantsResponses, ListModelsData, ListModelsErrors, ListModelsResponses, ListOpenAiTenantsData, ListOpenAiTenantsErrors, ListOpenAiTenantsResponses, ListPeerFriendsData, ListPeerFriendsErrors, ListPeerFriendsResponses, ListPeersData, ListPeersErrors, ListPeersResponses, ListPetSpeciesData, ListPetSpeciesErrors, ListPetSpeciesResponses, ListVoicesData, ListVoicesErrors, ListVoicesResponses, ListVolcTenantsData, ListVolcTenantsErrors, ListVolcTenantsResponses, ListWorkflowsData, ListWorkflowsErrors, ListWorkflowsResponses, ListWorkspaceHistoryData, ListWorkspaceHistoryErrors, ListWorkspaceHistoryResponses, ListWorkspacesData, ListWorkspacesErrors, ListWorkspacesResponses, PutAclPolicyBindingData, PutAclPolicyBindingErrors, PutAclPolicyBindingResponses, PutAclRoleData, PutAclRoleErrors, PutAclRoleResponses, PutAclViewData, PutAclViewErrors, PutAclViewResponses, PutCredentialData, PutCredentialErrors, PutCredentialResponses, PutDashScopeTenantData, PutDashScopeTenantErrors, PutDashScopeTenantResponses, PutFirmwareData, PutFirmwareErrors, PutFirmwareResponses, PutFriendGroupData, PutFriendGroupErrors, PutFriendGroupInviteTokenData, PutFriendGroupInviteTokenErrors, PutFriendGroupInviteTokenResponses, PutFriendGroupMemberData, PutFriendGroupMemberErrors, PutFriendGroupMemberResponses, PutFriendGroupResponses, PutGeminiTenantData, PutGeminiTenantErrors, PutGeminiTenantResponses, PutMiniMaxTenantData, PutMiniMaxTenantErrors, PutMiniMaxTenantResponses, PutModelData, PutModelErrors, PutModelResponses, PutOpenAiTenantData, PutOpenAiTenantErrors, PutOpenAiTenantResponses, PutPeerConfigData, PutPeerConfigErrors, PutPeerConfigResponses, PutPeerInfoData, PutPeerInfoErrors, PutPeerInfoResponses, PutResourceData, PutResourceErrors, PutResourceResponses, PutVoiceData, PutVoiceErrors, PutVoiceResponses, PutVolcTenantData, PutVolcTenantErrors, PutVolcTenantResponses, PutWorkflowData, PutWorkflowErrors, PutWorkflowResponses, PutWorkspaceData, PutWorkspaceErrors, PutWorkspaceResponses, RefreshPeerData, RefreshPeerErrors, RefreshPeerResponses, ReleaseFirmwareData, ReleaseFirmwareErrors, ReleaseFirmwareResponses, RollbackFirmwareData, RollbackFirmwareErrors, RollbackFirmwareResponses, SyncMiniMaxTenantVoicesData, SyncMiniMaxTenantVoicesErrors, SyncMiniMaxTenantVoicesResponses, SyncVolcTenantVoicesData, SyncVolcTenantVoicesErrors, SyncVolcTenantVoicesResponses, UploadBadgeIconData, UploadBadgeIconErrors, UploadBadgeIconResponses, UploadFirmwareBinData, UploadFirmwareBinErrors, UploadFirmwareBinResponses, UploadPetSpeciesPixaData, UploadPetSpeciesPixaErrors, UploadPetSpeciesPixaResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -53,6 +53,128 @@ export const getResource = <ThrowOnError extends boolean = false>(options: Optio
  */
 export const putResource = <ThrowOnError extends boolean = false>(options: Options<PutResourceData, ThrowOnError>) => (options.client ?? client).put<PutResourceResponses, PutResourceErrors, ThrowOnError>({
     url: '/resources/{kind}/{name}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List global owner-view friend rows
+ */
+export const listFriends = <ThrowOnError extends boolean = false>(options?: Options<ListFriendsData, ThrowOnError>) => (options?.client ?? client).get<ListFriendsResponses, ListFriendsErrors, ThrowOnError>({ url: '/social/friends', ...options });
+
+/**
+ * Create a direct friend relation
+ */
+export const createFriend = <ThrowOnError extends boolean = false>(options: Options<CreateFriendData, ThrowOnError>) => (options.client ?? client).post<CreateFriendResponses, CreateFriendErrors, ThrowOnError>({
+    url: '/social/friends',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a direct friend relation and backing workspace
+ */
+export const deleteFriend = <ThrowOnError extends boolean = false>(options: Options<DeleteFriendData, ThrowOnError>) => (options.client ?? client).delete<DeleteFriendResponses, DeleteFriendErrors, ThrowOnError>({ url: '/social/friends/{ownerPublicKey}/{id}', ...options });
+
+/**
+ * Get one global owner-view friend row
+ */
+export const getFriend = <ThrowOnError extends boolean = false>(options: Options<GetFriendData, ThrowOnError>) => (options.client ?? client).get<GetFriendResponses, GetFriendErrors, ThrowOnError>({ url: '/social/friends/{ownerPublicKey}/{id}', ...options });
+
+/**
+ * List friend groups
+ */
+export const listFriendGroups = <ThrowOnError extends boolean = false>(options?: Options<ListFriendGroupsData, ThrowOnError>) => (options?.client ?? client).get<ListFriendGroupsResponses, ListFriendGroupsErrors, ThrowOnError>({ url: '/social/friend-groups', ...options });
+
+/**
+ * Create a friend group without an implicit owner member
+ */
+export const createFriendGroup = <ThrowOnError extends boolean = false>(options: Options<CreateFriendGroupData, ThrowOnError>) => (options.client ?? client).post<CreateFriendGroupResponses, CreateFriendGroupErrors, ThrowOnError>({
+    url: '/social/friend-groups',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a friend group and backing workspace data
+ */
+export const deleteFriendGroup = <ThrowOnError extends boolean = false>(options: Options<DeleteFriendGroupData, ThrowOnError>) => (options.client ?? client).delete<DeleteFriendGroupResponses, DeleteFriendGroupErrors, ThrowOnError>({ url: '/social/friend-groups/{id}', ...options });
+
+/**
+ * Get a friend group
+ */
+export const getFriendGroup = <ThrowOnError extends boolean = false>(options: Options<GetFriendGroupData, ThrowOnError>) => (options.client ?? client).get<GetFriendGroupResponses, GetFriendGroupErrors, ThrowOnError>({ url: '/social/friend-groups/{id}', ...options });
+
+/**
+ * Update a friend group
+ */
+export const putFriendGroup = <ThrowOnError extends boolean = false>(options: Options<PutFriendGroupData, ThrowOnError>) => (options.client ?? client).put<PutFriendGroupResponses, PutFriendGroupErrors, ThrowOnError>({
+    url: '/social/friend-groups/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * List friend group members
+ */
+export const listFriendGroupMembers = <ThrowOnError extends boolean = false>(options: Options<ListFriendGroupMembersData, ThrowOnError>) => (options.client ?? client).get<ListFriendGroupMembersResponses, ListFriendGroupMembersErrors, ThrowOnError>({ url: '/social/friend-groups/{id}/members', ...options });
+
+/**
+ * Add a friend group member
+ */
+export const createFriendGroupMember = <ThrowOnError extends boolean = false>(options: Options<CreateFriendGroupMemberData, ThrowOnError>) => (options.client ?? client).post<CreateFriendGroupMemberResponses, CreateFriendGroupMemberErrors, ThrowOnError>({
+    url: '/social/friend-groups/{id}/members',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a friend group member
+ */
+export const deleteFriendGroupMember = <ThrowOnError extends boolean = false>(options: Options<DeleteFriendGroupMemberData, ThrowOnError>) => (options.client ?? client).delete<DeleteFriendGroupMemberResponses, DeleteFriendGroupMemberErrors, ThrowOnError>({ url: '/social/friend-groups/{id}/members/{publicKey}', ...options });
+
+/**
+ * Update a friend group member role
+ */
+export const putFriendGroupMember = <ThrowOnError extends boolean = false>(options: Options<PutFriendGroupMemberData, ThrowOnError>) => (options.client ?? client).put<PutFriendGroupMemberResponses, PutFriendGroupMemberErrors, ThrowOnError>({
+    url: '/social/friend-groups/{id}/members/{publicKey}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a friend group invite token
+ */
+export const deleteFriendGroupInviteToken = <ThrowOnError extends boolean = false>(options: Options<DeleteFriendGroupInviteTokenData, ThrowOnError>) => (options.client ?? client).delete<DeleteFriendGroupInviteTokenResponses, DeleteFriendGroupInviteTokenErrors, ThrowOnError>({ url: '/social/friend-groups/{id}/invite-token', ...options });
+
+/**
+ * Get a friend group invite token
+ */
+export const getFriendGroupInviteToken = <ThrowOnError extends boolean = false>(options: Options<GetFriendGroupInviteTokenData, ThrowOnError>) => (options.client ?? client).get<GetFriendGroupInviteTokenResponses, GetFriendGroupInviteTokenErrors, ThrowOnError>({ url: '/social/friend-groups/{id}/invite-token', ...options });
+
+/**
+ * Set or replace a friend group invite token
+ */
+export const putFriendGroupInviteToken = <ThrowOnError extends boolean = false>(options: Options<PutFriendGroupInviteTokenData, ThrowOnError>) => (options.client ?? client).put<PutFriendGroupInviteTokenResponses, PutFriendGroupInviteTokenErrors, ThrowOnError>({
+    url: '/social/friend-groups/{id}/invite-token',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -686,6 +808,21 @@ export const putWorkspace = <ThrowOnError extends boolean = false>(options: Opti
 });
 
 /**
+ * List workspace history without requiring an active runtime connection
+ */
+export const listWorkspaceHistory = <ThrowOnError extends boolean = false>(options: Options<ListWorkspaceHistoryData, ThrowOnError>) => (options.client ?? client).get<ListWorkspaceHistoryResponses, ListWorkspaceHistoryErrors, ThrowOnError>({ url: '/workspaces/{name}/history', ...options });
+
+/**
+ * Get one workspace history entry
+ */
+export const getWorkspaceHistory = <ThrowOnError extends boolean = false>(options: Options<GetWorkspaceHistoryData, ThrowOnError>) => (options.client ?? client).get<GetWorkspaceHistoryResponses, GetWorkspaceHistoryErrors, ThrowOnError>({ url: '/workspaces/{name}/history/{historyId}', ...options });
+
+/**
+ * Download workspace history audio as Ogg Opus
+ */
+export const downloadWorkspaceHistoryAudio = <ThrowOnError extends boolean = false>(options: Options<DownloadWorkspaceHistoryAudioData, ThrowOnError>) => (options.client ?? client).get<DownloadWorkspaceHistoryAudioResponses, DownloadWorkspaceHistoryAudioErrors, ThrowOnError>({ url: '/workspaces/{name}/history/{historyId}/audio.ogg', ...options });
+
+/**
  * List all peers
  */
 export const listPeers = <ThrowOnError extends boolean = false>(options?: Options<ListPeersData, ThrowOnError>) => (options?.client ?? client).get<ListPeersResponses, ListPeersErrors, ThrowOnError>({ url: '/peers', ...options });
@@ -770,6 +907,33 @@ export const putPeerConfig = <ThrowOnError extends boolean = false>(options: Opt
  * Get peer runtime status
  */
 export const getPeerRuntime = <ThrowOnError extends boolean = false>(options: Options<GetPeerRuntimeData, ThrowOnError>) => (options.client ?? client).get<GetPeerRuntimeResponses, unknown, ThrowOnError>({ url: '/peers/{publicKey}/runtime', ...options });
+
+/**
+ * List one peer owner-view friend rows
+ */
+export const listPeerFriends = <ThrowOnError extends boolean = false>(options: Options<ListPeerFriendsData, ThrowOnError>) => (options.client ?? client).get<ListPeerFriendsResponses, ListPeerFriendsErrors, ThrowOnError>({ url: '/peers/{publicKey}/friends', ...options });
+
+/**
+ * Create a direct friend relation for a peer
+ */
+export const createPeerFriend = <ThrowOnError extends boolean = false>(options: Options<CreatePeerFriendData, ThrowOnError>) => (options.client ?? client).post<CreatePeerFriendResponses, CreatePeerFriendErrors, ThrowOnError>({
+    url: '/peers/{publicKey}/friends',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Delete a direct friend relation and backing workspace
+ */
+export const deletePeerFriend = <ThrowOnError extends boolean = false>(options: Options<DeletePeerFriendData, ThrowOnError>) => (options.client ?? client).delete<DeletePeerFriendResponses, DeletePeerFriendErrors, ThrowOnError>({ url: '/peers/{publicKey}/friends/{id}', ...options });
+
+/**
+ * Get one peer owner-view friend row
+ */
+export const getPeerFriend = <ThrowOnError extends boolean = false>(options: Options<GetPeerFriendData, ThrowOnError>) => (options.client ?? client).get<GetPeerFriendResponses, GetPeerFriendErrors, ThrowOnError>({ url: '/peers/{publicKey}/friends/{id}', ...options });
 
 /**
  * List pet species

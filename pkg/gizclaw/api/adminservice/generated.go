@@ -138,6 +138,29 @@ type AdminFriendGroupPutRequest struct {
 	Name        *string `json:"name,omitempty"`
 }
 
+// AdminFriendListResponse defines model for AdminFriendListResponse.
+type AdminFriendListResponse struct {
+	HasNext    bool                `json:"has_next"`
+	Items      []AdminFriendObject `json:"items"`
+	NextCursor *string             `json:"next_cursor,omitempty"`
+}
+
+// AdminFriendObject defines model for AdminFriendObject.
+type AdminFriendObject struct {
+	CreatedAt      *time.Time `json:"created_at,omitempty"`
+	Id             string     `json:"id"`
+	OwnerPublicKey string     `json:"owner_public_key"`
+	PeerPublicKey  string     `json:"peer_public_key"`
+	UpdatedAt      *time.Time `json:"updated_at,omitempty"`
+	WorkspaceName  string     `json:"workspace_name"`
+}
+
+// AdminSocialFriendCreateRequest defines model for AdminSocialFriendCreateRequest.
+type AdminSocialFriendCreateRequest struct {
+	OwnerPublicKey string `json:"owner_public_key"`
+	PeerPublicKey  string `json:"peer_public_key"`
+}
+
 // ApproveRequest defines model for ApproveRequest.
 type ApproveRequest struct {
 	Role externalRef0.PeerRole `json:"role"`
@@ -577,6 +600,15 @@ type ListFriendGroupMembersParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// ListFriendsParams defines parameters for ListFriends.
+type ListFriendsParams struct {
+	// Cursor Cursor returned by the previous list response.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Maximum number of items to return.
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // ListVoicesParams defines parameters for ListVoices.
 type ListVoicesParams struct {
 	// Source Filter voices by source
@@ -729,6 +761,9 @@ type CreateFriendGroupMemberJSONRequestBody = AdminFriendGroupMemberCreateReques
 
 // PutFriendGroupMemberJSONRequestBody defines body for PutFriendGroupMember for application/json ContentType.
 type PutFriendGroupMemberJSONRequestBody = AdminFriendGroupMemberPutRequest
+
+// CreateFriendJSONRequestBody defines body for CreateFriend for application/json ContentType.
+type CreateFriendJSONRequestBody = AdminSocialFriendCreateRequest
 
 // CreateVoiceJSONRequestBody defines body for CreateVoice for application/json ContentType.
 type CreateVoiceJSONRequestBody = VoiceUpsert
@@ -1167,6 +1202,20 @@ type ClientInterface interface {
 	PutFriendGroupMemberWithBody(ctx context.Context, id string, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	PutFriendGroupMember(ctx context.Context, id string, publicKey string, body PutFriendGroupMemberJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListFriends request
+	ListFriends(ctx context.Context, params *ListFriendsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// CreateFriendWithBody request with any body
+	CreateFriendWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	CreateFriend(ctx context.Context, body CreateFriendJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// DeleteFriend request
+	DeleteFriend(ctx context.Context, ownerPublicKey string, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// GetFriend request
+	GetFriend(ctx context.Context, ownerPublicKey string, id string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// ListVoices request
 	ListVoices(ctx context.Context, params *ListVoicesParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -2735,6 +2784,66 @@ func (c *Client) PutFriendGroupMemberWithBody(ctx context.Context, id string, pu
 
 func (c *Client) PutFriendGroupMember(ctx context.Context, id string, publicKey string, body PutFriendGroupMemberJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutFriendGroupMemberRequest(c.Server, id, publicKey, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) ListFriends(ctx context.Context, params *ListFriendsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListFriendsRequest(c.Server, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateFriendWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFriendRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) CreateFriend(ctx context.Context, body CreateFriendJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewCreateFriendRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) DeleteFriend(ctx context.Context, ownerPublicKey string, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewDeleteFriendRequest(c.Server, ownerPublicKey, id)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) GetFriend(ctx context.Context, ownerPublicKey string, id string, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetFriendRequest(c.Server, ownerPublicKey, id)
 	if err != nil {
 		return nil, err
 	}
@@ -7388,6 +7497,193 @@ func NewPutFriendGroupMemberRequestWithBody(server string, id string, publicKey 
 	return req, nil
 }
 
+// NewListFriendsRequest generates requests for ListFriends
+func NewListFriendsRequest(server string, params *ListFriendsParams) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/social/friends")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if params != nil {
+		queryValues := queryURL.Query()
+
+		if params.Cursor != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "cursor", *params.Cursor, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "string", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		if params.Limit != nil {
+
+			if queryFrag, err := runtime.StyleParamWithOptions("form", true, "limit", *params.Limit, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationQuery, Type: "integer", Format: ""}); err != nil {
+				return nil, err
+			} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+				return nil, err
+			} else {
+				for k, v := range parsed {
+					for _, v2 := range v {
+						queryValues.Add(k, v2)
+					}
+				}
+			}
+
+		}
+
+		queryURL.RawQuery = queryValues.Encode()
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewCreateFriendRequest calls the generic CreateFriend builder with application/json body
+func NewCreateFriendRequest(server string, body CreateFriendJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewCreateFriendRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewCreateFriendRequestWithBody generates requests for CreateFriend with any type of body
+func NewCreateFriendRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/social/friends")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewDeleteFriendRequest generates requests for DeleteFriend
+func NewDeleteFriendRequest(server string, ownerPublicKey string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "ownerPublicKey", ownerPublicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/social/friends/%s/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("DELETE", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewGetFriendRequest generates requests for GetFriend
+func NewGetFriendRequest(server string, ownerPublicKey string, id string) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithOptions("simple", false, "ownerPublicKey", ownerPublicKey, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	var pathParam1 string
+
+	pathParam1, err = runtime.StyleParamWithOptions("simple", false, "id", id, runtime.StyleParamOptions{ParamLocation: runtime.ParamLocationPath, Type: "string", Format: ""})
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/social/friends/%s/%s", pathParam0, pathParam1)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // NewListVoicesRequest generates requests for ListVoices
 func NewListVoicesRequest(server string, params *ListVoicesParams) (*http.Request, error) {
 	var err error
@@ -8903,6 +9199,20 @@ type ClientWithResponsesInterface interface {
 	PutFriendGroupMemberWithBodyWithResponse(ctx context.Context, id string, publicKey string, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutFriendGroupMemberResponse, error)
 
 	PutFriendGroupMemberWithResponse(ctx context.Context, id string, publicKey string, body PutFriendGroupMemberJSONRequestBody, reqEditors ...RequestEditorFn) (*PutFriendGroupMemberResponse, error)
+
+	// ListFriendsWithResponse request
+	ListFriendsWithResponse(ctx context.Context, params *ListFriendsParams, reqEditors ...RequestEditorFn) (*ListFriendsResponse, error)
+
+	// CreateFriendWithBodyWithResponse request with any body
+	CreateFriendWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFriendResponse, error)
+
+	CreateFriendWithResponse(ctx context.Context, body CreateFriendJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFriendResponse, error)
+
+	// DeleteFriendWithResponse request
+	DeleteFriendWithResponse(ctx context.Context, ownerPublicKey string, id string, reqEditors ...RequestEditorFn) (*DeleteFriendResponse, error)
+
+	// GetFriendWithResponse request
+	GetFriendWithResponse(ctx context.Context, ownerPublicKey string, id string, reqEditors ...RequestEditorFn) (*GetFriendResponse, error)
 
 	// ListVoicesWithResponse request
 	ListVoicesWithResponse(ctx context.Context, params *ListVoicesParams, reqEditors ...RequestEditorFn) (*ListVoicesResponse, error)
@@ -11246,6 +11556,105 @@ func (r PutFriendGroupMemberResponse) StatusCode() int {
 	return 0
 }
 
+type ListFriendsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AdminFriendListResponse
+	JSON400      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r ListFriendsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListFriendsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type CreateFriendResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AdminFriendObject
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r CreateFriendResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r CreateFriendResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type DeleteFriendResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AdminFriendObject
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r DeleteFriendResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r DeleteFriendResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type GetFriendResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *AdminFriendObject
+	JSON400      *externalRef0.ErrorResponse
+	JSON404      *externalRef0.ErrorResponse
+	JSON500      *externalRef0.ErrorResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetFriendResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetFriendResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type ListVoicesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
@@ -12910,6 +13319,50 @@ func (c *ClientWithResponses) PutFriendGroupMemberWithResponse(ctx context.Conte
 		return nil, err
 	}
 	return ParsePutFriendGroupMemberResponse(rsp)
+}
+
+// ListFriendsWithResponse request returning *ListFriendsResponse
+func (c *ClientWithResponses) ListFriendsWithResponse(ctx context.Context, params *ListFriendsParams, reqEditors ...RequestEditorFn) (*ListFriendsResponse, error) {
+	rsp, err := c.ListFriends(ctx, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListFriendsResponse(rsp)
+}
+
+// CreateFriendWithBodyWithResponse request with arbitrary body returning *CreateFriendResponse
+func (c *ClientWithResponses) CreateFriendWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*CreateFriendResponse, error) {
+	rsp, err := c.CreateFriendWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateFriendResponse(rsp)
+}
+
+func (c *ClientWithResponses) CreateFriendWithResponse(ctx context.Context, body CreateFriendJSONRequestBody, reqEditors ...RequestEditorFn) (*CreateFriendResponse, error) {
+	rsp, err := c.CreateFriend(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseCreateFriendResponse(rsp)
+}
+
+// DeleteFriendWithResponse request returning *DeleteFriendResponse
+func (c *ClientWithResponses) DeleteFriendWithResponse(ctx context.Context, ownerPublicKey string, id string, reqEditors ...RequestEditorFn) (*DeleteFriendResponse, error) {
+	rsp, err := c.DeleteFriend(ctx, ownerPublicKey, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseDeleteFriendResponse(rsp)
+}
+
+// GetFriendWithResponse request returning *GetFriendResponse
+func (c *ClientWithResponses) GetFriendWithResponse(ctx context.Context, ownerPublicKey string, id string, reqEditors ...RequestEditorFn) (*GetFriendResponse, error) {
+	rsp, err := c.GetFriend(ctx, ownerPublicKey, id, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetFriendResponse(rsp)
 }
 
 // ListVoicesWithResponse request returning *ListVoicesResponse
@@ -17059,6 +17512,187 @@ func ParsePutFriendGroupMemberResponse(rsp *http.Response) (*PutFriendGroupMembe
 	return response, nil
 }
 
+// ParseListFriendsResponse parses an HTTP response from a ListFriendsWithResponse call
+func ParseListFriendsResponse(rsp *http.Response) (*ListFriendsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListFriendsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdminFriendListResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseCreateFriendResponse parses an HTTP response from a CreateFriendWithResponse call
+func ParseCreateFriendResponse(rsp *http.Response) (*CreateFriendResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &CreateFriendResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdminFriendObject
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseDeleteFriendResponse parses an HTTP response from a DeleteFriendWithResponse call
+func ParseDeleteFriendResponse(rsp *http.Response) (*DeleteFriendResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &DeleteFriendResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdminFriendObject
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseGetFriendResponse parses an HTTP response from a GetFriendWithResponse call
+func ParseGetFriendResponse(rsp *http.Response) (*GetFriendResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetFriendResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest AdminFriendObject
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 404:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON404 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 500:
+		var dest externalRef0.ErrorResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON500 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseListVoicesResponse parses an HTTP response from a ListVoicesWithResponse call
 func ParseListVoicesResponse(rsp *http.Response) (*ListVoicesResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -18335,6 +18969,18 @@ type ServerInterface interface {
 	// Update a friend group member role
 	// (PUT /social/friend-groups/{id}/members/{publicKey})
 	PutFriendGroupMember(c *fiber.Ctx, id string, publicKey string) error
+	// List global owner-view friend rows
+	// (GET /social/friends)
+	ListFriends(c *fiber.Ctx, params ListFriendsParams) error
+	// Create a direct friend relation
+	// (POST /social/friends)
+	CreateFriend(c *fiber.Ctx) error
+	// Delete a direct friend relation and backing workspace
+	// (DELETE /social/friends/{ownerPublicKey}/{id})
+	DeleteFriend(c *fiber.Ctx, ownerPublicKey string, id string) error
+	// Get one global owner-view friend row
+	// (GET /social/friends/{ownerPublicKey}/{id})
+	GetFriend(c *fiber.Ctx, ownerPublicKey string, id string) error
 	// List all voices
 	// (GET /voices)
 	ListVoices(c *fiber.Ctx, params ListVoicesParams) error
@@ -20204,6 +20850,91 @@ func (siw *ServerInterfaceWrapper) PutFriendGroupMember(c *fiber.Ctx) error {
 	return siw.Handler.PutFriendGroupMember(c, id, publicKey)
 }
 
+// ListFriends operation middleware
+func (siw *ServerInterfaceWrapper) ListFriends(c *fiber.Ctx) error {
+
+	var err error
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListFriendsParams
+
+	var query url.Values
+	query, err = url.ParseQuery(string(c.Request().URI().QueryString()))
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for query string: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", query, &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter cursor: %w", err).Error())
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", query, &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter limit: %w", err).Error())
+	}
+
+	return siw.Handler.ListFriends(c, params)
+}
+
+// CreateFriend operation middleware
+func (siw *ServerInterfaceWrapper) CreateFriend(c *fiber.Ctx) error {
+
+	return siw.Handler.CreateFriend(c)
+}
+
+// DeleteFriend operation middleware
+func (siw *ServerInterfaceWrapper) DeleteFriend(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "ownerPublicKey" -------------
+	var ownerPublicKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "ownerPublicKey", c.Params("ownerPublicKey"), &ownerPublicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter ownerPublicKey: %w", err).Error())
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.DeleteFriend(c, ownerPublicKey, id)
+}
+
+// GetFriend operation middleware
+func (siw *ServerInterfaceWrapper) GetFriend(c *fiber.Ctx) error {
+
+	var err error
+
+	// ------------- Path parameter "ownerPublicKey" -------------
+	var ownerPublicKey string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "ownerPublicKey", c.Params("ownerPublicKey"), &ownerPublicKey, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter ownerPublicKey: %w", err).Error())
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", c.Params("id"), &id, runtime.BindStyledParameterOptions{Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter id: %w", err).Error())
+	}
+
+	return siw.Handler.GetFriend(c, ownerPublicKey, id)
+}
+
 // ListVoices operation middleware
 func (siw *ServerInterfaceWrapper) ListVoices(c *fiber.Ctx) error {
 
@@ -20881,6 +21612,14 @@ func RegisterHandlersWithOptions(router fiber.Router, si ServerInterface, option
 	router.Delete(options.BaseURL+"/social/friend-groups/:id/members/:publicKey", wrapper.DeleteFriendGroupMember)
 
 	router.Put(options.BaseURL+"/social/friend-groups/:id/members/:publicKey", wrapper.PutFriendGroupMember)
+
+	router.Get(options.BaseURL+"/social/friends", wrapper.ListFriends)
+
+	router.Post(options.BaseURL+"/social/friends", wrapper.CreateFriend)
+
+	router.Delete(options.BaseURL+"/social/friends/:ownerPublicKey/:id", wrapper.DeleteFriend)
+
+	router.Get(options.BaseURL+"/social/friends/:ownerPublicKey/:id", wrapper.GetFriend)
 
 	router.Get(options.BaseURL+"/voices", wrapper.ListVoices)
 
@@ -24450,6 +25189,175 @@ func (response PutFriendGroupMember500JSONResponse) VisitPutFriendGroupMemberRes
 	return ctx.JSON(&response)
 }
 
+type ListFriendsRequestObject struct {
+	Params ListFriendsParams
+}
+
+type ListFriendsResponseObject interface {
+	VisitListFriendsResponse(ctx *fiber.Ctx) error
+}
+
+type ListFriends200JSONResponse AdminFriendListResponse
+
+func (response ListFriends200JSONResponse) VisitListFriendsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type ListFriends400JSONResponse externalRef0.ErrorResponse
+
+func (response ListFriends400JSONResponse) VisitListFriendsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type ListFriends500JSONResponse externalRef0.ErrorResponse
+
+func (response ListFriends500JSONResponse) VisitListFriendsResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type CreateFriendRequestObject struct {
+	Body *CreateFriendJSONRequestBody
+}
+
+type CreateFriendResponseObject interface {
+	VisitCreateFriendResponse(ctx *fiber.Ctx) error
+}
+
+type CreateFriend200JSONResponse AdminFriendObject
+
+func (response CreateFriend200JSONResponse) VisitCreateFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type CreateFriend400JSONResponse externalRef0.ErrorResponse
+
+func (response CreateFriend400JSONResponse) VisitCreateFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type CreateFriend404JSONResponse externalRef0.ErrorResponse
+
+func (response CreateFriend404JSONResponse) VisitCreateFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type CreateFriend500JSONResponse externalRef0.ErrorResponse
+
+func (response CreateFriend500JSONResponse) VisitCreateFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteFriendRequestObject struct {
+	OwnerPublicKey string `json:"ownerPublicKey"`
+	Id             string `json:"id"`
+}
+
+type DeleteFriendResponseObject interface {
+	VisitDeleteFriendResponse(ctx *fiber.Ctx) error
+}
+
+type DeleteFriend200JSONResponse AdminFriendObject
+
+func (response DeleteFriend200JSONResponse) VisitDeleteFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteFriend400JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteFriend400JSONResponse) VisitDeleteFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteFriend404JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteFriend404JSONResponse) VisitDeleteFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type DeleteFriend500JSONResponse externalRef0.ErrorResponse
+
+func (response DeleteFriend500JSONResponse) VisitDeleteFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
+type GetFriendRequestObject struct {
+	OwnerPublicKey string `json:"ownerPublicKey"`
+	Id             string `json:"id"`
+}
+
+type GetFriendResponseObject interface {
+	VisitGetFriendResponse(ctx *fiber.Ctx) error
+}
+
+type GetFriend200JSONResponse AdminFriendObject
+
+func (response GetFriend200JSONResponse) VisitGetFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(200)
+
+	return ctx.JSON(&response)
+}
+
+type GetFriend400JSONResponse externalRef0.ErrorResponse
+
+func (response GetFriend400JSONResponse) VisitGetFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(400)
+
+	return ctx.JSON(&response)
+}
+
+type GetFriend404JSONResponse externalRef0.ErrorResponse
+
+func (response GetFriend404JSONResponse) VisitGetFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(404)
+
+	return ctx.JSON(&response)
+}
+
+type GetFriend500JSONResponse externalRef0.ErrorResponse
+
+func (response GetFriend500JSONResponse) VisitGetFriendResponse(ctx *fiber.Ctx) error {
+	ctx.Response().Header.Set("Content-Type", "application/json")
+	ctx.Status(500)
+
+	return ctx.JSON(&response)
+}
+
 type ListVoicesRequestObject struct {
 	Params ListVoicesParams
 }
@@ -25642,6 +26550,18 @@ type StrictServerInterface interface {
 	// Update a friend group member role
 	// (PUT /social/friend-groups/{id}/members/{publicKey})
 	PutFriendGroupMember(ctx context.Context, request PutFriendGroupMemberRequestObject) (PutFriendGroupMemberResponseObject, error)
+	// List global owner-view friend rows
+	// (GET /social/friends)
+	ListFriends(ctx context.Context, request ListFriendsRequestObject) (ListFriendsResponseObject, error)
+	// Create a direct friend relation
+	// (POST /social/friends)
+	CreateFriend(ctx context.Context, request CreateFriendRequestObject) (CreateFriendResponseObject, error)
+	// Delete a direct friend relation and backing workspace
+	// (DELETE /social/friends/{ownerPublicKey}/{id})
+	DeleteFriend(ctx context.Context, request DeleteFriendRequestObject) (DeleteFriendResponseObject, error)
+	// Get one global owner-view friend row
+	// (GET /social/friends/{ownerPublicKey}/{id})
+	GetFriend(ctx context.Context, request GetFriendRequestObject) (GetFriendResponseObject, error)
 	// List all voices
 	// (GET /voices)
 	ListVoices(ctx context.Context, request ListVoicesRequestObject) (ListVoicesResponseObject, error)
@@ -28445,6 +29365,120 @@ func (sh *strictHandler) PutFriendGroupMember(ctx *fiber.Ctx, id string, publicK
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	} else if validResponse, ok := response.(PutFriendGroupMemberResponseObject); ok {
 		if err := validResponse.VisitPutFriendGroupMemberResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListFriends operation middleware
+func (sh *strictHandler) ListFriends(ctx *fiber.Ctx, params ListFriendsParams) error {
+	var request ListFriendsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.ListFriends(ctx.UserContext(), request.(ListFriendsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListFriends")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(ListFriendsResponseObject); ok {
+		if err := validResponse.VisitListFriendsResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateFriend operation middleware
+func (sh *strictHandler) CreateFriend(ctx *fiber.Ctx) error {
+	var request CreateFriendRequestObject
+
+	var body CreateFriendJSONRequestBody
+	if err := ctx.BodyParser(&body); err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+	request.Body = &body
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateFriend(ctx.UserContext(), request.(CreateFriendRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateFriend")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(CreateFriendResponseObject); ok {
+		if err := validResponse.VisitCreateFriendResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// DeleteFriend operation middleware
+func (sh *strictHandler) DeleteFriend(ctx *fiber.Ctx, ownerPublicKey string, id string) error {
+	var request DeleteFriendRequestObject
+
+	request.OwnerPublicKey = ownerPublicKey
+	request.Id = id
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.DeleteFriend(ctx.UserContext(), request.(DeleteFriendRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "DeleteFriend")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(DeleteFriendResponseObject); ok {
+		if err := validResponse.VisitDeleteFriendResponse(ctx); err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, err.Error())
+		}
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetFriend operation middleware
+func (sh *strictHandler) GetFriend(ctx *fiber.Ctx, ownerPublicKey string, id string) error {
+	var request GetFriendRequestObject
+
+	request.OwnerPublicKey = ownerPublicKey
+	request.Id = id
+
+	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {
+		return sh.ssi.GetFriend(ctx.UserContext(), request.(GetFriendRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetFriend")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	} else if validResponse, ok := response.(GetFriendResponseObject); ok {
+		if err := validResponse.VisitGetFriendResponse(ctx); err != nil {
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		}
 	} else if response != nil {
