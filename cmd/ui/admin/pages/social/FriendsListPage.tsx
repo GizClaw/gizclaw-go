@@ -42,7 +42,6 @@ export function FriendsListPage(): JSX.Element {
       const friend = await expectData(createFriend({ body: { owner_public_key: ownerPublicKey.trim(), peer_public_key: peerPublicKey.trim() } }));
       setOwnerPublicKey("");
       setPeerPublicKey("");
-      await refresh();
       navigate(friendDetailPath(friend));
     } catch (err) {
       setNotice({ message: toMessage(err), tone: "error" });

@@ -156,6 +156,12 @@ func (p *uiAPIProxy) set(client uiAPIProxyClient) {
 }
 
 func (p *uiAPIProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if isUIAPIProxyBufferedAPIRequest(r) {
+		if err := p.serveBuffered(w, r); err != nil {
+			http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		}
+		return
+	}
 	if !isUIAPIProxyRetryable(r) {
 		if err := p.serveDirect(w, r); err != nil {
 			http.Error(w, err.Error(), http.StatusServiceUnavailable)
@@ -178,6 +184,30 @@ func (p *uiAPIProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	response.writeTo(w)
 }
 
+func (p *uiAPIProxy) serveBuffered(w http.ResponseWriter, r *http.Request) error {
+	body, err := readReplayBody(r)
+	if err != nil {
+		return err
+	}
+	var response *bufferedHTTPResponse
+	for attempt, maxAttempts := 0, uiAPIProxyMaxAttempts(r); attempt < maxAttempts; attempt++ {
+		var client uiAPIProxyClient
+		response, client, err = p.serveOnce(requestWithReplayBody(r, body))
+		if err != nil {
+			return err
+		}
+		if !isUIAPIProxyFailure(response.statusCode()) {
+			break
+		}
+		p.invalidate(client)
+		if !isUIAPIProxyReplaySafeRequest(r) {
+			break
+		}
+	}
+	response.writeTo(w)
+	return nil
+}
+
 func (p *uiAPIProxy) serveDirect(w http.ResponseWriter, r *http.Request) error {
 	client, err := p.get()
 	if err != nil {
@@ -189,6 +219,36 @@ func (p *uiAPIProxy) serveDirect(w http.ResponseWriter, r *http.Request) error {
 		p.invalidate(client)
 	}
 	return nil
+}
+
+func readReplayBody(r *http.Request) ([]byte, error) {
+	if r.Body == nil {
+		return nil, nil
+	}
+	body, err := io.ReadAll(r.Body)
+	if closeErr := r.Body.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
+func requestWithReplayBody(r *http.Request, body []byte) *http.Request {
+	clone := r.Clone(r.Context())
+	if body == nil {
+		clone.Body = nil
+		clone.GetBody = nil
+		clone.ContentLength = 0
+		return clone
+	}
+	clone.Body = io.NopCloser(bytes.NewReader(body))
+	clone.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(body)), nil
+	}
+	clone.ContentLength = int64(len(body))
+	return clone
 }
 
 func (p *uiAPIProxy) serveOnce(r *http.Request) (*bufferedHTTPResponse, uiAPIProxyClient, error) {
@@ -261,6 +321,27 @@ func (p *uiAPIProxy) invalidate(stale uiAPIProxyClient) {
 	p.client = nil
 	p.mu.Unlock()
 	_ = stale.Close()
+}
+
+func isUIAPIProxyBufferedAPIRequest(r *http.Request) bool {
+	return r.URL.Path == "/api" || strings.HasPrefix(r.URL.Path, "/api/")
+}
+
+func isUIAPIProxyReplaySafeRequest(r *http.Request) bool {
+	if isUIAPIProxyRetryable(r) {
+		return true
+	}
+	return r.Method == http.MethodPost && r.URL.Path == "/api/admin/social/friends"
+}
+
+func uiAPIProxyMaxAttempts(r *http.Request) int {
+	if r.Method == http.MethodPost && r.URL.Path == "/api/admin/social/friends" {
+		return 3
+	}
+	if isUIAPIProxyReplaySafeRequest(r) {
+		return 2
+	}
+	return 1
 }
 
 func isUIAPIProxyRetryable(r *http.Request) bool {

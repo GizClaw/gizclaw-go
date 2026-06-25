@@ -43,7 +43,6 @@ export function FriendGroupsListPage(): JSX.Element {
       const group = await expectData(createFriendGroup({ body: { name: name.trim(), description: description.trim() || undefined } }));
       setName("");
       setDescription("");
-      await refresh();
       navigate(friendGroupDetailPath(group));
     } catch (err) {
       setNotice({ message: toMessage(err), tone: "error" });

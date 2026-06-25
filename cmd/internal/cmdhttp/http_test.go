@@ -134,7 +134,136 @@ func TestUIAPIProxyRetriesBadGatewayClient(t *testing.T) {
 	}
 }
 
-func TestUIAPIProxyDoesNotRetryNonRetryableFailure(t *testing.T) {
+func TestUIAPIProxyInvalidatesBufferedAPIPostFailure(t *testing.T) {
+	const wantBody = `{"name":"demo"}`
+	first := &fakeUIAPIProxyClient{
+		handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read first body: %v", err)
+			}
+			if string(body) != wantBody {
+				t.Fatalf("first body = %q, want %q", body, wantBody)
+			}
+			http.Error(w, "bad gateway", http.StatusBadGateway)
+		}),
+	}
+	second := &fakeUIAPIProxyClient{
+		handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read second body: %v", err)
+			}
+			if string(body) != wantBody {
+				t.Fatalf("second body = %q, want %q", body, wantBody)
+			}
+			_, _ = w.Write([]byte("ok"))
+		}),
+	}
+	var connects atomic.Int32
+	proxy := newUIAPIProxy(func() (uiAPIProxyClient, error) {
+		switch connects.Add(1) {
+		case 1:
+			return first, nil
+		case 2:
+			return second, nil
+		default:
+			t.Fatal("unexpected reconnect")
+			return nil, errors.New("unexpected reconnect")
+		}
+	}, time.Second)
+	defer proxy.Close()
+
+	rec := httptest.NewRecorder()
+	proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/admin/credentials", strings.NewReader(wantBody)))
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("first ServeHTTP status = %d, want %d", rec.Code, http.StatusBadGateway)
+	}
+	if !first.closed.Load() {
+		t.Fatal("bad gateway client was not closed")
+	}
+	if got := connects.Load(); got != 1 {
+		t.Fatalf("connects after failure = %d, want 1", got)
+	}
+
+	rec = httptest.NewRecorder()
+	proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/admin/credentials", strings.NewReader(wantBody)))
+	if rec.Code != http.StatusOK || rec.Body.String() != "ok" {
+		t.Fatalf("second ServeHTTP status/body = %d/%q, want 200/ok", rec.Code, rec.Body.String())
+	}
+	if got := connects.Load(); got != 2 {
+		t.Fatalf("connects = %d, want 2", got)
+	}
+}
+
+func TestUIAPIProxyRetriesReplaySafeSocialFriendPostFailure(t *testing.T) {
+	const wantBody = `{"owner_public_key":"a","peer_public_key":"b"}`
+	first := &fakeUIAPIProxyClient{
+		handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read first body: %v", err)
+			}
+			if string(body) != wantBody {
+				t.Fatalf("first body = %q, want %q", body, wantBody)
+			}
+			http.Error(w, "bad gateway", http.StatusBadGateway)
+		}),
+	}
+	second := &fakeUIAPIProxyClient{
+		handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read second body: %v", err)
+			}
+			if string(body) != wantBody {
+				t.Fatalf("second body = %q, want %q", body, wantBody)
+			}
+			http.Error(w, "bad gateway", http.StatusBadGateway)
+		}),
+	}
+	third := &fakeUIAPIProxyClient{
+		handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Fatalf("read third body: %v", err)
+			}
+			if string(body) != wantBody {
+				t.Fatalf("third body = %q, want %q", body, wantBody)
+			}
+			_, _ = w.Write([]byte("ok"))
+		}),
+	}
+	var connects atomic.Int32
+	proxy := newUIAPIProxy(func() (uiAPIProxyClient, error) {
+		switch connects.Add(1) {
+		case 1:
+			return first, nil
+		case 2:
+			return second, nil
+		case 3:
+			return third, nil
+		default:
+			t.Fatal("unexpected reconnect")
+			return nil, errors.New("unexpected reconnect")
+		}
+	}, time.Second)
+	defer proxy.Close()
+
+	rec := httptest.NewRecorder()
+	proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/admin/social/friends", strings.NewReader(wantBody)))
+	if rec.Code != http.StatusOK || rec.Body.String() != "ok" {
+		t.Fatalf("ServeHTTP status/body = %d/%q, want 200/ok", rec.Code, rec.Body.String())
+	}
+	if !first.closed.Load() {
+		t.Fatal("bad gateway client was not closed")
+	}
+	if got := connects.Load(); got != 3 {
+		t.Fatalf("connects = %d, want 3", got)
+	}
+}
+
+func TestUIAPIProxyDoesNotRetryNonAPIPostFailure(t *testing.T) {
 	fake := &fakeUIAPIProxyClient{
 		handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			http.Error(w, "bad gateway", http.StatusBadGateway)
@@ -148,7 +277,7 @@ func TestUIAPIProxyDoesNotRetryNonRetryableFailure(t *testing.T) {
 	defer proxy.Close()
 
 	rec := httptest.NewRecorder()
-	proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/api/admin/credentials", strings.NewReader("{}")))
+	proxy.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/v1/chat/completions", strings.NewReader("{}")))
 	if rec.Code != http.StatusBadGateway {
 		t.Fatalf("ServeHTTP status = %d, want %d", rec.Code, http.StatusBadGateway)
 	}
@@ -156,7 +285,7 @@ func TestUIAPIProxyDoesNotRetryNonRetryableFailure(t *testing.T) {
 		t.Fatalf("connects = %d, want 1", got)
 	}
 	if fake.closed.Load() {
-		t.Fatal("non-retryable failure should not invalidate client")
+		t.Fatal("non-api post failure should not invalidate client")
 	}
 }
 
