@@ -1,4 +1,4 @@
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { StrictMode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import type { JSX, MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import { createRoot } from "react-dom/client";
 import OpenAI from "openai";
@@ -4445,19 +4445,21 @@ function EmptyMessage({ description, title }: { description: string; title: stri
 }
 
 function Field({ label, onChange, type = "text", value }: { label: string; onChange: (value: string) => void; type?: string; value: string }): JSX.Element {
+  const id = useId();
   return (
     <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      <Input onChange={(event) => onChange(event.target.value)} type={type} value={value} />
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} onChange={(event) => onChange(event.target.value)} type={type} value={value} />
     </div>
   );
 }
 
 function TextAreaField({ label, onChange, placeholder, value }: { label: string; onChange: (value: string) => void; placeholder?: string; value: string }): JSX.Element {
+  const id = useId();
   return (
     <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      <Textarea className="min-h-20 resize-y" onChange={(event) => onChange(event.target.value)} placeholder={placeholder} value={value} />
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea className="min-h-20 resize-y" id={id} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} value={value} />
     </div>
   );
 }

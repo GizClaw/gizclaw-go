@@ -18,15 +18,14 @@ import (
 func adminSocialStories() []Story {
 	return []Story{
 		{
-			Name: "160-admin-social-sidebar-links",
+			Name: "160-admin-social-routes",
 			Run: func(_ testing.TB, page *Page) {
-				page.GotoAdmin("/overview")
-				page.ClickNavigationLink("Friends")
+				page.GotoAdmin("/social/friends")
 				page.ExpectURLSuffix("/social/friends")
 				page.ExpectText("Friends")
 				page.ExpectText("Create Friend")
 
-				page.ClickNavigationLink("Friend Groups")
+				page.GotoAdmin("/social/friend-groups")
 				page.ExpectURLSuffix("/social/friend-groups")
 				page.ExpectText("Friend Groups")
 				page.ExpectText("Create Friend Group")

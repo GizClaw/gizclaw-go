@@ -123,6 +123,7 @@ func (s *Suite) RunStory(t testing.TB, run func(testing.TB, *Page)) {
 		t.Fatalf("create page: %v", err)
 	}
 	defer page.Close()
+	defer captureStoryFailure(t, page)
 	page.OnConsole(func(message playwright.ConsoleMessage) {
 		if message.Type() == "error" {
 			t.Logf("browser console error: %s", message.Text())
@@ -133,6 +134,35 @@ func (s *Suite) RunStory(t testing.TB, run func(testing.TB, *Page)) {
 	})
 
 	run(t, &Page{t: t, page: page, Seed: s.seed})
+}
+
+func captureStoryFailure(t testing.TB, page playwright.Page) {
+	t.Helper()
+	if !t.Failed() {
+		return
+	}
+	currentURL := page.URL()
+	body, err := page.TextContent("body")
+	if err != nil {
+		t.Logf("browser failure url=%s body_read_error=%v", currentURL, err)
+	} else {
+		t.Logf("browser failure url=%s body=%q", currentURL, truncateForLog(body, 4000))
+	}
+
+	artifactDir := getenvDefault("GIZCLAW_E2E_UI_ARTIFACT_DIR", filepath.Join(os.TempDir(), "gizclaw-e2e-ui-artifacts"))
+	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
+		t.Logf("browser failure screenshot mkdir %s: %v", artifactDir, err)
+		return
+	}
+	screenshotPath := filepath.Join(artifactDir, safeArtifactName(t.Name())+".png")
+	if _, err := page.Screenshot(playwright.PageScreenshotOptions{
+		Path:     playwright.String(screenshotPath),
+		FullPage: playwright.Bool(true),
+	}); err != nil {
+		t.Logf("browser failure screenshot %s: %v", screenshotPath, err)
+		return
+	}
+	t.Logf("browser failure screenshot=%s", screenshotPath)
 }
 
 func (s *Suite) Close() {
@@ -333,21 +363,27 @@ func setupClientPublicKey(t testing.TB) string {
 
 func requireURL(t *testing.T, name, rawURL string) {
 	t.Helper()
-	if err := probeURL(rawURL); err != nil {
+	if err := probeURL(rawURL, "GizClaw "+name); err != nil {
 		t.Skipf("%s not reachable at %s; run setup/start-%s-ui.sh first: %v", name, rawURL, strings.ToLower(strings.TrimSuffix(name, " UI")), err)
 	}
 }
 
-func probeURL(rawURL string) error {
+func probeURL(rawURL, marker string) error {
 	client := &http.Client{Timeout: 500 * time.Millisecond}
 	resp, err := client.Get(rawURL)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	if err != nil {
+		return fmt.Errorf("read GET body: %w", err)
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 500 {
 		return fmt.Errorf("GET status %d", resp.StatusCode)
+	}
+	if !strings.Contains(string(body), marker) {
+		return fmt.Errorf("GET body missing %q", marker)
 	}
 	return nil
 }
@@ -374,6 +410,24 @@ func getenvDefault(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func truncateForLog(value string, limit int) string {
+	if len(value) <= limit {
+		return value
+	}
+	return value[:limit] + "...<truncated>"
+}
+
+func safeArtifactName(name string) string {
+	return strings.Map(func(r rune) rune {
+		switch r {
+		case '/', '\\', ':', ' ', '\t', '\n', '\r':
+			return '_'
+		default:
+			return r
+		}
+	}, name)
 }
 
 func newBrowserRunner(t testing.TB) *browserRunner {
