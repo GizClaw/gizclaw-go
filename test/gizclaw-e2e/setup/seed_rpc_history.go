@@ -38,7 +38,7 @@ func main() {
 			Text:      text,
 			CreatedAt: base.Add(time.Duration(i) * time.Second),
 			Asset: &workspace.AppendHistoryAsset{
-				MIMEType: "audio/opus",
+				MIMEType: "audio/ogg",
 				Data:     []byte(fmt.Sprintf("rpc-history-opus-payload-%d\n", i+1)),
 			},
 		})

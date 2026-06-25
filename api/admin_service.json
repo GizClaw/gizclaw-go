@@ -66,6 +66,18 @@
     {
       "name": "Resource",
       "description": "Single peer CRUD and actions"
+    },
+    {
+      "name": "SocialFriends",
+      "description": "Peer-scoped social friend management"
+    },
+    {
+      "name": "SocialFriendGroups",
+      "description": "Social friend group management"
+    },
+    {
+      "name": "WorkspaceHistory",
+      "description": "Workspace history metadata and audio assets"
     }
   ],
   "paths": {
@@ -374,6 +386,820 @@
           },
           "409": {
             "description": "Resource conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/social/friend-groups": {
+      "get": {
+        "operationId": "listFriendGroups",
+        "summary": "List friend groups",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cursor returned by the previous list response."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Maximum number of items to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Friend group list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createFriendGroup",
+        "summary": "Create a friend group without an implicit owner member",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminFriendGroupCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created friend group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/social/friend-groups/{id}": {
+      "get": {
+        "operationId": "getFriendGroup",
+        "summary": "Get a friend group",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Friend group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putFriendGroup",
+        "summary": "Update a friend group",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminFriendGroupPutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated friend group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFriendGroup",
+        "summary": "Delete a friend group and backing workspace data",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted friend group",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/social/friend-groups/{id}/members": {
+      "get": {
+        "operationId": "listFriendGroupMembers",
+        "summary": "List friend group members",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cursor returned by the previous list response."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Maximum number of items to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Friend group member list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupMemberListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createFriendGroupMember",
+        "summary": "Add a friend group member",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminFriendGroupMemberCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created friend group member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupMemberObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/social/friend-groups/{id}/members/{publicKey}": {
+      "put": {
+        "operationId": "putFriendGroupMember",
+        "summary": "Update a friend group member role",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          },
+          {
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Member peer public key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminFriendGroupMemberPutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated friend group member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupMemberObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFriendGroupMember",
+        "summary": "Delete a friend group member",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          },
+          {
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Member peer public key"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted friend group member",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupMemberObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/social/friend-groups/{id}/invite-token": {
+      "get": {
+        "operationId": "getFriendGroupInviteToken",
+        "summary": "Get a friend group invite token",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Friend group invite token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupInviteTokenGetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "putFriendGroupInviteToken",
+        "summary": "Set or replace a friend group invite token",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminFriendGroupInviteTokenPutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Friend group invite token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupInviteTokenGetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteFriendGroupInviteToken",
+        "summary": "Delete a friend group invite token",
+        "tags": [
+          "SocialFriendGroups"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend group id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted friend group invite token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendGroupInviteTokenClearResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -5001,6 +5827,242 @@
         }
       }
     },
+    "/workspaces/{name}/history": {
+      "get": {
+        "operationId": "listWorkspaceHistory",
+        "summary": "List workspace history without requiring an active runtime connection",
+        "tags": [
+          "WorkspaceHistory"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workspace name"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cursor returned by the previous list response."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Maximum number of items to return."
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "description": "History ordering.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace history list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/WorkspaceHistoryListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{name}/history/{historyId}": {
+      "get": {
+        "operationId": "getWorkspaceHistory",
+        "summary": "Get one workspace history entry",
+        "tags": [
+          "WorkspaceHistory"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workspace name"
+          },
+          {
+            "name": "historyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workspace history id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace history entry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/WorkspaceHistoryGetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workspaces/{name}/history/{historyId}/audio.ogg": {
+      "get": {
+        "operationId": "downloadWorkspaceHistoryAudio",
+        "summary": "Download workspace history audio as Ogg Opus",
+        "tags": [
+          "WorkspaceHistory"
+        ],
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workspace name"
+          },
+          {
+            "name": "historyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workspace history id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Workspace history audio asset",
+            "content": {
+              "audio/ogg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid history audio request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace history audio not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/peers": {
       "get": {
         "operationId": "listPeers",
@@ -5611,6 +6673,296 @@
               "application/json": {
                 "schema": {
                   "$ref": "./types.json#/components/schemas/Runtime"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peers/{publicKey}/friends": {
+      "get": {
+        "operationId": "listPeerFriends",
+        "summary": "List one peer owner-view friend rows",
+        "tags": [
+          "SocialFriends"
+        ],
+        "parameters": [
+          {
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Peer public key"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Cursor returned by the previous list response."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Maximum number of items to return."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Friend list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPeerFriend",
+        "summary": "Create a direct friend relation for a peer",
+        "tags": [
+          "SocialFriends"
+        ],
+        "parameters": [
+          {
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Peer public key"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminFriendCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created friend relation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/peers/{publicKey}/friends/{id}": {
+      "get": {
+        "operationId": "getPeerFriend",
+        "summary": "Get one peer owner-view friend row",
+        "tags": [
+          "SocialFriends"
+        ],
+        "parameters": [
+          {
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Peer public key"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend relation id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Friend relation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deletePeerFriend",
+        "summary": "Delete a direct friend relation and backing workspace",
+        "tags": [
+          "SocialFriends"
+        ],
+        "parameters": [
+          {
+            "name": "publicKey",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Peer public key"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Friend relation id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted friend relation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./rpc/server.json#/components/schemas/FriendObject"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Resource not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "./types.json#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -6541,6 +7893,95 @@
             "items": {
               "$ref": "./types.json#/components/schemas/Badge"
             }
+          }
+        }
+      },
+      "AdminFriendCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "peer_public_key"
+        ],
+        "properties": {
+          "peer_public_key": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "AdminFriendGroupCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminFriendGroupPutRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "AdminFriendGroupMemberCreateRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "peer_public_key",
+          "role"
+        ],
+        "properties": {
+          "peer_public_key": {
+            "type": "string",
+            "minLength": 1
+          },
+          "role": {
+            "$ref": "./rpc/server.json#/components/schemas/FriendGroupMemberRole"
+          }
+        }
+      },
+      "AdminFriendGroupMemberPutRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "$ref": "./rpc/server.json#/components/schemas/FriendGroupMemberRole"
+          }
+        }
+      },
+      "AdminFriendGroupInviteTokenPutRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "invite_token",
+          "expires_at"
+        ],
+        "properties": {
+          "invite_token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       }

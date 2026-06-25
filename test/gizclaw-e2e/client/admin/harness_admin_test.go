@@ -118,6 +118,25 @@ func collectAdminPages[T any](t *testing.T, limit int32, call func(cursor *strin
 	return out
 }
 
+func collectAdminPagesInt[T any](t *testing.T, limit int, call func(cursor *string, limit int) ([]T, bool, *string)) []T {
+	t.Helper()
+	var out []T
+	var cursor *string
+	for i := 0; i < 20; i++ {
+		items, hasNext, nextCursor := call(cursor, limit)
+		out = append(out, items...)
+		if !hasNext {
+			return out
+		}
+		if nextCursor == nil || *nextCursor == "" {
+			t.Fatalf("page %d has_next without next_cursor", i)
+		}
+		cursor = nextCursor
+	}
+	t.Fatalf("pagination did not finish")
+	return out
+}
+
 func ptr[T any](value T) *T {
 	return &value
 }

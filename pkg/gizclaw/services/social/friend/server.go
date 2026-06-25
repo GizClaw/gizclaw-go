@@ -136,6 +136,35 @@ func (s *Server) AddFriend(ctx context.Context, owner string, req rpcapi.FriendA
 	return friend, nil
 }
 
+func (s *Server) AdminCreateFriend(ctx context.Context, owner string, peerPublicKey string) (rpcapi.FriendObject, error) {
+	owner = strings.TrimSpace(owner)
+	peerPublicKey = strings.TrimSpace(peerPublicKey)
+	if owner == "" || peerPublicKey == "" {
+		return rpcapi.FriendObject{}, errors.New("social: friend peers are required")
+	}
+	if owner == peerPublicKey {
+		return rpcapi.FriendObject{}, errors.New("social: cannot friend self")
+	}
+	relationID := socialutil.RelationID(owner, peerPublicKey)
+	if existing, err := s.GetFriendRelation(ctx, owner, relationID); err == nil {
+		return existing, nil
+	} else if !errors.Is(err, kv.ErrNotFound) {
+		return rpcapi.FriendObject{}, err
+	}
+	workspaceName, rollback, err := s.ensureDirectChatWorkspace(ctx, owner, peerPublicKey)
+	if err != nil {
+		return rpcapi.FriendObject{}, err
+	}
+	friend, err := s.createFriendRows(ctx, owner, peerPublicKey, workspaceName)
+	if err != nil {
+		if rollback != nil {
+			rollback()
+		}
+		return rpcapi.FriendObject{}, err
+	}
+	return friend, nil
+}
+
 func (s *Server) ListFriends(ctx context.Context, owner string, req rpcapi.FriendListRequest) (rpcapi.FriendListResponse, error) {
 	store, err := s.friendsStore()
 	if err != nil {

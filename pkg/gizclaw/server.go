@@ -451,6 +451,8 @@ func (s *Server) init() error {
 			WorkflowAdminService:        workflowServer,
 			PetSpecies:                  petSpeciesServer,
 			Badges:                      badgeServer,
+			Friends:                     friendServer,
+			FriendGroups:                friendGroupServer,
 			ACL:                         aclServer,
 			ResourceManager:             resourceManager,
 		},

@@ -174,6 +174,137 @@ func TestMembersMaintainBelongsAndWorkspaceACLBindings(t *testing.T) {
 	}
 }
 
+func TestAdminFriendGroupLifecycleMaintainsMembersBelongsAndWorkspaceACL(t *testing.T) {
+	ctx := context.Background()
+	s := newTestServer(t)
+	baseACL := newTestACL(t)
+	s.ACL = baseACL
+	workspaces := &recordingWorkspaceService{}
+	s.Workspaces = workspaces
+
+	group, err := s.AdminCreateFriendGroup(ctx, "room", strPtr("admin room"))
+	if err != nil {
+		t.Fatalf("AdminCreateFriendGroup: %v", err)
+	}
+	friendGroupID := socialutil.StringValue(group.Id)
+	workspaceName := socialutil.StringValue(group.WorkspaceName)
+	if friendGroupID == "" || workspaceName == "" {
+		t.Fatalf("AdminCreateFriendGroup returned %#v", group)
+	}
+	if group.CreatedByPeerPublicKey != nil || group.MyRole != nil {
+		t.Fatalf("admin-created group has peer fields: %#v", group)
+	}
+	if len(workspaces.created) != 1 || workspaces.created[0].Name != workspaceName {
+		t.Fatalf("created workspaces = %#v, want %q", workspaces.created, workspaceName)
+	}
+	if _, err := s.groupMember(ctx, friendGroupID, "peer-owner"); !errors.Is(err, kv.ErrNotFound) {
+		t.Fatalf("implicit member error = %v, want not found", err)
+	}
+
+	groups, err := s.AdminListFriendGroups(ctx, rpcapi.FriendGroupListRequest{})
+	if err != nil {
+		t.Fatalf("AdminListFriendGroups: %v", err)
+	}
+	if len(groups.Items) != 1 || socialutil.StringValue(groups.Items[0].Id) != friendGroupID {
+		t.Fatalf("AdminListFriendGroups = %#v", groups)
+	}
+	renamed, err := s.AdminPutFriendGroup(ctx, friendGroupID, strPtr("renamed"), strPtr(""))
+	if err != nil {
+		t.Fatalf("AdminPutFriendGroup: %v", err)
+	}
+	if socialutil.StringValue(renamed.Name) != "renamed" || renamed.Description != nil {
+		t.Fatalf("renamed group = %#v", renamed)
+	}
+
+	owner, err := s.AdminPutFriendGroupMember(ctx, friendGroupID, "peer-owner", rpcapi.FriendGroupMemberRoleOwner)
+	if err != nil {
+		t.Fatalf("AdminPutFriendGroupMember owner: %v", err)
+	}
+	if socialutil.GroupRole(owner) != rpcapi.FriendGroupMemberRoleOwner {
+		t.Fatalf("owner role = %q", socialutil.GroupRole(owner))
+	}
+	assertBelongs(t, ctx, s, "peer-owner", friendGroupID, rpcapi.FriendGroupMemberRoleOwner)
+	if err := baseACL.Authorize(ctx, acl.AuthorizeRequest{
+		Subject:    acl.PublicKeySubject("peer-owner"),
+		Resource:   acl.WorkspaceResource(workspaceName),
+		Permission: apitypes.ACLPermissionWorkspaceUse,
+	}); err != nil {
+		t.Fatalf("owner workspace authorize: %v", err)
+	}
+	member, err := s.AdminPutFriendGroupMember(ctx, friendGroupID, "peer-member", rpcapi.FriendGroupMemberRoleMember)
+	if err != nil {
+		t.Fatalf("AdminPutFriendGroupMember member: %v", err)
+	}
+	if socialutil.GroupRole(member) != rpcapi.FriendGroupMemberRoleMember {
+		t.Fatalf("member role = %q", socialutil.GroupRole(member))
+	}
+	member, err = s.AdminPutFriendGroupMember(ctx, friendGroupID, "peer-member", rpcapi.FriendGroupMemberRoleAdmin)
+	if err != nil {
+		t.Fatalf("AdminPutFriendGroupMember update: %v", err)
+	}
+	if socialutil.GroupRole(member) != rpcapi.FriendGroupMemberRoleAdmin {
+		t.Fatalf("updated member role = %q", socialutil.GroupRole(member))
+	}
+	assertBelongs(t, ctx, s, "peer-member", friendGroupID, rpcapi.FriendGroupMemberRoleAdmin)
+
+	members, err := s.AdminListFriendGroupMembers(ctx, friendGroupID, rpcapi.FriendGroupMemberListRequest{})
+	if err != nil {
+		t.Fatalf("AdminListFriendGroupMembers: %v", err)
+	}
+	if len(members.Items) != 2 {
+		t.Fatalf("AdminListFriendGroupMembers len = %d, want 2", len(members.Items))
+	}
+	if _, err := s.AdminDeleteFriendGroupMember(ctx, friendGroupID, "peer-owner"); err != nil {
+		t.Fatalf("AdminDeleteFriendGroupMember owner: %v", err)
+	}
+	assertNoBelongs(t, ctx, s, "peer-owner", friendGroupID)
+	if err := baseACL.Authorize(ctx, acl.AuthorizeRequest{
+		Subject:    acl.PublicKeySubject("peer-owner"),
+		Resource:   acl.WorkspaceResource(workspaceName),
+		Permission: apitypes.ACLPermissionWorkspaceUse,
+	}); !errors.Is(err, acl.ErrDenied) {
+		t.Fatalf("owner workspace authorize after delete = %v, want denied", err)
+	}
+
+	expiresAt := s.now().Add(time.Hour)
+	putToken, err := s.AdminPutFriendGroupInviteToken(ctx, friendGroupID, "admin-token", expiresAt)
+	if err != nil {
+		t.Fatalf("AdminPutFriendGroupInviteToken: %v", err)
+	}
+	if putToken.InviteToken != "admin-token" || !putToken.ExpiresAt.Equal(expiresAt) {
+		t.Fatalf("put token = %#v", putToken)
+	}
+	gotToken, err := s.AdminGetFriendGroupInviteToken(ctx, friendGroupID)
+	if err != nil {
+		t.Fatalf("AdminGetFriendGroupInviteToken: %v", err)
+	}
+	if gotToken.InviteToken == nil || *gotToken.InviteToken != "admin-token" {
+		t.Fatalf("got token = %#v", gotToken)
+	}
+	if _, err := s.AdminDeleteFriendGroupInviteToken(ctx, friendGroupID); err != nil {
+		t.Fatalf("AdminDeleteFriendGroupInviteToken: %v", err)
+	}
+	gotToken, err = s.AdminGetFriendGroupInviteToken(ctx, friendGroupID)
+	if err != nil {
+		t.Fatalf("AdminGetFriendGroupInviteToken cleared: %v", err)
+	}
+	if gotToken.InviteToken != nil || gotToken.ExpiresAt != nil {
+		t.Fatalf("cleared token = %#v, want empty", gotToken)
+	}
+
+	deleted, err := s.AdminDeleteFriendGroup(ctx, friendGroupID)
+	if err != nil {
+		t.Fatalf("AdminDeleteFriendGroup: %v", err)
+	}
+	if socialutil.StringValue(deleted.Id) != friendGroupID {
+		t.Fatalf("deleted group = %#v", deleted)
+	}
+	if _, err := s.AdminGetFriendGroup(ctx, friendGroupID); !errors.Is(err, kv.ErrNotFound) {
+		t.Fatalf("AdminGetFriendGroup after delete error = %v, want not found", err)
+	}
+	assertNoBelongs(t, ctx, s, "peer-member", friendGroupID)
+}
+
 func TestMemberRollsBackWhenWorkspaceACLWriteFails(t *testing.T) {
 	ctx := context.Background()
 	s := newTestServer(t)

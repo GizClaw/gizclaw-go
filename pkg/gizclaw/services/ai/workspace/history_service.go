@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"strings"
 	"time"
 
@@ -40,8 +41,24 @@ func (s *Server) ListWorkspaceHistory(ctx context.Context, subject apitypes.ACLS
 	return store.List(ctx, req)
 }
 
+func (s *Server) AdminListWorkspaceHistory(ctx context.Context, workspaceName string, req apitypes.PeerRunHistoryListRequest) (apitypes.PeerRunHistoryListResponse, error) {
+	store, err := s.historyStore(ctx, workspaceName)
+	if err != nil {
+		return apitypes.PeerRunHistoryListResponse{}, err
+	}
+	return store.List(ctx, req)
+}
+
 func (s *Server) GetWorkspaceHistory(ctx context.Context, subject apitypes.ACLSubject, workspaceName, historyID string) (HistoryEntry, error) {
 	store, err := s.authorizedHistoryStore(ctx, subject, workspaceName)
+	if err != nil {
+		return HistoryEntry{}, err
+	}
+	return store.Get(ctx, historyID)
+}
+
+func (s *Server) AdminGetWorkspaceHistory(ctx context.Context, workspaceName, historyID string) (HistoryEntry, error) {
+	store, err := s.historyStore(ctx, workspaceName)
 	if err != nil {
 		return HistoryEntry{}, err
 	}
@@ -54,6 +71,27 @@ func (s *Server) ReadWorkspaceHistoryAsset(ctx context.Context, subject apitypes
 		return nil, err
 	}
 	return store.ReadAsset(ctx, assetName)
+}
+
+func (s *Server) AdminReadWorkspaceHistoryAudio(ctx context.Context, workspaceName, historyID string) (io.ReadCloser, int64, error) {
+	store, err := s.historyStore(ctx, workspaceName)
+	if err != nil {
+		return nil, 0, err
+	}
+	entry, err := store.Get(ctx, historyID)
+	if err != nil {
+		return nil, 0, err
+	}
+	for _, asset := range entry.Assets {
+		if strings.EqualFold(strings.TrimSpace(asset.MIMEType), "audio/ogg") || strings.EqualFold(strings.TrimSpace(asset.MIMEType), "audio/ogg; codecs=opus") {
+			r, err := store.ReadAsset(ctx, asset.Name)
+			if err != nil {
+				return nil, 0, err
+			}
+			return r, asset.Bytes, nil
+		}
+	}
+	return nil, 0, fs.ErrNotExist
 }
 
 func (s *Server) authorizedHistoryStore(ctx context.Context, subject apitypes.ACLSubject, workspaceName string) (*HistoryStore, error) {

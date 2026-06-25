@@ -178,6 +178,65 @@ func TestAddAndDeleteMaintainChatWorkspace(t *testing.T) {
 	}
 }
 
+func TestAdminCreateFriendMaintainsRowsAndChatWorkspace(t *testing.T) {
+	ctx := context.Background()
+	s := newTestServer()
+	workspaces := &recordingWorkspaceService{}
+	aclSvc := &recordingACL{}
+	s.Workspaces = workspaces
+	s.ACL = aclSvc
+
+	friend, err := s.AdminCreateFriend(ctx, "peer-a", "peer-b")
+	if err != nil {
+		t.Fatalf("AdminCreateFriend: %v", err)
+	}
+	relationID := socialutil.RelationID("peer-a", "peer-b")
+	if socialutil.StringValue(friend.Id) != relationID || socialutil.StringValue(friend.PeerPublicKey) != "peer-b" {
+		t.Fatalf("AdminCreateFriend item = %#v", friend)
+	}
+	workspaceName := socialutil.StringValue(friend.WorkspaceName)
+	if workspaceName == "" {
+		t.Fatal("AdminCreateFriend workspace_name is empty")
+	}
+	if len(workspaces.created) != 1 || workspaces.created[0].Name != workspaceName {
+		t.Fatalf("created workspaces = %#v, want %q", workspaces.created, workspaceName)
+	}
+	if err := aclSvc.authorizeWorkspace(workspaceName, "peer-a"); err != nil {
+		t.Fatalf("peer-a workspace authorize: %v", err)
+	}
+	if err := aclSvc.authorizeWorkspace(workspaceName, "peer-b"); err != nil {
+		t.Fatalf("peer-b workspace authorize: %v", err)
+	}
+
+	otherRow, err := s.GetFriendRelation(ctx, "peer-b", relationID)
+	if err != nil {
+		t.Fatalf("GetFriendRelation peer-b: %v", err)
+	}
+	if socialutil.StringValue(otherRow.PeerPublicKey) != "peer-a" || socialutil.StringValue(otherRow.WorkspaceName) != workspaceName {
+		t.Fatalf("peer-b row = %#v", otherRow)
+	}
+	duplicate, err := s.AdminCreateFriend(ctx, "peer-a", "peer-b")
+	if err != nil {
+		t.Fatalf("AdminCreateFriend duplicate: %v", err)
+	}
+	if socialutil.StringValue(duplicate.Id) != relationID || len(workspaces.created) != 1 {
+		t.Fatalf("duplicate = %#v created=%#v, want existing row without new workspace", duplicate, workspaces.created)
+	}
+	if _, err := s.AdminCreateFriend(ctx, "peer-a", "peer-a"); err == nil {
+		t.Fatal("AdminCreateFriend self error = nil")
+	}
+
+	if _, err := s.DeleteFriend(ctx, "peer-a", rpcapi.FriendDeleteRequest{Id: relationID}); err != nil {
+		t.Fatalf("DeleteFriend: %v", err)
+	}
+	if _, err := s.GetFriendRelation(ctx, "peer-a", relationID); !errors.Is(err, kv.ErrNotFound) {
+		t.Fatalf("peer-a row after delete error = %v, want not found", err)
+	}
+	if _, err := s.GetFriendRelation(ctx, "peer-b", relationID); !errors.Is(err, kv.ErrNotFound) {
+		t.Fatalf("peer-b row after delete error = %v, want not found", err)
+	}
+}
+
 func TestAddFriendRollsBackWorkspaceWhenFriendRowsFail(t *testing.T) {
 	ctx := context.Background()
 	s := newTestServer()
