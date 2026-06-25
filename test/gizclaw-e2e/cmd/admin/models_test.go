@@ -42,9 +42,17 @@ func TestAdminAIProviderCatalogUserStory(t *testing.T) {
 	modelsList.MustSucceed(t)
 	assertOutputContains(t, modelsList.Stdout, `"id":"ui-seed-openai-chat"`, `"upstream_model":"gpt-4o-mini"`)
 
+	rpcModelsList := h.RunCLI("admin", "models", "list", "--provider-kind", "openai-tenant", "--provider-name", "e2e-rpc-provider", "--context", "admin-a")
+	rpcModelsList.MustSucceed(t)
+	assertOutputContains(t, rpcModelsList.Stdout, `"id":"e2e-rpc-model"`, `"id":"e2e-rpc-model-079"`)
+
 	modelGet := h.RunCLI("admin", "models", "get", "ui-seed-openai-chat", "--context", "admin-a")
 	modelGet.MustSucceed(t)
 	assertOutputContains(t, modelGet.Stdout, `"kind":"llm"`, `"name":"Seeded OpenAI Chat"`)
+
+	rpcModelGet := h.RunCLI("admin", "models", "get", "e2e-rpc-model", "--context", "admin-a")
+	rpcModelGet.MustSucceed(t)
+	assertOutputContains(t, rpcModelGet.Stdout, `"upstream_model":"e2e-rpc-core-model"`)
 
 	viewsList := h.RunCLI("admin", "acl", "views", "list", "--context", "admin-a")
 	viewsList.MustSucceed(t)

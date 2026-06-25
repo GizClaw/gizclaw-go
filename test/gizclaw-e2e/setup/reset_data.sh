@@ -28,6 +28,10 @@ fi
 
 admin_setup_config_home="${GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME:-$testdata_dir/admin-config-home}"
 admin_setup_context="${GIZCLAW_E2E_ADMIN_SETUP_CONTEXT:-e2e-admin}"
+default_client_config_home="$testdata_dir/gizclaw-config-home"
+default_client_context="e2e-client"
+client_config_home="${GIZCLAW_E2E_CLIENT_CONFIG_HOME:-$testdata_dir/gizclaw-config-home}"
+client_context="${GIZCLAW_E2E_CLIENT_CONTEXT:-e2e-client}"
 
 # Preserve Flowcraft runtime placeholders while admin apply expands provider
 # credential placeholders from the setup environment.
@@ -64,6 +68,13 @@ volc_ready() {
 
 init_data() {
   "$script_dir/start-server.sh" >/dev/null
+
+  XDG_CONFIG_HOME="$default_client_config_home" \
+    "$bin_path" connect set-name e2e-client --context "$default_client_context" >/dev/null
+  if [[ "$client_config_home" != "$default_client_config_home" || "$client_context" != "$default_client_context" ]]; then
+    XDG_CONFIG_HOME="$client_config_home" \
+      "$bin_path" connect set-name e2e-client --context "$client_context" >/dev/null
+  fi
 
   shopt -s nullglob
   local resource_files=("$resource_dir"/*.json)
@@ -114,6 +125,26 @@ init_data() {
       apply_resource "$resource_file"
     done
   fi
+
+  upload_firmware_asset() {
+    local firmware_id="e2e-rpc-firmware"
+    local channel="stable"
+    local bin="main"
+    local asset_path="$resource_dir/assets/firmware/e2e-rpc-firmware-main.tar"
+    if [[ ! -f "$asset_path" ]]; then
+      echo "missing firmware fixture asset: $asset_path" >&2
+      exit 2
+    fi
+    XDG_CONFIG_HOME="$admin_setup_config_home" \
+      "$bin_path" admin firmwares upload-bin "$firmware_id" --channel "$channel" --bin "$bin" -f "$asset_path" --context "$admin_setup_context" >/dev/null
+  }
+
+  upload_firmware_asset
+
+  (
+    cd "$repo_root"
+    go run ./test/gizclaw-e2e/setup/seed_rpc_history.go
+  )
 
 }
 

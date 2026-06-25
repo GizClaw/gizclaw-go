@@ -19,10 +19,21 @@ func TestAdminWorkflowsUserStory(t *testing.T) {
 	if !strings.Contains(list.Stdout, `"name":"ui-seed-workflow"`) {
 		t.Fatalf("workflows list missing ui-seed-workflow:\n%s", list.Stdout)
 	}
+	for _, want := range []string{`"name":"e2e-rpc-workflow"`, `"name":"e2e-rpc-workflow-119"`} {
+		if !strings.Contains(list.Stdout, want) {
+			t.Fatalf("workflows list missing %q:\n%s", want, list.Stdout)
+		}
+	}
 
 	get := h.RunCLI("admin", "workflows", "get", "ui-seed-workflow", "--context", "admin-a")
 	get.MustSucceed(t)
 	if !strings.Contains(get.Stdout, `"driver":"flowcraft"`) {
 		t.Fatalf("workflows get missing driver:\n%s", get.Stdout)
+	}
+
+	rpcGet := h.RunCLI("admin", "workflows", "get", "e2e-rpc-workflow", "--context", "admin-a")
+	rpcGet.MustSucceed(t)
+	if !strings.Contains(rpcGet.Stdout, `"name":"e2e-rpc-workflow"`) || !strings.Contains(rpcGet.Stdout, `"driver":"flowcraft"`) {
+		t.Fatalf("workflows get missing RPC fixture fields:\n%s", rpcGet.Stdout)
 	}
 }

@@ -2,6 +2,9 @@
 !.gitignore
 !resources/
 !resources/*.json
+!resources/assets/
+!resources/assets/firmware/
+!resources/assets/firmware/*.tar
 !workspaces/
 !workspaces/*.json
 !server-workspace/

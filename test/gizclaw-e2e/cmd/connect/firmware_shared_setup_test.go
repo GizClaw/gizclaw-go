@@ -1,0 +1,85 @@
+//go:build gizclaw_e2e
+
+package connect_test
+
+import (
+	"bytes"
+	"encoding/json"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
+	clitest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/cmd"
+)
+
+func TestFirmwareSharedSetupDownload(t *testing.T) {
+	h := clitest.NewSetupHarness(t, "304-firmware-shared-download")
+	h.CreateContext("device-a").MustSucceed(t)
+	h.RegisterContext("device-a", "--sn", "shared-firmware-device").MustSucceed(t)
+	applyClientView(t, h, h.ContextPublicKey("device-a"))
+
+	list := h.RunCLI("connect", "firmware", "list", "--context", "device-a")
+	list.MustSucceed(t)
+	assertOutputContains(t, list.Stdout, `"name":"e2e-rpc-firmware"`, `"has_next":true`)
+
+	getLast := h.RunCLI("connect", "firmware", "get", "--firmware-id", "e2e-rpc-firmware-079", "--context", "device-a")
+	getLast.MustSucceed(t)
+	assertOutputContains(t, getLast.Stdout, `"name":"e2e-rpc-firmware-079"`)
+
+	outputPath := filepath.Join(h.SandboxDir, "e2e-rpc-firmware-main.tar")
+	download := mustRunCLIJSON[firmwareDownloadCLIResponse](t, h, "connect", "firmware", "download", "--firmware-id", "e2e-rpc-firmware", "--channel", "stable", "--artifact-name", "main", "--output", outputPath, "--context", "device-a")
+	if download.Bytes <= 0 || download.Metadata.Artifact.Name != "main" {
+		t.Fatalf("firmware download = %#v", download)
+	}
+	payload, err := os.ReadFile(outputPath)
+	if err != nil {
+		t.Fatalf("read downloaded firmware: %v", err)
+	}
+	if !bytes.Contains(payload, []byte("gizclaw e2e rpc firmware")) {
+		t.Fatalf("downloaded firmware tar missing manifest text")
+	}
+}
+
+type firmwareDownloadCLIResponse struct {
+	Metadata rpcapi.FirmwareDownloadResponse `json:"metadata"`
+	Bytes    int64                           `json:"bytes"`
+	Output   string                          `json:"output"`
+}
+
+func mustRunCLIJSON[T any](t *testing.T, h *clitest.Harness, args ...string) T {
+	t.Helper()
+	result, err := h.RunCLIUntilSuccess(args...)
+	if err != nil {
+		t.Fatalf("%v failed: %v\nstdout:\n%s\nstderr:\n%s", args, err, result.Stdout, result.Stderr)
+	}
+	var out T
+	if err := json.Unmarshal([]byte(result.Stdout), &out); err != nil {
+		t.Fatalf("decode %v output: %v\n%s", args, err, result.Stdout)
+	}
+	return out
+}
+
+func applyClientView(t *testing.T, h *clitest.Harness, peerPublicKey string) {
+	t.Helper()
+
+	script := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "setup", "apply_client_view.sh")
+	cmd := exec.Command(script, peerPublicKey)
+	cmd.Dir = h.RepoRoot
+	cmd.Env = os.Environ()
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("apply client view: %v\n%s", err, string(output))
+	}
+}
+
+func assertOutputContains(t *testing.T, output string, values ...string) {
+	t.Helper()
+	for _, value := range values {
+		if !strings.Contains(output, value) {
+			t.Fatalf("output missing %s:\n%s", value, output)
+		}
+	}
+}

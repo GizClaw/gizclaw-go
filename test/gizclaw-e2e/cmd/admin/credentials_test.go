@@ -16,7 +16,7 @@ func TestAdminCredentialsUserStory(t *testing.T) {
 
 	list := h.RunCLI("admin", "credentials", "list", "--context", "admin-a")
 	list.MustSucceed(t)
-	for _, want := range []string{`"name":"ui-seed-openai-credential"`, `"name":"ui-seed-credential"`} {
+	for _, want := range []string{`"name":"ui-seed-openai-credential"`, `"name":"ui-seed-credential"`, `"name":"e2e-rpc-credential"`, `"name":"e2e-rpc-credential-049"`} {
 		if !strings.Contains(list.Stdout, want) {
 			t.Fatalf("credentials list missing %q:\n%s", want, list.Stdout)
 		}
@@ -32,5 +32,11 @@ func TestAdminCredentialsUserStory(t *testing.T) {
 	get.MustSucceed(t)
 	if !strings.Contains(get.Stdout, `"provider":"openai"`) {
 		t.Fatalf("credentials get missing provider:\n%s", get.Stdout)
+	}
+
+	rpcGet := h.RunCLI("admin", "credentials", "get", "e2e-rpc-credential", "--context", "admin-a")
+	rpcGet.MustSucceed(t)
+	if !strings.Contains(rpcGet.Stdout, `"api_key":"sk-e2e-rpc"`) {
+		t.Fatalf("credentials get missing RPC fixture api key:\n%s", rpcGet.Stdout)
 	}
 }

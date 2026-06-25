@@ -96,6 +96,58 @@ config fixtures, not env values.
 Generated runtime data under `testdata/server-workspace/data/` and generated
 binaries under `testdata/bin/` stay ignored.
 
+## Shared RPC Catalog
+
+`setup/reset_data.sh init` also creates a larger RPC fixture catalog under the
+`e2e-rpc-*` namespace. These fixtures are intended for typed RPC clients, CLI
+story tests, and UI surfaces that need realistic list data rather than a nearly
+empty server.
+
+Stable fixture IDs:
+
+- Workflow: `e2e-rpc-workflow`
+- Run-control workflow: `e2e-rpc-run-workflow`
+- Workspace: `e2e-rpc-workspace`
+- Run-control workspace: `e2e-rpc-run-workspace`
+- History workspace target: `e2e-rpc-history-workspace`
+- History seed text prefix: `rpc shared history round`
+- Model: `e2e-rpc-model`
+- Credential: `e2e-rpc-credential`
+- Voice metadata row: `e2e-rpc-voice`
+- Firmware: `e2e-rpc-firmware`
+- Firmware channel/artifact: `stable` / `main`
+- Mutation-safe names: `e2e-rpc-mut-workflow`, `e2e-rpc-mut-workspace`,
+  `e2e-rpc-mut-model`, `e2e-rpc-mut-credential`
+
+Bulk catalog prefixes:
+
+- `e2e-rpc-workflow-000` through `e2e-rpc-workflow-119`
+- `e2e-rpc-workspace-000` through `e2e-rpc-workspace-119`
+- `e2e-rpc-model-000` through `e2e-rpc-model-079`
+- `e2e-rpc-credential-000` through `e2e-rpc-credential-049`
+- `e2e-rpc-firmware-000` through `e2e-rpc-firmware-079`
+
+The committed firmware metadata is applied through ResourceList JSON, but the
+downloadable firmware payload is a real tar fixture at
+`testdata/resources/assets/firmware/e2e-rpc-firmware-main.tar`. During init,
+`reset_data.sh` uploads that tar with:
+
+```sh
+gizclaw admin firmwares upload-bin e2e-rpc-firmware \
+  --channel stable --bin main \
+  -f testdata/resources/assets/firmware/e2e-rpc-firmware-main.tar
+```
+
+Provider-independent RPC fixtures use schema-valid fake metadata and do not
+require real provider credentials. Real OpenAI/Volc workspace voice fixtures
+still depend on the credential values from `.env` and are skipped when those
+values are absent.
+
+`reset_data.sh init` also writes several deterministic history entries with
+audio assets into `e2e-rpc-history-workspace` after resources are applied. That
+state is runtime data, so it is created by setup code rather than by static
+ResourceList JSON.
+
 ## Config Homes
 
 `testdata/admin-config-home` and `testdata/gizclaw-config-home` are
