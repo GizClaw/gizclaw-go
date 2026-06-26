@@ -1,6 +1,6 @@
 import { Check, Copy, Plus, RefreshCw } from "lucide-react";
 import type { KeyboardEvent, MouseEvent } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { createContact, listContacts, type AdminContactObject } from "@gizclaw/adminservice";
@@ -23,11 +23,8 @@ import { contactDetailPath } from "./social-utils";
 
 export function ContactsListPage(): JSX.Element {
   const navigate = useNavigate();
-  const [ownerFilterInput, setOwnerFilterInput] = useState("");
-  const [ownerFilter, setOwnerFilter] = useState("");
-  const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh, reset } = useCursorListPage<AdminContactObject>(async (query) => {
-    const owner = ownerFilter.trim();
-    const result = await expectData(listContacts({ query: owner === "" ? query : { ...query, owner_public_key: owner } }));
+  const { error, hasNext, items, loading, nextPage, pageNumber, prevPage, refresh } = useCursorListPage<AdminContactObject>(async (query) => {
+    const result = await expectData(listContacts({ query }));
     return {
       hasNext: result.has_next,
       items: result.items ?? [],
@@ -42,15 +39,6 @@ export function ContactsListPage(): JSX.Element {
   const [notice, setNotice] = useState<{ message: string; tone: "error" | "success" } | null>(null);
   const [busy, setBusy] = useState("");
   const [copiedID, setCopiedID] = useState("");
-  const filterLoaded = useRef(false);
-
-  useEffect(() => {
-    if (!filterLoaded.current) {
-      filterLoaded.current = true;
-      return;
-    }
-    reset();
-  }, [ownerFilter, reset]);
 
   const openContact = (contact: AdminContactObject): void => {
     navigate(contactDetailPath(contact));
@@ -122,7 +110,7 @@ export function ContactsListPage(): JSX.Element {
       />
 
       <PageSummaryCard
-        description="Owner-scoped address book entries. Contacts are social resources and are not ACL rules."
+        description="Global owner-view contact rows. Each row belongs to one peer address book."
         eyebrow="Social"
         meta={
           <>
@@ -178,38 +166,10 @@ export function ContactsListPage(): JSX.Element {
         <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
           <div className="space-y-1">
             <CardTitle>Contact rows</CardTitle>
-            <CardDescription>Cursor-paginated contact resources.</CardDescription>
+            <CardDescription>Cursor-paginated social contact resources.</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form
-            className="grid gap-3 rounded-md border bg-muted/20 p-3 lg:grid-cols-[minmax(0,1fr)_auto]"
-            onSubmit={(event) => {
-              event.preventDefault();
-              setOwnerFilter(ownerFilterInput.trim());
-            }}
-          >
-            <FormField label="Owner public key">
-              <Input onChange={(event) => setOwnerFilterInput(event.target.value)} placeholder="Filter by owner public key" value={ownerFilterInput} />
-            </FormField>
-            <div className="flex items-end gap-2">
-              <Button className="h-9" disabled={loading} type="submit" variant="outline">
-                Apply
-              </Button>
-              <Button
-                className="h-9"
-                disabled={loading || (ownerFilterInput.trim() === "" && ownerFilter === "")}
-                onClick={() => {
-                  setOwnerFilterInput("");
-                  setOwnerFilter("");
-                }}
-                type="button"
-                variant="ghost"
-              >
-                Clear
-              </Button>
-            </div>
-          </form>
           <div className="flex justify-end gap-2">
             <Button
               className="h-8 min-w-fit shrink-0 whitespace-nowrap px-3 text-sm disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:shadow-none"

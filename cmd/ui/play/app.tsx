@@ -417,8 +417,8 @@ function App(): JSX.Element {
 
   return (
     <>
-      <div className="min-h-screen bg-slate-50">
-      <div className="flex min-h-screen">
+      <div className="h-screen overflow-hidden bg-slate-50">
+      <div className="flex h-screen min-h-0">
         <aside className="hidden w-64 shrink-0 border-r bg-background px-4 py-5 lg:block">
           <div className="mb-6 flex items-center gap-3 px-2">
             <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -450,8 +450,8 @@ function App(): JSX.Element {
           </nav>
         </aside>
 
-        <main className="min-w-0 flex-1">
-          <header className="border-b bg-background px-4 py-4 sm:px-6">
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="shrink-0 border-b bg-background px-4 py-4 sm:px-6">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <div className="text-xs font-semibold uppercase text-muted-foreground">Gateway</div>
@@ -487,7 +487,7 @@ function App(): JSX.Element {
             </div>
           </header>
 
-          <div className="space-y-5 p-4 sm:p-6">
+          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain p-4 sm:p-6">
             {error !== "" ? (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
