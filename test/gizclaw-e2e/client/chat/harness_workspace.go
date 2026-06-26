@@ -335,9 +335,6 @@ func workflowSpec(cfg config) rpcapi.WorkflowSpec {
 		if cfg.Workflow.ASTTranslate.ResourceID != "" {
 			spec.ResourceId = &cfg.Workflow.ASTTranslate.ResourceID
 		}
-		if cfg.Workflow.ASTTranslate.AuthMode != "" {
-			spec.AuthMode = &cfg.Workflow.ASTTranslate.AuthMode
-		}
 		return rpcapi.WorkflowSpec{
 			Driver:       rpcapi.WorkflowDriverAstTranslate,
 			AstTranslate: &spec,
@@ -345,7 +342,6 @@ func workflowSpec(cfg config) rpcapi.WorkflowSpec {
 	}
 	realtime := map[string]interface{}{
 		"session": map[string]interface{}{
-			"auth_mode":     cfg.Workflow.Session.AuthMode,
 			"bot_name":      cfg.Workflow.Session.BotName,
 			"model":         cfg.Workflow.Session.Model,
 			"resource_id":   cfg.Workflow.Session.ResourceID,

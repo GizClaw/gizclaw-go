@@ -191,10 +191,10 @@ func TestIntegrationAdminServiceCredentialLifecycle(t *testing.T) {
 	}
 
 	updateBody := mustCredentialUpsert(t, `{
-		"name": "openai-primary",
-		"provider": "volc",
-		"description": "migrated credential",
-		"body": {"app_id": "app-123", "speech_token": "tok-123"}
+			"name": "openai-primary",
+			"provider": "volc",
+			"description": "migrated credential",
+			"body": {"api_key": "volc-api-key"}
 	}`)
 	updated, err := putCredential(context.Background(), admin, "openai-primary", updateBody)
 	if err != nil {
@@ -203,7 +203,7 @@ func TestIntegrationAdminServiceCredentialLifecycle(t *testing.T) {
 	if updated.Provider != "volc" {
 		t.Fatalf("PutCredential = %#v", updated)
 	}
-	if testCredentialBodyString(updated.Body, "app_id") != "app-123" || testCredentialBodyString(updated.Body, "speech_token") != "tok-123" {
+	if testCredentialBodyString(updated.Body, "api_key") != "volc-api-key" {
 		t.Fatalf("PutCredential body = %#v", updated.Body)
 	}
 
@@ -215,7 +215,7 @@ func TestIntegrationAdminServiceCredentialLifecycle(t *testing.T) {
 	if len(filtered) != 1 || filtered[0].Name != "openai-primary" {
 		t.Fatalf("ListCredentials(provider) = %#v", filtered)
 	}
-	if testCredentialBodyString(filtered[0].Body, "speech_token") != "tok-123" {
+	if testCredentialBodyString(filtered[0].Body, "api_key") != "volc-api-key" {
 		t.Fatalf("ListCredentials(provider) body = %#v", filtered[0].Body)
 	}
 

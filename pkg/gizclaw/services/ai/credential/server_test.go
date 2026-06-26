@@ -87,10 +87,10 @@ func TestServerCredentialsCRUD(t *testing.T) {
 	}
 
 	updateBody := mustCredentialUpsert(t, `{
-		"name": "openai-primary",
-		"provider": "volc",
-		"description": "migrated credential",
-		"body": {"app_id": "app-123", "speech_token": "tok-123"}
+			"name": "openai-primary",
+			"provider": "volc",
+			"description": "migrated credential",
+			"body": {"api_key": "volc-api-key"}
 	}`)
 	putResp, err := srv.PutCredential(ctx, adminservice.PutCredentialRequestObject{
 		Name: "openai-primary",
@@ -106,7 +106,7 @@ func TestServerCredentialsCRUD(t *testing.T) {
 	if updated.Provider != "volc" {
 		t.Fatalf("PutCredential() credential = %#v", updated)
 	}
-	if testCredentialBodyString(updated.Body, "app_id") != "app-123" || testCredentialBodyString(updated.Body, "speech_token") != "tok-123" {
+	if testCredentialBodyString(updated.Body, "api_key") != "volc-api-key" {
 		t.Fatalf("PutCredential() body = %#v", updated.Body)
 	}
 
@@ -139,7 +139,7 @@ func TestServerCredentialsCRUD(t *testing.T) {
 	if len(newList.Items) != 1 || newList.Items[0].Name != "openai-primary" {
 		t.Fatalf("ListCredentials(new provider) = %#v", newList)
 	}
-	if testCredentialBodyString(newList.Items[0].Body, "app_id") != "app-123" {
+	if testCredentialBodyString(newList.Items[0].Body, "api_key") != "volc-api-key" {
 		t.Fatalf("ListCredentials(new provider) body = %#v", newList.Items[0].Body)
 	}
 
@@ -305,7 +305,7 @@ func TestServerValidatesBodyForProvider(t *testing.T) {
 	wrongBody := mustCredentialUpsert(t, `{
 		"name": "wrong-body",
 		"provider": "openai",
-		"body": {"app_id": "app-test", "token": "tok-test"}
+		"body": {"openapi_access_key_id": "ak-test"}
 	}`)
 	wrongResp, err := srv.CreateCredential(ctx, adminservice.CreateCredentialRequestObject{Body: &wrongBody})
 	if err != nil {
@@ -339,6 +339,38 @@ func TestServerValidatesBodyForProvider(t *testing.T) {
 	}
 	if _, ok := unknownResp.(adminservice.CreateCredential400JSONResponse); !ok {
 		t.Fatalf("CreateCredential(unknown provider) response = %#v", unknownResp)
+	}
+}
+
+func TestValidateCredentialBodyProviderShapes(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		provider string
+		body     string
+		wantErr  bool
+	}{
+		{name: "openai api key", provider: "openai", body: `{"api_key":"sk-openai"}`},
+		{name: "gemini api key", provider: "gemini", body: `{"api_key":"sk-gemini"}`},
+		{name: "dashscope api key", provider: "dashscope", body: `{"api_key":"sk-dashscope"}`},
+		{name: "minimax api key", provider: "minimax", body: `{"api_key":"sk-minimax"}`},
+		{name: "volc speech api key", provider: "volc", body: `{"api_key":"sk-volc"}`},
+		{name: "volc openapi key", provider: "volc", body: `{"openapi_access_key_id":"ak","openapi_access_key":"sk"}`},
+		{name: "volcengine alias", provider: "volcengine", body: `{"api_key":"sk-volc"}`},
+		{name: "unsupported provider", provider: "unknown", body: `{"api_key":"sk-test"}`, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			upsert := mustCredentialUpsert(t, `{"name":"shape","provider":"`+tt.provider+`","body":`+tt.body+`}`)
+			err := validateCredentialBody(tt.provider, upsert.Body)
+			if tt.wantErr && err == nil {
+				t.Fatal("validateCredentialBody() error = nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("validateCredentialBody() error = %v", err)
+			}
+		})
 	}
 }
 

@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -223,6 +225,11 @@ type ThinkingOptions struct {
 	Level   *string `json:"level,omitempty"`
 }
 
+// CreateTranscriptionParams defines parameters for CreateTranscription.
+type CreateTranscriptionParams struct {
+	Accept *string `json:"Accept,omitempty"`
+}
+
 // CreateSpeechJSONRequestBody defines body for CreateSpeech for application/json ContentType.
 type CreateSpeechJSONRequestBody = CreateSpeechRequest
 
@@ -239,7 +246,7 @@ type ServerInterface interface {
 	CreateSpeech(c *fiber.Ctx) error
 	// Create transcription
 	// (POST /audio/transcriptions)
-	CreateTranscription(c *fiber.Ctx) error
+	CreateTranscription(c *fiber.Ctx, params CreateTranscriptionParams) error
 	// Create chat completion
 	// (POST /chat/completions)
 	CreateChatCompletion(c *fiber.Ctx) error
@@ -266,9 +273,33 @@ func (siw *ServerInterfaceWrapper) CreateSpeech(c *fiber.Ctx) error {
 // CreateTranscription operation middleware
 func (siw *ServerInterfaceWrapper) CreateTranscription(c *fiber.Ctx) error {
 
+	var err error
+
 	c.Context().SetUserValue(ApiKeyAuthScopes, []string{})
 
-	return siw.Handler.CreateTranscription(c)
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateTranscriptionParams
+
+	headers := c.GetReqHeaders()
+
+	// ------------- Optional header parameter "Accept" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Accept")]; found {
+		var Accept string
+		n := len(valueList)
+		if n != 1 {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Sprintf("Too many values for ParamName Accept, 1 is required, but %d found", n))
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Accept", valueList[0], &Accept, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			return fiber.NewError(fiber.StatusBadRequest, fmt.Errorf("Invalid format for parameter Accept: %w", err).Error())
+		}
+
+		params.Accept = &Accept
+
+	}
+
+	return siw.Handler.CreateTranscription(c, params)
 }
 
 // CreateChatCompletion operation middleware
@@ -357,7 +388,7 @@ func (response CreateSpeech200TexteventStreamResponse) VisitCreateSpeechResponse
 }
 
 type CreateTranscriptionRequestObject struct {
-	Accept string
+	Params CreateTranscriptionParams
 	Body   *multipart.Reader
 }
 
@@ -510,14 +541,15 @@ func (sh *strictHandler) CreateSpeech(ctx *fiber.Ctx) error {
 }
 
 // CreateTranscription operation middleware
-func (sh *strictHandler) CreateTranscription(ctx *fiber.Ctx) error {
+func (sh *strictHandler) CreateTranscription(ctx *fiber.Ctx, params CreateTranscriptionParams) error {
 	var request CreateTranscriptionRequestObject
+
+	request.Params = params
 
 	body := ctx.Context().RequestBodyStream()
 	if body == nil {
 		body = bytes.NewReader(ctx.Request().Body())
 	}
-	request.Accept = string(ctx.Request().Header.Peek("Accept"))
 	request.Body = multipart.NewReader(body, string(ctx.Request().Header.MultipartFormBoundary()))
 
 	handler := func(ctx *fiber.Ctx, request interface{}) (interface{}, error) {

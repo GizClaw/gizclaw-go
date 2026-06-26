@@ -378,7 +378,7 @@ func validateCredentialBody(provider string, body apitypes.CredentialBody) error
 		if err := decodeCredentialBody(body, &typed); err != nil {
 			return err
 		}
-		if allEmpty(typed.AppId, typed.SpeechToken, typed.ArkApiKey, typed.OpenapiAccessKeyId, typed.SecretAccessKey, typed.SessionToken, typed.WebsearchApiKey) {
+		if allEmpty(typed.AppId, typed.ApiKey, typed.OpenapiAccessKeyId, typed.OpenapiAccessKey) {
 			return errors.New("body must include at least one non-empty credential field")
 		}
 		return nil

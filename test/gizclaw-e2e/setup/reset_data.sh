@@ -54,11 +54,10 @@ openai_ready() {
 volc_ready() {
   local name
   for name in \
-    GIZCLAW_E2E_VOLC_APP_ID \
-    GIZCLAW_E2E_VOLC_ARK_API_KEY \
-    GIZCLAW_E2E_VOLC_ACCESS_KEY_ID \
-    GIZCLAW_E2E_VOLC_SECRET_ACCESS_KEY \
-    GIZCLAW_E2E_VOLC_TOKEN; do
+    GIZCLAW_E2E_DOUBAO_APP_ID \
+    GIZCLAW_E2E_DOUBAO_API_KEY \
+    GIZCLAW_E2E_VOLC_OPENAPI_ACCESS_KEY_ID \
+    GIZCLAW_E2E_VOLC_OPENAPI_ACCESS_KEY; do
     if [[ -z "${!name:-}" ]]; then
       return 1
     fi

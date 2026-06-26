@@ -15,7 +15,6 @@
       "lang_pair": "auto"
     },
     "ast_translate": {
-      "auth_mode": "v2",
       "mode": "s2t",
       "voice": {
         "tts_voice": "volc-tenant:volc-main:zh_female_vv_mars_bigtts"

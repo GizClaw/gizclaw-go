@@ -106,9 +106,6 @@
           "resource_id": {
             "type": "string"
           },
-          "auth_mode": {
-            "type": "string"
-          },
           "support_json_output": {
             "type": "boolean"
           },

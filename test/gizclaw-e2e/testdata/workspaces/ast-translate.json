@@ -15,7 +15,6 @@
       "lang_pair": "auto"
     },
     "ast_translate": {
-      "auth_mode": "v2",
       "mode": "s2s",
       "voice": {
         "speaker_id": "zh_female_vv_uranus_bigtts"

@@ -8,7 +8,6 @@ spec:
   driver: ast-translate
   ast_translate:
     translation_model: volc-ast-translate
-    auth_mode: v2
     mode: s2s
     resource_id: volc.service_type.10053
     denoise: false

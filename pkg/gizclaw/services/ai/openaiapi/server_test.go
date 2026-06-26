@@ -704,6 +704,7 @@ func TestCreateTranscriptionStreamsAndValidates(t *testing.T) {
 }
 
 func TestCreateTranscriptionAcceptHeaderSelectsEventStream(t *testing.T) {
+	accept := "application/json, text/event-stream"
 	srv := &Server{
 		Transformer: transformerFunc(func(context.Context, string, genx.Stream) (genx.Stream, error) {
 			return &sliceStream{chunks: []*genx.MessageChunk{
@@ -717,7 +718,7 @@ func TestCreateTranscriptionAcceptHeaderSelectsEventStream(t *testing.T) {
 		{field: "stream", value: "true"},
 	})
 	resp, err := srv.CreateTranscription(context.Background(), openaiservice.CreateTranscriptionRequestObject{
-		Accept: "application/json, text/event-stream",
+		Params: openaiservice.CreateTranscriptionParams{Accept: &accept},
 		Body:   reader,
 	})
 	if err != nil {

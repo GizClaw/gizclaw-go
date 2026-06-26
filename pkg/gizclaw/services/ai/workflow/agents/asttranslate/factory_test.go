@@ -31,7 +31,6 @@ func TestFactoryMergesWorkflowAndWorkspaceParams(t *testing.T) {
 				Driver: apitypes.WorkflowDriverAstTranslate,
 				AstTranslate: &apitypes.ASTTranslateWorkflowSpec{
 					TranslationModel: "ast-model",
-					AuthMode:         stringPtr("v2"),
 				},
 			},
 		},
@@ -51,8 +50,7 @@ func TestFactoryMergesWorkflowAndWorkspaceParams(t *testing.T) {
 	if !strings.HasPrefix(got, "model/ast-model?") ||
 		!strings.Contains(got, "source_language=zh") ||
 		!strings.Contains(got, "target_language=ja") ||
-		!strings.Contains(got, "mode=s2s") ||
-		!strings.Contains(got, "auth_mode=v2") {
+		!strings.Contains(got, "mode=s2s") {
 		t.Fatalf("pattern = %q, want AST translate params", got)
 	}
 }

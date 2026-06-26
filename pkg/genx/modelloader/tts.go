@@ -31,12 +31,12 @@ func registerDoubaoTTS(cfg ConfigFile) ([]string, error) {
 	if cfg.AppID == "" {
 		return nil, fmt.Errorf("app_id is required for doubao TTS")
 	}
-	if cfg.Token == "" {
-		return nil, fmt.Errorf("token is required for doubao TTS")
+	if cfg.APIKey == "" {
+		return nil, fmt.Errorf("api_key is required for doubao TTS")
 	}
 
 	// Create Doubao client
-	client := doubaospeech.NewClient(cfg.AppID, doubaospeech.WithBearerToken(cfg.Token))
+	client := doubaospeech.NewClient(cfg.AppID, doubaospeech.WithAPIKey(cfg.APIKey))
 
 	// Parse default params
 	var opts []transformers.DoubaoTTSSeedV2Option

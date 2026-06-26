@@ -93,7 +93,7 @@ func TestParseConfig_YAML(t *testing.T) {
 schema: doubao/seed_tts/v2
 type: tts
 app_id: test-app-id
-token: test-token
+api_key: test-api-key
 voices:
   - name: doubao/voice1
     voice_id: zh_female_test
@@ -114,6 +114,9 @@ voices:
 	}
 	if cfg.Type != "tts" {
 		t.Errorf("Type = %q, want %q", cfg.Type, "tts")
+	}
+	if cfg.APIKey != "test-api-key" {
+		t.Errorf("APIKey = %q, want %q", cfg.APIKey, "test-api-key")
 	}
 	if cfg.AppID != "test-app-id" {
 		t.Errorf("AppID = %q, want %q", cfg.AppID, "test-app-id")
@@ -257,8 +260,8 @@ func TestRegisterSpeechSchemaDispatch(t *testing.T) {
 			name: "asr",
 			cfg: ConfigFile{
 				Schema: "doubao/asr/v1",
-				AppID:  "app",
-				Token:  "token",
+				AppID:  "app-id",
+				APIKey: "api-key",
 				Models: []Entry{{Name: "asr/schema-test"}},
 			},
 			want: "asr/schema-test",
@@ -268,8 +271,8 @@ func TestRegisterSpeechSchemaDispatch(t *testing.T) {
 			name: "realtime",
 			cfg: ConfigFile{
 				Schema: "doubao/realtime/v1",
-				AppID:  "app",
-				Token:  "token",
+				AppID:  "app-id",
+				APIKey: "api-key",
 				Models: []Entry{{Name: "realtime/schema-test"}},
 			},
 			want: "realtime/schema-test",
@@ -279,8 +282,8 @@ func TestRegisterSpeechSchemaDispatch(t *testing.T) {
 			name: "doubao tts",
 			cfg: ConfigFile{
 				Schema: "doubao/seed_tts/v2",
-				AppID:  "app",
-				Token:  "token",
+				AppID:  "app-id",
+				APIKey: "api-key",
 				DefaultParams: map[string]any{
 					"format":      "mp3",
 					"sample_rate": float64(24000),
@@ -325,19 +328,16 @@ func TestRegisterSpeechSchemaValidation(t *testing.T) {
 	}{
 		{name: "asr invalid schema", cfg: ConfigFile{Schema: "bad"}, call: registerASRBySchema},
 		{name: "asr unknown provider", cfg: ConfigFile{Schema: "unknown/asr/v1"}, call: registerASRBySchema},
-		{name: "asr missing app", cfg: ConfigFile{Schema: "doubao/asr/v1", Token: "token"}, call: registerASRBySchema},
-		{name: "asr missing token", cfg: ConfigFile{Schema: "doubao/asr/v1", AppID: "app"}, call: registerASRBySchema},
-		{name: "asr missing model name", cfg: ConfigFile{Schema: "doubao/asr/v1", AppID: "app", Token: "token", Models: []Entry{{}}}, call: registerASRBySchema},
+		{name: "asr missing api key", cfg: ConfigFile{Schema: "doubao/asr/v1", AppID: "app-id"}, call: registerASRBySchema},
+		{name: "asr missing model name", cfg: ConfigFile{Schema: "doubao/asr/v1", AppID: "app-id", APIKey: "api-key", Models: []Entry{{}}}, call: registerASRBySchema},
 		{name: "realtime invalid schema", cfg: ConfigFile{Schema: "bad"}, call: registerRealtimeBySchema},
 		{name: "realtime unknown provider", cfg: ConfigFile{Schema: "unknown/realtime/v1"}, call: registerRealtimeBySchema},
-		{name: "realtime missing app", cfg: ConfigFile{Schema: "doubao/realtime/v1", Token: "token"}, call: registerRealtimeBySchema},
-		{name: "realtime missing token", cfg: ConfigFile{Schema: "doubao/realtime/v1", AppID: "app"}, call: registerRealtimeBySchema},
-		{name: "realtime missing model name", cfg: ConfigFile{Schema: "doubao/realtime/v1", AppID: "app", Token: "token", Models: []Entry{{}}}, call: registerRealtimeBySchema},
+		{name: "realtime missing api key", cfg: ConfigFile{Schema: "doubao/realtime/v1", AppID: "app-id"}, call: registerRealtimeBySchema},
+		{name: "realtime missing model name", cfg: ConfigFile{Schema: "doubao/realtime/v1", AppID: "app-id", APIKey: "api-key", Models: []Entry{{}}}, call: registerRealtimeBySchema},
 		{name: "tts invalid schema", cfg: ConfigFile{Schema: "bad"}, call: registerTTSBySchema},
 		{name: "tts unknown provider", cfg: ConfigFile{Schema: "unknown/tts/v1"}, call: registerTTSBySchema},
-		{name: "doubao tts missing app", cfg: ConfigFile{Schema: "doubao/tts/v1", Token: "token"}, call: registerTTSBySchema},
-		{name: "doubao tts missing token", cfg: ConfigFile{Schema: "doubao/tts/v1", AppID: "app"}, call: registerTTSBySchema},
-		{name: "doubao tts missing voice", cfg: ConfigFile{Schema: "doubao/tts/v1", AppID: "app", Token: "token", Voices: []VoiceEntry{{Name: "tts/bad"}}}, call: registerTTSBySchema},
+		{name: "doubao tts missing api key", cfg: ConfigFile{Schema: "doubao/tts/v1", AppID: "app-id"}, call: registerTTSBySchema},
+		{name: "doubao tts missing voice", cfg: ConfigFile{Schema: "doubao/tts/v1", AppID: "app-id", APIKey: "api-key", Voices: []VoiceEntry{{Name: "tts/bad"}}}, call: registerTTSBySchema},
 		{name: "minimax tts missing key", cfg: ConfigFile{Schema: "minimax/tts/v1"}, call: registerTTSBySchema},
 		{name: "minimax tts missing voice", cfg: ConfigFile{Schema: "minimax/tts/v1", APIKey: "mini-key", Voices: []VoiceEntry{{VoiceID: "voice"}}}, call: registerTTSBySchema},
 	} {
@@ -360,8 +360,8 @@ func TestRegisterDoubaoASRUsesFixedTransportAudioDefaults(t *testing.T) {
 	})
 
 	names, err := registerDoubaoASR(ConfigFile{
-		AppID: "app",
-		Token: "token",
+		AppID:  "app-id",
+		APIKey: "api-key",
 		DefaultParams: map[string]any{
 			"format":      "ogg_opus",
 			"sample_rate": float64(24000),
@@ -396,8 +396,8 @@ func TestRegisterDoubaoASRUsesFixedTransportAudioDefaults(t *testing.T) {
 	}
 
 	_, err = registerDoubaoASR(ConfigFile{
-		AppID:  "app",
-		Token:  "token",
+		AppID:  "app-id",
+		APIKey: "api-key",
 		Models: []Entry{{Name: "asr/test"}},
 	})
 	if err == nil {
@@ -413,8 +413,8 @@ func TestRegisterDoubaoRealtimeIgnoresOutputAudioDefaults(t *testing.T) {
 	})
 
 	names, err := registerDoubaoRealtime(ConfigFile{
-		AppID: "app",
-		Token: "token",
+		AppID:  "app-id",
+		APIKey: "api-key",
 		DefaultParams: map[string]any{
 			"format":        "pcm",
 			"sample_rate":   float64(8000),
@@ -448,8 +448,7 @@ func TestRegisterDoubaoRealtimeIgnoresOutputAudioDefaults(t *testing.T) {
 	}
 
 	_, err = registerDoubaoRealtime(ConfigFile{
-		AppID:  "app",
-		Token:  "token",
+		APIKey: "api-key",
 		Models: []Entry{{Name: "realtime/test"}},
 	})
 	if err == nil {

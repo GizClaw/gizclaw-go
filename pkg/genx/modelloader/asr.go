@@ -29,8 +29,8 @@ func registerDoubaoASR(cfg ConfigFile) ([]string, error) {
 	if cfg.AppID == "" {
 		return nil, fmt.Errorf("app_id is required for doubao ASR")
 	}
-	if cfg.Token == "" {
-		return nil, fmt.Errorf("token is required for doubao ASR")
+	if cfg.APIKey == "" {
+		return nil, fmt.Errorf("api_key is required for doubao ASR")
 	}
 
 	// Extract default params
@@ -56,7 +56,7 @@ func registerDoubaoASR(cfg ConfigFile) ([]string, error) {
 		// Create ASR transformer with the resource options
 		client := doubaospeech.NewClient(
 			cfg.AppID,
-			doubaospeech.WithBearerToken(cfg.Token),
+			doubaospeech.WithAPIKey(cfg.APIKey),
 			doubaospeech.WithResourceID(resourceID),
 		)
 		modelOpts := append(slices.Clone(opts), transformers.WithDoubaoASRSAUCResourceID(resourceID))

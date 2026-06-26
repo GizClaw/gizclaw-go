@@ -53,10 +53,6 @@
           },
           "resource_id": {
             "type": "string"
-          },
-          "auth_mode": {
-            "type": "string",
-            "description": "Optional AST auth mode. Supported values are x-api-key and v2."
           }
         }
       },

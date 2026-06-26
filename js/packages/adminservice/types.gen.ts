@@ -759,12 +759,9 @@ export type OpenAiCredentialBody = {
 
 export type VolcCredentialBody = {
     app_id?: string;
-    speech_token?: string;
-    ark_api_key?: string;
+    api_key?: string;
     openapi_access_key_id?: string;
-    secret_access_key?: string;
-    session_token?: string;
-    websearch_api_key?: string;
+    openapi_access_key?: string;
 };
 
 export type CredentialSpec = {
@@ -1007,7 +1004,6 @@ export type VolcTenantModelProviderData = {
     upstream_model?: string;
     api_mode?: 'asr' | 'tts' | 'realtime';
     resource_id?: string;
-    auth_mode?: string;
     support_json_output?: boolean;
     support_tool_calls?: boolean;
     support_text_only?: boolean;
@@ -1327,10 +1323,6 @@ export type AstTranslateWorkflowSpec = {
     enable_source_language_detect?: boolean;
     denoise?: boolean;
     resource_id?: string;
-    /**
-     * Optional AST auth mode. Supported values are x-api-key and v2.
-     */
-    auth_mode?: string;
 };
 
 export type ChatRoomWorkflowHistorySpec = {

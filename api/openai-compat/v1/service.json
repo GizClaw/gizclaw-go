@@ -105,6 +105,16 @@
       "post": {
         "operationId": "createTranscription",
         "summary": "Create transcription",
+        "parameters": [
+          {
+            "name": "Accept",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {

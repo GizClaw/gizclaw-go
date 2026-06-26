@@ -118,7 +118,6 @@ func workflowParams(ast apitypes.ASTTranslateWorkflowSpec) map[string]any {
 	setParam(params, "enable_source_language_detect", ast.EnableSourceLanguageDetect)
 	setParam(params, "denoise", ast.Denoise)
 	setParam(params, "resource_id", ast.ResourceId)
-	setParam(params, "auth_mode", ast.AuthMode)
 	if len(params) == 0 {
 		return nil
 	}

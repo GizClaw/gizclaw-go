@@ -52,7 +52,7 @@ func TestAdminVoicesUserStory(t *testing.T) {
 
 	showVolcCredential := h.RunCLI("admin", "--context", "admin-a", "show", "Credential", "volc-lab-credential")
 	showVolcCredential.MustSucceed(t)
-	for _, want := range []string{`"kind":"Credential"`, `"name":"volc-lab-credential"`, `"app_id":"volc-lab-app"`} {
+	for _, want := range []string{`"kind":"Credential"`, `"name":"volc-lab-credential"`, `"api_key":"sk-volc-lab"`} {
 		if !strings.Contains(showVolcCredential.Stdout, want) {
 			t.Fatalf("admin show Volc credential missing %q:\n%s", want, showVolcCredential.Stdout)
 		}
@@ -62,7 +62,7 @@ func TestAdminVoicesUserStory(t *testing.T) {
 	if syncVolcTenant.Err == nil {
 		t.Fatalf("volc sync with incomplete credential should fail:\n%s", syncVolcTenant.Stdout)
 	}
-	for _, want := range []string{"INVALID_VOLC_TENANT", "missing openapi_access_key_id/secret_access_key"} {
+	for _, want := range []string{"INVALID_VOLC_TENANT", "missing openapi_access_key_id/openapi_access_key"} {
 		if !strings.Contains(syncVolcTenant.Stderr, want) {
 			t.Fatalf("volc sync stderr missing %q:\nstdout:\n%s\nstderr:\n%s", want, syncVolcTenant.Stdout, syncVolcTenant.Stderr)
 		}

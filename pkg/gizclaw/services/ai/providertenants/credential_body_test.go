@@ -53,18 +53,12 @@ func testVolcCredentialBodyFromStrings(values map[string]string) apitypes.Creden
 		switch key {
 		case "app_id":
 			typed.AppId = &value
-		case "ark_api_key":
-			typed.ArkApiKey = &value
+		case "api_key":
+			typed.ApiKey = &value
 		case "openapi_access_key_id":
 			typed.OpenapiAccessKeyId = &value
-		case "secret_access_key":
-			typed.SecretAccessKey = &value
-		case "session_token":
-			typed.SessionToken = &value
-		case "speech_token":
-			typed.SpeechToken = &value
-		case "websearch_api_key":
-			typed.WebsearchApiKey = &value
+		case "openapi_access_key":
+			typed.OpenapiAccessKey = &value
 		default:
 			panic("unsupported volc credential field: " + key)
 		}

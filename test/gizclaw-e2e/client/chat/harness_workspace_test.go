@@ -206,7 +206,7 @@ func TestWorkflowSpecCoversTypedAgentSpecs(t *testing.T) {
 		t.Fatalf("ast mode = %#v", ast.AstTranslate.Mode)
 	}
 
-	realtime := workflowSpec(config{Workflow: workflowConfig{RealtimeModel: "rt", Session: realtimeSessionConfig{AuthMode: "v2"}, Output: realtimeOutputConfig{Speaker: "sp"}}})
+	realtime := workflowSpec(config{Workflow: workflowConfig{RealtimeModel: "rt", Session: realtimeSessionConfig{}, Output: realtimeOutputConfig{Speaker: "sp"}}})
 	if realtime.Driver != rpcapi.WorkflowDriverDoubaoRealtime || realtime.DoubaoRealtime == nil || realtime.DoubaoRealtime.Realtime == nil {
 		t.Fatalf("realtime spec = %+v", realtime)
 	}
@@ -495,7 +495,6 @@ func TestEnsureWorkspaceRequiresSetupWorkflowAndRecreatesWorkspace(t *testing.T)
 				Music: realtimeMusicConfig{Enabled: &musicEnabled},
 			},
 			Session: realtimeSessionConfig{
-				AuthMode:    "v2",
 				BotName:     "豆包",
 				Model:       "O",
 				ResourceID:  "volc.speech.dialog",

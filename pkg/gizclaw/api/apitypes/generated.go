@@ -1377,8 +1377,6 @@ type ASTTranslateVoiceParameters struct {
 
 // ASTTranslateWorkflowSpec defines model for ASTTranslateWorkflowSpec.
 type ASTTranslateWorkflowSpec struct {
-	// AuthMode Optional AST auth mode. Supported values are x-api-key and v2.
-	AuthMode                   *string           `json:"auth_mode,omitempty"`
 	Denoise                    *bool             `json:"denoise,omitempty"`
 	EnableSourceLanguageDetect *bool             `json:"enable_source_language_detect,omitempty"`
 	IsCustomSpeaker            *bool             `json:"is_custom_speaker,omitempty"`
@@ -2597,13 +2595,10 @@ type VoiceSpec struct {
 
 // VolcCredentialBody defines model for VolcCredentialBody.
 type VolcCredentialBody struct {
+	ApiKey             *string `json:"api_key,omitempty"`
 	AppId              *string `json:"app_id,omitempty"`
-	ArkApiKey          *string `json:"ark_api_key,omitempty"`
+	OpenapiAccessKey   *string `json:"openapi_access_key,omitempty"`
 	OpenapiAccessKeyId *string `json:"openapi_access_key_id,omitempty"`
-	SecretAccessKey    *string `json:"secret_access_key,omitempty"`
-	SessionToken       *string `json:"session_token,omitempty"`
-	SpeechToken        *string `json:"speech_token,omitempty"`
-	WebsearchApiKey    *string `json:"websearch_api_key,omitempty"`
 }
 
 // VolcTenant defines model for VolcTenant.
@@ -2622,7 +2617,6 @@ type VolcTenant struct {
 // VolcTenantModelProviderData defines model for VolcTenantModelProviderData.
 type VolcTenantModelProviderData struct {
 	ApiMode              *VolcTenantModelProviderDataApiMode `json:"api_mode,omitempty"`
-	AuthMode             *string                             `json:"auth_mode,omitempty"`
 	DefaultThinkingLevel *string                             `json:"default_thinking_level,omitempty"`
 	ResourceId           *string                             `json:"resource_id,omitempty"`
 	SupportJsonOutput    *bool                               `json:"support_json_output,omitempty"`

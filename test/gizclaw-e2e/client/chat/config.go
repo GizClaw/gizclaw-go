@@ -90,7 +90,6 @@ type workspaceParameterConfig struct {
 }
 
 type realtimeSessionConfig struct {
-	AuthMode    string `json:"auth_mode,omitempty"`
 	BotName     string `json:"bot_name,omitempty"`
 	Model       string `json:"model,omitempty"`
 	ResourceID  string `json:"resource_id,omitempty"`
@@ -118,7 +117,6 @@ type astTranslateConfig struct {
 	EnableSourceLanguageDetect *bool                   `json:"enable_source_language_detect,omitempty"`
 	Denoise                    *bool                   `json:"denoise,omitempty"`
 	ResourceID                 string                  `json:"resource_id,omitempty"`
-	AuthMode                   string                  `json:"auth_mode,omitempty"`
 }
 
 type astTranslateVoiceConfig struct {
@@ -294,7 +292,6 @@ func (c *config) validate() error {
 	c.Workflow.Parameters.TTSResourceID = strings.TrimSpace(c.Workflow.Parameters.TTSResourceID)
 	c.Workflow.Parameters.Voice.trim()
 	c.Workflow.Parameters.Search.trim()
-	c.Workflow.Session.AuthMode = strings.TrimSpace(c.Workflow.Session.AuthMode)
 	c.Workflow.Session.BotName = strings.TrimSpace(c.Workflow.Session.BotName)
 	c.Workflow.Session.Model = strings.TrimSpace(c.Workflow.Session.Model)
 	c.Workflow.Session.ResourceID = strings.TrimSpace(c.Workflow.Session.ResourceID)
@@ -306,7 +303,6 @@ func (c *config) validate() error {
 	c.Workflow.ASTTranslate.SpeakerID = strings.TrimSpace(c.Workflow.ASTTranslate.SpeakerID)
 	c.Workflow.ASTTranslate.TTSResourceID = strings.TrimSpace(c.Workflow.ASTTranslate.TTSResourceID)
 	c.Workflow.ASTTranslate.ResourceID = strings.TrimSpace(c.Workflow.ASTTranslate.ResourceID)
-	c.Workflow.ASTTranslate.AuthMode = strings.TrimSpace(c.Workflow.ASTTranslate.AuthMode)
 	c.Workflow.ASTTranslate.Voice.trim()
 	for rawNodeID, voice := range c.Workflow.VoiceAdapter.NodeVoices {
 		nodeID := strings.TrimSpace(rawNodeID)
@@ -364,9 +360,6 @@ func (c *config) validate() error {
 	if c.Workflow.Translation == "" {
 		c.Workflow.Translation = c.Models.Translation
 	}
-	if c.Workflow.Session.AuthMode == "" {
-		c.Workflow.Session.AuthMode = "v2"
-	}
 	if c.Workflow.Session.BotName == "" {
 		c.Workflow.Session.BotName = "豆包"
 	}
@@ -399,9 +392,6 @@ func (c *config) validate() error {
 	if c.isASTTranslateAgent() {
 		if c.Workflow.ASTTranslate.Mode == "" {
 			c.Workflow.ASTTranslate.Mode = "s2s"
-		}
-		if c.Workflow.ASTTranslate.AuthMode == "" {
-			c.Workflow.ASTTranslate.AuthMode = "v2"
 		}
 		if c.Workflow.Parameters.TranslationModel == "" {
 			c.Workflow.Parameters.TranslationModel = c.Workflow.Translation

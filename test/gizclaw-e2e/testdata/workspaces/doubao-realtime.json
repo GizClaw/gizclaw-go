@@ -31,7 +31,6 @@
       }
     },
     "session": {
-      "auth_mode": "v2",
       "bot_name": "豆包",
       "model": "1.2.1.1",
       "resource_id": "volc.speech.dialog",

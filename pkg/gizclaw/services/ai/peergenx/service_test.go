@@ -302,7 +302,7 @@ func TestDefaultBuilderBuildsVolcArkGenerator(t *testing.T) {
 		},
 		Credential: apitypes.Credential{
 			Name: "volc-key",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{"ark_api_key": "ark-test"}),
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "ark-test"}),
 		},
 	})
 	if err != nil {
@@ -339,7 +339,7 @@ func TestDefaultBuilderBuildsVolcASRTransformer(t *testing.T) {
 		},
 		Credential: apitypes.Credential{
 			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "tok"}),
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "tok"}),
 		},
 	})
 	if err != nil {
@@ -369,6 +369,9 @@ func TestDefaultBuilderBuildsVolcASRTransformer(t *testing.T) {
 	if got := transformerStringField(t, tf, "resourceID"); got != "volc.bigasr.sauc.duration" {
 		t.Fatalf("ASR resourceID = %q, want volc.bigasr.sauc.duration", got)
 	}
+	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "tok" {
+		t.Fatalf("ASR api key = %q, want tok", got)
+	}
 }
 
 func TestDefaultBuilderBuildsVolcASRTransformerFromParams(t *testing.T) {
@@ -389,7 +392,7 @@ func TestDefaultBuilderBuildsVolcASRTransformerFromParams(t *testing.T) {
 		},
 		Credential: apitypes.Credential{
 			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "tok"}),
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "tok"}),
 		},
 		Params: map[string]any{
 			"format":          "pcm",
@@ -443,7 +446,7 @@ func TestDefaultBuilderBuildsVolcRealtimeTransformer(t *testing.T) {
 		},
 		Credential: apitypes.Credential{
 			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "runtime-key"}),
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "runtime-key"}),
 		},
 		Params: map[string]any{
 			"upstream_model": "SC",
@@ -463,15 +466,12 @@ func TestDefaultBuilderBuildsVolcRealtimeTransformer(t *testing.T) {
 	if got := transformerIntField(t, tf, "vadWindowMs"); got != 220 {
 		t.Fatalf("realtime vadWindowMs = %d, want 220", got)
 	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "runtime-key" {
-		t.Fatalf("realtime access key = %q, want speech token", got)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "" {
-		t.Fatalf("realtime api key = %q, want empty by default", got)
+	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "runtime-key" {
+		t.Fatalf("realtime api key = %q, want runtime-key", got)
 	}
 }
 
-func TestDefaultBuilderBuildsVolcRealtimeTransformerPrefersSpeechTokenOverArkAPIKey(t *testing.T) {
+func TestDefaultBuilderBuildsVolcRealtimeTransformerUsesAPIKey(t *testing.T) {
 	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
 		Model: &apitypes.Model{
 			Id:   "dialog",
@@ -483,21 +483,14 @@ func TestDefaultBuilderBuildsVolcRealtimeTransformerPrefersSpeechTokenOverArkAPI
 		},
 		Credential: apitypes.Credential{
 			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{
-				"app_id":       "app-id",
-				"ark_api_key":  "ark-runtime-key",
-				"speech_token": "speech-runtime-key",
-			}),
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "speech-runtime-key"}),
 		},
 	})
 	if err != nil {
 		t.Fatalf("BuildTransformer() error = %v", err)
 	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "speech-runtime-key" {
-		t.Fatalf("realtime access key = %q, want speech token", got)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "" {
-		t.Fatalf("realtime api key = %q, want empty by default", got)
+	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "speech-runtime-key" {
+		t.Fatalf("realtime api key = %q, want speech-runtime-key", got)
 	}
 }
 
@@ -516,10 +509,9 @@ func TestDefaultBuilderBuildsVolcRealtimeTransformerFromWorkflowParams(t *testin
 		},
 		Credential: apitypes.Credential{
 			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "realtime-key"}),
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "realtime-key"}),
 		},
 		Params: map[string]any{
-			"auth_mode":          "v2",
 			"resource_id":        "volc.speech.dialog",
 			"upstream_model":     "O",
 			"speaker":            "workflow-speaker",
@@ -544,11 +536,8 @@ func TestDefaultBuilderBuildsVolcRealtimeTransformerFromWorkflowParams(t *testin
 	if got := transformerNestedStringField(t, tf, "client", "config", "resourceID"); got != "volc.speech.dialog" {
 		t.Fatalf("realtime resourceID = %q, want volc.speech.dialog", got)
 	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "realtime-key" {
-		t.Fatalf("realtime access key = %q, want speech token", got)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "" {
-		t.Fatalf("realtime api key = %q, want empty in v2 mode", got)
+	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "realtime-key" {
+		t.Fatalf("realtime api key = %q, want realtime-key", got)
 	}
 	if got := transformerStringField(t, tf, "model"); got != "O" {
 		t.Fatalf("realtime model = %q, want O", got)
@@ -612,135 +601,12 @@ func TestDefaultBuilderRejectsUnsupportedVolcRealtimeMode(t *testing.T) {
 		},
 		Credential: apitypes.Credential{
 			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "realtime-key"}),
+			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "realtime-key"}),
 		},
 		Params: map[string]any{"mode": "bad"},
 	})
 	if err == nil || !strings.Contains(err.Error(), `doubao realtime mode "bad"`) {
 		t.Fatalf("BuildTransformer() error = %v, want unsupported mode", err)
-	}
-}
-
-func TestDefaultBuilderBuildsVolcASRTransformerPrefersSaucAccessToken(t *testing.T) {
-	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
-		Model: &apitypes.Model{
-			Id:   "asr",
-			Kind: apitypes.ModelKindAsr,
-			ProviderData: mustVolcModelProviderData(t, apitypes.VolcTenantModelProviderData{
-				ResourceId: stringPtr("volc.bigasr.sauc.duration"),
-			}),
-		},
-		Tenant: Tenant{
-			Kind: "volc-tenant",
-			Volc: &apitypes.VolcTenant{
-				Name:           "main",
-				CredentialName: "volc-token",
-			},
-		},
-		Credential: apitypes.Credential{
-			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{
-				"app_id":       "app-id",
-				"speech_token": "old-sauc-token",
-			}),
-		},
-	})
-	if err != nil {
-		t.Fatalf("BuildTransformer() error = %v", err)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "old-sauc-token" {
-		t.Fatalf("ASR access key = %q, want old SAUC token", got)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "resourceID"); got != "volc.bigasr.sauc.duration" {
-		t.Fatalf("ASR resource ID = %q, want volc.bigasr.sauc.duration", got)
-	}
-}
-
-func TestDefaultBuilderBuildsVolcASRTransformerTreatsAPIKeyAsSpeechAccessKey(t *testing.T) {
-	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
-		Model: &apitypes.Model{
-			Id:   "asr",
-			Kind: apitypes.ModelKindAsr,
-			ProviderData: mustVolcModelProviderData(t, apitypes.VolcTenantModelProviderData{
-				ResourceId: stringPtr("volc.bigasr.sauc.duration"),
-			}),
-		},
-		Tenant: Tenant{
-			Kind: "volc-tenant",
-			Volc: &apitypes.VolcTenant{Name: "main"},
-		},
-		Credential: apitypes.Credential{
-			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "speech-runtime-key"}),
-		},
-	})
-	if err != nil {
-		t.Fatalf("BuildTransformer() error = %v", err)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "speech-runtime-key" {
-		t.Fatalf("ASR access key = %q, want speech runtime key", got)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "" {
-		t.Fatalf("ASR x-api-key = %q, want empty by default", got)
-	}
-}
-
-func TestDefaultBuilderBuildsVolcASRTransformerPrefersTokenOverArkAPIKey(t *testing.T) {
-	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
-		Model: &apitypes.Model{
-			Id:   "asr",
-			Kind: apitypes.ModelKindAsr,
-			ProviderData: mustVolcModelProviderData(t, apitypes.VolcTenantModelProviderData{
-				ResourceId: stringPtr("volc.bigasr.sauc.duration"),
-			}),
-		},
-		Tenant: Tenant{
-			Kind: "volc-tenant",
-			Volc: &apitypes.VolcTenant{Name: "main"},
-		},
-		Credential: apitypes.Credential{
-			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{
-				"app_id":       "app-id",
-				"ark_api_key":  "ark-runtime-key",
-				"speech_token": "speech-token",
-			}),
-		},
-	})
-	if err != nil {
-		t.Fatalf("BuildTransformer() error = %v", err)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "speech-token" {
-		t.Fatalf("ASR access key = %q, want speech token", got)
-	}
-}
-
-func TestDefaultBuilderBuildsVolcASRTransformerSupportsXAPIKeyMode(t *testing.T) {
-	tf, err := (DefaultBuilder{}).BuildTransformer(context.Background(), TransformerConfig{
-		Model: &apitypes.Model{
-			Id:   "asr",
-			Kind: apitypes.ModelKindAsr,
-			ProviderData: mustVolcModelProviderData(t, apitypes.VolcTenantModelProviderData{
-				AuthMode: stringPtr("x-api-key"),
-			}),
-		},
-		Tenant: Tenant{
-			Kind: "volc-tenant",
-			Volc: &apitypes.VolcTenant{Name: "main"},
-		},
-		Credential: apitypes.Credential{
-			Name: "volc-token",
-			Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "ark_api_key": "real-x-api-key"}),
-		},
-	})
-	if err != nil {
-		t.Fatalf("BuildTransformer() error = %v", err)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "apiKey"); got != "real-x-api-key" {
-		t.Fatalf("ASR x-api-key = %q, want real x-api-key", got)
-	}
-	if got := transformerNestedStringField(t, tf, "client", "config", "accessKey"); got != "" {
-		t.Fatalf("ASR access key = %q, want empty in x-api-key mode", got)
 	}
 }
 
@@ -800,7 +666,7 @@ func TestDefaultBuilderBuildsVoiceTransformers(t *testing.T) {
 					Kind: "volc-tenant",
 					Volc: &apitypes.VolcTenant{Name: "main", CredentialName: "volc-token"},
 				},
-				Credential: apitypes.Credential{Name: "volc-token", Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "tok"})},
+				Credential: apitypes.Credential{Name: "volc-token", Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "tok"})},
 			},
 			wantFormat:     defaultVolcTTSAudioFormat,
 			wantSampleRate: defaultTTSAudioSampleRate,
@@ -980,7 +846,7 @@ func TestDefaultBuilderRejectsInvalidTransformerConfigs(t *testing.T) {
 			},
 		},
 		{
-			name: "volc asr missing token",
+			name: "volc asr missing api key",
 			cfg: TransformerConfig{
 				Model: &apitypes.Model{Id: "asr", Kind: apitypes.ModelKindAsr},
 				Tenant: Tenant{
@@ -997,7 +863,7 @@ func TestDefaultBuilderRejectsInvalidTransformerConfigs(t *testing.T) {
 					Kind: string(apitypes.VoiceProviderKindVolcTenant),
 					Volc: &apitypes.VolcTenant{Name: "main"},
 				},
-				Credential: apitypes.Credential{Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-id", "speech_token": "tok"})},
+				Credential: apitypes.Credential{Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "tok"})},
 			},
 		},
 		{
@@ -1591,11 +1457,7 @@ func (f fakeCredentials) GetCredential(_ context.Context, request adminservice.G
 	*f.events = append(*f.events, "get:credential:"+request.Name)
 	return adminservice.GetCredential200JSONResponse(apitypes.Credential{
 		Name: request.Name,
-		Body: testVolcCredentialBodyFromStrings(map[string]string{
-			"app_id":       "app-id",
-			"ark_api_key":  "sk-test",
-			"speech_token": "tok-test",
-		}),
+		Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "api_key": "sk-test"}),
 	}), nil
 }
 

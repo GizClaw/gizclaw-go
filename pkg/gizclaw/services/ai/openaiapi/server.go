@@ -230,7 +230,7 @@ func (s *Server) CreateTranscription(ctx context.Context, request openaiservice.
 	if err != nil {
 		return nil, err
 	}
-	if transcriptionAcceptsEventStream(request.Accept) {
+	if request.Params.Accept != nil && transcriptionAcceptsEventStream(*request.Params.Accept) {
 		form.stream = true
 	}
 	if s == nil || s.Transformer == nil {

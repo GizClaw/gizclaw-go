@@ -56,6 +56,7 @@ type ConfigFile struct {
 	Kind string `json:"kind,omitzero" yaml:"kind,omitzero"` // "openai", "gemini"
 
 	// Common fields
+	AppID   string `json:"app_id,omitzero" yaml:"app_id,omitzero"`
 	APIKey  string `json:"api_key,omitzero" yaml:"api_key,omitzero"` // Can be env var name like "$OPENAI_API_KEY"
 	BaseURL string `json:"base_url,omitzero" yaml:"base_url,omitzero"`
 
@@ -63,8 +64,6 @@ type ConfigFile struct {
 	Models []Entry `json:"models,omitzero" yaml:"models,omitzero"`
 
 	// TTS specific
-	AppID         string         `json:"app_id,omitzero" yaml:"app_id,omitzero"`
-	Token         string         `json:"token,omitzero" yaml:"token,omitzero"`
 	Cluster       string         `json:"cluster,omitzero" yaml:"cluster,omitzero"`
 	Model         string         `json:"model,omitzero" yaml:"model,omitzero"` // For TTS model like "speech-02-hd"
 	Voices        []VoiceEntry   `json:"voices,omitzero" yaml:"voices,omitzero"`
@@ -98,7 +97,7 @@ type Entry struct {
 
 // LoadFromDir loads model configs from dir recursively and registers generators.
 // Returns the registered model names.
-// Configs with missing credentials (empty API key/token after env expansion) are skipped.
+// Configs with missing credentials after env expansion are skipped.
 func LoadFromDir(dir string) ([]string, error) {
 	var names []string
 
@@ -159,9 +158,8 @@ func parseConfig(path string) (*ConfigFile, error) {
 
 func registerConfig(cfg ConfigFile) ([]string, error) {
 	// Expand environment variables
-	cfg.APIKey = expandEnv(cfg.APIKey)
 	cfg.AppID = expandEnv(cfg.AppID)
-	cfg.Token = expandEnv(cfg.Token)
+	cfg.APIKey = expandEnv(cfg.APIKey)
 
 	// New unified format: use schema + type
 	if cfg.Schema != "" {

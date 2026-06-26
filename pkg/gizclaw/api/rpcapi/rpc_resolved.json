@@ -56,10 +56,6 @@
       "ASTTranslateWorkflowSpec": {
         "additionalProperties": false,
         "properties": {
-          "auth_mode": {
-            "description": "Optional AST auth mode. Supported values are x-api-key and v2.",
-            "type": "string"
-          },
           "denoise": {
             "type": "boolean"
           },
@@ -3953,30 +3949,21 @@
       "VolcCredentialBody": {
         "additionalProperties": false,
         "example": {
-          "app_id": "123456",
-          "speech_token": "..."
+          "api_key": "...",
+          "app_id": "..."
         },
         "minProperties": 1,
         "properties": {
+          "api_key": {
+            "type": "string"
+          },
           "app_id": {
             "type": "string"
           },
-          "ark_api_key": {
+          "openapi_access_key": {
             "type": "string"
           },
           "openapi_access_key_id": {
-            "type": "string"
-          },
-          "secret_access_key": {
-            "type": "string"
-          },
-          "session_token": {
-            "type": "string"
-          },
-          "speech_token": {
-            "type": "string"
-          },
-          "websearch_api_key": {
             "type": "string"
           }
         },
@@ -3990,9 +3977,6 @@
               "tts",
               "realtime"
             ],
-            "type": "string"
-          },
-          "auth_mode": {
             "type": "string"
           },
           "default_thinking_level": {

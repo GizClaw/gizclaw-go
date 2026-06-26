@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/volcengine/volcengine-go-sdk/service/speechsaasprod"
+
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -25,7 +27,7 @@ func TestServerMiniMaxTenantsCRUD(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"speech_token": "tok-main"}),
+		Body:      testMiniMaxCredentialBody("tok-main"),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -160,7 +162,7 @@ func TestServerMiniMaxTenantsPaginationAndValidation(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"speech_token": "tok-main"}),
+		Body:      testMiniMaxCredentialBody("tok-main"),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -291,6 +293,26 @@ func TestServerMiniMaxCredentialValidation(t *testing.T) {
 		t.Fatalf("miniMaxClientForTenant(missing api key) error = nil, want error")
 	}
 
+	seedCredential(t, srv, apitypes.Credential{
+		Name:      "cred-main",
+		Provider:  "minimax",
+		Body:      testMiniMaxCredentialBody("mmx-key"),
+		CreatedAt: srv.now(),
+		UpdatedAt: srv.now(),
+	})
+	client, err := srv.miniMaxClientForTenant(ctx, credentialStore, tenant)
+	if err != nil {
+		t.Fatalf("miniMaxClientForTenant() error = %v", err)
+	}
+	if client == nil {
+		t.Fatal("miniMaxClientForTenant() returned nil client")
+	}
+	missingTenant := tenant
+	missingTenant.CredentialName = "missing-cred"
+	if _, err := srv.miniMaxCredentialForTenant(ctx, credentialStore, missingTenant); err == nil || !strings.Contains(err.Error(), `credential "missing-cred" not found`) {
+		t.Fatalf("miniMaxCredentialForTenant(missing) error = %v", err)
+	}
+
 	missingTenantResp, err := srv.SyncMiniMaxTenantVoices(ctx, adminservice.SyncMiniMaxTenantVoicesRequestObject{Name: "missing"})
 	if err != nil {
 		t.Fatalf("SyncMiniMaxTenantVoices(missing tenant) error = %v", err)
@@ -303,12 +325,74 @@ func TestServerMiniMaxCredentialValidation(t *testing.T) {
 func TestServerMiniMaxHelpers(t *testing.T) {
 	t.Parallel()
 
+	if miniMaxCredentialRejected(nil) {
+		t.Fatal("miniMaxCredentialRejected(nil) = true")
+	}
+	for _, err := range []error{
+		errors.New("invalid api key"),
+		errors.New("login fail"),
+		errors.New("status_code=2049"),
+		errors.New("status=403"),
+		errors.New("unauthorized"),
+	} {
+		if !miniMaxCredentialRejected(err) {
+			t.Fatalf("miniMaxCredentialRejected(%v) = false", err)
+		}
+	}
+	if miniMaxCredentialRejected(errors.New("temporary upstream error")) {
+		t.Fatal("miniMaxCredentialRejected(temporary) = true")
+	}
+
 	if got := miniMaxBaseURL(apitypes.MiniMaxTenant{}); got != defaultMiniMaxBaseURL {
 		t.Fatalf("miniMaxBaseURL(default) = %q, want %q", got, defaultMiniMaxBaseURL)
 	}
 	baseURL := "https://voice.example.test"
 	if got := miniMaxBaseURL(apitypes.MiniMaxTenant{BaseUrl: &baseURL}); got != baseURL {
 		t.Fatalf("miniMaxBaseURL(tenant) = %q, want %q", got, baseURL)
+	}
+	credential := apitypes.Credential{
+		Body: testMiniMaxCredentialBodyFromStrings(map[string]string{
+			"voice_base_url":         " https://voice.example.test ",
+			"minimax_voice_base_url": "https://voice-backup.example.test",
+			"base_url":               "https://api.example.test",
+		}),
+	}
+	candidates := miniMaxBaseURLCandidates(
+		apitypes.MiniMaxTenant{BaseUrl: stringPtr("https://tenant.example.test")},
+		credential,
+		[]string{"https://fallback.example.test", "https://voice-backup.example.test"},
+	)
+	if !slices.Equal(candidates, []string{
+		"https://tenant.example.test",
+		"https://voice.example.test",
+		"https://voice-backup.example.test",
+		"https://fallback.example.test",
+		"https://api.example.test",
+	}) {
+		t.Fatalf("miniMaxBaseURLCandidates() = %#v", candidates)
+	}
+	for _, tt := range []struct {
+		raw  string
+		want string
+	}{
+		{raw: "", want: ""},
+		{raw: " https://api.minimax.chat/v1/ ", want: "https://api.minimax.chat"},
+		{raw: "https://api.minimax.chat/anthropic", want: "https://api.minimax.chat"},
+		{raw: "https://api.minimax.chat/v1/anthropic", want: "https://api.minimax.chat"},
+	} {
+		if got := normalizeMiniMaxVoiceBaseURL(tt.raw); got != tt.want {
+			t.Fatalf("normalizeMiniMaxVoiceBaseURL(%q) = %q, want %q", tt.raw, got, tt.want)
+		}
+	}
+	apiKey, err := miniMaxAPIKey(apitypes.Credential{Name: "mmx", Body: testMiniMaxCredentialBodyFromStrings(map[string]string{"token": " token-key "})})
+	if err != nil {
+		t.Fatalf("miniMaxAPIKey(token fallback) error = %v", err)
+	}
+	if apiKey != "token-key" {
+		t.Fatalf("miniMaxAPIKey(token fallback) = %q, want token-key", apiKey)
+	}
+	if _, err := miniMaxAPIKey(apitypes.Credential{Name: "mmx", Body: testMiniMaxCredentialBodyFromStrings(nil)}); err == nil {
+		t.Fatal("miniMaxAPIKey(missing) error = nil")
 	}
 	if got := testCredentialBodyString(testOpenAICredentialBody("12345"), "api_key"); got != "12345" {
 		t.Fatalf("testCredentialBodyString(api key) = %q, want 12345", got)
@@ -434,6 +518,9 @@ func TestServerMiniMaxStoreHelpers(t *testing.T) {
 	if _, err := nilServer.credentialStore(); err == nil {
 		t.Fatal("nil server credentialStore() error = nil")
 	}
+	if _, err := nilServer.volcTenantStore(); err == nil {
+		t.Fatal("nil server volcTenantStore() error = nil")
+	}
 	if _, err := (&Server{}).tenantStore(); err == nil {
 		t.Fatal("empty server tenantStore() error = nil")
 	}
@@ -442,6 +529,9 @@ func TestServerMiniMaxStoreHelpers(t *testing.T) {
 	}
 	if _, err := (&Server{}).credentialStore(); err == nil {
 		t.Fatal("empty server credentialStore() error = nil")
+	}
+	if _, err := (&Server{}).volcTenantStore(); err == nil {
+		t.Fatal("empty server volcTenantStore() error = nil")
 	}
 
 	base := kv.NewMemory(nil)
@@ -455,11 +545,16 @@ func TestServerMiniMaxStoreHelpers(t *testing.T) {
 	if got, err := srv.credentialStore(); err != nil || got != base {
 		t.Fatalf("credentialStore fallback = %v, %v", got, err)
 	}
+	if got, err := srv.volcTenantStore(); err != nil || got != base {
+		t.Fatalf("volcTenantStore fallback = %v, %v", got, err)
+	}
 
 	tenantStore := kv.NewMemory(nil)
+	volcTenantStore := kv.NewMemory(nil)
 	voiceStore := kv.NewMemory(nil)
 	credentialStore := kv.NewMemory(nil)
 	srv.TenantStore = tenantStore
+	srv.VolcTenantStore = volcTenantStore
 	srv.VoiceStore = voiceStore
 	srv.CredentialStore = credentialStore
 	if got, err := srv.tenantStore(); err != nil || got != tenantStore {
@@ -471,6 +566,14 @@ func TestServerMiniMaxStoreHelpers(t *testing.T) {
 	if got, err := srv.credentialStore(); err != nil || got != credentialStore {
 		t.Fatalf("credentialStore explicit = %v, %v", got, err)
 	}
+	if got, err := srv.volcTenantStore(); err != nil || got != volcTenantStore {
+		t.Fatalf("volcTenantStore explicit = %v, %v", got, err)
+	}
+
+	srv.VolcTenantStore = nil
+	if got, err := srv.volcTenantStore(); err != nil || got != tenantStore {
+		t.Fatalf("volcTenantStore tenant fallback = %v, %v", got, err)
+	}
 }
 
 func TestServerMiniMaxTenantValidationAndConflictPaths(t *testing.T) {
@@ -481,7 +584,7 @@ func TestServerMiniMaxTenantValidationAndConflictPaths(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "cred-main",
 		Provider:  "minimax",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"speech_token": "tok-main"}),
+		Body:      testMiniMaxCredentialBody("tok-main"),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -920,7 +1023,7 @@ func TestServerVolcTenantsCRUDAndSyncVoices(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "volc-main",
 		Provider:  "volcengine",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-1", "openapi_access_key_id": "ak", "secret_access_key": "sk"}),
+		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak", "openapi_access_key": "sk"}),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -1088,7 +1191,7 @@ func TestServerVolcTenantPutGetAndValidation(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "volc-main",
 		Provider:  "volc",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-1", "openapi_access_key_id": "ak", "secret_access_key": "sk"}),
+		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak", "openapi_access_key": "sk"}),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -1150,7 +1253,7 @@ func TestServerVolcTenantErrorResponses(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "volc-main",
 		Provider:  "volc",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-1", "openapi_access_key_id": "ak", "secret_access_key": "sk"}),
+		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak", "openapi_access_key": "sk"}),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -1235,7 +1338,7 @@ func TestServerVolcSyncPublicOnlySkipsTrainStatusAPI(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "volc-main",
 		Provider:  "volcengine",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-1", "openapi_access_key_id": "ak", "secret_access_key": "sk"}),
+		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak", "openapi_access_key": "sk"}),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -1284,7 +1387,7 @@ func TestServerVolcSyncTimbreFallbackMapsICLResourceID(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "volc-main",
 		Provider:  "volcengine",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-1", "openapi_access_key_id": "ak", "secret_access_key": "sk"}),
+		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak", "openapi_access_key": "sk"}),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -1375,7 +1478,7 @@ func TestServerVolcSyncRejectsInvalidCredential(t *testing.T) {
 	seedCredential(t, srv, apitypes.Credential{
 		Name:      "volc-main",
 		Provider:  "volc",
-		Body:      testVolcCredentialBodyFromStrings(map[string]string{"openapi_access_key_id": "ak"}),
+		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak"}),
 		CreatedAt: srv.now(),
 		UpdatedAt: srv.now(),
 	})
@@ -1394,7 +1497,7 @@ func TestServerVolcSyncRejectsInvalidCredential(t *testing.T) {
 	if !ok {
 		t.Fatalf("SyncVolcTenantVoices() response = %#v, want 400", resp)
 	}
-	if !strings.Contains(rejected.Error.Message, "missing openapi_access_key_id/secret_access_key") {
+	if !strings.Contains(rejected.Error.Message, "missing openapi_access_key_id/openapi_access_key") {
 		t.Fatalf("SyncVolcTenantVoices() error = %#v", rejected.Error)
 	}
 }
@@ -1402,27 +1505,67 @@ func TestServerVolcSyncRejectsInvalidCredential(t *testing.T) {
 func TestVolcCredentialAndResourceHelpers(t *testing.T) {
 	t.Parallel()
 
-	ak, sk, token, err := volcCredentialKeys(apitypes.Credential{
+	appID, ak, sk, err := volcCredentialValues(apitypes.Credential{
 		Name: "volc-main",
 		Body: testVolcCredentialBodyFromStrings(map[string]string{
+			"app_id":                " app ",
 			"openapi_access_key_id": " ak ",
-			"secret_access_key":     " sk ",
-			"session_token":         " token ",
+			"openapi_access_key":    " sk ",
 		}),
 	})
 	if err != nil {
-		t.Fatalf("volcCredentialKeys() error = %v", err)
+		t.Fatalf("volcCredentialValues() error = %v", err)
 	}
-	if ak != "ak" || sk != "sk" || token != "token" {
-		t.Fatalf("volcCredentialKeys() = %q, %q, %q", ak, sk, token)
+	if appID != "app" || ak != "ak" || sk != "sk" {
+		t.Fatalf("volcCredentialValues() = %q, %q, %q", appID, ak, sk)
 	}
-	if _, _, _, err := volcCredentialKeys(apitypes.Credential{Name: "missing", Body: testVolcCredentialBodyFromStrings(map[string]string{"openapi_access_key_id": "ak"})}); err == nil {
-		t.Fatal("volcCredentialKeys(missing secret) error = nil")
+	if _, _, _, err := volcCredentialValues(apitypes.Credential{Name: "missing", Body: testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak"})}); err == nil {
+		t.Fatal("volcCredentialValues(missing secret) error = nil")
 	}
 
 	resourceIDs := volcResourceIDStrings([]string{" seed-tts-2.0 ", "", "seed-tts-2.0", "seed-icl-2.0"})
 	if !slices.Equal(resourceIDs, []string{"seed-tts-2.0", "seed-icl-2.0"}) {
 		t.Fatalf("volcResourceIDStrings() = %#v", resourceIDs)
+	}
+	resourceIDPtrs := volcResourceIDStringPtrs([]string{" seed-tts-2.0 ", "seed-tts-2.0", "seed-icl-2.0"})
+	if len(resourceIDPtrs) != 2 || *resourceIDPtrs[0] != "seed-tts-2.0" || *resourceIDPtrs[1] != "seed-icl-2.0" {
+		t.Fatalf("volcResourceIDStringPtrs() = %#v", resourceIDPtrs)
+	}
+	for _, tt := range []struct {
+		speakerID string
+		want      string
+	}{
+		{speakerID: "S_custom_voice", want: volcPublicICLResourceID},
+		{speakerID: "zh_female_vv_uranus_bigtts", want: volcPublicTTSResourceID},
+		{speakerID: "saturn_voice", want: volcPublicTTSResourceID},
+		{speakerID: "zh_female_vv_mars_bigtts", want: volcPublicTTSV1ResourceID},
+	} {
+		if got := volcResourceIDForPublicTimbre(tt.speakerID); got != tt.want {
+			t.Fatalf("volcResourceIDForPublicTimbre(%q) = %q, want %q", tt.speakerID, got, tt.want)
+		}
+	}
+	speakerName := " Speaker Name "
+	if got := firstVolcTimbreSpeakerName([]*speechsaasprod.TimbreInfoForListBigModelTTSTimbresOutput{
+		nil,
+		{SpeakerName: &speakerName},
+	}); got != "Speaker Name" {
+		t.Fatalf("firstVolcTimbreSpeakerName() = %q, want Speaker Name", got)
+	}
+	if got := firstVolcTimbreSpeakerName(nil); got != "" {
+		t.Fatalf("firstVolcTimbreSpeakerName(nil) = %q, want empty", got)
+	}
+	for _, tt := range []struct {
+		record volcSpeakerRecord
+		want   string
+	}{
+		{record: volcSpeakerRecord{}, want: ""},
+		{record: volcSpeakerRecord{status: &volcSpeakerStatus{SpeakerID: " S_status "}}, want: "S_status"},
+		{record: volcSpeakerRecord{speaker: &volcSpeaker{VoiceType: " public_voice "}}, want: "public_voice"},
+		{record: volcSpeakerRecord{timbre: &volcPublicTimbre{SpeakerID: " timbre_voice "}}, want: "timbre_voice"},
+	} {
+		if got := tt.record.providerVoiceID(); got != tt.want {
+			t.Fatalf("providerVoiceID() = %q, want %q", got, tt.want)
+		}
 	}
 	region := volcRegion(apitypes.VolcTenant{Region: stringPtr(" cn-shanghai ")})
 	if region != "cn-shanghai" {
@@ -1489,6 +1632,47 @@ func TestVolcCredentialAndResourceHelpers(t *testing.T) {
 	}
 }
 
+func TestTenantReferenceValidation(t *testing.T) {
+	t.Parallel()
+
+	srv := newTestServer(t)
+	ctx := context.Background()
+	credentialStore, err := srv.credentialStore()
+	if err != nil {
+		t.Fatalf("credentialStore() error = %v", err)
+	}
+	miniMaxTenant := apitypes.MiniMaxTenant{Name: "mmx", CredentialName: "mmx-cred"}
+	volcTenant := apitypes.VolcTenant{Name: "volc", CredentialName: "volc-cred"}
+
+	if err := validateTenantReferences(ctx, credentialStore, miniMaxTenant); err == nil || !strings.Contains(err.Error(), `credential "mmx-cred" not found`) {
+		t.Fatalf("validateTenantReferences(missing) error = %v", err)
+	}
+	if err := validateVolcTenantReferences(ctx, credentialStore, volcTenant); err == nil || !strings.Contains(err.Error(), `credential "volc-cred" not found`) {
+		t.Fatalf("validateVolcTenantReferences(missing) error = %v", err)
+	}
+
+	seedCredential(t, srv, apitypes.Credential{
+		Name:      "mmx-cred",
+		Provider:  "minimax",
+		Body:      testMiniMaxCredentialBody("mmx-key"),
+		CreatedAt: srv.now(),
+		UpdatedAt: srv.now(),
+	})
+	seedCredential(t, srv, apitypes.Credential{
+		Name:      "volc-cred",
+		Provider:  "volc",
+		Body:      testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak", "openapi_access_key": "sk"}),
+		CreatedAt: srv.now(),
+		UpdatedAt: srv.now(),
+	})
+	if err := validateTenantReferences(ctx, credentialStore, miniMaxTenant); err != nil {
+		t.Fatalf("validateTenantReferences() error = %v", err)
+	}
+	if err := validateVolcTenantReferences(ctx, credentialStore, volcTenant); err != nil {
+		t.Fatalf("validateVolcTenantReferences() error = %v", err)
+	}
+}
+
 func TestVolcSpeakerClientForTenantValidation(t *testing.T) {
 	t.Parallel()
 
@@ -1502,21 +1686,21 @@ func TestVolcSpeakerClientForTenantValidation(t *testing.T) {
 	if _, err := srv.volcSpeakerClientForTenant(ctx, apitypes.Credential{
 		Name:     "wrong-provider",
 		Provider: "minimax",
-		Body:     testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-1", "openapi_access_key_id": "ak", "secret_access_key": "sk"}),
+		Body:     testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak", "openapi_access_key": "sk"}),
 	}, tenant); err == nil || !strings.Contains(err.Error(), "provider must be volcengine") {
 		t.Fatalf("volcSpeakerClientForTenant(wrong provider) error = %v", err)
 	}
 	if _, err := srv.volcSpeakerClientForTenant(ctx, apitypes.Credential{
 		Name:     "missing-secret",
 		Provider: "volc",
-		Body:     testVolcCredentialBodyFromStrings(map[string]string{"openapi_access_key_id": "ak"}),
-	}, tenant); err == nil || !strings.Contains(err.Error(), "missing openapi_access_key_id/secret_access_key") {
+		Body:     testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak"}),
+	}, tenant); err == nil || !strings.Contains(err.Error(), "missing openapi_access_key_id/openapi_access_key") {
 		t.Fatalf("volcSpeakerClientForTenant(missing secret) error = %v", err)
 	}
 	client, err := srv.volcSpeakerClientForTenant(ctx, apitypes.Credential{
 		Name:     "volc-main",
 		Provider: "volcengine",
-		Body:     testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app-1", "openapi_access_key_id": "ak", "secret_access_key": "sk"}),
+		Body:     testVolcCredentialBodyFromStrings(map[string]string{"app_id": "app", "openapi_access_key_id": "ak", "openapi_access_key": "sk"}),
 	}, tenant)
 	if err != nil {
 		t.Fatalf("volcSpeakerClientForTenant() error = %v", err)
@@ -1528,6 +1712,18 @@ func TestVolcSpeakerClientForTenantValidation(t *testing.T) {
 
 func TestVolcTrainStatusPageCaptureRawStatusesFallback(t *testing.T) {
 	t.Parallel()
+
+	raw := json.RawMessage(`{"SpeakerID":"existing"}`)
+	alreadyCaptured := volcMegaTTSTrainStatusPage{
+		Statuses:    []volcSpeakerStatus{{SpeakerID: "existing"}},
+		rawStatuses: []json.RawMessage{raw},
+	}
+	if err := alreadyCaptured.captureRawStatuses(); err != nil {
+		t.Fatalf("captureRawStatuses(already captured) error = %v", err)
+	}
+	if string(alreadyCaptured.rawStatuses[0]) != string(raw) {
+		t.Fatalf("raw status changed = %s", alreadyCaptured.rawStatuses[0])
+	}
 
 	page := volcMegaTTSTrainStatusPage{
 		Statuses: []volcSpeakerStatus{{

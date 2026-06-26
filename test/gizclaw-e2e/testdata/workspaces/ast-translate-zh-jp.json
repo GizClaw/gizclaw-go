@@ -15,7 +15,6 @@
       "lang_pair": "zh/jp"
     },
     "ast_translate": {
-      "auth_mode": "v2",
       "mode": "s2s",
       "resource_id": "volc.service_type.10053",
       "denoise": false

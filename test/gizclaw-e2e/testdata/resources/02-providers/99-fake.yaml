@@ -50,6 +50,7 @@ spec:
       description: Volcengine lab catalog credential
       body:
         app_id: volc-lab-app
+        api_key: sk-volc-lab
   - apiVersion: gizclaw.admin/v1alpha1
     kind: OpenAITenant
     metadata:

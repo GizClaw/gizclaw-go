@@ -209,17 +209,13 @@ func (s *Server) SyncVolcTenantVoices(ctx context.Context, request adminservice.
 		}
 		return adminservice.SyncVolcTenantVoices500JSONResponse(apitypes.NewErrorResponse("INTERNAL_ERROR", err.Error())), nil
 	}
+	appID, _, _, err := volcCredentialValues(credential)
+	if err != nil {
+		return adminservice.SyncVolcTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", err.Error())), nil
+	}
 	client, err := s.volcSpeakerClientForTenant(ctx, credential, tenant)
 	if err != nil {
 		return adminservice.SyncVolcTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", err.Error())), nil
-	}
-	credentialBody, err := credential.Body.AsVolcCredentialBody()
-	if err != nil {
-		return adminservice.SyncVolcTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", err.Error())), nil
-	}
-	appID := strings.TrimSpace(ptrString(credentialBody.AppId))
-	if appID == "" {
-		return adminservice.SyncVolcTenantVoices400JSONResponse(apitypes.NewErrorResponse("INVALID_VOLC_TENANT", fmt.Sprintf("credential %q missing app_id", tenant.CredentialName))), nil
 	}
 	upstream, err := listAllVolcSpeakers(ctx, client, tenant, appID)
 	if err != nil {
@@ -349,12 +345,12 @@ func (s *Server) volcSpeakerClientForTenant(ctx context.Context, credential apit
 	if provider != "" && provider != "volc" && provider != "volcengine" {
 		return nil, fmt.Errorf("credential %q provider must be volcengine", tenant.CredentialName)
 	}
-	ak, sk, token, err := volcCredentialKeys(credential)
+	_, ak, sk, err := volcCredentialValues(credential)
 	if err != nil {
 		return nil, err
 	}
 	cfg := volcengine.NewConfig().
-		WithCredentials(credentials.NewStaticCredentials(ak, sk, token)).
+		WithCredentials(credentials.NewStaticCredentials(ak, sk, "")).
 		WithRegion(volcRegion(tenant))
 	if s != nil && s.HTTPClient != nil {
 		cfg.WithHTTPClient(s.HTTPClient)
@@ -481,18 +477,21 @@ func (c volcSpeechSDKClient) BatchListMegaTTSTrainStatusWithContext(ctx context.
 	return &page, nil
 }
 
-func volcCredentialKeys(credential apitypes.Credential) (string, string, string, error) {
+func volcCredentialValues(credential apitypes.Credential) (string, string, string, error) {
 	body, err := credential.Body.AsVolcCredentialBody()
 	if err != nil {
 		return "", "", "", err
 	}
+	appID := ptrString(body.AppId)
 	ak := ptrString(body.OpenapiAccessKeyId)
-	sk := ptrString(body.SecretAccessKey)
-	token := ptrString(body.SessionToken)
-	if ak == "" || sk == "" {
-		return "", "", "", fmt.Errorf("credential %q is missing openapi_access_key_id/secret_access_key", credential.Name)
+	sk := ptrString(body.OpenapiAccessKey)
+	if appID == "" {
+		return "", "", "", fmt.Errorf("credential %q is missing app_id", credential.Name)
 	}
-	return ak, sk, token, nil
+	if ak == "" || sk == "" {
+		return "", "", "", fmt.Errorf("credential %q is missing openapi_access_key_id/openapi_access_key", credential.Name)
+	}
+	return appID, ak, sk, nil
 }
 
 type volcSpeakerRecord struct {
