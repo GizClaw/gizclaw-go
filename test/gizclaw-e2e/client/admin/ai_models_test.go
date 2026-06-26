@@ -23,15 +23,15 @@ func TestAdminAPIModelsListGetPaginationAndMutation(t *testing.T) {
 		}
 		return resp.JSON200.Items, resp.JSON200.HasNext, resp.JSON200.NextCursor
 	})
-	requireName(t, all, "openai-catalog-chat", func(item apitypes.Model) string { return item.Id })
-	requirePrefixCount(t, all, "openai-catalog-chat-", 70, func(item apitypes.Model) string { return item.Id })
+	requireName(t, all, "fake-openai-chat-000", func(item apitypes.Model) string { return item.Id })
+	requirePrefixCount(t, all, "fake-openai-chat-", 70, func(item apitypes.Model) string { return item.Id })
 
-	get, err := env.api.GetModelWithResponse(env.ctx, "openai-catalog-chat")
+	get, err := env.api.GetModelWithResponse(env.ctx, "fake-openai-chat-000")
 	if err != nil {
 		t.Fatalf("get model: %v", err)
 	}
 	requireStatusOK(t, get, get.Body)
-	if get.JSON200 == nil || get.JSON200.Id != "openai-catalog-chat" || get.JSON200.Provider.Name != "openai-lab" {
+	if get.JSON200 == nil || get.JSON200.Id != "fake-openai-chat-000" || get.JSON200.Provider.Name != "fake-openai" {
 		t.Fatalf("get model = %#v", get.JSON200)
 	}
 
@@ -43,7 +43,7 @@ func TestAdminAPIModelsListGetPaginationAndMutation(t *testing.T) {
 		Name: ptr("Admin API mutation model"),
 		Provider: apitypes.ModelProvider{
 			Kind: apitypes.ModelProviderKindOpenaiTenant,
-			Name: "openai-lab",
+			Name: "fake-openai",
 		},
 		ProviderData: openAIModelProviderData(t, "e2e-admin-mut-upstream"),
 		Source:       apitypes.ModelSourceManual,

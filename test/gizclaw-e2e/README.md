@@ -1,13 +1,13 @@
 # GizClaw E2E
 
 This directory contains the manual/setup-driven GizClaw e2e suites. These tests
-depend on a prepared local e2e server, shared resource fixtures, and generated
+depend on a prepared local e2e server, a shared business resource set, and generated
 CLI config homes. Go test files in this tree require the `gizclaw_e2e` build tag
 so they are not pulled into ordinary `go test ./...` runs.
 
 ## Modules
 
-- `testdata/`: committed e2e fixtures plus ignored generated runtime files.
+- `testdata/`: committed config/resource data plus ignored generated runtime files.
 - `setup/`: lifecycle scripts for building the CLI, starting services,
   resetting shared data, granting the default client view, and stopping
   services.
@@ -36,7 +36,7 @@ so they are not pulled into ordinary `go test ./...` runs.
 ./test/gizclaw-e2e/setup/start-server.sh
 ```
 
-4. Clear and initialize shared server resources:
+4. Clear and initialize server resources:
 
 ```sh
 ./test/gizclaw-e2e/setup/reset_data.sh
@@ -50,8 +50,8 @@ To let another peer public key use the default shared client view, apply a
 ```
 
 `reset_data.sh` only rebuilds resource state: provider tenants, models,
-workflows, workspaces, firmware metadata, ACL rows, and shared social graph
-rows. It does not call provider sync operations. It must not seed runtime
+workflows, workspaces, firmware metadata, ACL rows, and social graph
+resources. It does not call provider sync operations. It must not seed runtime
 history, message records, replay audio, or other non-resource state.
 
 5. Run client tests that create runtime state. These should run before any UI
@@ -97,11 +97,11 @@ go test -tags gizclaw_e2e -count=1 ./test/gizclaw-e2e/ui/smoke/...
 The full e2e run is intentionally ordered. Setup creates resource state, client
 tests exercise the server and create runtime state, and UI tests verify the
 browser surfaces against the resulting server state. Do not make UI tests depend
-on setup-seeded runtime records.
+on setup-created runtime records.
 
 ## Test Data
 
-`testdata/resources` is the shared business resource catalog used by client,
+`testdata/resources` is the business resource set used by client,
 cmd, and UI tests. It is organized by resource domain instead of by test
 surface:
 
@@ -109,13 +109,12 @@ surface:
 resources/
   00-credentials/
   01-tenants/
-  02-providers/
   03-models/
   04-workflows/
   05-workspaces/
   06-firmwares/
-  07-catalog/
-  08-history/
+  07-gameplay/
+  08-voices/
   09-social/
   90-acl/
   assets/
@@ -131,7 +130,7 @@ resource fixtures should use `.yaml`.
 Only credential-like provider values should be environment placeholders, such as
 `${GIZCLAW_E2E_OPENAI_API_KEY}`. Values are supplied by
 `test/gizclaw-e2e/.env` during setup. `reset_data.sh` skips real-provider
-fixtures whose required credentials are empty, while still initializing shared
+fixtures whose required credentials are empty, while still initializing fake
 fixtures with committed non-secret defaults. Do not commit real provider keys,
 tokens, app secrets, or access keys. Stable e2e identity key pairs are committed
 config fixtures, not env values.
@@ -146,58 +145,65 @@ credential is available.
 Generated runtime data under `testdata/server-workspace/data/` and generated
 binaries under `testdata/bin/` stay ignored.
 
-## Shared System Catalog
+## Resource Set
 
-`setup/reset_data.sh init` creates a system catalog that looks like a small real
+`setup/reset_data.sh init` creates a resource set that looks like a small real
 deployment: provider tenants, model rows, voice rows, workflows, workspaces,
 firmware entries, ACL policy bindings, and social graph rows. Client, CLI, and
-UI tests should be written around this business catalog instead of adding
+UI tests should be written around this business resource set instead of adding
 private per-test or UI-specific resource groups. Tests may still create and delete
 `mutation-*` resources for mutation coverage.
 
-Stable catalog IDs:
+Stable business resource IDs:
 
 - Workflow: `flowcraft-support`
 - Run-control workflow: `chatroom-direct`
-- Workspace: `workspace-support-demo`
-- Run-control workspace: `workspace-direct-chat-demo`
-- History workspace target: `workspace-history-demo`
-- Model: `openai-catalog-chat`
-- Credential: `openai-catalog-credential`
-- Voice metadata row: `minimax-catalog-voice`
+- Chatroom workflow: `family-circle-chatroom`
+- Workspace: `support-desk-workspace`
+- Run-control workspace: `direct-chatroom-workspace`
+- Family chatroom workspace: `family-circle-chatroom-workspace`
+- Model: `openai-gpt-4o-mini`
+- Gameplay system task models: `reward-claim`, `pet-action` (provider credentials required)
+- Credential: `openai-main-credential`
+- MiniMax voice metadata row: `minimax-narrator-clone`
+- Volc voice metadata row: `volc-tenant:volc-main:zh_female_vv_mars_bigtts`
+- Pet species: `rabbit`
+- Badge: `founder`
 - Firmware: `devkit-firmware-main`
 - Firmware channel/artifact: `stable` / `main`
 - Mutation-safe names: `mutation-flowcraft-workflow`, `mutation-flowcraft-workspace`,
   `mutation-openai-model`, `mutation-openai-credential`
 
-Bulk catalog prefixes:
+Bulk fake resource prefixes:
 
 - `flowcraft-scenario-000` through `flowcraft-scenario-119`
 - `workspace-scenario-000` through `workspace-scenario-119`
-- `openai-catalog-chat-000` through `openai-catalog-chat-079`
-- `openai-catalog-credential-000` through `openai-catalog-credential-049`
+- `fake-openai-chat-000` through `fake-openai-chat-079`
+- `fake-openai-credential-000` through `fake-openai-credential-049`
 - `devkit-firmware-000` through `devkit-firmware-079`
 
 The committed firmware metadata is applied through ResourceList YAML, but the
 downloadable firmware payload is a real tar fixture at
-`testdata/resources/assets/firmware/devkit-firmware-main.tar`. During init,
+`testdata/assets/firmware/devkit-firmware-main.tar`. During init,
 `reset_data.sh` uploads that tar with:
 
 ```sh
 gizclaw admin firmwares upload-bin devkit-firmware-main \
   --channel stable --bin main \
-  -f testdata/resources/assets/firmware/devkit-firmware-main.tar
+  -f testdata/assets/firmware/devkit-firmware-main.tar
 ```
 
-Provider-independent catalog rows use schema-valid committed metadata and do
-not require real provider credentials. Real OpenAI/Volc workspace voice
-resources still depend on the credential values from `.env` and are skipped
-when those values are absent. `client/admin` owns provider voice sync
-verification and should run before chat voice tests.
+Provider-independent resource rows use schema-valid committed metadata and do
+not require real provider credentials. Real OpenAI/Volc resources still depend
+on credential values from `.env` and are skipped when those values are absent.
+`reward-claim` and `pet-action` are gameplay system task model rows; business
+RPC tests skip when reset_data did not apply them. `client/admin` owns provider
+voice sync verification and should run before chat voice tests.
 
-Workspace history is runtime data. `reset_data.sh` must not seed history
-entries directly; social and workspace e2e cases should create history by
-running the relevant client workflows.
+Workspace history is runtime data. `family-circle-chatroom-workspace` is a normal
+chatroom workspace target. `reset_data.sh` must not seed
+history entries or audio directly; social and workspace e2e cases should create
+history by running the relevant client workflows.
 
 ## Config Homes
 
@@ -228,7 +234,7 @@ without changing test code:
 Unset values fall back to the committed `testdata` config homes and context
 names.
 
-The setup scripts, chat client tests, UI seed lookup, and social peer A/B
+The setup scripts, chat client tests, UI resource lookup, and social peer A/B
 harness read their matching role overrides. Most `cmd/*` story tests still
 create isolated sandbox contexts unless a specific story opts into one of the
 CLI target roles.

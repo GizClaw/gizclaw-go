@@ -2,7 +2,7 @@
 apiVersion: gizclaw.admin/v1alpha1
 kind: ResourceList
 metadata:
-  name: social-fixtures
+  name: family-circle-social-graph
 spec:
   items:
   - apiVersion: gizclaw.admin/v1alpha1

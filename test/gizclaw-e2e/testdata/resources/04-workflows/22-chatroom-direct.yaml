@@ -1,0 +1,11 @@
+---
+apiVersion: gizclaw.admin/v1alpha1
+kind: Workflow
+metadata:
+  description: Direct chatroom message board workflow
+  name: chatroom-direct
+spec:
+  chatroom:
+    history:
+      ttl: 168h
+  driver: chatroom

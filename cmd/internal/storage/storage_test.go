@@ -8,6 +8,7 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
@@ -448,6 +449,94 @@ func TestSQLSQLiteCreatesParentDir(t *testing.T) {
 
 	if _, err := reg.SQL("db"); err != nil {
 		t.Fatalf("SQL(db): %v", err)
+	}
+}
+
+func TestSQLSQLiteConfiguresConnection(t *testing.T) {
+	reg, err := New(map[string]Config{
+		"db": {
+			Kind:   KindSQL,
+			SQLite: &SQLConfig{Dir: filepath.Join(t.TempDir(), "data", "db.sqlite")},
+		},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer reg.Close()
+
+	db, err := reg.SQL("db")
+	if err != nil {
+		t.Fatalf("SQL(db): %v", err)
+	}
+	if got := db.Stats().MaxOpenConnections; got != 1 {
+		t.Fatalf("MaxOpenConnections = %d, want 1", got)
+	}
+
+	var busyTimeout int
+	if err := db.QueryRow(`PRAGMA busy_timeout`).Scan(&busyTimeout); err != nil {
+		t.Fatalf("query busy_timeout: %v", err)
+	}
+	if busyTimeout != 5000 {
+		t.Fatalf("busy_timeout = %d, want 5000", busyTimeout)
+	}
+
+	var journalMode string
+	if err := db.QueryRow(`PRAGMA journal_mode`).Scan(&journalMode); err != nil {
+		t.Fatalf("query journal_mode: %v", err)
+	}
+	if !strings.EqualFold(journalMode, "wal") {
+		t.Fatalf("journal_mode = %q, want wal", journalMode)
+	}
+}
+
+func TestSQLSQLiteConcurrentWrites(t *testing.T) {
+	reg, err := New(map[string]Config{
+		"db": {
+			Kind:   KindSQL,
+			SQLite: &SQLConfig{Dir: filepath.Join(t.TempDir(), "data", "db.sqlite")},
+		},
+	})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	defer reg.Close()
+
+	db, err := reg.SQL("db")
+	if err != nil {
+		t.Fatalf("SQL(db): %v", err)
+	}
+	if _, err := db.Exec(`CREATE TABLE writes (id INTEGER PRIMARY KEY, worker INTEGER NOT NULL, seq INTEGER NOT NULL)`); err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+
+	const workers = 12
+	const writesPerWorker = 25
+	var wg sync.WaitGroup
+	errs := make(chan error, workers)
+	for worker := range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for seq := range writesPerWorker {
+				if _, err := db.Exec(`INSERT INTO writes (worker, seq) VALUES (?, ?)`, worker, seq); err != nil {
+					errs <- err
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	close(errs)
+	for err := range errs {
+		t.Fatalf("concurrent write: %v", err)
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT count(*) FROM writes`).Scan(&count); err != nil {
+		t.Fatalf("count writes: %v", err)
+	}
+	if want := workers * writesPerWorker; count != want {
+		t.Fatalf("write count = %d, want %d", count, want)
 	}
 }
 

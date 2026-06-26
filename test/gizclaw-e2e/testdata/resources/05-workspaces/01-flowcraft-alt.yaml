@@ -6,5 +6,5 @@ metadata:
 spec:
   workflow_name: flowcraft-assistant
   parameters:
-    customer: demo-customer-alt
+    customer: acme-customer-alt
     locale: en-US

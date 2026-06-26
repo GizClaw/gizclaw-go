@@ -7,1200 +7,1200 @@ spec:
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-000
+      name: fake-openai-chat-000
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-000
+      name: Fake OpenAI chat model fake-openai-chat-000
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-000
+        upstream_model: fake-gpt-000
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-001
+      name: fake-openai-chat-001
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-001
+      name: Fake OpenAI chat model fake-openai-chat-001
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-001
+        upstream_model: fake-gpt-001
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-002
+      name: fake-openai-chat-002
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-002
+      name: Fake OpenAI chat model fake-openai-chat-002
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-002
+        upstream_model: fake-gpt-002
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-003
+      name: fake-openai-chat-003
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-003
+      name: Fake OpenAI chat model fake-openai-chat-003
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-003
+        upstream_model: fake-gpt-003
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-004
+      name: fake-openai-chat-004
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-004
+      name: Fake OpenAI chat model fake-openai-chat-004
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-004
+        upstream_model: fake-gpt-004
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-005
+      name: fake-openai-chat-005
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-005
+      name: Fake OpenAI chat model fake-openai-chat-005
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-005
+        upstream_model: fake-gpt-005
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-006
+      name: fake-openai-chat-006
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-006
+      name: Fake OpenAI chat model fake-openai-chat-006
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-006
+        upstream_model: fake-gpt-006
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-007
+      name: fake-openai-chat-007
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-007
+      name: Fake OpenAI chat model fake-openai-chat-007
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-007
+        upstream_model: fake-gpt-007
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-008
+      name: fake-openai-chat-008
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-008
+      name: Fake OpenAI chat model fake-openai-chat-008
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-008
+        upstream_model: fake-gpt-008
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-009
+      name: fake-openai-chat-009
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-009
+      name: Fake OpenAI chat model fake-openai-chat-009
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-009
+        upstream_model: fake-gpt-009
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-010
+      name: fake-openai-chat-010
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-010
+      name: Fake OpenAI chat model fake-openai-chat-010
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-010
+        upstream_model: fake-gpt-010
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-011
+      name: fake-openai-chat-011
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-011
+      name: Fake OpenAI chat model fake-openai-chat-011
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-011
+        upstream_model: fake-gpt-011
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-012
+      name: fake-openai-chat-012
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-012
+      name: Fake OpenAI chat model fake-openai-chat-012
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-012
+        upstream_model: fake-gpt-012
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-013
+      name: fake-openai-chat-013
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-013
+      name: Fake OpenAI chat model fake-openai-chat-013
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-013
+        upstream_model: fake-gpt-013
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-014
+      name: fake-openai-chat-014
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-014
+      name: Fake OpenAI chat model fake-openai-chat-014
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-014
+        upstream_model: fake-gpt-014
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-015
+      name: fake-openai-chat-015
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-015
+      name: Fake OpenAI chat model fake-openai-chat-015
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-015
+        upstream_model: fake-gpt-015
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-016
+      name: fake-openai-chat-016
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-016
+      name: Fake OpenAI chat model fake-openai-chat-016
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-016
+        upstream_model: fake-gpt-016
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-017
+      name: fake-openai-chat-017
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-017
+      name: Fake OpenAI chat model fake-openai-chat-017
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-017
+        upstream_model: fake-gpt-017
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-018
+      name: fake-openai-chat-018
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-018
+      name: Fake OpenAI chat model fake-openai-chat-018
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-018
+        upstream_model: fake-gpt-018
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-019
+      name: fake-openai-chat-019
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-019
+      name: Fake OpenAI chat model fake-openai-chat-019
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-019
+        upstream_model: fake-gpt-019
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-020
+      name: fake-openai-chat-020
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-020
+      name: Fake OpenAI chat model fake-openai-chat-020
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-020
+        upstream_model: fake-gpt-020
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-021
+      name: fake-openai-chat-021
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-021
+      name: Fake OpenAI chat model fake-openai-chat-021
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-021
+        upstream_model: fake-gpt-021
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-022
+      name: fake-openai-chat-022
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-022
+      name: Fake OpenAI chat model fake-openai-chat-022
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-022
+        upstream_model: fake-gpt-022
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-023
+      name: fake-openai-chat-023
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-023
+      name: Fake OpenAI chat model fake-openai-chat-023
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-023
+        upstream_model: fake-gpt-023
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-024
+      name: fake-openai-chat-024
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-024
+      name: Fake OpenAI chat model fake-openai-chat-024
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-024
+        upstream_model: fake-gpt-024
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-025
+      name: fake-openai-chat-025
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-025
+      name: Fake OpenAI chat model fake-openai-chat-025
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-025
+        upstream_model: fake-gpt-025
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-026
+      name: fake-openai-chat-026
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-026
+      name: Fake OpenAI chat model fake-openai-chat-026
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-026
+        upstream_model: fake-gpt-026
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-027
+      name: fake-openai-chat-027
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-027
+      name: Fake OpenAI chat model fake-openai-chat-027
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-027
+        upstream_model: fake-gpt-027
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-028
+      name: fake-openai-chat-028
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-028
+      name: Fake OpenAI chat model fake-openai-chat-028
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-028
+        upstream_model: fake-gpt-028
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-029
+      name: fake-openai-chat-029
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-029
+      name: Fake OpenAI chat model fake-openai-chat-029
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-029
+        upstream_model: fake-gpt-029
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-030
+      name: fake-openai-chat-030
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-030
+      name: Fake OpenAI chat model fake-openai-chat-030
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-030
+        upstream_model: fake-gpt-030
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-031
+      name: fake-openai-chat-031
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-031
+      name: Fake OpenAI chat model fake-openai-chat-031
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-031
+        upstream_model: fake-gpt-031
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-032
+      name: fake-openai-chat-032
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-032
+      name: Fake OpenAI chat model fake-openai-chat-032
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-032
+        upstream_model: fake-gpt-032
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-033
+      name: fake-openai-chat-033
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-033
+      name: Fake OpenAI chat model fake-openai-chat-033
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-033
+        upstream_model: fake-gpt-033
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-034
+      name: fake-openai-chat-034
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-034
+      name: Fake OpenAI chat model fake-openai-chat-034
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-034
+        upstream_model: fake-gpt-034
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-035
+      name: fake-openai-chat-035
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-035
+      name: Fake OpenAI chat model fake-openai-chat-035
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-035
+        upstream_model: fake-gpt-035
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-036
+      name: fake-openai-chat-036
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-036
+      name: Fake OpenAI chat model fake-openai-chat-036
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-036
+        upstream_model: fake-gpt-036
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-037
+      name: fake-openai-chat-037
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-037
+      name: Fake OpenAI chat model fake-openai-chat-037
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-037
+        upstream_model: fake-gpt-037
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-038
+      name: fake-openai-chat-038
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-038
+      name: Fake OpenAI chat model fake-openai-chat-038
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-038
+        upstream_model: fake-gpt-038
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-039
+      name: fake-openai-chat-039
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-039
+      name: Fake OpenAI chat model fake-openai-chat-039
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-039
+        upstream_model: fake-gpt-039
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-040
+      name: fake-openai-chat-040
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-040
+      name: Fake OpenAI chat model fake-openai-chat-040
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-040
+        upstream_model: fake-gpt-040
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-041
+      name: fake-openai-chat-041
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-041
+      name: Fake OpenAI chat model fake-openai-chat-041
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-041
+        upstream_model: fake-gpt-041
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-042
+      name: fake-openai-chat-042
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-042
+      name: Fake OpenAI chat model fake-openai-chat-042
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-042
+        upstream_model: fake-gpt-042
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-043
+      name: fake-openai-chat-043
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-043
+      name: Fake OpenAI chat model fake-openai-chat-043
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-043
+        upstream_model: fake-gpt-043
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-044
+      name: fake-openai-chat-044
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-044
+      name: Fake OpenAI chat model fake-openai-chat-044
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-044
+        upstream_model: fake-gpt-044
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-045
+      name: fake-openai-chat-045
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-045
+      name: Fake OpenAI chat model fake-openai-chat-045
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-045
+        upstream_model: fake-gpt-045
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-046
+      name: fake-openai-chat-046
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-046
+      name: Fake OpenAI chat model fake-openai-chat-046
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-046
+        upstream_model: fake-gpt-046
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-047
+      name: fake-openai-chat-047
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-047
+      name: Fake OpenAI chat model fake-openai-chat-047
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-047
+        upstream_model: fake-gpt-047
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-048
+      name: fake-openai-chat-048
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-048
+      name: Fake OpenAI chat model fake-openai-chat-048
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-048
+        upstream_model: fake-gpt-048
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-049
+      name: fake-openai-chat-049
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-049
+      name: Fake OpenAI chat model fake-openai-chat-049
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-049
+        upstream_model: fake-gpt-049
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-050
+      name: fake-openai-chat-050
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-050
+      name: Fake OpenAI chat model fake-openai-chat-050
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-050
+        upstream_model: fake-gpt-050
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-051
+      name: fake-openai-chat-051
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-051
+      name: Fake OpenAI chat model fake-openai-chat-051
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-051
+        upstream_model: fake-gpt-051
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-052
+      name: fake-openai-chat-052
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-052
+      name: Fake OpenAI chat model fake-openai-chat-052
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-052
+        upstream_model: fake-gpt-052
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-053
+      name: fake-openai-chat-053
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-053
+      name: Fake OpenAI chat model fake-openai-chat-053
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-053
+        upstream_model: fake-gpt-053
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-054
+      name: fake-openai-chat-054
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-054
+      name: Fake OpenAI chat model fake-openai-chat-054
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-054
+        upstream_model: fake-gpt-054
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-055
+      name: fake-openai-chat-055
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-055
+      name: Fake OpenAI chat model fake-openai-chat-055
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-055
+        upstream_model: fake-gpt-055
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-056
+      name: fake-openai-chat-056
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-056
+      name: Fake OpenAI chat model fake-openai-chat-056
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-056
+        upstream_model: fake-gpt-056
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-057
+      name: fake-openai-chat-057
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-057
+      name: Fake OpenAI chat model fake-openai-chat-057
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-057
+        upstream_model: fake-gpt-057
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-058
+      name: fake-openai-chat-058
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-058
+      name: Fake OpenAI chat model fake-openai-chat-058
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-058
+        upstream_model: fake-gpt-058
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-059
+      name: fake-openai-chat-059
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-059
+      name: Fake OpenAI chat model fake-openai-chat-059
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-059
+        upstream_model: fake-gpt-059
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-060
+      name: fake-openai-chat-060
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-060
+      name: Fake OpenAI chat model fake-openai-chat-060
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-060
+        upstream_model: fake-gpt-060
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-061
+      name: fake-openai-chat-061
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-061
+      name: Fake OpenAI chat model fake-openai-chat-061
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-061
+        upstream_model: fake-gpt-061
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-062
+      name: fake-openai-chat-062
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-062
+      name: Fake OpenAI chat model fake-openai-chat-062
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-062
+        upstream_model: fake-gpt-062
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-063
+      name: fake-openai-chat-063
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-063
+      name: Fake OpenAI chat model fake-openai-chat-063
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-063
+        upstream_model: fake-gpt-063
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-064
+      name: fake-openai-chat-064
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-064
+      name: Fake OpenAI chat model fake-openai-chat-064
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-064
+        upstream_model: fake-gpt-064
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-065
+      name: fake-openai-chat-065
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-065
+      name: Fake OpenAI chat model fake-openai-chat-065
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-065
+        upstream_model: fake-gpt-065
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-066
+      name: fake-openai-chat-066
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-066
+      name: Fake OpenAI chat model fake-openai-chat-066
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-066
+        upstream_model: fake-gpt-066
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-067
+      name: fake-openai-chat-067
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-067
+      name: Fake OpenAI chat model fake-openai-chat-067
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-067
+        upstream_model: fake-gpt-067
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-068
+      name: fake-openai-chat-068
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-068
+      name: Fake OpenAI chat model fake-openai-chat-068
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-068
+        upstream_model: fake-gpt-068
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-069
+      name: fake-openai-chat-069
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-069
+      name: Fake OpenAI chat model fake-openai-chat-069
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-069
+        upstream_model: fake-gpt-069
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-070
+      name: fake-openai-chat-070
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-070
+      name: Fake OpenAI chat model fake-openai-chat-070
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-070
+        upstream_model: fake-gpt-070
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-071
+      name: fake-openai-chat-071
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-071
+      name: Fake OpenAI chat model fake-openai-chat-071
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-071
+        upstream_model: fake-gpt-071
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-072
+      name: fake-openai-chat-072
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-072
+      name: Fake OpenAI chat model fake-openai-chat-072
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-072
+        upstream_model: fake-gpt-072
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-073
+      name: fake-openai-chat-073
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-073
+      name: Fake OpenAI chat model fake-openai-chat-073
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-073
+        upstream_model: fake-gpt-073
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-074
+      name: fake-openai-chat-074
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-074
+      name: Fake OpenAI chat model fake-openai-chat-074
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-074
+        upstream_model: fake-gpt-074
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-075
+      name: fake-openai-chat-075
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-075
+      name: Fake OpenAI chat model fake-openai-chat-075
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-075
+        upstream_model: fake-gpt-075
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-076
+      name: fake-openai-chat-076
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-076
+      name: Fake OpenAI chat model fake-openai-chat-076
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-076
+        upstream_model: fake-gpt-076
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-077
+      name: fake-openai-chat-077
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-077
+      name: Fake OpenAI chat model fake-openai-chat-077
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-077
+        upstream_model: fake-gpt-077
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-078
+      name: fake-openai-chat-078
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-078
+      name: Fake OpenAI chat model fake-openai-chat-078
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-078
+        upstream_model: fake-gpt-078
         use_system_role: true
       source: manual
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Model
     metadata:
-      name: openai-catalog-chat-079
+      name: fake-openai-chat-079
     spec:
       kind: llm
-      name: OpenAI catalog model openai-catalog-chat-079
+      name: Fake OpenAI chat model fake-openai-chat-079
       provider:
         kind: openai-tenant
-        name: openai-lab
+        name: fake-openai
       provider_data:
         support_json_output: true
-        upstream_model: gpt-catalog-079
+        upstream_model: fake-gpt-079
         use_system_role: true
       source: manual

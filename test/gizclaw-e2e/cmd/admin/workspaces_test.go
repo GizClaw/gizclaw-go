@@ -19,7 +19,7 @@ func TestAdminWorkspacesUserStory(t *testing.T) {
 	if !strings.Contains(list.Stdout, `"name":"workspace-flowcraft-assistant"`) {
 		t.Fatalf("workspaces list missing created item:\n%s", list.Stdout)
 	}
-	for _, want := range []string{`"name":"workspace-support-demo"`, `"name":"workspace-scenario-119"`} {
+	for _, want := range []string{`"name":"support-desk-workspace"`, `"name":"workspace-scenario-119"`} {
 		if !strings.Contains(list.Stdout, want) {
 			t.Fatalf("workspaces list missing %q:\n%s", want, list.Stdout)
 		}
@@ -31,9 +31,9 @@ func TestAdminWorkspacesUserStory(t *testing.T) {
 		t.Fatalf("workspaces get missing workflow name:\n%s", get.Stdout)
 	}
 
-	rpcGet := h.RunCLI("admin", "workspaces", "get", "workspace-support-demo", "--context", "admin-a")
+	rpcGet := h.RunCLI("admin", "workspaces", "get", "support-desk-workspace", "--context", "admin-a")
 	rpcGet.MustSucceed(t)
 	if !strings.Contains(rpcGet.Stdout, `"workflow_name":"flowcraft-support"`) {
-		t.Fatalf("workspaces get missing catalog workflow name:\n%s", rpcGet.Stdout)
+		t.Fatalf("workspaces get missing resource workflow name:\n%s", rpcGet.Stdout)
 	}
 }

@@ -340,11 +340,36 @@ func newSQL(name string, cfg Config) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("storage: sql %q open: %w", name, err)
 	}
+	if backend == "sqlite" {
+		configureSQLitePool(db)
+		if err := configureSQLiteConnection(db); err != nil {
+			db.Close()
+			return nil, fmt.Errorf("storage: sql %q configure sqlite: %w", name, err)
+		}
+	}
 	if err := db.Ping(); err != nil {
 		db.Close()
 		return nil, fmt.Errorf("storage: sql %q ping: %w", name, err)
 	}
 	return db, nil
+}
+
+func configureSQLitePool(db *sql.DB) {
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+}
+
+func configureSQLiteConnection(db *sql.DB) error {
+	for _, stmt := range []string{
+		`PRAGMA busy_timeout = 5000`,
+		`PRAGMA journal_mode = WAL`,
+		`PRAGMA foreign_keys = ON`,
+	} {
+		if _, err := db.Exec(stmt); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func prepareSQLDir(name string, cfg Config) error {

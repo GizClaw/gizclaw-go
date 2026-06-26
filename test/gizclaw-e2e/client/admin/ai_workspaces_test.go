@@ -23,10 +23,10 @@ func TestAdminAPIWorkspacesListGetPaginationAndMutation(t *testing.T) {
 		}
 		return resp.JSON200.Items, resp.JSON200.HasNext, resp.JSON200.NextCursor
 	})
-	requireName(t, all, "workspace-support-demo", func(item apitypes.Workspace) string { return item.Name })
+	requireName(t, all, "support-desk-workspace", func(item apitypes.Workspace) string { return item.Name })
 	requirePrefixCount(t, all, "workspace-scenario-", 100, func(item apitypes.Workspace) string { return item.Name })
 
-	get, err := env.api.GetWorkspaceWithResponse(env.ctx, "workspace-support-demo")
+	get, err := env.api.GetWorkspaceWithResponse(env.ctx, "support-desk-workspace")
 	if err != nil {
 		t.Fatalf("get workspace: %v", err)
 	}

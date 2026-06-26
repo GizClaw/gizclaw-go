@@ -17,7 +17,7 @@ func adminVoicesListStories() []Story {
 			page.GotoAdmin("/ai/voices")
 			page.ExpectText("Voices")
 			page.ExpectText(SeedVoiceID)
-			page.ExpectText("MiniMax Cloned Narrator")
+			page.ExpectText("MiniMax Narrator Clone")
 			page.ExpectText("manual")
 			page.ExpectText(SeedMiniMaxTenantName)
 		},
@@ -25,14 +25,14 @@ func adminVoicesListStories() []Story {
 		Name: "140-admin-volc-voice-detail-cli",
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoAdmin("/ai/voices/" + url.PathEscape(SeedVolcVoiceID))
-			page.ExpectText("Volc Demo Voice")
+			page.ExpectText("Volc Mars VV Female")
 			page.ClickRole("tab", "CLI")
 			page.ExpectText("Voice Resource Spec")
 			page.ExpectText(`"kind": "Voice"`)
-			page.ExpectText(`"name": "volc-tenant:volc-lab:ICL_demo_voice"`)
-			page.ExpectText("gizclaw admin --context <admin-cli-context> show Voice 'volc-tenant:volc-lab:ICL_demo_voice'")
-			page.ExpectText("gizclaw admin --context <admin-cli-context> show VolcTenant 'volc-lab'")
-			page.ExpectText("gizclaw admin volc-tenants --context <admin-cli-context> sync-voices 'volc-lab'")
+			page.ExpectText(`"name": "volc-tenant:volc-main:zh_female_vv_mars_bigtts"`)
+			page.ExpectText("gizclaw admin --context <admin-cli-context> show Voice 'volc-tenant:volc-main:zh_female_vv_mars_bigtts'")
+			page.ExpectText("gizclaw admin --context <admin-cli-context> show VolcTenant 'volc-main'")
+			page.ExpectText("gizclaw admin volc-tenants --context <admin-cli-context> sync-voices 'volc-main'")
 		},
 	}}
 }

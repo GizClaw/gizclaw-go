@@ -1,0 +1,9 @@
+---
+apiVersion: gizclaw.admin/v1alpha1
+kind: Workspace
+metadata:
+  name: family-circle-chatroom-workspace
+spec:
+  parameters:
+    agent_type: chatroom
+  workflow_name: family-circle-chatroom

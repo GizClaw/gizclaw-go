@@ -88,6 +88,15 @@ func requireName[T any](t *testing.T, items []T, want string, name func(T) strin
 	return zero
 }
 
+func hasAdminName[T any](items []T, want string, name func(T) string) bool {
+	for _, item := range items {
+		if name(item) == want {
+			return true
+		}
+	}
+	return false
+}
+
 func requirePrefixCount[T any](t *testing.T, items []T, prefix string, min int, name func(T) string) {
 	t.Helper()
 	count := 0

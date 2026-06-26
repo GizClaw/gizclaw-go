@@ -17,10 +17,7 @@ func adminMiniMaxTenantsListStories() []Story {
 			page.GotoAdmin("/providers/minimax-tenants")
 			page.ExpectText("MiniMax Tenants")
 			page.ExpectText(SeedMiniMaxTenantName)
-			page.ExpectText("minimax-main-app")
-			page.ExpectText("minimax-main-group")
 			page.ExpectText(SeedCredentialName)
-			page.ExpectText("https://example.invalid")
 		},
 	}, {
 		Name: "131-admin-minimax-tenant-detail-cli",

@@ -1,0 +1,53 @@
+---
+apiVersion: gizclaw.admin/v1alpha1
+kind: ResourceList
+metadata:
+  name: gameplay-system-task-models
+spec:
+  items:
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: Model
+    metadata:
+      name: reward-claim
+    spec:
+      kind: llm
+      source: manual
+      provider:
+        kind: openai-tenant
+        name: openai-main
+      name: Reward claim policy model
+      description: System task model for reward claim decisions
+      capabilities:
+        json_output: true
+        system_role: true
+        text_only: true
+        tool_calls: true
+      provider_data:
+        upstream_model: gpt-4o-mini
+        support_json_output: true
+        support_text_only: true
+        support_tool_calls: true
+        use_system_role: true
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: Model
+    metadata:
+      name: pet-action
+    spec:
+      kind: llm
+      source: manual
+      provider:
+        kind: openai-tenant
+        name: openai-main
+      name: Pet action policy model
+      description: System task model for pet action decisions
+      capabilities:
+        json_output: true
+        system_role: true
+        text_only: true
+        tool_calls: true
+      provider_data:
+        upstream_model: gpt-4o-mini
+        support_json_output: true
+        support_text_only: true
+        support_tool_calls: true
+        use_system_role: true

@@ -17,7 +17,7 @@ func adminCredentialsListStories() []Story {
 			page.GotoAdmin("/providers/credentials")
 			page.ExpectText("Credentials")
 			page.ExpectText(SeedCredentialName)
-			page.ExpectText("minimax")
+			page.ExpectText("openai")
 			page.ExpectText("Body Keys")
 			page.ExpectText("Refresh")
 		},

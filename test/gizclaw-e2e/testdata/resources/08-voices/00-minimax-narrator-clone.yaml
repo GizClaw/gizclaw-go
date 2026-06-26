@@ -1,0 +1,17 @@
+---
+apiVersion: gizclaw.admin/v1alpha1
+kind: Voice
+metadata:
+  name: minimax-narrator-clone
+spec:
+  description: MiniMax narrator clone voice
+  name: MiniMax Narrator Clone
+  provider:
+    kind: minimax-tenant
+    name: minimax-cn
+  provider_data:
+    raw:
+      origin: manual-resource
+    voice_id: minimax-narrator-clone-v1
+    voice_type: voice_cloning
+  source: manual

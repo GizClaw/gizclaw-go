@@ -930,33 +930,6 @@ func (e PetSpeciesResourceKind) Valid() bool {
 	}
 }
 
-// Defines values for ProviderKind.
-const (
-	ProviderKindDashscopeTenant ProviderKind = "dashscope-tenant"
-	ProviderKindGeminiTenant    ProviderKind = "gemini-tenant"
-	ProviderKindMinimaxTenant   ProviderKind = "minimax-tenant"
-	ProviderKindOpenaiTenant    ProviderKind = "openai-tenant"
-	ProviderKindVolcTenant      ProviderKind = "volc-tenant"
-)
-
-// Valid indicates whether the value is a known member of the ProviderKind enum.
-func (e ProviderKind) Valid() bool {
-	switch e {
-	case ProviderKindDashscopeTenant:
-		return true
-	case ProviderKindGeminiTenant:
-		return true
-	case ProviderKindMinimaxTenant:
-		return true
-	case ProviderKindOpenaiTenant:
-		return true
-	case ProviderKindVolcTenant:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ResourceAPIVersion.
 const (
 	ResourceAPIVersionGizclawAdminv1alpha1 ResourceAPIVersion = "gizclaw.admin/v1alpha1"
@@ -2439,16 +2412,6 @@ type PixaMetadata struct {
 	PayloadBytes int      `json:"payload_bytes"`
 	Version      int      `json:"version"`
 }
-
-// Provider defines model for Provider.
-type Provider struct {
-	// Kind Provider resource kind, such as openai-tenant, minimax-tenant, or volc-tenant.
-	Kind ProviderKind `json:"kind"`
-	Name string       `json:"name"`
-}
-
-// ProviderKind Provider resource kind, such as openai-tenant, minimax-tenant, or volc-tenant.
-type ProviderKind string
 
 // RefreshIdentifiers defines model for RefreshIdentifiers.
 type RefreshIdentifiers struct {

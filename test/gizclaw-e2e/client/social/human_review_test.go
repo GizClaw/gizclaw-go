@@ -83,15 +83,13 @@ func newSocialHumanReviewHarness(t *testing.T) *clitest.Harness {
 	t.Helper()
 
 	h := clitest.NewSetupHarness(t, "client-social-human-review")
-	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "--sn", "client-social-human-review-admin-sn").MustSucceed(t)
+	configureSocialAdminContext(t, h)
 	admin := h.ConnectClientFromContext("admin-a")
 	defer admin.Close()
 	api, err := admin.ServerAdminClient()
 	if err != nil {
 		t.Fatalf("create social human-review admin client: %v", err)
 	}
-	applySocialResourceFile(t, api, socialHumanReviewResourcePath(h, "04-workflows/03-chatroom.yaml"))
 	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT", "client-social-human-review-peer-a-sn")
 	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT", "client-social-human-review-peer-b-sn")
 	for _, peer := range []string{"peer-c"} {
@@ -156,10 +154,6 @@ func putSocialHumanReviewPeerConfig(t *testing.T, api *adminservice.ClientWithRe
 	if resp.JSON200 == nil {
 		t.Fatalf("put social human-review peer config %s status %d: %s", publicKey, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
 	}
-}
-
-func socialHumanReviewResourcePath(h *clitest.Harness, name string) string {
-	return h.RepoRoot + "/test/gizclaw-e2e/testdata/resources/" + name
 }
 
 func runSocialHumanReviewAudioStory(t *testing.T, h *clitest.Harness, playback *socialHumanReviewPlayback, writerContext, readerContext, workspaceName string, texts []string) {

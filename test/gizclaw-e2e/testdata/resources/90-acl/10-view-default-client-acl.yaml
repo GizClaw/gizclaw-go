@@ -1,9 +1,262 @@
+---
 apiVersion: gizclaw.admin/v1alpha1
 kind: ResourceList
 metadata:
-  name: standard-client-bindings
+  name: view-default-client-acl
 spec:
   items:
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-credential-openai
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: credential
+        id: openai-main-credential
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-credential-volc
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: credential
+        id: volc-main-credential
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-credential-minimax-cn
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: credential
+        id: minimax-cn-credential
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-credential-minimax-global
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: credential
+        id: minimax-global-credential
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-credential-gemini
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: credential
+        id: gemini-main-credential
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-credential-qwen-dashscope
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: credential
+        id: qwen-dashscope-credential
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-model-tts
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: model
+        id: volc-bigtts
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-model-asr
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: model
+        id: volc-bigasr-sauc
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-model-ast-translate
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: model
+        id: volc-ast-translate
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-model-realtime
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: model
+        id: doubao-realtime-dialog
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-model-doubao-2-lite-chat
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: model
+        id: doubao-lite-chat
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-model-gemini-chat
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: model
+        id: gemini-2-flash
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-model-qwen-chat
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: model
+        id: qwen-plus
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-voice-story-narrator
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: voice
+        id: volc-tenant:volc-main:zh_female_shaoergushi_mars_bigtts
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-voice-story-wukong
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: voice
+        id: volc-tenant:volc-main:zh_male_sunwukong_mars_bigtts
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-voice-story-tangseng
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: voice
+        id: volc-tenant:volc-main:zh_male_tangseng_mars_bigtts
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-voice-story-bajie
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: voice
+        id: volc-tenant:volc-main:zh_male_zhubajie_mars_bigtts
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-voice-story-monster
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: voice
+        id: volc-tenant:volc-main:ICL_zh_female_bingjiao3_tob
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-openai-gpt-4o-mini
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: model
+        id: openai-gpt-4o-mini
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-minimax-narrator-clone
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: voice
+        id: minimax-narrator-clone
+      role: default-client
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-volc-mars-vv-voice
+    spec:
+      subject:
+        kind: view
+        id: default-client
+      resource:
+        kind: voice
+        id: volc-tenant:volc-main:zh_female_vv_mars_bigtts
+      role: default-client
   - apiVersion: gizclaw.admin/v1alpha1
     kind: ACLPolicyBinding
     metadata:
@@ -34,7 +287,7 @@ spec:
       name: view-default-client-model-core
     spec:
       resource:
-        id: openai-catalog-chat
+        id: openai-gpt-4o-mini
         kind: model
       role: standard-client
       subject:
@@ -46,7 +299,7 @@ spec:
       name: view-default-client-credential-core
     spec:
       resource:
-        id: openai-catalog-credential
+        id: openai-main-credential
         kind: credential
       role: standard-client
       subject:
@@ -70,7 +323,7 @@ spec:
       name: view-default-client-voice-core
     spec:
       resource:
-        id: minimax-catalog-voice
+        id: minimax-narrator-clone
         kind: voice
       role: standard-client
       subject:
@@ -82,7 +335,7 @@ spec:
       name: view-default-client-history-workspace
     spec:
       resource:
-        id: workspace-history-demo
+        id: family-circle-chatroom-workspace
         kind: workspace
       role: standard-client
       subject:
@@ -94,7 +347,7 @@ spec:
       name: view-default-client-history-workflow
     spec:
       resource:
-        id: chatroom-history
+        id: family-circle-chatroom
         kind: workflow
       role: standard-client
       subject:
@@ -103,22 +356,70 @@ spec:
   - apiVersion: gizclaw.admin/v1alpha1
     kind: ACLPolicyBinding
     metadata:
-      name: pk-default-client-history-workspace
+      name: view-default-client-pet-species-rabbit
     spec:
       resource:
-        id: workspace-history-demo
-        kind: workspace
+        id: rabbit
+        kind: pet_species
       role: standard-client
       subject:
-        id: 8rAUkTyxLHDa5o3VajtzWcQdNJq1thrjAGtpwQkEsaEu
-        kind: pk
+        id: default-client
+        kind: view
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-badge-founder
+    spec:
+      resource:
+        id: founder
+        kind: badge
+      role: standard-client
+      subject:
+        id: default-client
+        kind: view
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-mutation-model
+    spec:
+      resource:
+        id: mutation-openai-model
+        kind: model
+      role: standard-client
+      subject:
+        id: default-client
+        kind: view
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-mutation-credential
+    spec:
+      resource:
+        id: mutation-openai-credential
+        kind: credential
+      role: standard-client
+      subject:
+        id: default-client
+        kind: view
+  - apiVersion: gizclaw.admin/v1alpha1
+    kind: ACLPolicyBinding
+    metadata:
+      name: view-default-client-mutation-firmware
+    spec:
+      resource:
+        id: mutation-firmware
+        kind: firmware
+      role: standard-client
+      subject:
+        id: default-client
+        kind: view
   - apiVersion: gizclaw.admin/v1alpha1
     kind: ACLPolicyBinding
     metadata:
       name: view-default-client-model-000
     spec:
       resource:
-        id: openai-catalog-chat-000
+        id: fake-openai-chat-000
         kind: model
       role: standard-client
       subject:
@@ -130,7 +431,7 @@ spec:
       name: view-default-client-model-001
     spec:
       resource:
-        id: openai-catalog-chat-001
+        id: fake-openai-chat-001
         kind: model
       role: standard-client
       subject:
@@ -142,7 +443,7 @@ spec:
       name: view-default-client-model-002
     spec:
       resource:
-        id: openai-catalog-chat-002
+        id: fake-openai-chat-002
         kind: model
       role: standard-client
       subject:
@@ -154,7 +455,7 @@ spec:
       name: view-default-client-model-003
     spec:
       resource:
-        id: openai-catalog-chat-003
+        id: fake-openai-chat-003
         kind: model
       role: standard-client
       subject:
@@ -166,7 +467,7 @@ spec:
       name: view-default-client-model-004
     spec:
       resource:
-        id: openai-catalog-chat-004
+        id: fake-openai-chat-004
         kind: model
       role: standard-client
       subject:
@@ -178,7 +479,7 @@ spec:
       name: view-default-client-model-005
     spec:
       resource:
-        id: openai-catalog-chat-005
+        id: fake-openai-chat-005
         kind: model
       role: standard-client
       subject:
@@ -190,7 +491,7 @@ spec:
       name: view-default-client-model-006
     spec:
       resource:
-        id: openai-catalog-chat-006
+        id: fake-openai-chat-006
         kind: model
       role: standard-client
       subject:
@@ -202,7 +503,7 @@ spec:
       name: view-default-client-model-007
     spec:
       resource:
-        id: openai-catalog-chat-007
+        id: fake-openai-chat-007
         kind: model
       role: standard-client
       subject:
@@ -214,7 +515,7 @@ spec:
       name: view-default-client-model-008
     spec:
       resource:
-        id: openai-catalog-chat-008
+        id: fake-openai-chat-008
         kind: model
       role: standard-client
       subject:
@@ -226,7 +527,7 @@ spec:
       name: view-default-client-model-009
     spec:
       resource:
-        id: openai-catalog-chat-009
+        id: fake-openai-chat-009
         kind: model
       role: standard-client
       subject:
@@ -238,7 +539,7 @@ spec:
       name: view-default-client-model-010
     spec:
       resource:
-        id: openai-catalog-chat-010
+        id: fake-openai-chat-010
         kind: model
       role: standard-client
       subject:
@@ -250,7 +551,7 @@ spec:
       name: view-default-client-model-011
     spec:
       resource:
-        id: openai-catalog-chat-011
+        id: fake-openai-chat-011
         kind: model
       role: standard-client
       subject:
@@ -262,7 +563,7 @@ spec:
       name: view-default-client-model-012
     spec:
       resource:
-        id: openai-catalog-chat-012
+        id: fake-openai-chat-012
         kind: model
       role: standard-client
       subject:
@@ -274,7 +575,7 @@ spec:
       name: view-default-client-model-013
     spec:
       resource:
-        id: openai-catalog-chat-013
+        id: fake-openai-chat-013
         kind: model
       role: standard-client
       subject:
@@ -286,7 +587,7 @@ spec:
       name: view-default-client-model-014
     spec:
       resource:
-        id: openai-catalog-chat-014
+        id: fake-openai-chat-014
         kind: model
       role: standard-client
       subject:
@@ -298,7 +599,7 @@ spec:
       name: view-default-client-model-015
     spec:
       resource:
-        id: openai-catalog-chat-015
+        id: fake-openai-chat-015
         kind: model
       role: standard-client
       subject:
@@ -310,7 +611,7 @@ spec:
       name: view-default-client-model-016
     spec:
       resource:
-        id: openai-catalog-chat-016
+        id: fake-openai-chat-016
         kind: model
       role: standard-client
       subject:
@@ -322,7 +623,7 @@ spec:
       name: view-default-client-model-017
     spec:
       resource:
-        id: openai-catalog-chat-017
+        id: fake-openai-chat-017
         kind: model
       role: standard-client
       subject:
@@ -334,7 +635,7 @@ spec:
       name: view-default-client-model-018
     spec:
       resource:
-        id: openai-catalog-chat-018
+        id: fake-openai-chat-018
         kind: model
       role: standard-client
       subject:
@@ -346,7 +647,7 @@ spec:
       name: view-default-client-model-019
     spec:
       resource:
-        id: openai-catalog-chat-019
+        id: fake-openai-chat-019
         kind: model
       role: standard-client
       subject:
@@ -358,7 +659,7 @@ spec:
       name: view-default-client-model-020
     spec:
       resource:
-        id: openai-catalog-chat-020
+        id: fake-openai-chat-020
         kind: model
       role: standard-client
       subject:
@@ -370,7 +671,7 @@ spec:
       name: view-default-client-model-021
     spec:
       resource:
-        id: openai-catalog-chat-021
+        id: fake-openai-chat-021
         kind: model
       role: standard-client
       subject:
@@ -382,7 +683,7 @@ spec:
       name: view-default-client-model-022
     spec:
       resource:
-        id: openai-catalog-chat-022
+        id: fake-openai-chat-022
         kind: model
       role: standard-client
       subject:
@@ -394,7 +695,7 @@ spec:
       name: view-default-client-model-023
     spec:
       resource:
-        id: openai-catalog-chat-023
+        id: fake-openai-chat-023
         kind: model
       role: standard-client
       subject:
@@ -406,7 +707,7 @@ spec:
       name: view-default-client-model-024
     spec:
       resource:
-        id: openai-catalog-chat-024
+        id: fake-openai-chat-024
         kind: model
       role: standard-client
       subject:
@@ -418,7 +719,7 @@ spec:
       name: view-default-client-model-025
     spec:
       resource:
-        id: openai-catalog-chat-025
+        id: fake-openai-chat-025
         kind: model
       role: standard-client
       subject:
@@ -430,7 +731,7 @@ spec:
       name: view-default-client-model-026
     spec:
       resource:
-        id: openai-catalog-chat-026
+        id: fake-openai-chat-026
         kind: model
       role: standard-client
       subject:
@@ -442,7 +743,7 @@ spec:
       name: view-default-client-model-027
     spec:
       resource:
-        id: openai-catalog-chat-027
+        id: fake-openai-chat-027
         kind: model
       role: standard-client
       subject:
@@ -454,7 +755,7 @@ spec:
       name: view-default-client-model-028
     spec:
       resource:
-        id: openai-catalog-chat-028
+        id: fake-openai-chat-028
         kind: model
       role: standard-client
       subject:
@@ -466,7 +767,7 @@ spec:
       name: view-default-client-model-029
     spec:
       resource:
-        id: openai-catalog-chat-029
+        id: fake-openai-chat-029
         kind: model
       role: standard-client
       subject:
@@ -478,7 +779,7 @@ spec:
       name: view-default-client-model-030
     spec:
       resource:
-        id: openai-catalog-chat-030
+        id: fake-openai-chat-030
         kind: model
       role: standard-client
       subject:
@@ -490,7 +791,7 @@ spec:
       name: view-default-client-model-031
     spec:
       resource:
-        id: openai-catalog-chat-031
+        id: fake-openai-chat-031
         kind: model
       role: standard-client
       subject:
@@ -502,7 +803,7 @@ spec:
       name: view-default-client-model-032
     spec:
       resource:
-        id: openai-catalog-chat-032
+        id: fake-openai-chat-032
         kind: model
       role: standard-client
       subject:
@@ -514,7 +815,7 @@ spec:
       name: view-default-client-model-033
     spec:
       resource:
-        id: openai-catalog-chat-033
+        id: fake-openai-chat-033
         kind: model
       role: standard-client
       subject:
@@ -526,7 +827,7 @@ spec:
       name: view-default-client-model-034
     spec:
       resource:
-        id: openai-catalog-chat-034
+        id: fake-openai-chat-034
         kind: model
       role: standard-client
       subject:
@@ -538,7 +839,7 @@ spec:
       name: view-default-client-model-035
     spec:
       resource:
-        id: openai-catalog-chat-035
+        id: fake-openai-chat-035
         kind: model
       role: standard-client
       subject:
@@ -550,7 +851,7 @@ spec:
       name: view-default-client-model-036
     spec:
       resource:
-        id: openai-catalog-chat-036
+        id: fake-openai-chat-036
         kind: model
       role: standard-client
       subject:
@@ -562,7 +863,7 @@ spec:
       name: view-default-client-model-037
     spec:
       resource:
-        id: openai-catalog-chat-037
+        id: fake-openai-chat-037
         kind: model
       role: standard-client
       subject:
@@ -574,7 +875,7 @@ spec:
       name: view-default-client-model-038
     spec:
       resource:
-        id: openai-catalog-chat-038
+        id: fake-openai-chat-038
         kind: model
       role: standard-client
       subject:
@@ -586,7 +887,7 @@ spec:
       name: view-default-client-model-039
     spec:
       resource:
-        id: openai-catalog-chat-039
+        id: fake-openai-chat-039
         kind: model
       role: standard-client
       subject:
@@ -598,7 +899,7 @@ spec:
       name: view-default-client-model-040
     spec:
       resource:
-        id: openai-catalog-chat-040
+        id: fake-openai-chat-040
         kind: model
       role: standard-client
       subject:
@@ -610,7 +911,7 @@ spec:
       name: view-default-client-model-041
     spec:
       resource:
-        id: openai-catalog-chat-041
+        id: fake-openai-chat-041
         kind: model
       role: standard-client
       subject:
@@ -622,7 +923,7 @@ spec:
       name: view-default-client-model-042
     spec:
       resource:
-        id: openai-catalog-chat-042
+        id: fake-openai-chat-042
         kind: model
       role: standard-client
       subject:
@@ -634,7 +935,7 @@ spec:
       name: view-default-client-model-043
     spec:
       resource:
-        id: openai-catalog-chat-043
+        id: fake-openai-chat-043
         kind: model
       role: standard-client
       subject:
@@ -646,7 +947,7 @@ spec:
       name: view-default-client-model-044
     spec:
       resource:
-        id: openai-catalog-chat-044
+        id: fake-openai-chat-044
         kind: model
       role: standard-client
       subject:
@@ -658,7 +959,7 @@ spec:
       name: view-default-client-model-045
     spec:
       resource:
-        id: openai-catalog-chat-045
+        id: fake-openai-chat-045
         kind: model
       role: standard-client
       subject:
@@ -670,7 +971,7 @@ spec:
       name: view-default-client-model-046
     spec:
       resource:
-        id: openai-catalog-chat-046
+        id: fake-openai-chat-046
         kind: model
       role: standard-client
       subject:
@@ -682,7 +983,7 @@ spec:
       name: view-default-client-model-047
     spec:
       resource:
-        id: openai-catalog-chat-047
+        id: fake-openai-chat-047
         kind: model
       role: standard-client
       subject:
@@ -694,7 +995,7 @@ spec:
       name: view-default-client-model-048
     spec:
       resource:
-        id: openai-catalog-chat-048
+        id: fake-openai-chat-048
         kind: model
       role: standard-client
       subject:
@@ -706,7 +1007,7 @@ spec:
       name: view-default-client-model-049
     spec:
       resource:
-        id: openai-catalog-chat-049
+        id: fake-openai-chat-049
         kind: model
       role: standard-client
       subject:
@@ -718,7 +1019,7 @@ spec:
       name: view-default-client-model-050
     spec:
       resource:
-        id: openai-catalog-chat-050
+        id: fake-openai-chat-050
         kind: model
       role: standard-client
       subject:
@@ -730,7 +1031,7 @@ spec:
       name: view-default-client-model-051
     spec:
       resource:
-        id: openai-catalog-chat-051
+        id: fake-openai-chat-051
         kind: model
       role: standard-client
       subject:
@@ -742,7 +1043,7 @@ spec:
       name: view-default-client-model-052
     spec:
       resource:
-        id: openai-catalog-chat-052
+        id: fake-openai-chat-052
         kind: model
       role: standard-client
       subject:
@@ -754,7 +1055,7 @@ spec:
       name: view-default-client-model-053
     spec:
       resource:
-        id: openai-catalog-chat-053
+        id: fake-openai-chat-053
         kind: model
       role: standard-client
       subject:
@@ -766,7 +1067,7 @@ spec:
       name: view-default-client-model-054
     spec:
       resource:
-        id: openai-catalog-chat-054
+        id: fake-openai-chat-054
         kind: model
       role: standard-client
       subject:
@@ -778,7 +1079,7 @@ spec:
       name: view-default-client-model-055
     spec:
       resource:
-        id: openai-catalog-chat-055
+        id: fake-openai-chat-055
         kind: model
       role: standard-client
       subject:
@@ -790,7 +1091,7 @@ spec:
       name: view-default-client-model-056
     spec:
       resource:
-        id: openai-catalog-chat-056
+        id: fake-openai-chat-056
         kind: model
       role: standard-client
       subject:
@@ -802,7 +1103,7 @@ spec:
       name: view-default-client-model-057
     spec:
       resource:
-        id: openai-catalog-chat-057
+        id: fake-openai-chat-057
         kind: model
       role: standard-client
       subject:
@@ -814,7 +1115,7 @@ spec:
       name: view-default-client-model-058
     spec:
       resource:
-        id: openai-catalog-chat-058
+        id: fake-openai-chat-058
         kind: model
       role: standard-client
       subject:
@@ -826,7 +1127,7 @@ spec:
       name: view-default-client-model-059
     spec:
       resource:
-        id: openai-catalog-chat-059
+        id: fake-openai-chat-059
         kind: model
       role: standard-client
       subject:
@@ -838,7 +1139,7 @@ spec:
       name: view-default-client-model-060
     spec:
       resource:
-        id: openai-catalog-chat-060
+        id: fake-openai-chat-060
         kind: model
       role: standard-client
       subject:
@@ -850,7 +1151,7 @@ spec:
       name: view-default-client-model-061
     spec:
       resource:
-        id: openai-catalog-chat-061
+        id: fake-openai-chat-061
         kind: model
       role: standard-client
       subject:
@@ -862,7 +1163,7 @@ spec:
       name: view-default-client-model-062
     spec:
       resource:
-        id: openai-catalog-chat-062
+        id: fake-openai-chat-062
         kind: model
       role: standard-client
       subject:
@@ -874,7 +1175,7 @@ spec:
       name: view-default-client-model-063
     spec:
       resource:
-        id: openai-catalog-chat-063
+        id: fake-openai-chat-063
         kind: model
       role: standard-client
       subject:
@@ -886,7 +1187,7 @@ spec:
       name: view-default-client-model-064
     spec:
       resource:
-        id: openai-catalog-chat-064
+        id: fake-openai-chat-064
         kind: model
       role: standard-client
       subject:
@@ -898,7 +1199,7 @@ spec:
       name: view-default-client-model-065
     spec:
       resource:
-        id: openai-catalog-chat-065
+        id: fake-openai-chat-065
         kind: model
       role: standard-client
       subject:
@@ -910,7 +1211,7 @@ spec:
       name: view-default-client-model-066
     spec:
       resource:
-        id: openai-catalog-chat-066
+        id: fake-openai-chat-066
         kind: model
       role: standard-client
       subject:
@@ -922,7 +1223,7 @@ spec:
       name: view-default-client-model-067
     spec:
       resource:
-        id: openai-catalog-chat-067
+        id: fake-openai-chat-067
         kind: model
       role: standard-client
       subject:
@@ -934,7 +1235,7 @@ spec:
       name: view-default-client-model-068
     spec:
       resource:
-        id: openai-catalog-chat-068
+        id: fake-openai-chat-068
         kind: model
       role: standard-client
       subject:
@@ -946,7 +1247,7 @@ spec:
       name: view-default-client-model-069
     spec:
       resource:
-        id: openai-catalog-chat-069
+        id: fake-openai-chat-069
         kind: model
       role: standard-client
       subject:
@@ -958,7 +1259,7 @@ spec:
       name: view-default-client-model-070
     spec:
       resource:
-        id: openai-catalog-chat-070
+        id: fake-openai-chat-070
         kind: model
       role: standard-client
       subject:
@@ -970,7 +1271,7 @@ spec:
       name: view-default-client-model-071
     spec:
       resource:
-        id: openai-catalog-chat-071
+        id: fake-openai-chat-071
         kind: model
       role: standard-client
       subject:
@@ -982,7 +1283,7 @@ spec:
       name: view-default-client-model-072
     spec:
       resource:
-        id: openai-catalog-chat-072
+        id: fake-openai-chat-072
         kind: model
       role: standard-client
       subject:
@@ -994,7 +1295,7 @@ spec:
       name: view-default-client-model-073
     spec:
       resource:
-        id: openai-catalog-chat-073
+        id: fake-openai-chat-073
         kind: model
       role: standard-client
       subject:
@@ -1006,7 +1307,7 @@ spec:
       name: view-default-client-model-074
     spec:
       resource:
-        id: openai-catalog-chat-074
+        id: fake-openai-chat-074
         kind: model
       role: standard-client
       subject:
@@ -1018,7 +1319,7 @@ spec:
       name: view-default-client-model-075
     spec:
       resource:
-        id: openai-catalog-chat-075
+        id: fake-openai-chat-075
         kind: model
       role: standard-client
       subject:
@@ -1030,7 +1331,7 @@ spec:
       name: view-default-client-model-076
     spec:
       resource:
-        id: openai-catalog-chat-076
+        id: fake-openai-chat-076
         kind: model
       role: standard-client
       subject:
@@ -1042,7 +1343,7 @@ spec:
       name: view-default-client-model-077
     spec:
       resource:
-        id: openai-catalog-chat-077
+        id: fake-openai-chat-077
         kind: model
       role: standard-client
       subject:
@@ -1054,7 +1355,7 @@ spec:
       name: view-default-client-model-078
     spec:
       resource:
-        id: openai-catalog-chat-078
+        id: fake-openai-chat-078
         kind: model
       role: standard-client
       subject:
@@ -1066,7 +1367,7 @@ spec:
       name: view-default-client-model-079
     spec:
       resource:
-        id: openai-catalog-chat-079
+        id: fake-openai-chat-079
         kind: model
       role: standard-client
       subject:
@@ -1078,7 +1379,7 @@ spec:
       name: view-default-client-credential-000
     spec:
       resource:
-        id: openai-catalog-credential-000
+        id: fake-openai-credential-000
         kind: credential
       role: standard-client
       subject:
@@ -1090,7 +1391,7 @@ spec:
       name: view-default-client-credential-001
     spec:
       resource:
-        id: openai-catalog-credential-001
+        id: fake-openai-credential-001
         kind: credential
       role: standard-client
       subject:
@@ -1102,7 +1403,7 @@ spec:
       name: view-default-client-credential-002
     spec:
       resource:
-        id: openai-catalog-credential-002
+        id: fake-openai-credential-002
         kind: credential
       role: standard-client
       subject:
@@ -1114,7 +1415,7 @@ spec:
       name: view-default-client-credential-003
     spec:
       resource:
-        id: openai-catalog-credential-003
+        id: fake-openai-credential-003
         kind: credential
       role: standard-client
       subject:
@@ -1126,7 +1427,7 @@ spec:
       name: view-default-client-credential-004
     spec:
       resource:
-        id: openai-catalog-credential-004
+        id: fake-openai-credential-004
         kind: credential
       role: standard-client
       subject:
@@ -1138,7 +1439,7 @@ spec:
       name: view-default-client-credential-005
     spec:
       resource:
-        id: openai-catalog-credential-005
+        id: fake-openai-credential-005
         kind: credential
       role: standard-client
       subject:
@@ -1150,7 +1451,7 @@ spec:
       name: view-default-client-credential-006
     spec:
       resource:
-        id: openai-catalog-credential-006
+        id: fake-openai-credential-006
         kind: credential
       role: standard-client
       subject:
@@ -1162,7 +1463,7 @@ spec:
       name: view-default-client-credential-007
     spec:
       resource:
-        id: openai-catalog-credential-007
+        id: fake-openai-credential-007
         kind: credential
       role: standard-client
       subject:
@@ -1174,7 +1475,7 @@ spec:
       name: view-default-client-credential-008
     spec:
       resource:
-        id: openai-catalog-credential-008
+        id: fake-openai-credential-008
         kind: credential
       role: standard-client
       subject:
@@ -1186,7 +1487,7 @@ spec:
       name: view-default-client-credential-009
     spec:
       resource:
-        id: openai-catalog-credential-009
+        id: fake-openai-credential-009
         kind: credential
       role: standard-client
       subject:
@@ -1198,7 +1499,7 @@ spec:
       name: view-default-client-credential-010
     spec:
       resource:
-        id: openai-catalog-credential-010
+        id: fake-openai-credential-010
         kind: credential
       role: standard-client
       subject:
@@ -1210,7 +1511,7 @@ spec:
       name: view-default-client-credential-011
     spec:
       resource:
-        id: openai-catalog-credential-011
+        id: fake-openai-credential-011
         kind: credential
       role: standard-client
       subject:
@@ -1222,7 +1523,7 @@ spec:
       name: view-default-client-credential-012
     spec:
       resource:
-        id: openai-catalog-credential-012
+        id: fake-openai-credential-012
         kind: credential
       role: standard-client
       subject:
@@ -1234,7 +1535,7 @@ spec:
       name: view-default-client-credential-013
     spec:
       resource:
-        id: openai-catalog-credential-013
+        id: fake-openai-credential-013
         kind: credential
       role: standard-client
       subject:
@@ -1246,7 +1547,7 @@ spec:
       name: view-default-client-credential-014
     spec:
       resource:
-        id: openai-catalog-credential-014
+        id: fake-openai-credential-014
         kind: credential
       role: standard-client
       subject:
@@ -1258,7 +1559,7 @@ spec:
       name: view-default-client-credential-015
     spec:
       resource:
-        id: openai-catalog-credential-015
+        id: fake-openai-credential-015
         kind: credential
       role: standard-client
       subject:
@@ -1270,7 +1571,7 @@ spec:
       name: view-default-client-credential-016
     spec:
       resource:
-        id: openai-catalog-credential-016
+        id: fake-openai-credential-016
         kind: credential
       role: standard-client
       subject:
@@ -1282,7 +1583,7 @@ spec:
       name: view-default-client-credential-017
     spec:
       resource:
-        id: openai-catalog-credential-017
+        id: fake-openai-credential-017
         kind: credential
       role: standard-client
       subject:
@@ -1294,7 +1595,7 @@ spec:
       name: view-default-client-credential-018
     spec:
       resource:
-        id: openai-catalog-credential-018
+        id: fake-openai-credential-018
         kind: credential
       role: standard-client
       subject:
@@ -1306,7 +1607,7 @@ spec:
       name: view-default-client-credential-019
     spec:
       resource:
-        id: openai-catalog-credential-019
+        id: fake-openai-credential-019
         kind: credential
       role: standard-client
       subject:
@@ -1318,7 +1619,7 @@ spec:
       name: view-default-client-credential-020
     spec:
       resource:
-        id: openai-catalog-credential-020
+        id: fake-openai-credential-020
         kind: credential
       role: standard-client
       subject:
@@ -1330,7 +1631,7 @@ spec:
       name: view-default-client-credential-021
     spec:
       resource:
-        id: openai-catalog-credential-021
+        id: fake-openai-credential-021
         kind: credential
       role: standard-client
       subject:
@@ -1342,7 +1643,7 @@ spec:
       name: view-default-client-credential-022
     spec:
       resource:
-        id: openai-catalog-credential-022
+        id: fake-openai-credential-022
         kind: credential
       role: standard-client
       subject:
@@ -1354,7 +1655,7 @@ spec:
       name: view-default-client-credential-023
     spec:
       resource:
-        id: openai-catalog-credential-023
+        id: fake-openai-credential-023
         kind: credential
       role: standard-client
       subject:
@@ -1366,7 +1667,7 @@ spec:
       name: view-default-client-credential-024
     spec:
       resource:
-        id: openai-catalog-credential-024
+        id: fake-openai-credential-024
         kind: credential
       role: standard-client
       subject:
@@ -1378,7 +1679,7 @@ spec:
       name: view-default-client-credential-025
     spec:
       resource:
-        id: openai-catalog-credential-025
+        id: fake-openai-credential-025
         kind: credential
       role: standard-client
       subject:
@@ -1390,7 +1691,7 @@ spec:
       name: view-default-client-credential-026
     spec:
       resource:
-        id: openai-catalog-credential-026
+        id: fake-openai-credential-026
         kind: credential
       role: standard-client
       subject:
@@ -1402,7 +1703,7 @@ spec:
       name: view-default-client-credential-027
     spec:
       resource:
-        id: openai-catalog-credential-027
+        id: fake-openai-credential-027
         kind: credential
       role: standard-client
       subject:
@@ -1414,7 +1715,7 @@ spec:
       name: view-default-client-credential-028
     spec:
       resource:
-        id: openai-catalog-credential-028
+        id: fake-openai-credential-028
         kind: credential
       role: standard-client
       subject:
@@ -1426,7 +1727,7 @@ spec:
       name: view-default-client-credential-029
     spec:
       resource:
-        id: openai-catalog-credential-029
+        id: fake-openai-credential-029
         kind: credential
       role: standard-client
       subject:
@@ -1438,7 +1739,7 @@ spec:
       name: view-default-client-credential-030
     spec:
       resource:
-        id: openai-catalog-credential-030
+        id: fake-openai-credential-030
         kind: credential
       role: standard-client
       subject:
@@ -1450,7 +1751,7 @@ spec:
       name: view-default-client-credential-031
     spec:
       resource:
-        id: openai-catalog-credential-031
+        id: fake-openai-credential-031
         kind: credential
       role: standard-client
       subject:
@@ -1462,7 +1763,7 @@ spec:
       name: view-default-client-credential-032
     spec:
       resource:
-        id: openai-catalog-credential-032
+        id: fake-openai-credential-032
         kind: credential
       role: standard-client
       subject:
@@ -1474,7 +1775,7 @@ spec:
       name: view-default-client-credential-033
     spec:
       resource:
-        id: openai-catalog-credential-033
+        id: fake-openai-credential-033
         kind: credential
       role: standard-client
       subject:
@@ -1486,7 +1787,7 @@ spec:
       name: view-default-client-credential-034
     spec:
       resource:
-        id: openai-catalog-credential-034
+        id: fake-openai-credential-034
         kind: credential
       role: standard-client
       subject:
@@ -1498,7 +1799,7 @@ spec:
       name: view-default-client-credential-035
     spec:
       resource:
-        id: openai-catalog-credential-035
+        id: fake-openai-credential-035
         kind: credential
       role: standard-client
       subject:
@@ -1510,7 +1811,7 @@ spec:
       name: view-default-client-credential-036
     spec:
       resource:
-        id: openai-catalog-credential-036
+        id: fake-openai-credential-036
         kind: credential
       role: standard-client
       subject:
@@ -1522,7 +1823,7 @@ spec:
       name: view-default-client-credential-037
     spec:
       resource:
-        id: openai-catalog-credential-037
+        id: fake-openai-credential-037
         kind: credential
       role: standard-client
       subject:
@@ -1534,7 +1835,7 @@ spec:
       name: view-default-client-credential-038
     spec:
       resource:
-        id: openai-catalog-credential-038
+        id: fake-openai-credential-038
         kind: credential
       role: standard-client
       subject:
@@ -1546,7 +1847,7 @@ spec:
       name: view-default-client-credential-039
     spec:
       resource:
-        id: openai-catalog-credential-039
+        id: fake-openai-credential-039
         kind: credential
       role: standard-client
       subject:
@@ -1558,7 +1859,7 @@ spec:
       name: view-default-client-credential-040
     spec:
       resource:
-        id: openai-catalog-credential-040
+        id: fake-openai-credential-040
         kind: credential
       role: standard-client
       subject:
@@ -1570,7 +1871,7 @@ spec:
       name: view-default-client-credential-041
     spec:
       resource:
-        id: openai-catalog-credential-041
+        id: fake-openai-credential-041
         kind: credential
       role: standard-client
       subject:
@@ -1582,7 +1883,7 @@ spec:
       name: view-default-client-credential-042
     spec:
       resource:
-        id: openai-catalog-credential-042
+        id: fake-openai-credential-042
         kind: credential
       role: standard-client
       subject:
@@ -1594,7 +1895,7 @@ spec:
       name: view-default-client-credential-043
     spec:
       resource:
-        id: openai-catalog-credential-043
+        id: fake-openai-credential-043
         kind: credential
       role: standard-client
       subject:
@@ -1606,7 +1907,7 @@ spec:
       name: view-default-client-credential-044
     spec:
       resource:
-        id: openai-catalog-credential-044
+        id: fake-openai-credential-044
         kind: credential
       role: standard-client
       subject:
@@ -1618,7 +1919,7 @@ spec:
       name: view-default-client-credential-045
     spec:
       resource:
-        id: openai-catalog-credential-045
+        id: fake-openai-credential-045
         kind: credential
       role: standard-client
       subject:
@@ -1630,7 +1931,7 @@ spec:
       name: view-default-client-credential-046
     spec:
       resource:
-        id: openai-catalog-credential-046
+        id: fake-openai-credential-046
         kind: credential
       role: standard-client
       subject:
@@ -1642,7 +1943,7 @@ spec:
       name: view-default-client-credential-047
     spec:
       resource:
-        id: openai-catalog-credential-047
+        id: fake-openai-credential-047
         kind: credential
       role: standard-client
       subject:
@@ -1654,7 +1955,7 @@ spec:
       name: view-default-client-credential-048
     spec:
       resource:
-        id: openai-catalog-credential-048
+        id: fake-openai-credential-048
         kind: credential
       role: standard-client
       subject:
@@ -1666,7 +1967,7 @@ spec:
       name: view-default-client-credential-049
     spec:
       resource:
-        id: openai-catalog-credential-049
+        id: fake-openai-credential-049
         kind: credential
       role: standard-client
       subject:

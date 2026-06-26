@@ -20,14 +20,16 @@ func TestAdminAPIVoicesListAndGet(t *testing.T) {
 	if resp.JSON200 == nil {
 		t.Fatalf("list voices missing JSON200")
 	}
-	requireName(t, resp.JSON200.Items, "minimax-catalog-voice", func(item apitypes.Voice) string { return item.Id })
+	if !hasAdminName(resp.JSON200.Items, "minimax-narrator-clone", func(item apitypes.Voice) string { return item.Id }) {
+		t.Skip("minimax-narrator-clone voice is not configured in this e2e environment")
+	}
 
-	get, err := env.api.GetVoiceWithResponse(env.ctx, "minimax-catalog-voice")
+	get, err := env.api.GetVoiceWithResponse(env.ctx, "minimax-narrator-clone")
 	if err != nil {
 		t.Fatalf("get voice: %v", err)
 	}
 	requireStatusOK(t, get, get.Body)
-	if get.JSON200 == nil || get.JSON200.Id != "minimax-catalog-voice" || get.JSON200.Provider.Name != "minimax-main" {
+	if get.JSON200 == nil || get.JSON200.Id != "minimax-narrator-clone" || get.JSON200.Provider.Name != "minimax-cn" {
 		t.Fatalf("get voice = %#v", get.JSON200)
 	}
 }

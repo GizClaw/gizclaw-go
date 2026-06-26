@@ -3,9 +3,9 @@
 !resources/
 !resources/**/
 !resources/**/*.yaml
-!resources/assets/
-!resources/assets/firmware/
-!resources/assets/firmware/*.tar
+!assets/
+!assets/firmware/
+!assets/firmware/*.tar
 !workspaces/
 !workspaces/*.json
 !server-workspace/

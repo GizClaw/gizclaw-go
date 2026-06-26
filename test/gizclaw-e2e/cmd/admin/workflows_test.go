@@ -34,6 +34,6 @@ func TestAdminWorkflowsUserStory(t *testing.T) {
 	rpcGet := h.RunCLI("admin", "workflows", "get", "flowcraft-support", "--context", "admin-a")
 	rpcGet.MustSucceed(t)
 	if !strings.Contains(rpcGet.Stdout, `"name":"flowcraft-support"`) || !strings.Contains(rpcGet.Stdout, `"driver":"flowcraft"`) {
-		t.Fatalf("workflows get missing catalog fields:\n%s", rpcGet.Stdout)
+		t.Fatalf("workflows get missing resource fields:\n%s", rpcGet.Stdout)
 	}
 }

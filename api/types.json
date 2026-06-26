@@ -146,12 +146,6 @@
       "ModelKind": {
         "$ref": "./type/model_kind.json#/components/schemas/ModelKind"
       },
-      "ProviderKind": {
-        "$ref": "./type/provider_kind.json#/components/schemas/ProviderKind"
-      },
-      "Provider": {
-        "$ref": "./type/provider.json#/components/schemas/Provider"
-      },
       "ModelProviderKind": {
         "$ref": "./type/model_provider_kind.json#/components/schemas/ModelProviderKind"
       },

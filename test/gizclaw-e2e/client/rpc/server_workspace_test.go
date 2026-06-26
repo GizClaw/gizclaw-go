@@ -12,23 +12,25 @@ import (
 func TestServerWorkspaceRPC(t *testing.T) {
 	env := newServerResourceHarness(t)
 
-	if _, err := env.peer.CreateWorkflow(env.ctx, "workspace.workflow.create", rpcWorkflow("peer-flow", "workspace test flow")); err != nil {
+	_, _ = env.peer.DeleteWorkspace(env.ctx, "workspace.delete.preclean", rpcapi.WorkspaceDeleteRequest{Name: mutationWorkspace})
+	_, _ = env.peer.DeleteWorkflow(env.ctx, "workspace.workflow.delete.preclean", rpcapi.WorkflowDeleteRequest{Name: mutationWorkflow})
+	if _, err := env.peer.CreateWorkflow(env.ctx, "workspace.workflow.create", rpcWorkflow(mutationWorkflow, "workspace test flow")); err != nil {
 		t.Fatalf("create workflow for workspace test: %v", err)
 	}
-	workspaceList, err := env.peer.ListWorkspaces(env.ctx, "workspace.list.seeded", rpcapi.WorkspaceListRequest{})
+	workspaceList, err := env.peer.ListWorkspaces(env.ctx, "workspace.list.shared", rpcapi.WorkspaceListRequest{})
 	if err != nil {
-		t.Fatalf("workspace.list seeded: %v", err)
+		t.Fatalf("workspace.list shared: %v", err)
 	}
-	if !hasWorkspace(workspaceList.Items, "seed-workspace") {
-		t.Fatalf("workspace.list missing seed-workspace: %#v", workspaceList.Items)
+	if len(workspaceList.Items) == 0 {
+		t.Fatalf("workspace.list returned no items")
 	}
 	assertWorkspacePrefixList(t, env.ctx, env.peer)
-	seedWorkspace, err := env.peer.GetWorkspace(env.ctx, "workspace.get.seeded", rpcapi.WorkspaceGetRequest{Name: "seed-workspace"})
+	sharedWorkspaceObject, err := env.peer.GetWorkspace(env.ctx, "workspace.get.shared", rpcapi.WorkspaceGetRequest{Name: sharedWorkspace})
 	if err != nil {
-		t.Fatalf("workspace.get seeded: %v", err)
+		t.Fatalf("workspace.get shared: %v", err)
 	}
-	if seedWorkspace.Name != "seed-workspace" || seedWorkspace.WorkflowName != "seed-flow" {
-		t.Fatalf("workspace.get seeded = %#v", seedWorkspace)
+	if sharedWorkspaceObject.Name != sharedWorkspace || sharedWorkspaceObject.WorkflowName != sharedWorkflow {
+		t.Fatalf("workspace.get shared = %#v", sharedWorkspaceObject)
 	}
 
 	createInput := rpcapi.WorkspaceInputModePushToTalk
@@ -37,14 +39,14 @@ func TestServerWorkspaceRPC(t *testing.T) {
 		t.Fatalf("FromFlowcraftWorkspaceParameters(create) error = %v", err)
 	}
 	workspace, err := env.peer.CreateWorkspace(env.ctx, "workspace.create", rpcapi.WorkspaceCreateRequest{
-		Name:         "peer-workspace",
-		WorkflowName: "peer-flow",
+		Name:         mutationWorkspace,
+		WorkflowName: mutationWorkflow,
 		Parameters:   &createParams,
 	})
 	if err != nil {
 		t.Fatalf("workspace.create: %v", err)
 	}
-	if workspace.Name != "peer-workspace" || workspace.WorkflowName != "peer-flow" {
+	if workspace.Name != mutationWorkspace || workspace.WorkflowName != mutationWorkflow {
 		t.Fatalf("workspace.create = %#v", workspace)
 	}
 
@@ -54,10 +56,10 @@ func TestServerWorkspaceRPC(t *testing.T) {
 		t.Fatalf("FromFlowcraftWorkspaceParameters(update) error = %v", err)
 	}
 	workspace, err = env.peer.PutWorkspace(env.ctx, "workspace.put", rpcapi.WorkspacePutRequest{
-		Name: "peer-workspace",
+		Name: mutationWorkspace,
 		Body: rpcapi.Workspace{
-			Name:         "peer-workspace",
-			WorkflowName: "peer-flow",
+			Name:         mutationWorkspace,
+			WorkflowName: mutationWorkflow,
 			Parameters:   &updateParams,
 		},
 	})
@@ -71,7 +73,7 @@ func TestServerWorkspaceRPC(t *testing.T) {
 	if typed.Input == nil || *typed.Input != rpcapi.WorkspaceInputModeRealtime {
 		t.Fatalf("workspace.put input = %#v, want realtime", typed.Input)
 	}
-	workspace, err = env.peer.GetWorkspace(env.ctx, "workspace.get.updated", rpcapi.WorkspaceGetRequest{Name: "peer-workspace"})
+	workspace, err = env.peer.GetWorkspace(env.ctx, "workspace.get.updated", rpcapi.WorkspaceGetRequest{Name: mutationWorkspace})
 	if err != nil {
 		t.Fatalf("workspace.get updated: %v", err)
 	}
@@ -82,11 +84,11 @@ func TestServerWorkspaceRPC(t *testing.T) {
 	if typed.Input == nil || *typed.Input != rpcapi.WorkspaceInputModeRealtime {
 		t.Fatalf("workspace.get updated input = %#v, want realtime", typed.Input)
 	}
-	assertWorkspacePagination(t, env.ctx, env.peer, "seed-workspace", "peer-workspace")
-	if _, err := env.peer.DeleteWorkspace(env.ctx, "workspace.delete", rpcapi.WorkspaceDeleteRequest{Name: "peer-workspace"}); err != nil {
+	assertWorkspacePagination(t, env.ctx, env.peer, sharedWorkspace, mutationWorkspace)
+	if _, err := env.peer.DeleteWorkspace(env.ctx, "workspace.delete", rpcapi.WorkspaceDeleteRequest{Name: mutationWorkspace}); err != nil {
 		t.Fatalf("workspace.delete: %v", err)
 	}
-	if _, err := env.peer.DeleteWorkflow(env.ctx, "workspace.workflow.delete", rpcapi.WorkflowDeleteRequest{Name: "peer-flow"}); err != nil {
+	if _, err := env.peer.DeleteWorkflow(env.ctx, "workspace.workflow.delete", rpcapi.WorkflowDeleteRequest{Name: mutationWorkflow}); err != nil {
 		t.Fatalf("delete workflow for workspace test: %v", err)
 	}
 }
@@ -96,16 +98,16 @@ func TestServerResourceACLRPC(t *testing.T) {
 
 	denied := env.h.ConnectClientFromContext("peer-denied")
 	defer denied.Close()
-	if _, err := denied.GetWorkflow(env.ctx, "workflow.get.denied", rpcapi.WorkflowGetRequest{Name: "seed-flow"}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
+	if _, err := denied.GetWorkflow(env.ctx, "workflow.get.denied", rpcapi.WorkflowGetRequest{Name: sharedWorkflow}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
 		t.Fatalf("denied peer workflow.get error = %v", err)
 	}
-	if _, err := denied.GetWorkspace(env.ctx, "workspace.get.denied", rpcapi.WorkspaceGetRequest{Name: "seed-workspace"}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
+	if _, err := denied.GetWorkspace(env.ctx, "workspace.get.denied", rpcapi.WorkspaceGetRequest{Name: sharedWorkspace}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
 		t.Fatalf("denied peer workspace.get error = %v", err)
 	}
-	if _, err := denied.GetModel(env.ctx, "model.get.denied", rpcapi.ModelGetRequest{Id: "seed-model"}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
+	if _, err := denied.GetModel(env.ctx, "model.get.denied", rpcapi.ModelGetRequest{Id: sharedModel}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
 		t.Fatalf("denied peer model.get error = %v", err)
 	}
-	if _, err := denied.GetCredential(env.ctx, "credential.get.denied", rpcapi.CredentialGetRequest{Name: "seed-credential"}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
+	if _, err := denied.GetCredential(env.ctx, "credential.get.denied", rpcapi.CredentialGetRequest{Name: sharedCredential}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
 		t.Fatalf("denied peer credential.get error = %v", err)
 	}
 	assertDeniedListsAreEmpty(t, env.ctx, denied)

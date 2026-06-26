@@ -7,450 +7,450 @@ spec:
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-000
+      name: fake-openai-credential-000
     spec:
       body:
-        api_key: sk-openai-catalog-000
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-000
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-001
+      name: fake-openai-credential-001
     spec:
       body:
-        api_key: sk-openai-catalog-001
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-001
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-002
+      name: fake-openai-credential-002
     spec:
       body:
-        api_key: sk-openai-catalog-002
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-002
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-003
+      name: fake-openai-credential-003
     spec:
       body:
-        api_key: sk-openai-catalog-003
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-003
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-004
+      name: fake-openai-credential-004
     spec:
       body:
-        api_key: sk-openai-catalog-004
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-004
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-005
+      name: fake-openai-credential-005
     spec:
       body:
-        api_key: sk-openai-catalog-005
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-005
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-006
+      name: fake-openai-credential-006
     spec:
       body:
-        api_key: sk-openai-catalog-006
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-006
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-007
+      name: fake-openai-credential-007
     spec:
       body:
-        api_key: sk-openai-catalog-007
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-007
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-008
+      name: fake-openai-credential-008
     spec:
       body:
-        api_key: sk-openai-catalog-008
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-008
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-009
+      name: fake-openai-credential-009
     spec:
       body:
-        api_key: sk-openai-catalog-009
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-009
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-010
+      name: fake-openai-credential-010
     spec:
       body:
-        api_key: sk-openai-catalog-010
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-010
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-011
+      name: fake-openai-credential-011
     spec:
       body:
-        api_key: sk-openai-catalog-011
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-011
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-012
+      name: fake-openai-credential-012
     spec:
       body:
-        api_key: sk-openai-catalog-012
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-012
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-013
+      name: fake-openai-credential-013
     spec:
       body:
-        api_key: sk-openai-catalog-013
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-013
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-014
+      name: fake-openai-credential-014
     spec:
       body:
-        api_key: sk-openai-catalog-014
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-014
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-015
+      name: fake-openai-credential-015
     spec:
       body:
-        api_key: sk-openai-catalog-015
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-015
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-016
+      name: fake-openai-credential-016
     spec:
       body:
-        api_key: sk-openai-catalog-016
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-016
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-017
+      name: fake-openai-credential-017
     spec:
       body:
-        api_key: sk-openai-catalog-017
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-017
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-018
+      name: fake-openai-credential-018
     spec:
       body:
-        api_key: sk-openai-catalog-018
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-018
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-019
+      name: fake-openai-credential-019
     spec:
       body:
-        api_key: sk-openai-catalog-019
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-019
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-020
+      name: fake-openai-credential-020
     spec:
       body:
-        api_key: sk-openai-catalog-020
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-020
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-021
+      name: fake-openai-credential-021
     spec:
       body:
-        api_key: sk-openai-catalog-021
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-021
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-022
+      name: fake-openai-credential-022
     spec:
       body:
-        api_key: sk-openai-catalog-022
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-022
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-023
+      name: fake-openai-credential-023
     spec:
       body:
-        api_key: sk-openai-catalog-023
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-023
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-024
+      name: fake-openai-credential-024
     spec:
       body:
-        api_key: sk-openai-catalog-024
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-024
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-025
+      name: fake-openai-credential-025
     spec:
       body:
-        api_key: sk-openai-catalog-025
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-025
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-026
+      name: fake-openai-credential-026
     spec:
       body:
-        api_key: sk-openai-catalog-026
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-026
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-027
+      name: fake-openai-credential-027
     spec:
       body:
-        api_key: sk-openai-catalog-027
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-027
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-028
+      name: fake-openai-credential-028
     spec:
       body:
-        api_key: sk-openai-catalog-028
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-028
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-029
+      name: fake-openai-credential-029
     spec:
       body:
-        api_key: sk-openai-catalog-029
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-029
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-030
+      name: fake-openai-credential-030
     spec:
       body:
-        api_key: sk-openai-catalog-030
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-030
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-031
+      name: fake-openai-credential-031
     spec:
       body:
-        api_key: sk-openai-catalog-031
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-031
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-032
+      name: fake-openai-credential-032
     spec:
       body:
-        api_key: sk-openai-catalog-032
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-032
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-033
+      name: fake-openai-credential-033
     spec:
       body:
-        api_key: sk-openai-catalog-033
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-033
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-034
+      name: fake-openai-credential-034
     spec:
       body:
-        api_key: sk-openai-catalog-034
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-034
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-035
+      name: fake-openai-credential-035
     spec:
       body:
-        api_key: sk-openai-catalog-035
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-035
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-036
+      name: fake-openai-credential-036
     spec:
       body:
-        api_key: sk-openai-catalog-036
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-036
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-037
+      name: fake-openai-credential-037
     spec:
       body:
-        api_key: sk-openai-catalog-037
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-037
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-038
+      name: fake-openai-credential-038
     spec:
       body:
-        api_key: sk-openai-catalog-038
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-038
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-039
+      name: fake-openai-credential-039
     spec:
       body:
-        api_key: sk-openai-catalog-039
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-039
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-040
+      name: fake-openai-credential-040
     spec:
       body:
-        api_key: sk-openai-catalog-040
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-040
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-041
+      name: fake-openai-credential-041
     spec:
       body:
-        api_key: sk-openai-catalog-041
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-041
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-042
+      name: fake-openai-credential-042
     spec:
       body:
-        api_key: sk-openai-catalog-042
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-042
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-043
+      name: fake-openai-credential-043
     spec:
       body:
-        api_key: sk-openai-catalog-043
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-043
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-044
+      name: fake-openai-credential-044
     spec:
       body:
-        api_key: sk-openai-catalog-044
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-044
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-045
+      name: fake-openai-credential-045
     spec:
       body:
-        api_key: sk-openai-catalog-045
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-045
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-046
+      name: fake-openai-credential-046
     spec:
       body:
-        api_key: sk-openai-catalog-046
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-046
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-047
+      name: fake-openai-credential-047
     spec:
       body:
-        api_key: sk-openai-catalog-047
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-047
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-048
+      name: fake-openai-credential-048
     spec:
       body:
-        api_key: sk-openai-catalog-048
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-048
+      description: Fake OpenAI-compatible credential entry
       provider: openai
   - apiVersion: gizclaw.admin/v1alpha1
     kind: Credential
     metadata:
-      name: openai-catalog-credential-049
+      name: fake-openai-credential-049
     spec:
       body:
-        api_key: sk-openai-catalog-049
-      description: OpenAI-compatible credential entry for the shared catalog
+        api_key: sk-fake-openai-049
+      description: Fake OpenAI-compatible credential entry
       provider: openai

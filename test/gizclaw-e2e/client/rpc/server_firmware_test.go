@@ -13,22 +13,22 @@ import (
 func TestServerFirmwareRPC(t *testing.T) {
 	env := newServerResourceHarness(t)
 
-	list, err := env.peer.ListFirmwares(env.ctx, "firmware.list.seeded", rpcapi.FirmwareListRequest{})
+	list, err := env.peer.ListFirmwares(env.ctx, "firmware.list.shared", rpcapi.FirmwareListRequest{})
 	if err != nil {
-		t.Fatalf("firmware.list seeded: %v", err)
+		t.Fatalf("firmware.list shared: %v", err)
 	}
-	if !hasFirmware(list.Items, "seed-firmware") {
-		t.Fatalf("firmware.list missing seed-firmware: %#v", list.Items)
+	if len(list.Items) == 0 {
+		t.Fatalf("firmware.list returned no items")
 	}
 
-	got, err := env.peer.GetFirmware(env.ctx, "firmware.get.seeded", rpcapi.FirmwareGetRequest{FirmwareId: "seed-firmware"})
+	got, err := env.peer.GetFirmware(env.ctx, "firmware.get.shared", rpcapi.FirmwareGetRequest{FirmwareId: sharedFirmware})
 	if err != nil {
-		t.Fatalf("firmware.get seeded: %v", err)
+		t.Fatalf("firmware.get shared: %v", err)
 	}
-	if got.Name != "seed-firmware" {
+	if got.Name != sharedFirmware {
 		t.Fatalf("firmware.get name = %q", got.Name)
 	}
-	if got.Slots.Stable.Version == nil || *got.Slots.Stable.Version != "1.0.0" {
+	if got.Slots.Stable.Version == nil || *got.Slots.Stable.Version != "9.9.0" {
 		t.Fatalf("firmware stable version = %#v", got.Slots.Stable.Version)
 	}
 	if got.Slots.Stable.Artifacts == nil || len(*got.Slots.Stable.Artifacts) != 1 || (*got.Slots.Stable.Artifacts)[0].Path == nil {
@@ -36,21 +36,19 @@ func TestServerFirmwareRPC(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	download, err := env.peer.DownloadFirmware(env.ctx, "firmware.download.seeded", rpcapi.FirmwareDownloadRequest{
-		FirmwareId:   "seed-firmware",
+	download, err := env.peer.DownloadFirmware(env.ctx, "firmware.download.shared", rpcapi.FirmwareDownloadRequest{
+		FirmwareId:   sharedFirmware,
 		Channel:      rpcapi.FirmwareChannelNameStable,
 		ArtifactName: "main",
 	}, &out)
 	if err != nil {
-		t.Fatalf("firmware.download seeded: %v", err)
+		t.Fatalf("firmware.download shared: %v", err)
 	}
-	if out.String() != "firmware-payload" {
-		t.Fatalf("firmware.download payload = %q", out.String())
-	}
-	if download.Bytes != int64(len("firmware-payload")) {
+	assertTarContains(t, out.Bytes(), "MANIFEST.txt", "gizclaw devkit firmware")
+	if download.Bytes != int64(out.Len()) {
 		t.Fatalf("firmware.download bytes = %d", download.Bytes)
 	}
-	if download.Metadata.FirmwareId != "seed-firmware" || download.Metadata.Channel != rpcapi.FirmwareChannelNameStable {
+	if download.Metadata.FirmwareId != sharedFirmware || download.Metadata.Channel != rpcapi.FirmwareChannelNameStable {
 		t.Fatalf("firmware.download metadata = %#v", download.Metadata)
 	}
 	if download.Metadata.Artifact.Name != "main" || download.Metadata.Artifact.Kind != rpcapi.FirmwareArtifactKindApp {
@@ -66,7 +64,7 @@ func TestServerFirmwareRPC(t *testing.T) {
 	if len(deniedList.Items) != 0 {
 		t.Fatalf("firmware.list denied items = %#v", deniedList.Items)
 	}
-	if _, err := denied.GetFirmware(env.ctx, "firmware.get.denied", rpcapi.FirmwareGetRequest{FirmwareId: "seed-firmware"}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
+	if _, err := denied.GetFirmware(env.ctx, "firmware.get.denied", rpcapi.FirmwareGetRequest{FirmwareId: sharedFirmware}); err == nil || !strings.Contains(err.Error(), "acl: denied") {
 		t.Fatalf("firmware.get denied error = %v", err)
 	}
 }

@@ -96,7 +96,7 @@ func TestAdminFirmwaresUserStory(t *testing.T) {
 }
 
 func TestAdminFirmwaresSharedSetupCatalog(t *testing.T) {
-	h := clitest.NewSetupHarness(t, "511-admin-firmwares-shared-catalog")
+	h := clitest.NewSetupHarness(t, "511-admin-firmwares-shared-resources")
 	h.CreateContext("admin-a").MustSucceed(t)
 	h.RegisterContext("admin-a", "--sn", "admin-sn").MustSucceed(t)
 

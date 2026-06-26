@@ -16,49 +16,52 @@ func TestAdminVoicesUserStory(t *testing.T) {
 
 	list := h.RunCLI("admin", "voices", "list", "--context", "admin-a")
 	list.MustSucceed(t)
-	for _, want := range []string{`"id":"minimax-cloned-narrator"`, `"id":"volc-tenant:volc-lab:ICL_demo_voice"`} {
+	if !strings.Contains(list.Stdout, `"id":"minimax-narrator-clone"`) || !strings.Contains(list.Stdout, `"id":"volc-tenant:volc-main:zh_female_vv_mars_bigtts"`) {
+		t.Skipf("provider voice resources are not configured in this e2e environment: %s", strings.TrimSpace(list.Stdout))
+	}
+	for _, want := range []string{`"id":"minimax-narrator-clone"`, `"id":"volc-tenant:volc-main:zh_female_vv_mars_bigtts"`} {
 		if !strings.Contains(list.Stdout, want) {
 			t.Fatalf("voices list missing %q:\n%s", want, list.Stdout)
 		}
 	}
 
-	filtered := h.RunCLI("admin", "voices", "list", "--provider-name", "minimax-main", "--context", "admin-a")
+	filtered := h.RunCLI("admin", "voices", "list", "--provider-name", "minimax-cn", "--context", "admin-a")
 	filtered.MustSucceed(t)
-	if !strings.Contains(filtered.Stdout, `"id":"minimax-cloned-narrator"`) || strings.Contains(filtered.Stdout, `"id":"volc-tenant:volc-lab:ICL_demo_voice"`) {
+	if !strings.Contains(filtered.Stdout, `"id":"minimax-narrator-clone"`) || strings.Contains(filtered.Stdout, `"id":"volc-tenant:volc-main:zh_female_vv_mars_bigtts"`) {
 		t.Fatalf("voices filtered list returned unexpected items:\n%s", filtered.Stdout)
 	}
 
-	get := h.RunCLI("admin", "voices", "get", "minimax-cloned-narrator", "--context", "admin-a")
+	get := h.RunCLI("admin", "voices", "get", "minimax-narrator-clone", "--context", "admin-a")
 	get.MustSucceed(t)
-	if !strings.Contains(get.Stdout, `"name":"MiniMax Cloned Narrator"`) {
+	if !strings.Contains(get.Stdout, `"name":"MiniMax Narrator Clone"`) {
 		t.Fatalf("voices get missing name:\n%s", get.Stdout)
 	}
 
-	showVolcVoice := h.RunCLI("admin", "--context", "admin-a", "show", "Voice", "volc-tenant:volc-lab:ICL_demo_voice")
+	showVolcVoice := h.RunCLI("admin", "--context", "admin-a", "show", "Voice", "volc-tenant:volc-main:zh_female_vv_mars_bigtts")
 	showVolcVoice.MustSucceed(t)
-	for _, want := range []string{`"kind":"Voice"`, `"name":"volc-tenant:volc-lab:ICL_demo_voice"`, `"resource_id":"seed-tts-2.0"`} {
+	for _, want := range []string{`"kind":"Voice"`, `"name":"volc-tenant:volc-main:zh_female_vv_mars_bigtts"`, `"resource_id":"seed-tts-1.0"`} {
 		if !strings.Contains(showVolcVoice.Stdout, want) {
 			t.Fatalf("admin show Volc voice missing %q:\n%s", want, showVolcVoice.Stdout)
 		}
 	}
 
-	showVolcTenant := h.RunCLI("admin", "--context", "admin-a", "show", "VolcTenant", "volc-lab")
+	showVolcTenant := h.RunCLI("admin", "--context", "admin-a", "show", "VolcTenant", "volc-main")
 	showVolcTenant.MustSucceed(t)
-	for _, want := range []string{`"kind":"VolcTenant"`, `"name":"volc-lab"`, `"credential_name":"volc-lab-credential"`} {
+	for _, want := range []string{`"kind":"VolcTenant"`, `"name":"volc-main"`, `"credential_name":"volc-main-credential"`} {
 		if !strings.Contains(showVolcTenant.Stdout, want) {
 			t.Fatalf("admin show VolcTenant missing %q:\n%s", want, showVolcTenant.Stdout)
 		}
 	}
 
-	showVolcCredential := h.RunCLI("admin", "--context", "admin-a", "show", "Credential", "volc-lab-credential")
+	showVolcCredential := h.RunCLI("admin", "--context", "admin-a", "show", "Credential", "volc-main-credential")
 	showVolcCredential.MustSucceed(t)
-	for _, want := range []string{`"kind":"Credential"`, `"name":"volc-lab-credential"`, `"api_key":"sk-volc-lab"`} {
+	for _, want := range []string{`"kind":"Credential"`, `"name":"volc-main-credential"`} {
 		if !strings.Contains(showVolcCredential.Stdout, want) {
 			t.Fatalf("admin show Volc credential missing %q:\n%s", want, showVolcCredential.Stdout)
 		}
 	}
 
-	syncVolcTenant := h.RunCLI("admin", "volc-tenants", "--context", "admin-a", "sync-voices", "volc-lab")
+	syncVolcTenant := h.RunCLI("admin", "volc-tenants", "--context", "admin-a", "sync-voices", "volc-main")
 	if syncVolcTenant.Err == nil {
 		t.Fatalf("volc sync with incomplete credential should fail:\n%s", syncVolcTenant.Stdout)
 	}

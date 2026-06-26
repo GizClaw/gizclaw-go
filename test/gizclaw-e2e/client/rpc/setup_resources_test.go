@@ -33,7 +33,7 @@ const (
 func newSharedSetupRPCHarness(t *testing.T) *sharedSetupRPCHarness {
 	t.Helper()
 
-	h := clitest.NewSetupHarness(t, "client-rpc-shared-catalog")
+	h := clitest.NewSetupHarness(t, "client-rpc-shared-resources")
 	configHome := getenvDefault("GIZCLAW_E2E_CLIENT_CONFIG_HOME", filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "gizclaw-config-home"))
 	contextName := getenvDefault("GIZCLAW_E2E_CLIENT_CONTEXT", "e2e-client")
 	h.SetContextAlias("e2e-client", configHome, contextName)
@@ -45,7 +45,7 @@ func newSharedSetupRPCHarness(t *testing.T) *sharedSetupRPCHarness {
 	return &sharedSetupRPCHarness{ctx: ctx, h: h, peer: peer}
 }
 
-func TestSharedSetupRPCCatalogPagination(t *testing.T) {
+func TestSharedSetupRPCResourcesPagination(t *testing.T) {
 	env := newSharedSetupRPCHarness(t)
 
 	workflowNames := collectWorkflowNames(t, env.ctx, env.peer, 25)
@@ -53,17 +53,17 @@ func TestSharedSetupRPCCatalogPagination(t *testing.T) {
 	requirePrefixCount(t, workflowNames, "flowcraft-scenario-", 120)
 
 	workspaceNames := collectWorkspaceNames(t, env.ctx, env.peer, 25)
-	requireName(t, workspaceNames, "workspace-support-demo")
-	requireName(t, workspaceNames, "workspace-history-demo")
+	requireName(t, workspaceNames, "support-desk-workspace")
+	requireName(t, workspaceNames, "family-circle-chatroom-workspace")
 	requirePrefixCount(t, workspaceNames, "workspace-scenario-", 120)
 
 	modelIDs := collectModelIDs(t, env.ctx, env.peer, 25)
-	requireName(t, modelIDs, "openai-catalog-chat")
-	requirePrefixCount(t, modelIDs, "openai-catalog-chat-", 80)
+	requireName(t, modelIDs, "fake-openai-chat-000")
+	requirePrefixCount(t, modelIDs, "fake-openai-chat-", 80)
 
 	credentialNames := collectCredentialNames(t, env.ctx, env.peer, 25)
-	requireName(t, credentialNames, "openai-catalog-credential")
-	requirePrefixCount(t, credentialNames, "openai-catalog-credential-", 50)
+	requireName(t, credentialNames, "fake-openai-credential-000")
+	requirePrefixCount(t, credentialNames, "fake-openai-credential-", 50)
 
 	firmwareNames := collectFirmwareNames(t, env.ctx, env.peer, 25)
 	requireName(t, firmwareNames, "devkit-firmware-main")
@@ -164,7 +164,7 @@ func TestSharedSetupRPCMutationFixtures(t *testing.T) {
 	}
 
 	_, _ = env.peer.DeleteModel(env.ctx, "shared.model.delete.preclean", rpcapi.ModelDeleteRequest{Id: "mutation-openai-model"})
-	createdModel, err := env.peer.CreateModel(env.ctx, "shared.model.create", rpcModel("mutation-openai-model", "openai-lab"))
+	createdModel, err := env.peer.CreateModel(env.ctx, "shared.model.create", rpcModel("mutation-openai-model", "openai-main"))
 	if err != nil {
 		t.Fatalf("model.create mutation-openai-model: %v", err)
 	}

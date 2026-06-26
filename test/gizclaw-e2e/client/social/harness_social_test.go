@@ -4,7 +4,6 @@ package social_test
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -19,23 +18,13 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 	clitest "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/cmd"
-	"github.com/goccy/go-yaml"
 )
 
 func newSocialSimulatorHarness(t *testing.T) *clitest.Harness {
 	t.Helper()
 
 	h := clitest.NewSetupHarness(t, "client-social")
-	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "--sn", "client-social-admin-sn").MustSucceed(t)
-	chatroomWorkflow := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "resources", "04-workflows", "03-chatroom.yaml")
-	admin := h.ConnectClientFromContext("admin-a")
-	defer admin.Close()
-	api, err := admin.ServerAdminClient()
-	if err != nil {
-		t.Fatalf("create admin client: %v", err)
-	}
-	applySocialResourceFile(t, api, chatroomWorkflow)
+	configureSocialAdminContext(t, h)
 	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT", "client-social-peer-a-sn")
 	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT", "client-social-peer-b-sn")
 	for _, peer := range []string{"peer-c", "peer-d"} {
@@ -43,6 +32,20 @@ func newSocialSimulatorHarness(t *testing.T) *clitest.Harness {
 		h.RegisterContext(peer, "--sn", "client-social-"+peer+"-sn").MustSucceed(t)
 	}
 	return h
+}
+
+func configureSocialAdminContext(t *testing.T, h *clitest.Harness) {
+	t.Helper()
+
+	configHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME"))
+	if configHome == "" {
+		configHome = filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home")
+	}
+	contextName := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONTEXT"))
+	if contextName == "" {
+		contextName = "e2e-admin"
+	}
+	h.SetContextAlias("admin-a", configHome, contextName)
 }
 
 func configureSocialPeerContext(t *testing.T, h *clitest.Harness, alias, homeEnv, contextEnv, sn string) {
@@ -63,32 +66,6 @@ func configureSocialPeerContext(t *testing.T, h *clitest.Harness, alias, homeEnv
 	}
 	h.SetContextAlias(alias, configHome, contextName)
 	h.RegisterContext(alias, "--sn", sn).MustSucceed(t)
-}
-
-func applySocialResourceFile(t *testing.T, api *adminservice.ClientWithResponses, resourcePath string) {
-	t.Helper()
-
-	data, err := os.ReadFile(resourcePath)
-	if err != nil {
-		t.Fatalf("read social resource %s: %v", resourcePath, err)
-	}
-	jsonData, err := yaml.YAMLToJSON(data)
-	if err != nil {
-		t.Fatalf("convert social resource %s to JSON: %v", resourcePath, err)
-	}
-	var resource apitypes.Resource
-	if err := json.Unmarshal(jsonData, &resource); err != nil {
-		t.Fatalf("decode social resource %s: %v", resourcePath, err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	resp, err := api.ApplyResourceWithResponse(ctx, resource)
-	if err != nil {
-		t.Fatalf("apply social resource %s: %v", resourcePath, err)
-	}
-	if resp.JSON200 == nil {
-		t.Fatalf("apply social resource %s status %d: %s", resourcePath, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
-	}
 }
 
 func setSocialChatWorkspaceInputMode(t *testing.T, h *clitest.Harness, workspaceName string, input apitypes.WorkspaceInputMode) {
