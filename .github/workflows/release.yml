@@ -129,7 +129,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           short_sha="${GITHUB_SHA::7}"
-          tag="main-build-${GITHUB_RUN_NUMBER}-${short_sha}"
+          tag="main-latest"
           assets=(
             ".tmp/release/gizclaw-linux-amd64/gizclaw-linux-amd64#gizclaw-linux-amd64" \
             ".tmp/release/gizclaw-linux-arm64/gizclaw-linux-arm64#gizclaw-linux-arm64" \
@@ -137,24 +137,22 @@ jobs:
           )
 
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "${assets[@]}" --clobber
-          else
-            gh release create "$tag" "${assets[@]}" \
-              --target "$GITHUB_SHA" \
-              --title "main build ${short_sha}" \
-              --notes "Automated release for ${GITHUB_SHA}."
+            gh release delete "$tag" --yes --cleanup-tag
           fi
 
-      - name: Prune old automated releases
+          gh release create "$tag" "${assets[@]}" \
+            --target "$GITHUB_SHA" \
+            --title "main latest ${short_sha}" \
+            --notes "Automated release for ${GITHUB_SHA}."
+
+      - name: Prune legacy automated releases
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          retain=20
           mapfile -t old_tags < <(
             gh release list --limit 100 --order desc --json tagName \
-              --jq '.[] | select(.tagName | startswith("main-build-")) | .tagName' \
-              | tail -n +"$((retain + 1))"
+              --jq '.[] | select(.tagName | startswith("main-build-")) | .tagName'
           )
 
           for tag in "${old_tags[@]}"; do
