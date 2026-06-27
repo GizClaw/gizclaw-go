@@ -81,21 +81,7 @@ func TestSharedSetupRPCFirmwareDownloadFixture(t *testing.T) {
 		t.Fatalf("firmware artifact = %#v", got.Slots.Stable.Artifact)
 	}
 
-	var out bytes.Buffer
-	download, err := env.peer.DownloadFirmware(env.ctx, "shared.firmware.files.download", rpcapi.FirmwareFilesDownloadRequest{
-		FirmwareId: "devkit-firmware-main",
-		Channel:    rpcapi.FirmwareChannelNameStable,
-		Path:       "MANIFEST.txt",
-	}, &out)
-	if err != nil {
-		t.Fatalf("firmware.files.download devkit-firmware-main: %v", err)
-	}
-	if download.Bytes != int64(out.Len()) {
-		t.Fatalf("firmware.download bytes = %d, payload len = %d", download.Bytes, out.Len())
-	}
-	if !strings.Contains(out.String(), "gizclaw devkit firmware") {
-		t.Fatalf("firmware manifest = %q", out.String())
-	}
+	assertFirmwareBundleRPCDownloads(t, env.ctx, env.peer, "shared.firmware.files.download", "devkit-firmware-main")
 }
 
 func TestSharedSetupRPCSocialFixtures(t *testing.T) {

@@ -45,6 +45,19 @@ func TestFirmwareSharedSetupDownload(t *testing.T) {
 	if !bytes.Contains(payload, []byte("gizclaw devkit firmware")) {
 		t.Fatalf("downloaded firmware manifest missing text")
 	}
+
+	binPath := filepath.Join(h.SandboxDir, "main.bin")
+	binDownload := mustRunCLIJSON[firmwareDownloadCLIResponse](t, h, "connect", "firmware", "download", "--firmware-id", "devkit-firmware-main", "--channel", "stable", "--path", "firmware/main.bin", "--output", binPath, "--context", "device-a")
+	if binDownload.Bytes <= 0 || binDownload.Metadata.File.Path != "firmware/main.bin" {
+		t.Fatalf("firmware bin download = %#v", binDownload)
+	}
+	binPayload, err := os.ReadFile(binPath)
+	if err != nil {
+		t.Fatalf("read downloaded firmware bin: %v", err)
+	}
+	if !bytes.Contains(binPayload, []byte("GIZCLAW_MAIN_FIRMWARE_V1")) {
+		t.Fatalf("downloaded firmware bin missing marker")
+	}
 }
 
 type firmwareDownloadCLIResponse struct {

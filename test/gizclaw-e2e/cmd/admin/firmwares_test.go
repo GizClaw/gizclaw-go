@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,7 +42,13 @@ func TestAdminFirmwaresUserStory(t *testing.T) {
 		t.Fatalf("write firmware file: %v", err)
 	}
 	appTarPath := filepath.Join(h.SandboxDir, "app.tar")
-	writeFirmwareTarFile(t, appTarPath, map[string]string{"firmware.bin": "app firmware payload"})
+	writeFirmwareTarFile(t, appTarPath, map[string]string{
+		"MANIFEST.txt":            "cmd firmware artifact bundle",
+		"firmware/main.bin":       "app firmware payload",
+		"firmware/voice_dsp.bin":  "voice dsp firmware payload",
+		"assets/icons/status.png": "png firmware asset payload",
+		"config/device.json":      `{"modules":["main","voice_dsp"]}`,
+	})
 	dataTarPath := filepath.Join(h.SandboxDir, "data.tar")
 	writeFirmwareTarFile(t, dataTarPath, map[string]string{"assets/data.txt": "data firmware payload"})
 
@@ -60,6 +67,38 @@ func TestAdminFirmwaresUserStory(t *testing.T) {
 	uploadApp := h.RunCLI("admin", "firmwares", "upload-artifact", "devkit", "--channel", "stable", "-f", appTarPath, "--context", "admin-a")
 	uploadApp.MustSucceed(t)
 	assertContains(t, uploadApp.Stdout, `"tar_path":"devkit/stable/artifact/artifact.tar"`, `"sha256":`)
+
+	artifactList := h.RunCLI("admin", "firmwares", "artifact", "ls", "devkit", "--channel", "stable", "--path", "firmware", "--context", "admin-a")
+	artifactList.MustSucceed(t)
+	assertContains(t, artifactList.Stdout, `"path":"firmware/main.bin"`, `"path":"firmware/voice_dsp.bin"`)
+
+	artifactTree := h.RunCLI("admin", "firmwares", "artifact", "tree", "devkit", "--channel", "stable", "--context", "admin-a")
+	artifactTree.MustSucceed(t)
+	assertContains(t, artifactTree.Stdout, `"path":"assets/icons/status.png"`, `"path":"config/device.json"`, `"path":"firmware/main.bin"`)
+
+	artifactStat := h.RunCLI("admin", "firmwares", "artifact", "stat", "devkit", "--channel", "stable", "--path", "assets/icons/status.png", "--context", "admin-a")
+	artifactStat.MustSucceed(t)
+	assertContains(t, artifactStat.Stdout, `"path":"assets/icons/status.png"`, `"type":"file"`)
+
+	entryDownloadPath := filepath.Join(h.SandboxDir, "artifact-main.bin")
+	artifactDownload := h.RunCLI("admin", "firmwares", "artifact", "dl", "devkit", "--channel", "stable", "--path", "firmware/main.bin", "--output", entryDownloadPath, "--context", "admin-a")
+	artifactDownload.MustSucceed(t)
+	assertContains(t, artifactDownload.Stdout, `"output":"`+entryDownloadPath+`"`)
+	assertFileContent(t, entryDownloadPath, "app firmware payload")
+
+	tarDownloadPath := filepath.Join(h.SandboxDir, "stable-artifact.tar")
+	artifactTar := h.RunCLI("admin", "firmwares", "download-artifact", "devkit", "--channel", "stable", "--output", tarDownloadPath, "--context", "admin-a")
+	artifactTar.MustSucceed(t)
+	assertContains(t, artifactTar.Stdout, `"output":"`+tarDownloadPath+`"`)
+	assertTarContains(t, tarDownloadPath, "firmware/main.bin", "assets/icons/status.png", "config/device.json")
+
+	uploadDevelop := h.RunCLI("admin", "firmwares", "upload-artifact", "devkit", "--channel", "develop", "-f", dataTarPath, "--context", "admin-a")
+	uploadDevelop.MustSucceed(t)
+	assertContains(t, uploadDevelop.Stdout, `"tar_path":"devkit/develop/artifact/artifact.tar"`)
+
+	deleteDevelop := h.RunCLI("admin", "firmwares", "delete-artifact", "devkit", "--channel", "develop", "--context", "admin-a")
+	deleteDevelop.MustSucceed(t)
+	assertContains(t, deleteDevelop.Stdout, `"name":"devkit"`)
 
 	uploadData := h.RunCLI("admin", "firmwares", "upload-artifact", "devkit", "--channel", "pending", "-f", dataTarPath, "--context", "admin-a")
 	uploadData.MustSucceed(t)
@@ -157,17 +196,11 @@ func assertDeviceFirmwareRPC(t *testing.T, h *clitest.Harness, contextName strin
 	if get.Slots.Stable.Artifact == nil {
 		t.Fatalf("firmware get = %#v", get)
 	}
-	download := mustRunCLIJSON[firmwareDownloadCLIResponse](t, h, "connect", "firmware", "download", "--firmware-id", "devkit", "--channel", "stable", "--path", "firmware.bin", "--output", outputPath, "--context", contextName)
-	if download.Bytes != 20 || download.Metadata.File.Path != "firmware.bin" {
+	download := mustRunCLIJSON[firmwareDownloadCLIResponse](t, h, "connect", "firmware", "download", "--firmware-id", "devkit", "--channel", "stable", "--path", "firmware/main.bin", "--output", outputPath, "--context", contextName)
+	if download.Bytes != 20 || download.Metadata.File.Path != "firmware/main.bin" {
 		t.Fatalf("firmware download = %#v", download)
 	}
-	payload, err := os.ReadFile(outputPath)
-	if err != nil {
-		t.Fatalf("read downloaded firmware: %v", err)
-	}
-	if string(payload) != "app firmware payload" {
-		t.Fatalf("downloaded firmware payload = %q", string(payload))
-	}
+	assertFileContent(t, outputPath, "app firmware payload")
 }
 
 type firmwareDownloadCLIResponse struct {
@@ -196,6 +229,43 @@ func writeFirmwareTarFile(t *testing.T, filePath string, files map[string]string
 	}
 	if err := tw.Close(); err != nil {
 		t.Fatalf("close tar %s: %v", filePath, err)
+	}
+}
+
+func assertFileContent(t *testing.T, filePath string, want string) {
+	t.Helper()
+	payload, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", filePath, err)
+	}
+	if string(payload) != want {
+		t.Fatalf("%s payload = %q, want %q", filePath, string(payload), want)
+	}
+}
+
+func assertTarContains(t *testing.T, filePath string, paths ...string) {
+	t.Helper()
+	f, err := os.Open(filePath)
+	if err != nil {
+		t.Fatalf("open tar %s: %v", filePath, err)
+	}
+	defer f.Close()
+	seen := make(map[string]bool)
+	tr := tar.NewReader(f)
+	for {
+		header, err := tr.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("read tar %s: %v", filePath, err)
+		}
+		seen[header.Name] = true
+	}
+	for _, path := range paths {
+		if !seen[path] {
+			t.Fatalf("tar %s missing %q; seen=%v", filePath, path, seen)
+		}
 	}
 }
 

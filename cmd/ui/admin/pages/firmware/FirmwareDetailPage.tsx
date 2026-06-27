@@ -527,7 +527,7 @@ function ArtifactStatsDialog({
                   ["Path", entry.path],
                   ["Size", formatBytes(entry.size)],
                   ["Content type", entry.content_type],
-                  ["Mode", entry.mode],
+                  ["Mode", String(entry.mode)],
                   ["Modified", entry.mod_time],
                 ]}
                 title="Selected Entry"
