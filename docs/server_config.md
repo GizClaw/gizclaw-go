@@ -9,9 +9,12 @@ business settings such as TTLs and system task generators.
 ## Example
 
 ```yaml
-# Address the GizClaw server listens on.
-# Use ":9820" to listen on all interfaces, or "127.0.0.1:9820" for local-only.
-listen: ":9820"
+# Host and ports the GizClaw server binds.
+# public-api-port serves HTTP public APIs and the fixed WebRTC signaling path.
+# noise-udp-port serves noise-protocol-over-udp.
+host: 0.0.0.0
+public-api-port: 9820
+noise-udp-port: 9820
 
 # Optional transport cipher mode for giznet connections.
 # Supported values are:
@@ -20,6 +23,12 @@ listen: ":9820"
 #   plaintext     - no transport encryption, for local tests only
 # Omit or leave empty to use the command/runtime default.
 cipher-mode: chacha_poly
+
+# WebRTC transport settings.
+# The signaling path is fixed at /giznet/webrtc/v1/offer and is served on
+# public-api-port. ice-port serves WebRTC ICE over UDP and passive ICE-TCP.
+webrtc:
+  ice-port: 9821
 
 # Optional admin public key. When set, admin HTTP/RPC calls must authenticate as
 # this key. Leave empty only for local development or tests that inject runtime
@@ -254,6 +263,78 @@ system_tasks:
     generator: model/qwen-flash
 ```
 
+## Transport Config
+
+The server config uses explicit host and port fields. Do not infer one
+transport port from another.
+
+```yaml
+host: 0.0.0.0
+public-api-port: 9820
+noise-udp-port: 9820
+cipher-mode: chacha_poly
+
+webrtc:
+  ice-port: 9821
+```
+
+Binding direction:
+
+- `host:public-api-port/tcp` serves the public HTTP API and the fixed WebRTC
+  signaling path `/giznet/webrtc/v1/offer`.
+- `host:noise-udp-port/udp` serves `noise-protocol-over-udp`.
+- `host:webrtc.ice-port/udp` serves WebRTC ICE UDP.
+- `host:webrtc.ice-port/tcp` serves WebRTC passive ICE-TCP.
+
+Default ports:
+
+- `public-api-port`: `9820`
+- `noise-udp-port`: `9820`
+- `webrtc.ice-port`: `9821`
+
+## CLI Context Config
+
+CLI contexts use the same explicit host/port model. The server public key is
+the trust anchor for both transports.
+
+Noise context:
+
+```yaml
+server:
+  host: 127.0.0.1
+  public-api-port: 9820
+  noise-udp-port: 9820
+  public-key: <server-public-key>
+  transport: noise
+  cipher-mode: chacha_poly
+```
+
+WebRTC context:
+
+```yaml
+server:
+  host: 127.0.0.1
+  public-api-port: 9820
+  noise-udp-port: 9820
+  ice-port: 9821
+  public-key: <server-public-key>
+  transport: webrtc
+  cipher-mode: chacha_poly
+```
+
+The WebRTC signaling path is fixed and must not be stored in the context:
+
+```text
+/giznet/webrtc/v1/offer
+```
+
+Transport selection:
+
+- `transport: noise` dials `host:noise-udp-port` over UDP.
+- `transport: webrtc` sends the sealed HTTP offer to
+  `http://host:public-api-port/giznet/webrtc/v1/offer` and uses `ice-port` for
+  WebRTC ICE UDP/TCP.
+
 ## Field Notes
 
 - `storage` contains physical backends. Currently supported `kind` values are
@@ -306,6 +387,8 @@ system_tasks:
 - `friend_groups.message_max_audio_bytes` limits the decoded audio payload accepted by
   friend group message send before writing bytes to the configured object store.
 - `cipher-mode` accepts `chacha_poly`, `aes_256_gcm`, `plaintext`, or empty.
+- `host`, `public-api-port`, `noise-udp-port`, and `webrtc.ice-port` are the
+  transport binding fields for the command server.
 - Asset services should use object-store operations such as get, put, delete,
   delete-prefix, and list. They should not require directory creation or rename
   semantics that are awkward for OSS-style backends.
