@@ -7,12 +7,12 @@
     "translation": "volc-ast-translate"
   },
   "workflow": {
-    "name": "volc-ast-translate-zh-jp",
-    "description": "AST Chinese to Japanese speech translation workflow",
+    "name": "volc-ast-translate-zh-en",
+    "description": "AST Chinese to English speech translation workflow",
     "translation_model": "volc-ast-translate",
     "parameters": {
       "input": "push-to-talk",
-      "lang_pair": "zh/jp",
+      "lang_pair": "zh/en",
       "voice": {
         "speaker_id": "zh_female_vv_uranus_bigtts"
       }

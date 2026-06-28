@@ -16,10 +16,17 @@ import (
 func TestFactoryMergesWorkflowAndWorkspaceParams(t *testing.T) {
 	langPair := "zh/ja"
 	mode := apitypes.ASTTranslateModeS2s
+	var voice apitypes.ASTTranslateVoiceParameters
+	if err := voice.FromASTTranslateInternalSpeakerParameters(apitypes.ASTTranslateInternalSpeakerParameters{
+		SpeakerId: "workspace-speaker",
+	}); err != nil {
+		t.Fatalf("FromASTTranslateInternalSpeakerParameters() error = %v", err)
+	}
 	var workspaceParams apitypes.WorkspaceParameters
 	if err := workspaceParams.FromASTTranslateWorkspaceParameters(apitypes.ASTTranslateWorkspaceParameters{
 		LangPair: &langPair,
 		Mode:     &mode,
+		Voice:    &voice,
 	}); err != nil {
 		t.Fatalf("FromASTTranslateWorkspaceParameters() error = %v", err)
 	}
@@ -31,6 +38,7 @@ func TestFactoryMergesWorkflowAndWorkspaceParams(t *testing.T) {
 				Driver: apitypes.WorkflowDriverAstTranslate,
 				AstTranslate: &apitypes.ASTTranslateWorkflowSpec{
 					TranslationModel: "ast-model",
+					SpeakerId:        stringPtr("workflow-speaker"),
 				},
 			},
 		},
@@ -50,7 +58,9 @@ func TestFactoryMergesWorkflowAndWorkspaceParams(t *testing.T) {
 	if !strings.HasPrefix(got, "model/ast-model?") ||
 		!strings.Contains(got, "source_language=zh") ||
 		!strings.Contains(got, "target_language=ja") ||
-		!strings.Contains(got, "mode=s2s") {
+		!strings.Contains(got, "mode=s2s") ||
+		!strings.Contains(got, "speaker_id=workspace-speaker") ||
+		strings.Contains(got, "workflow-speaker") {
 		t.Fatalf("pattern = %q, want AST translate params", got)
 	}
 }
