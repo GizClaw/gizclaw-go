@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
@@ -94,7 +95,9 @@ type Server struct {
 	manager     *Manager
 	peerService *PeerService
 	sessions    *publiclogin.SessionManager
+	listenerMu  sync.RWMutex
 	listeners   []giznet.Listener
+	closed      bool
 	httpHandler http.Handler
 	cleanupStop context.CancelFunc
 	cleanupDone <-chan struct{}
@@ -118,9 +121,12 @@ func (s *Server) Listen() error {
 	if s == nil {
 		return errors.New("gizclaw: nil server")
 	}
+	s.listenerMu.RLock()
 	if len(s.listeners) > 0 {
+		s.listenerMu.RUnlock()
 		return nil
 	}
+	s.listenerMu.RUnlock()
 	if err := s.init(); err != nil {
 		return err
 	}
@@ -143,15 +149,24 @@ func (s *Server) Listen() error {
 	if len(listeners) == 0 {
 		return giznet.ErrNilListener
 	}
+	s.listenerMu.Lock()
 	s.listeners = listeners
+	s.closed = false
+	s.listenerMu.Unlock()
 	s.startCleanup()
 	return nil
 }
 
 // Serve blocks serving accepted peer connections from listeners created by Listen.
 func (s *Server) Serve() error {
-	listeners := s.listeners
+	s.listenerMu.RLock()
+	listeners := append([]giznet.Listener(nil), s.listeners...)
+	closed := s.closed
+	s.listenerMu.RUnlock()
 	if len(listeners) == 0 {
+		if closed {
+			return nil
+		}
 		return giznet.ErrNilListener
 	}
 	var g errgroup.Group
@@ -228,7 +243,15 @@ func (s *Server) Close() error {
 		return nil
 	}
 	var errs []error
-	for _, listener := range s.listeners {
+	s.listenerMu.Lock()
+	listeners := append([]giznet.Listener(nil), s.listeners...)
+	hadListeners := len(s.listeners) > 0
+	s.listeners = nil
+	if hadListeners {
+		s.closed = true
+	}
+	s.listenerMu.Unlock()
+	for _, listener := range listeners {
 		if listener != nil {
 			errs = append(errs, listener.Close())
 		}
