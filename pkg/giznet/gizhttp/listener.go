@@ -9,9 +9,9 @@ import (
 )
 
 type listener struct {
-	conn    *giznet.Conn
+	conn    giznet.Conn
 	service uint64
-	inner   *giznet.ServiceListener
+	inner   giznet.ServiceListener
 }
 
 type listenerAddr struct {
@@ -19,7 +19,7 @@ type listenerAddr struct {
 	service uint64
 }
 
-func NewListener(conn *giznet.Conn, service uint64) net.Listener {
+func NewListener(conn giznet.Conn, service uint64) net.Listener {
 	return &listener{
 		conn:    conn,
 		service: service,

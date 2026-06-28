@@ -12,6 +12,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 	"github.com/goccy/go-yaml"
 )
 
@@ -318,7 +319,7 @@ func (c *config) validate() error {
 		return fmt.Errorf("server.public_key: %w", err)
 	}
 	if c.Server.CipherMode == "" {
-		c.Server.CipherMode = string(giznet.CipherModeChaChaPoly)
+		c.Server.CipherMode = string(giznoise.CipherModeChaChaPoly)
 	}
 	if c.Workflow.Name == "" && c.Workspace != "" {
 		c.Workflow.Name = c.Workspace
@@ -484,11 +485,11 @@ func (v *workspaceVoiceConfig) trim() {
 func normalizeCipherMode(mode string) string {
 	switch strings.ToLower(strings.ReplaceAll(mode, "-", "_")) {
 	case "", "chacha", "chacha_poly", "chacha20_poly1305":
-		return string(giznet.CipherModeChaChaPoly)
+		return string(giznoise.CipherModeChaChaPoly)
 	case "aes", "aes_gcm", "aes_256_gcm", "aes256_gcm":
-		return string(giznet.CipherModeAES256GCM)
+		return string(giznoise.CipherModeAES256GCM)
 	case "plain", "plaintext":
-		return string(giznet.CipherModePlaintext)
+		return string(giznoise.CipherModePlaintext)
 	default:
 		return mode
 	}

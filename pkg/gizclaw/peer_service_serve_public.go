@@ -12,7 +12,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
 )
 
-func (s *PeerService) servePublic(conn *giznet.Conn) error {
+func (s *PeerService) servePublic(conn giznet.Conn) error {
 	app := fiber.New(fiber.Config{DisableStartupMessage: true})
 	app.Use(func(ctx *fiber.Ctx) error {
 		base := ctx.UserContext()

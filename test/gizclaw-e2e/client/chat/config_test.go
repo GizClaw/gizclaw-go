@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
@@ -58,7 +59,7 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadConfig() error = %v", err)
 	}
-	if cfg.Server.CipherMode != string(giznet.CipherModeAES256GCM) {
+	if cfg.Server.CipherMode != string(giznoise.CipherModeAES256GCM) {
 		t.Fatalf("cipher mode = %q", cfg.Server.CipherMode)
 	}
 	if cfg.Workspace != "doubao-realtime-workflow" || cfg.Agent != "doubao-realtime" {
@@ -119,7 +120,7 @@ func TestLoadConfigJSONWithExplicitClientConfig(t *testing.T) {
 	if cfg.Timeout != "120s" || cfg.timeout != 120*time.Second {
 		t.Fatalf("default timeout = %q/%s", cfg.Timeout, cfg.timeout)
 	}
-	if cfg.Server.CipherMode != string(giznet.CipherModeChaChaPoly) {
+	if cfg.Server.CipherMode != string(giznoise.CipherModeChaChaPoly) {
 		t.Fatalf("default cipher mode = %q", cfg.Server.CipherMode)
 	}
 }
@@ -274,7 +275,7 @@ func TestConfigWorkspaceMode(t *testing.T) {
 func writeSetupContextConfig(t *testing.T, path string, serverKey, clientKey *giznet.KeyPair, cipherMode string) {
 	t.Helper()
 	if cipherMode == "" {
-		cipherMode = string(giznet.CipherModeChaChaPoly)
+		cipherMode = string(giznoise.CipherModeChaChaPoly)
 	}
 	contextDir := filepath.Dir(path)
 	if err := os.MkdirAll(contextDir, 0o755); err != nil {
@@ -307,11 +308,11 @@ func TestLoadConfigErrors(t *testing.T) {
 
 func TestNormalizeCipherMode(t *testing.T) {
 	tests := map[string]string{
-		"":             string(giznet.CipherModeChaChaPoly),
-		"aes-gcm":      string(giznet.CipherModeAES256GCM),
-		"aes_256_gcm":  string(giznet.CipherModeAES256GCM),
-		"plaintext":    string(giznet.CipherModePlaintext),
-		"chacha-poly":  string(giznet.CipherModeChaChaPoly),
+		"":             string(giznoise.CipherModeChaChaPoly),
+		"aes-gcm":      string(giznoise.CipherModeAES256GCM),
+		"aes_256_gcm":  string(giznoise.CipherModeAES256GCM),
+		"plaintext":    string(giznoise.CipherModePlaintext),
+		"chacha-poly":  string(giznoise.CipherModeChaChaPoly),
 		"custom-value": "custom-value",
 	}
 	for in, want := range tests {

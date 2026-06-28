@@ -16,6 +16,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -28,7 +29,7 @@ const (
 type testServer struct {
 	server     *gizclaw.Server
 	addr       string
-	cipherMode giznet.CipherMode
+	cipherMode giznoise.CipherMode
 	errCh      chan error
 }
 
@@ -75,7 +76,7 @@ func startTestServer(t *testing.T) *testServer {
 	return startTestServerWithCipherMode(t, "")
 }
 
-func startTestServerWithCipherMode(t *testing.T, cipherMode giznet.CipherMode) *testServer {
+func startTestServerWithCipherMode(t *testing.T, cipherMode giznoise.CipherMode) *testServer {
 	t.Helper()
 
 	keyPair, err := giznet.GenerateKeyPair()
@@ -85,14 +86,23 @@ func startTestServerWithCipherMode(t *testing.T, cipherMode giznet.CipherMode) *
 
 	srv := &gizclaw.Server{
 		LocalStatic: *keyPair,
-		ListenAddr:  allocateUDPAddr(t),
-		CipherMode:  cipherMode,
 		PeerStore:   mustBadgerInMemory(t, nil),
+	}
+	addr := allocateUDPAddr(t)
+	srv.PeerListenerFactories = []gizclaw.PeerListenerFactory{
+		func(opts gizclaw.PeerListenerOptions) (giznet.Listener, error) {
+			return (&giznoise.ListenConfig{
+				Addr:             addr,
+				CipherMode:       cipherMode,
+				SecurityPolicy:   opts.SecurityPolicy,
+				PeerEventHandler: opts.PeerEventHandler,
+			}).Listen(opts.KeyPair)
+		},
 	}
 
 	ts := &testServer{
 		server:     srv,
-		addr:       srv.ListenAddr,
+		addr:       addr,
 		cipherMode: cipherMode,
 		errCh:      make(chan error, 1),
 	}
@@ -124,13 +134,13 @@ func newTestClient(t *testing.T, ts *testServer) *gizcli.Client {
 		t.Fatalf("GenerateKeyPair(client) error: %v", err)
 	}
 
-	client := &gizcli.Client{KeyPair: keyPair, CipherMode: ts.cipherMode}
+	client := &gizcli.Client{KeyPair: keyPair, DialTransport: testNoiseDialTransport(ts.cipherMode)}
 	startTestClient(t, client, ts.server.PublicKey(), ts.addr)
 	t.Cleanup(func() { _ = client.Close() })
 	return client
 }
 
-func waitForServerReady(addr string, pk giznet.PublicKey, cipherMode giznet.CipherMode, errCh <-chan error) error {
+func waitForServerReady(addr string, pk giznet.PublicKey, cipherMode giznoise.CipherMode, errCh <-chan error) error {
 	return waitUntil(testReadyTimeout, func() error {
 		select {
 		case err := <-errCh:
@@ -143,7 +153,7 @@ func waitForServerReady(addr string, pk giznet.PublicKey, cipherMode giznet.Ciph
 			return fmt.Errorf("GenerateKeyPair(ready check): %w", err)
 		}
 
-		client := &gizcli.Client{KeyPair: keyPair, CipherMode: cipherMode}
+		client := &gizcli.Client{KeyPair: keyPair, DialTransport: testNoiseDialTransport(cipherMode)}
 		if err := client.Dial(pk, addr); err != nil {
 			_ = client.Close()
 			return fmt.Errorf("dial ready check: %w", err)
@@ -174,6 +184,30 @@ func waitForServerReady(addr string, pk giznet.PublicKey, cipherMode giznet.Ciph
 		_ = client.Close()
 		return fmt.Errorf("probe server public ready: not ready")
 	})
+}
+
+func testNoiseDialTransport(cipherMode giznoise.CipherMode) gizcli.DialTransportFunc {
+	return func(key *giznet.KeyPair, serverPK giznet.PublicKey, serverAddr string, securityPolicy giznet.SecurityPolicy) (giznet.Listener, giznet.Conn, error) {
+		listener, err := (&giznoise.ListenConfig{
+			Addr:           ":0",
+			CipherMode:     cipherMode,
+			SecurityPolicy: securityPolicy,
+		}).Listen(key)
+		if err != nil {
+			return nil, nil, err
+		}
+		udpAddr, err := net.ResolveUDPAddr("udp", serverAddr)
+		if err != nil {
+			_ = listener.Close()
+			return nil, nil, err
+		}
+		conn, err := listener.Dial(serverPK, udpAddr)
+		if err != nil {
+			_ = listener.Close()
+			return nil, nil, err
+		}
+		return listener, conn, nil
+	}
 }
 
 func startTestClient(t *testing.T, c *gizcli.Client, serverPK giznet.PublicKey, addr string) {

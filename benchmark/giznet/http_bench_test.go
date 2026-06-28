@@ -9,6 +9,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func BenchmarkPublicHTTPRoundTrip(b *testing.B) {
@@ -23,7 +24,7 @@ func BenchmarkPublicHTTPRoundTrip(b *testing.B) {
 				b.Fatal(err)
 			}
 
-			serverListener := newBenchListenerNode(b, serverKey, giznet.ListenConfig{
+			serverListener := newBenchListenerNode(b, serverKey, giznoise.ListenConfig{
 				SecurityPolicy: benchSecurityPolicy{
 					allowService: func(_ giznet.PublicKey, service uint64) bool {
 						return service == 7

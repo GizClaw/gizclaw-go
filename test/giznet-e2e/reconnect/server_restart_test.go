@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 const echoService uint64 = 7001
@@ -52,7 +53,7 @@ func TestClientConnRecoversAfterServerRestart(t *testing.T) {
 }
 
 type echoServer struct {
-	listener *giznet.Listener
+	listener *giznoise.Listener
 	addr     *net.UDPAddr
 	done     chan error
 }
@@ -60,7 +61,7 @@ type echoServer struct {
 func startEchoServer(t *testing.T, key *giznet.KeyPair, addr string) *echoServer {
 	t.Helper()
 
-	var listener *giznet.Listener
+	var listener *giznoise.Listener
 	var err error
 	for attempt := range 20 {
 		listener, err = startListenerMaybe(t, key, addr)
@@ -81,7 +82,7 @@ func startEchoServer(t *testing.T, key *giznet.KeyPair, addr string) *echoServer
 	return server
 }
 
-func startListener(t *testing.T, key *giznet.KeyPair, addr string) *giznet.Listener {
+func startListener(t *testing.T, key *giznet.KeyPair, addr string) *giznoise.Listener {
 	t.Helper()
 	listener, err := startListenerMaybe(t, key, addr)
 	if err != nil {
@@ -90,9 +91,9 @@ func startListener(t *testing.T, key *giznet.KeyPair, addr string) *giznet.Liste
 	return listener
 }
 
-func startListenerMaybe(t *testing.T, key *giznet.KeyPair, addr string) (*giznet.Listener, error) {
+func startListenerMaybe(t *testing.T, key *giznet.KeyPair, addr string) (*giznoise.Listener, error) {
 	t.Helper()
-	listener, err := (&giznet.ListenConfig{
+	listener, err := (&giznoise.ListenConfig{
 		Addr:           addr,
 		SecurityPolicy: allowAllPolicy{},
 	}).Listen(key)
@@ -135,7 +136,7 @@ func (s *echoServer) Close() {
 	}
 }
 
-func roundTrip(t *testing.T, conn *giznet.Conn, payload []byte) []byte {
+func roundTrip(t *testing.T, conn giznet.Conn, payload []byte) []byte {
 	t.Helper()
 	stream, err := conn.Dial(echoService)
 	if err != nil {
@@ -156,7 +157,7 @@ func roundTrip(t *testing.T, conn *giznet.Conn, payload []byte) []byte {
 	return got
 }
 
-func drainUDP(u *giznet.UDP) {
+func drainUDP(u *giznoise.UDP) {
 	buf := make([]byte, 65535)
 	for {
 		if _, _, err := u.ReadFrom(buf); err != nil {

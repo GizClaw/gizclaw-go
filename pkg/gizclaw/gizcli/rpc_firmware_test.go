@@ -10,6 +10,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func TestDownloadFirmwareRejectsNilOutput(t *testing.T) {
@@ -132,7 +133,7 @@ func TestDownloadFirmwareReturnsRPCError(t *testing.T) {
 	}
 }
 
-func connectedFirmwareTestClient(t *testing.T) (*Client, *giznet.Conn, func()) {
+func connectedFirmwareTestClient(t *testing.T) (*Client, giznet.Conn, func()) {
 	t.Helper()
 	serverKey, err := giznet.GenerateKeyPair()
 	if err != nil {
@@ -142,7 +143,7 @@ func connectedFirmwareTestClient(t *testing.T) (*Client, *giznet.Conn, func()) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
-	serverListener, err := (&giznet.ListenConfig{
+	serverListener, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: clientSecurityPolicy{},
 	}).Listen(serverKey)
@@ -150,7 +151,7 @@ func connectedFirmwareTestClient(t *testing.T) (*Client, *giznet.Conn, func()) {
 		t.Fatalf("Listen(server) error = %v", err)
 	}
 
-	accepted := make(chan *giznet.Conn, 1)
+	accepted := make(chan giznet.Conn, 1)
 	acceptErr := make(chan error, 1)
 	go func() {
 		conn, err := serverListener.Accept()
@@ -161,13 +162,13 @@ func connectedFirmwareTestClient(t *testing.T) (*Client, *giznet.Conn, func()) {
 		accepted <- conn
 	}()
 
-	client := &Client{KeyPair: clientKey}
+	client := &Client{KeyPair: clientKey, DialTransport: testNoiseDialTransport()}
 	if err := client.Dial(serverKey.Public, serverListener.HostInfo().Addr.String()); err != nil {
 		_ = serverListener.Close()
 		t.Fatalf("Dial() error = %v", err)
 	}
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-accepted:
 	case err := <-acceptErr:
@@ -190,7 +191,7 @@ func connectedFirmwareTestClient(t *testing.T) (*Client, *giznet.Conn, func()) {
 
 func serveFirmwareRPCResponse[T any](
 	t *testing.T,
-	listener *giznet.ServiceListener,
+	listener giznet.ServiceListener,
 	wantMethod rpcapi.RPCMethod,
 	response T,
 	encode func(*rpcapi.RPCResponse_Result, T) error,

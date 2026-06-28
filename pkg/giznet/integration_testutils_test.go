@@ -12,6 +12,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/audio/stampedopus"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 const (
@@ -63,11 +64,11 @@ type ConnectedPeerPair struct {
 	ServerKey *giznet.KeyPair
 	ClientKey *giznet.KeyPair
 
-	ServerListener *giznet.Listener
-	ClientListener *giznet.Listener
+	ServerListener *giznoise.Listener
+	ClientListener *giznoise.Listener
 
-	ServerConn *giznet.Conn
-	ClientConn *giznet.Conn
+	ServerConn giznet.Conn
+	ClientConn giznet.Conn
 }
 
 // NewConnectedPeerPair connects a client Listener to a server Listener and
@@ -87,7 +88,7 @@ func NewConnectedPeerPair(t *testing.T) *ConnectedPeerPair {
 	serverListener := NewTestListener(t, serverKey)
 	clientListener := NewTestListener(t, clientKey)
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		c, err := serverListener.Accept()
@@ -105,7 +106,7 @@ func NewConnectedPeerPair(t *testing.T) *ConnectedPeerPair {
 		t.Fatalf("clientListener.Dial failed: %v", err)
 	}
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-acceptCh:
 	case err := <-errCh:
@@ -144,12 +145,12 @@ func (p *ConnectedPeerPair) Close() {
 }
 
 // NewTestListener returns a Listener on loopback that allows inbound peers and starts a UDP read loop.
-func NewTestListener(t *testing.T, key *giznet.KeyPair) *giznet.Listener {
+func NewTestListener(t *testing.T, key *giznet.KeyPair) *giznoise.Listener {
 	t.Helper()
-	return NewTestListenerConfig(t, giznet.ListenConfig{}, key)
+	return NewTestListenerConfig(t, giznoise.ListenConfig{}, key)
 }
 
-func NewTestListenerConfig(t *testing.T, cfg giznet.ListenConfig, key *giznet.KeyPair) *giznet.Listener {
+func NewTestListenerConfig(t *testing.T, cfg giznoise.ListenConfig, key *giznet.KeyPair) *giznoise.Listener {
 	t.Helper()
 	if cfg.Addr == "" {
 		cfg.Addr = "127.0.0.1:0"
@@ -166,7 +167,7 @@ func NewTestListenerConfig(t *testing.T, cfg giznet.ListenConfig, key *giznet.Ke
 }
 
 // ConnectTestListeners wires endpoints and runs client Connect to server.
-func ConnectTestListeners(t *testing.T, client *giznet.Listener, clientKey *giznet.KeyPair, server *giznet.Listener, serverKey *giznet.KeyPair) {
+func ConnectTestListeners(t *testing.T, client *giznoise.Listener, clientKey *giznet.KeyPair, server *giznoise.Listener, serverKey *giznet.KeyPair) {
 	t.Helper()
 	client.SetPeerEndpoint(serverKey.Public, server.HostInfo().Addr)
 	server.SetPeerEndpoint(clientKey.Public, client.HostInfo().Addr)
@@ -175,7 +176,7 @@ func ConnectTestListeners(t *testing.T, client *giznet.Listener, clientKey *gizn
 	}
 }
 
-func startReadLoop(u *giznet.UDP) {
+func startReadLoop(u *giznoise.UDP) {
 	go func() {
 		buf := make([]byte, 65535)
 		for {
@@ -187,9 +188,9 @@ func startReadLoop(u *giznet.UDP) {
 }
 
 // AcceptConnWithTimeout calls Listener.Accept with a timeout.
-func AcceptConnWithTimeout(l *giznet.Listener, timeout time.Duration) (*giznet.Conn, error) {
+func AcceptConnWithTimeout(l *giznoise.Listener, timeout time.Duration) (giznet.Conn, error) {
 	type result struct {
-		conn *giznet.Conn
+		conn giznet.Conn
 		err  error
 	}
 
@@ -207,7 +208,7 @@ func AcceptConnWithTimeout(l *giznet.Listener, timeout time.Duration) (*giznet.C
 	}
 }
 
-func writeTestEvent(c *giznet.Conn, evt testEvent) error {
+func writeTestEvent(c giznet.Conn, evt testEvent) error {
 	if err := evt.Validate(); err != nil {
 		return err
 	}
@@ -230,7 +231,7 @@ func decodeTestEvent(payload []byte) (testEvent, error) {
 	return evt, nil
 }
 
-func readTestEvent(c *giznet.Conn) (testEvent, error) {
+func readTestEvent(c giznet.Conn) (testEvent, error) {
 	proto, payload, err := readPacketWithTimeout(c, 5*time.Second)
 	if err != nil {
 		return testEvent{}, err
@@ -241,7 +242,7 @@ func readTestEvent(c *giznet.Conn) (testEvent, error) {
 	return decodeTestEvent(payload)
 }
 
-func writeTestOpusFrame(c *giznet.Conn, frame []byte) error {
+func writeTestOpusFrame(c giznet.Conn, frame []byte) error {
 	if _, _, ok := stampedopus.Unpack(frame); !ok {
 		return errors.New("invalid stamped opus frame")
 	}
@@ -249,7 +250,7 @@ func writeTestOpusFrame(c *giznet.Conn, frame []byte) error {
 	return err
 }
 
-func readTestOpusFrame(c *giznet.Conn) (uint64, []byte, error) {
+func readTestOpusFrame(c giznet.Conn) (uint64, []byte, error) {
 	proto, payload, err := readPacketWithTimeout(c, 5*time.Second)
 	if err != nil {
 		return 0, nil, err
@@ -264,7 +265,7 @@ func readTestOpusFrame(c *giznet.Conn) (uint64, []byte, error) {
 	return ts, frame, nil
 }
 
-func readPacketWithTimeout(c *giznet.Conn, timeout time.Duration) (byte, []byte, error) {
+func readPacketWithTimeout(c giznet.Conn, timeout time.Duration) (byte, []byte, error) {
 	type result struct {
 		proto byte
 		data  []byte
@@ -291,7 +292,7 @@ func readPacketWithTimeout(c *giznet.Conn, timeout time.Duration) (byte, []byte,
 	}
 }
 
-func readEventWithTimeout(c *giznet.Conn, timeout time.Duration) (testEvent, error) {
+func readEventWithTimeout(c giznet.Conn, timeout time.Duration) (testEvent, error) {
 	type result struct {
 		evt testEvent
 		err error
@@ -321,10 +322,10 @@ type peerMux interface {
 }
 
 // NewUDPNode returns a UDP node backed by giznet.Listen (public API).
-func NewUDPNode(t *testing.T, key *giznet.KeyPair) *giznet.UDP {
+func NewUDPNode(t *testing.T, key *giznet.KeyPair) *giznoise.UDP {
 	t.Helper()
 
-	l, err := (&giznet.ListenConfig{
+	l, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: testSecurityPolicy{},
 	}).Listen(key)
@@ -347,7 +348,7 @@ func NewUDPNode(t *testing.T, key *giznet.KeyPair) *giznet.UDP {
 }
 
 // ConnectNodes establishes a connection between two UDP nodes.
-func ConnectNodes(t *testing.T, client *giznet.UDP, clientKey *giznet.KeyPair, server *giznet.UDP, serverKey *giznet.KeyPair) {
+func ConnectNodes(t *testing.T, client *giznoise.UDP, clientKey *giznet.KeyPair, server *giznoise.UDP, serverKey *giznet.KeyPair) {
 	t.Helper()
 
 	client.SetPeerEndpoint(serverKey.Public, server.HostInfo().Addr)
@@ -361,13 +362,13 @@ func ConnectNodes(t *testing.T, client *giznet.UDP, clientKey *giznet.KeyPair, s
 	waitForPeerEstablished(t, server, clientKey.Public)
 }
 
-func waitForPeerEstablished(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) {
+func waitForPeerEstablished(t *testing.T, u *giznoise.UDP, pk giznet.PublicKey) {
 	t.Helper()
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		info := u.PeerInfo(pk)
-		if info != nil && info.State == giznet.PeerStateEstablished {
+		if info != nil && info.State.String() == giznet.PeerStateEstablished.String() {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -380,13 +381,13 @@ func waitForPeerEstablished(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) {
 	t.Fatalf("peer %x state=%v, want %v", pk, info.State, giznet.PeerStateEstablished)
 }
 
-func waitForPeerOffline(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) {
+func waitForPeerOffline(t *testing.T, u *giznoise.UDP, pk giznet.PublicKey) {
 	t.Helper()
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		info := u.PeerInfo(pk)
-		if info != nil && info.State == giznet.PeerStateOffline {
+		if info != nil && info.State.String() == giznet.PeerStateOffline.String() {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -400,7 +401,7 @@ func waitForPeerOffline(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) {
 }
 
 // MustPeerMux returns the service mux for an established peer session.
-func MustPeerMux(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) peerMux {
+func MustPeerMux(t *testing.T, u *giznoise.UDP, pk giznet.PublicKey) peerMux {
 	t.Helper()
 
 	smux, err := u.PeerServiceMux(pk)
@@ -411,7 +412,7 @@ func MustPeerMux(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) peerMux {
 }
 
 // ReadFromPeerWithTimeout reads a datagram from the specified peer with timeout.
-func ReadFromPeerWithTimeout(t *testing.T, u *giznet.UDP, pk giznet.PublicKey, timeout time.Duration) (byte, []byte) {
+func ReadFromPeerWithTimeout(t *testing.T, u *giznoise.UDP, pk giznet.PublicKey, timeout time.Duration) (byte, []byte) {
 	t.Helper()
 
 	type result struct {

@@ -8,6 +8,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/clicontext"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func testPublicKeyText(fill byte) string {
@@ -39,7 +40,7 @@ func TestContextCreateStoresCipherMode(t *testing.T) {
 		"--public-key",
 		testPublicKeyText(0xab),
 		"--cipher-mode",
-		string(giznet.CipherModeAES256GCM),
+		string(giznoise.CipherModeAES256GCM),
 	})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("Execute error = %v", err)
@@ -53,8 +54,8 @@ func TestContextCreateStoresCipherMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadByName error = %v", err)
 	}
-	if ctx.Config.Server.CipherMode != giznet.CipherModeAES256GCM {
-		t.Fatalf("CipherMode = %q, want %q", ctx.Config.Server.CipherMode, giznet.CipherModeAES256GCM)
+	if ctx.Config.Server.CipherMode != giznoise.CipherModeAES256GCM {
+		t.Fatalf("CipherMode = %q, want %q", ctx.Config.Server.CipherMode, giznoise.CipherModeAES256GCM)
 	}
 }
 
@@ -70,7 +71,7 @@ func TestContextCommandsManageContexts(t *testing.T) {
 		"create", "beta",
 		"--server", "127.0.0.1:9821",
 		"--public-key", testPublicKeyText(0xcd),
-		"--cipher-mode", string(giznet.CipherModePlaintext),
+		"--cipher-mode", string(giznoise.CipherModePlaintext),
 	)
 
 	listOut := executeContextCmd(t, "list")
@@ -93,7 +94,7 @@ func TestContextCommandsManageContexts(t *testing.T) {
 	if err := json.Unmarshal([]byte(showOut), &shown); err != nil {
 		t.Fatalf("decode show output %q: %v", showOut, err)
 	}
-	if shown.Name != "beta" || shown.Current || shown.ServerCipherMode != string(giznet.CipherModePlaintext) {
+	if shown.Name != "beta" || shown.Current || shown.ServerCipherMode != string(giznoise.CipherModePlaintext) {
 		t.Fatalf("show = %+v", shown)
 	}
 

@@ -14,7 +14,7 @@ type Server struct {
 	listener   net.Listener
 }
 
-func NewServer(conn *giznet.Conn, service uint64, handler http.Handler) *Server {
+func NewServer(conn giznet.Conn, service uint64, handler http.Handler) *Server {
 	listener := NewListener(conn, service)
 	return &Server{
 		listener: listener,

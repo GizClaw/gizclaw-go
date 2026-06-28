@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
@@ -36,6 +37,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 	"github.com/GizClaw/gizclaw-go/pkg/store/objectstore"
+	"golang.org/x/sync/errgroup"
 )
 
 // Server holds peer transport configuration. Per-stream protocol handling can be
@@ -45,10 +47,10 @@ import (
 // Internal runtime state is built automatically on first ListenAndServe.
 type Server struct {
 	LocalStatic giznet.KeyPair
-	ListenAddr  string
-	CipherMode  giznet.CipherMode
 
-	SecurityPolicy giznet.SecurityPolicy
+	SecurityPolicy        giznet.SecurityPolicy
+	PeerListeners         []giznet.Listener
+	PeerListenerFactories []PeerListenerFactory
 
 	PeerStore                    kv.Store
 	PeerRunStore                 kv.Store
@@ -93,11 +95,21 @@ type Server struct {
 	manager     *Manager
 	peerService *PeerService
 	sessions    *publiclogin.SessionManager
-	listener    *giznet.Listener
+	listenerMu  sync.RWMutex
+	listeners   []giznet.Listener
+	closed      bool
 	httpHandler http.Handler
 	cleanupStop context.CancelFunc
 	cleanupDone <-chan struct{}
 }
+
+type PeerListenerOptions struct {
+	KeyPair          *giznet.KeyPair
+	SecurityPolicy   giznet.SecurityPolicy
+	PeerEventHandler giznet.PeerEventHandler
+}
+
+type PeerListenerFactory func(PeerListenerOptions) (giznet.Listener, error)
 
 // ServeHTTP exposes server-public APIs over ordinary HTTP.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -109,30 +121,65 @@ func (s *Server) Listen() error {
 	if s == nil {
 		return errors.New("gizclaw: nil server")
 	}
-	if s.listener != nil {
+	s.listenerMu.RLock()
+	if len(s.listeners) > 0 {
+		s.listenerMu.RUnlock()
 		return nil
 	}
+	s.listenerMu.RUnlock()
 	if err := s.init(); err != nil {
 		return err
 	}
-	cfg := giznet.ListenConfig{
-		Addr:             s.ListenAddr,
-		CipherMode:       s.CipherMode,
+	listeners := append([]giznet.Listener(nil), s.PeerListeners...)
+	opts := PeerListenerOptions{
+		KeyPair:          &s.LocalStatic,
 		SecurityPolicy:   (*ServerSecurityPolicy)(s),
 		PeerEventHandler: (*serverPeerEventHandler)(s),
 	}
-	l, err := (&cfg).Listen(&s.LocalStatic)
-	if err != nil {
-		return err
+	for _, factory := range s.PeerListenerFactories {
+		if factory == nil {
+			continue
+		}
+		listener, err := factory(opts)
+		if err != nil {
+			return err
+		}
+		listeners = append(listeners, listener)
 	}
-	s.listener = l
+	if len(listeners) == 0 {
+		return giznet.ErrNilListener
+	}
+	s.listenerMu.Lock()
+	s.listeners = listeners
+	s.closed = false
+	s.listenerMu.Unlock()
 	s.startCleanup()
 	return nil
 }
 
-// Serve blocks serving accepted peer connections from a listener created by Listen.
+// Serve blocks serving accepted peer connections from listeners created by Listen.
 func (s *Server) Serve() error {
-	l := s.listener
+	s.listenerMu.RLock()
+	listeners := append([]giznet.Listener(nil), s.listeners...)
+	closed := s.closed
+	s.listenerMu.RUnlock()
+	if len(listeners) == 0 {
+		if closed {
+			return nil
+		}
+		return giznet.ErrNilListener
+	}
+	var g errgroup.Group
+	for _, listener := range listeners {
+		l := listener
+		g.Go(func() error {
+			return s.servePeerListener(l)
+		})
+	}
+	return g.Wait()
+}
+
+func (s *Server) servePeerListener(l giznet.Listener) error {
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -195,10 +242,19 @@ func (s *Server) Close() error {
 	if s == nil {
 		return nil
 	}
-	listener := s.listener
 	var errs []error
-	if listener != nil {
-		errs = append(errs, listener.Close())
+	s.listenerMu.Lock()
+	listeners := append([]giznet.Listener(nil), s.listeners...)
+	hadListeners := len(s.listeners) > 0
+	s.listeners = nil
+	if hadListeners {
+		s.closed = true
+	}
+	s.listenerMu.Unlock()
+	for _, listener := range listeners {
+		if listener != nil {
+			errs = append(errs, listener.Close())
+		}
 	}
 	if s.cleanupStop != nil {
 		s.cleanupStop()

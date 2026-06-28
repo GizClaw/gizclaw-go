@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 type benchSecurityPolicy struct {
@@ -31,15 +32,15 @@ type peerBenchMux interface {
 	AcceptStream(service uint64) (net.Conn, error)
 }
 
-func newBenchUDPNode(tb testing.TB, key *giznet.KeyPair) *giznet.UDP {
+func newBenchUDPNode(tb testing.TB, key *giznet.KeyPair) *giznoise.UDP {
 	tb.Helper()
 
-	l, err := (&giznet.ListenConfig{
+	l, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: benchSecurityPolicy{},
 	}).Listen(key)
 	if err != nil {
-		tb.Fatalf("giznet.Listen failed: %v", err)
+		tb.Fatalf("giznoise.Listen failed: %v", err)
 	}
 	tb.Cleanup(func() { _ = l.Close() })
 
@@ -56,7 +57,7 @@ func newBenchUDPNode(tb testing.TB, key *giznet.KeyPair) *giznet.UDP {
 	return u
 }
 
-func connectBenchNodes(tb testing.TB, client *giznet.UDP, clientKey *giznet.KeyPair, server *giznet.UDP, serverKey *giznet.KeyPair) {
+func connectBenchNodes(tb testing.TB, client *giznoise.UDP, clientKey *giznet.KeyPair, server *giznoise.UDP, serverKey *giznet.KeyPair) {
 	tb.Helper()
 
 	client.SetPeerEndpoint(serverKey.Public, server.HostInfo().Addr)
@@ -70,13 +71,13 @@ func connectBenchNodes(tb testing.TB, client *giznet.UDP, clientKey *giznet.KeyP
 	waitBenchPeerEstablished(tb, server, clientKey.Public)
 }
 
-func waitBenchPeerEstablished(tb testing.TB, u *giznet.UDP, pk giznet.PublicKey) {
+func waitBenchPeerEstablished(tb testing.TB, u *giznoise.UDP, pk giznet.PublicKey) {
 	tb.Helper()
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		info := u.PeerInfo(pk)
-		if info != nil && info.State == giznet.PeerStateEstablished {
+		if info != nil && info.State.String() == giznet.PeerStateEstablished.String() {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)
@@ -89,7 +90,7 @@ func waitBenchPeerEstablished(tb testing.TB, u *giznet.UDP, pk giznet.PublicKey)
 	tb.Fatalf("peer %x state=%v, want %v", pk, info.State, giznet.PeerStateEstablished)
 }
 
-func mustPeerBenchMux(tb testing.TB, u *giznet.UDP, pk giznet.PublicKey) peerBenchMux {
+func mustPeerBenchMux(tb testing.TB, u *giznoise.UDP, pk giznet.PublicKey) peerBenchMux {
 	tb.Helper()
 
 	smux, err := u.PeerServiceMux(pk)
@@ -99,10 +100,10 @@ func mustPeerBenchMux(tb testing.TB, u *giznet.UDP, pk giznet.PublicKey) peerBen
 	return smux
 }
 
-func newBenchListenerNode(tb testing.TB, key *giznet.KeyPair, cfgs ...giznet.ListenConfig) *giznet.Listener {
+func newBenchListenerNode(tb testing.TB, key *giznet.KeyPair, cfgs ...giznoise.ListenConfig) *giznoise.Listener {
 	tb.Helper()
 
-	cfg := giznet.ListenConfig{
+	cfg := giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: benchSecurityPolicy{},
 	}
@@ -114,7 +115,7 @@ func newBenchListenerNode(tb testing.TB, key *giznet.KeyPair, cfgs ...giznet.Lis
 	}
 	l, err := (&cfg).Listen(key)
 	if err != nil {
-		tb.Fatalf("giznet.Listen failed: %v", err)
+		tb.Fatalf("giznoise.Listen failed: %v", err)
 	}
 	tb.Cleanup(func() { _ = l.Close() })
 
@@ -131,12 +132,12 @@ func newBenchListenerNode(tb testing.TB, key *giznet.KeyPair, cfgs ...giznet.Lis
 	return l
 }
 
-func connectBenchListenerNodes(tb testing.TB, client *giznet.Listener, clientKey *giznet.KeyPair, server *giznet.Listener, serverKey *giznet.KeyPair) (*giznet.Conn, *giznet.Conn) {
+func connectBenchListenerNodes(tb testing.TB, client *giznoise.Listener, clientKey *giznet.KeyPair, server *giznoise.Listener, serverKey *giznet.KeyPair) (giznet.Conn, giznet.Conn) {
 	tb.Helper()
 
 	server.SetPeerEndpoint(clientKey.Public, client.HostInfo().Addr)
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, err := server.Accept()

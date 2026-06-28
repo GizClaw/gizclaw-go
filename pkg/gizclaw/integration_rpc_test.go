@@ -11,6 +11,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func TestIntegrationRPCDialAndPing(t *testing.T) {
@@ -66,7 +67,7 @@ func TestIntegrationRPCDialAndPing(t *testing.T) {
 }
 
 func TestIntegrationRPCDialWithConfiguredCipherMode(t *testing.T) {
-	ts := startTestServerWithCipherMode(t, giznet.CipherModePlaintext)
+	ts := startTestServerWithCipherMode(t, giznoise.CipherModePlaintext)
 	client := newTestClient(t, ts)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -83,13 +84,13 @@ func TestIntegrationSameClientKeyReconnectsAfterClose(t *testing.T) {
 		t.Fatalf("GenerateKeyPair(client) error: %v", err)
 	}
 
-	first := &gizcli.Client{KeyPair: keyPair}
+	first := &gizcli.Client{KeyPair: keyPair, DialTransport: testNoiseDialTransport(ts.cipherMode)}
 	startTestClient(t, first, ts.server.PublicKey(), ts.addr)
 	if err := first.Close(); err != nil {
 		t.Fatalf("first Close error = %v", err)
 	}
 
-	second := &gizcli.Client{KeyPair: keyPair}
+	second := &gizcli.Client{KeyPair: keyPair, DialTransport: testNoiseDialTransport(ts.cipherMode)}
 	startTestClient(t, second, ts.server.PublicKey(), ts.addr)
 	t.Cleanup(func() { _ = second.Close() })
 }

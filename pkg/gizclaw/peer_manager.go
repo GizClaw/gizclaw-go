@@ -38,7 +38,7 @@ var (
 )
 
 type activePeer struct {
-	conn *giznet.Conn
+	conn giznet.Conn
 }
 
 type Manager struct {
@@ -90,7 +90,7 @@ func (m *Manager) allowService(ctx context.Context, publicKey giznet.PublicKey, 
 	}
 }
 
-func (m *Manager) SetPeerUp(publicKey giznet.PublicKey, conn *giznet.Conn) {
+func (m *Manager) SetPeerUp(publicKey giznet.PublicKey, conn giznet.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.peers == nil {
@@ -110,7 +110,7 @@ func (m *Manager) SetPeerDown(publicKey giznet.PublicKey) {
 	delete(m.peers, publicKey)
 }
 
-func (m *Manager) Peer(publicKey giznet.PublicKey) (*giznet.Conn, bool) {
+func (m *Manager) Peer(publicKey giznet.PublicKey) (giznet.Conn, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	state, ok := m.peers[publicKey]
@@ -196,7 +196,7 @@ func (m *Manager) RefreshPeer(ctx context.Context, publicKey giznet.PublicKey) (
 func (m *Manager) peerRPCConn(publicKey giznet.PublicKey) (net.Conn, error) {
 	m.mu.RLock()
 	state, ok := m.peers[publicKey]
-	var peerConn *giznet.Conn
+	var peerConn giznet.Conn
 	if ok {
 		peerConn = state.conn
 	}

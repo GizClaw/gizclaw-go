@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func TestRoundTrip(t *testing.T) {
@@ -23,7 +24,7 @@ func TestRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverListener := newListenerNode(t, serverKey, giznet.ListenConfig{
+	serverListener := newListenerNode(t, serverKey, giznoise.ListenConfig{
 		SecurityPolicy: testSecurityPolicy{
 			allowService: func(_ giznet.PublicKey, service uint64) bool {
 				return service == 7
@@ -82,7 +83,7 @@ func TestRoundTripKeepsRequestBodyOpenAfterResponseHeaders(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverListener := newListenerNode(t, serverKey, giznet.ListenConfig{
+	serverListener := newListenerNode(t, serverKey, giznoise.ListenConfig{
 		SecurityPolicy: testSecurityPolicy{
 			allowService: func(_ giznet.PublicKey, service uint64) bool {
 				return service == 7

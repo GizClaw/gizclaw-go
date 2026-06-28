@@ -14,6 +14,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func TestClientDialValidation(t *testing.T) {
@@ -47,20 +48,20 @@ func TestClientDialValidation(t *testing.T) {
 		if err != nil {
 			t.Fatalf("GenerateKeyPair error = %v", err)
 		}
-		client := &Client{KeyPair: keyPair, listener: &giznet.Listener{}}
+		client := &Client{KeyPair: keyPair, listener: testClientListener{}}
 		if err := client.Dial(giznet.PublicKey{}, "127.0.0.1:1"); err == nil || !strings.Contains(err.Error(), "already started") {
 			t.Fatalf("Dial(already started) err = %v", err)
 		}
 	})
 
-	t.Run("invalid cipher mode", func(t *testing.T) {
+	t.Run("nil dial transport", func(t *testing.T) {
 		keyPair, err := giznet.GenerateKeyPair()
 		if err != nil {
 			t.Fatalf("GenerateKeyPair error = %v", err)
 		}
-		client := &Client{KeyPair: keyPair, CipherMode: giznet.CipherMode("bad")}
-		if err := client.Dial(giznet.PublicKey{1}, "127.0.0.1:1"); err == nil || !strings.Contains(err.Error(), "unsupported cipher mode") {
-			t.Fatalf("Dial(invalid cipher mode) err = %v", err)
+		client := &Client{KeyPair: keyPair}
+		if err := client.Dial(giznet.PublicKey{1}, "127.0.0.1:1"); err == nil || !strings.Contains(err.Error(), "nil dial transport") {
+			t.Fatalf("Dial(nil dial transport) err = %v", err)
 		}
 	})
 }
@@ -238,7 +239,7 @@ func TestClientServeClearsPeerConnWhenUnderlyingConnCloses(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
-	serverListener, err := (&giznet.ListenConfig{
+	serverListener, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: clientSecurityPolicy{},
 	}).Listen(serverKey)
@@ -247,7 +248,7 @@ func TestClientServeClearsPeerConnWhenUnderlyingConnCloses(t *testing.T) {
 	}
 	defer serverListener.Close()
 
-	accepted := make(chan *giznet.Conn, 1)
+	accepted := make(chan giznet.Conn, 1)
 	acceptErr := make(chan error, 1)
 	go func() {
 		conn, err := serverListener.Accept()
@@ -258,7 +259,7 @@ func TestClientServeClearsPeerConnWhenUnderlyingConnCloses(t *testing.T) {
 		accepted <- conn
 	}()
 
-	client := &Client{KeyPair: clientKey}
+	client := &Client{KeyPair: clientKey, DialTransport: testNoiseDialTransport()}
 	if err := client.Dial(serverKey.Public, serverListener.HostInfo().Addr.String()); err != nil {
 		t.Fatalf("Dial() error = %v", err)
 	}
@@ -314,7 +315,7 @@ func TestClientRPCWithoutContextDeadlineUsesDefaultStreamTimeout(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
-	serverListener, err := (&giznet.ListenConfig{
+	serverListener, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: clientSecurityPolicy{},
 	}).Listen(serverKey)
@@ -323,7 +324,7 @@ func TestClientRPCWithoutContextDeadlineUsesDefaultStreamTimeout(t *testing.T) {
 	}
 	defer serverListener.Close()
 
-	accepted := make(chan *giznet.Conn, 1)
+	accepted := make(chan giznet.Conn, 1)
 	acceptErr := make(chan error, 1)
 	go func() {
 		conn, err := serverListener.Accept()
@@ -334,7 +335,7 @@ func TestClientRPCWithoutContextDeadlineUsesDefaultStreamTimeout(t *testing.T) {
 		accepted <- conn
 	}()
 
-	client := &Client{KeyPair: clientKey}
+	client := &Client{KeyPair: clientKey, DialTransport: testNoiseDialTransport()}
 	if err := client.Dial(serverKey.Public, serverListener.HostInfo().Addr.String()); err != nil {
 		t.Fatalf("Dial() error = %v", err)
 	}

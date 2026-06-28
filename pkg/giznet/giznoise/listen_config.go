@@ -1,6 +1,7 @@
-package giznet
+package giznoise
 
 import (
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/internal/core"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/internal/noise"
 )
@@ -17,46 +18,31 @@ const (
 	CipherModePlaintext CipherMode = "plaintext"
 )
 
-type SecurityPolicy interface {
-	AllowPeer(PublicKey) bool
-	AllowService(PublicKey, uint64) bool
-}
-
-type PeerEventHandler interface {
-	HandlePeerEvent(PeerEvent)
-}
-
-type PeerEventHandleFunc func(PeerEvent)
-
-func (f PeerEventHandleFunc) HandlePeerEvent(ev PeerEvent) {
-	f(ev)
-}
-
 type ListenConfig struct {
 	Addr string
 
 	// SecurityPolicy decides whether inbound peers and services are allowed.
 	// If nil, only peers already registered by dialing are accepted and only service 0 is allowed.
-	SecurityPolicy SecurityPolicy
+	SecurityPolicy giznet.SecurityPolicy
 
 	// PeerEventHandler is called synchronously from the Noise peer event path.
 	// The handler must not block.
-	PeerEventHandler PeerEventHandler
+	PeerEventHandler giznet.PeerEventHandler
 
 	// CipherMode selects the low-level Noise cipher mode.
 	// If empty, ChaCha20-Poly1305 is used for backwards compatibility.
 	CipherMode CipherMode
 }
 
-func Listen(key *KeyPair) (*Listener, error) {
+func Listen(key *giznet.KeyPair) (*Listener, error) {
 	return new(ListenConfig).Listen(key)
 }
 
-func (c *ListenConfig) Listen(key *KeyPair) (*Listener, error) {
+func (c *ListenConfig) Listen(key *giznet.KeyPair) (*Listener, error) {
 	l := &Listener{
 		closedCh:    make(chan struct{}),
-		established: make(map[PublicKey]*Conn),
-		events:      make(chan PeerEvent, 64),
+		established: make(map[giznet.PublicKey]*Conn),
+		events:      make(chan giznet.PeerEvent, 64),
 	}
 	if c != nil {
 		l.evtHandler = c.PeerEventHandler
@@ -66,7 +52,7 @@ func (c *ListenConfig) Listen(key *KeyPair) (*Listener, error) {
 	// peer event handling stay in sync with core peer state changes.
 	allOpts := c.options()
 	allOpts = append(allOpts, core.WithOnPeerEvent(l.onPeerEvent))
-	u, err := core.NewUDP(key, allOpts...)
+	u, err := core.NewUDP(toNoiseKeyPair(key), allOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,9 +70,13 @@ func (c *ListenConfig) options() []core.Option {
 		opts = append(opts, core.WithBindAddr(c.Addr))
 	}
 	if c.SecurityPolicy != nil {
-		opts = append(opts, core.WithAllowFunc(c.SecurityPolicy.AllowPeer))
+		opts = append(opts, core.WithAllowFunc(func(pk noise.PublicKey) bool {
+			return c.SecurityPolicy.AllowPeer(fromNoisePublicKey(pk))
+		}))
 		opts = append(opts, core.WithServiceMuxConfig(core.ServiceMuxConfig{
-			OnNewService: c.SecurityPolicy.AllowService,
+			OnNewService: func(pk noise.PublicKey, service uint64) bool {
+				return c.SecurityPolicy.AllowService(fromNoisePublicKey(pk), service)
+			},
 		}))
 	}
 	if c.CipherMode != "" {

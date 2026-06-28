@@ -3,6 +3,7 @@ package gizclaw
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -71,9 +72,9 @@ func TestServerServeReturnsNilAfterClose(t *testing.T) {
 	}
 
 	server := &Server{
-		LocalStatic: *keyPair,
-		ListenAddr:  "127.0.0.1:0",
-		PeerStore:   mustBadgerInMemory(t, nil),
+		LocalStatic:   *keyPair,
+		PeerStore:     mustBadgerInMemory(t, nil),
+		PeerListeners: []giznet.Listener{newTestGiznetListener()},
 	}
 	if err := server.Listen(); err != nil {
 		t.Fatalf("Listen() error = %v", err)
@@ -93,6 +94,57 @@ func TestServerServeReturnsNilAfterClose(t *testing.T) {
 		}
 	case <-time.After(3 * time.Second):
 		t.Fatal("Serve() did not return after Close()")
+	}
+}
+
+func TestServerCanListenAgainAfterClose(t *testing.T) {
+	keyPair, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair error = %v", err)
+	}
+
+	first := newTestGiznetListener()
+	second := newTestGiznetListener()
+	server := &Server{
+		LocalStatic:   *keyPair,
+		PeerStore:     mustBadgerInMemory(t, nil),
+		PeerListeners: []giznet.Listener{first},
+	}
+	if err := server.Listen(); err != nil {
+		t.Fatalf("first Listen() error = %v", err)
+	}
+	if err := server.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+
+	server.PeerListeners = []giznet.Listener{second}
+	if err := server.Listen(); err != nil {
+		t.Fatalf("second Listen() error = %v", err)
+	}
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- server.Serve()
+	}()
+	if err := second.Close(); err != nil {
+		t.Fatalf("second listener Close() error = %v", err)
+	}
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Serve() after second listener close error = %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("Serve() did not use second listener")
+	}
+}
+
+func TestServerServeWithoutListenStillRequiresListenerAfterClose(t *testing.T) {
+	server := &Server{}
+	if err := server.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if err := server.Serve(); !errors.Is(err, giznet.ErrNilListener) {
+		t.Fatalf("Serve() error = %v, want %v", err, giznet.ErrNilListener)
 	}
 }
 
@@ -312,7 +364,7 @@ func TestServerPeerEventHandlerMarksManagerOffline(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 	server := &Server{manager: &Manager{}}
-	server.manager.SetPeerUp(keyPair.Public, &giznet.Conn{})
+	server.manager.SetPeerUp(keyPair.Public, &testGiznetConn{})
 
 	(*serverPeerEventHandler)(server).HandlePeerEvent(giznet.PeerEvent{PublicKey: keyPair.Public, State: giznet.PeerStateOffline})
 	runtime := server.manager.PeerRuntime(context.Background(), keyPair.Public)

@@ -1,15 +1,47 @@
 package giznet
 
-import "github.com/GizClaw/gizclaw-go/pkg/giznet/internal/core"
+import (
+	"net"
+	"time"
+)
 
-type PeerState = core.PeerState
-type PeerEvent = core.PeerEvent
-type PeerInfo = core.PeerInfo
+type PeerState int
 
 const (
-	PeerStateNew         = core.PeerStateNew
-	PeerStateConnecting  = core.PeerStateConnecting
-	PeerStateEstablished = core.PeerStateEstablished
-	PeerStateFailed      = core.PeerStateFailed
-	PeerStateOffline     = core.PeerStateOffline
+	PeerStateNew PeerState = iota
+	PeerStateConnecting
+	PeerStateEstablished
+	PeerStateFailed
+	PeerStateOffline
 )
+
+func (s PeerState) String() string {
+	switch s {
+	case PeerStateNew:
+		return "new"
+	case PeerStateConnecting:
+		return "connecting"
+	case PeerStateEstablished:
+		return "established"
+	case PeerStateFailed:
+		return "failed"
+	case PeerStateOffline:
+		return "offline"
+	default:
+		return "unknown"
+	}
+}
+
+type PeerEvent struct {
+	PublicKey PublicKey
+	State     PeerState
+}
+
+type PeerInfo struct {
+	PublicKey PublicKey
+	Endpoint  net.Addr
+	State     PeerState
+	RxBytes   uint64
+	TxBytes   uint64
+	LastSeen  time.Time
+}

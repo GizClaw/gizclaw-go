@@ -22,6 +22,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/runtime/peerrun"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/system/acl"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -222,7 +223,7 @@ func TestPeerConnCloseClosesConn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
-	serverListener, err := (&giznet.ListenConfig{
+	serverListener, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: testGiznetSecurityPolicy{},
 	}).Listen(serverKey)
@@ -231,7 +232,7 @@ func TestPeerConnCloseClosesConn(t *testing.T) {
 	}
 	defer serverListener.Close()
 	go drainUDP(serverListener.UDP())
-	clientListener, err := (&giznet.ListenConfig{
+	clientListener, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: testGiznetSecurityPolicy{},
 	}).Listen(clientKey)
@@ -241,7 +242,7 @@ func TestPeerConnCloseClosesConn(t *testing.T) {
 	defer clientListener.Close()
 	go drainUDP(clientListener.UDP())
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, err := serverListener.Accept()
@@ -258,7 +259,7 @@ func TestPeerConnCloseClosesConn(t *testing.T) {
 	}
 	defer clientConn.Close()
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-acceptCh:
 	case err := <-errCh:
