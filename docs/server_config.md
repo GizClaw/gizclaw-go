@@ -27,8 +27,7 @@ cipher-mode: chacha_poly
 # WebRTC transport settings.
 # The signaling path is fixed at /giznet/webrtc/v1/offer and is served on
 # public-api-port. ice-port serves WebRTC ICE over UDP and passive ICE-TCP.
-webrtc:
-  ice-port: 9821
+ice-port: 9821
 
 # Optional admin public key. When set, admin HTTP/RPC calls must authenticate as
 # this key. Leave empty only for local development or tests that inject runtime
@@ -274,8 +273,7 @@ public-api-port: 9820
 noise-udp-port: 9820
 cipher-mode: chacha_poly
 
-webrtc:
-  ice-port: 9821
+ice-port: 9821
 ```
 
 Binding direction:
@@ -283,14 +281,14 @@ Binding direction:
 - `host:public-api-port/tcp` serves the public HTTP API and the fixed WebRTC
   signaling path `/giznet/webrtc/v1/offer`.
 - `host:noise-udp-port/udp` serves `noise-protocol-over-udp`.
-- `host:webrtc.ice-port/udp` serves WebRTC ICE UDP.
-- `host:webrtc.ice-port/tcp` serves WebRTC passive ICE-TCP.
+- `host:ice-port/udp` serves WebRTC ICE UDP.
+- `host:ice-port/tcp` serves WebRTC passive ICE-TCP.
 
 Default ports:
 
 - `public-api-port`: `9820`
 - `noise-udp-port`: `9820`
-- `webrtc.ice-port`: `9821`
+- `ice-port`: `9821`
 
 ## CLI Context Config
 
@@ -350,7 +348,7 @@ dialing behavior.
 - `friend_groups.message_max_audio_bytes` limits the decoded audio payload accepted by
   friend group message send before writing bytes to the configured object store.
 - `cipher-mode` accepts `chacha_poly`, `aes_256_gcm`, `plaintext`, or empty.
-- `host`, `public-api-port`, `noise-udp-port`, and `webrtc.ice-port` are the
+- `host`, `public-api-port`, `noise-udp-port`, and `ice-port` are the
   transport binding fields for the command server.
 - Asset services should use object-store operations such as get, put, delete,
   delete-prefix, and list. They should not require directory creation or rename
