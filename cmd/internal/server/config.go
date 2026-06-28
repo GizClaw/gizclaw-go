@@ -9,13 +9,14 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 	"github.com/goccy/go-yaml"
 )
 
 type Config struct {
 	KeyPair        *giznet.KeyPair
 	ListenAddr     string
-	CipherMode     giznet.CipherMode
+	CipherMode     giznoise.CipherMode
 	AdminPublicKey giznet.PublicKey
 	Storage        map[string]storage.Config
 	Stores         map[string]stores.Config
@@ -49,7 +50,7 @@ type GeneratorTaskConfig struct {
 
 type ConfigFile struct {
 	ListenAddr     string                    `yaml:"listen"`
-	CipherMode     giznet.CipherMode         `yaml:"cipher-mode"`
+	CipherMode     giznoise.CipherMode       `yaml:"cipher-mode"`
 	AdminPublicKey giznet.PublicKey          `yaml:"admin-public-key"`
 	Storage        map[string]storage.Config `yaml:"storage"`
 	Stores         map[string]stores.Config  `yaml:"stores"`
@@ -104,7 +105,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 	}
 	var raw struct {
 		ListenAddr     string                    `yaml:"listen"`
-		CipherMode     giznet.CipherMode         `yaml:"cipher-mode"`
+		CipherMode     giznoise.CipherMode       `yaml:"cipher-mode"`
 		AdminPublicKey *giznet.PublicKey         `yaml:"admin-public-key"`
 		Storage        map[string]storage.Config `yaml:"storage"`
 		Stores         map[string]stores.Config  `yaml:"stores"`
@@ -280,9 +281,9 @@ func parseConfigDuration(value string) (time.Duration, error) {
 	return time.ParseDuration(value)
 }
 
-func validateCipherMode(mode giznet.CipherMode) error {
+func validateCipherMode(mode giznoise.CipherMode) error {
 	switch mode {
-	case "", giznet.CipherModeChaChaPoly, giznet.CipherModeAES256GCM, giznet.CipherModePlaintext:
+	case "", giznoise.CipherModeChaChaPoly, giznoise.CipherModeAES256GCM, giznoise.CipherModePlaintext:
 		return nil
 	default:
 		return fmt.Errorf("server: unsupported cipher-mode %q", mode)

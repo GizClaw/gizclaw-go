@@ -10,6 +10,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/identity"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/paths"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 	"github.com/goccy/go-yaml"
 )
 
@@ -22,7 +23,7 @@ type Store struct {
 
 // CreateOptions holds optional settings for a newly created CLI context.
 type CreateOptions struct {
-	CipherMode      giznet.CipherMode
+	CipherMode      giznoise.CipherMode
 	ServerPublicKey string
 }
 
@@ -74,9 +75,9 @@ func (s *Store) CreateWithOptions(name, serverAddr string, opts CreateOptions) e
 
 	cfg := struct {
 		Server struct {
-			Address    string            `yaml:"address"`
-			PublicKey  giznet.PublicKey  `yaml:"public-key"`
-			CipherMode giznet.CipherMode `yaml:"cipher-mode,omitempty"`
+			Address    string              `yaml:"address"`
+			PublicKey  giznet.PublicKey    `yaml:"public-key"`
+			CipherMode giznoise.CipherMode `yaml:"cipher-mode,omitempty"`
 		} `yaml:"server"`
 	}{}
 	cfg.Server.Address = serverAddr
@@ -98,9 +99,9 @@ func (s *Store) CreateWithOptions(name, serverAddr string, opts CreateOptions) e
 	return nil
 }
 
-func validateCipherMode(mode giznet.CipherMode) error {
+func validateCipherMode(mode giznoise.CipherMode) error {
 	switch mode {
-	case "", giznet.CipherModeChaChaPoly, giznet.CipherModeAES256GCM, giznet.CipherModePlaintext:
+	case "", giznoise.CipherModeChaChaPoly, giznoise.CipherModeAES256GCM, giznoise.CipherModePlaintext:
 		return nil
 	default:
 		return fmt.Errorf("clicontext: unsupported cipher-mode %q", mode)

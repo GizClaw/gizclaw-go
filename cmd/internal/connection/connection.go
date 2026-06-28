@@ -3,11 +3,13 @@ package connection
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/clicontext"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func DialFromContext(name string) (*gizcli.Client, giznet.PublicKey, string, error) {
@@ -32,8 +34,28 @@ func DialFromContext(name string) (*gizcli.Client, giznet.PublicKey, string, err
 		return nil, giznet.PublicKey{}, "", fmt.Errorf("invalid server public key: %w", err)
 	}
 	return &gizcli.Client{
-		KeyPair:    cliCtx.KeyPair,
-		CipherMode: cliCtx.Config.Server.CipherMode,
+		KeyPair: cliCtx.KeyPair,
+		DialTransport: func(key *giznet.KeyPair, serverPK giznet.PublicKey, serverAddr string, securityPolicy giznet.SecurityPolicy) (giznet.Listener, giznet.Conn, error) {
+			l, err := (&giznoise.ListenConfig{
+				Addr:           ":0",
+				CipherMode:     cliCtx.Config.Server.CipherMode,
+				SecurityPolicy: securityPolicy,
+			}).Listen(key)
+			if err != nil {
+				return nil, nil, err
+			}
+			udpAddr, err := net.ResolveUDPAddr("udp", serverAddr)
+			if err != nil {
+				_ = l.Close()
+				return nil, nil, err
+			}
+			conn, err := l.Dial(serverPK, udpAddr)
+			if err != nil {
+				_ = l.Close()
+				return nil, nil, err
+			}
+			return l, conn, nil
+		},
 	}, serverPK, cliCtx.Config.Server.Address, nil
 }
 

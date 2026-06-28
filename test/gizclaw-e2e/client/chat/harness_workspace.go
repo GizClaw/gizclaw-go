@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 )
@@ -199,8 +201,28 @@ func dialClient(cfg config) (*gizcli.Client, <-chan error, error) {
 		return nil, nil, err
 	}
 	client := &gizcli.Client{
-		KeyPair:    keyPair,
-		CipherMode: giznet.CipherMode(cfg.Server.CipherMode),
+		KeyPair: keyPair,
+		DialTransport: func(key *giznet.KeyPair, serverPK giznet.PublicKey, serverAddr string, securityPolicy giznet.SecurityPolicy) (giznet.Listener, giznet.Conn, error) {
+			l, err := (&giznoise.ListenConfig{
+				Addr:           ":0",
+				CipherMode:     giznoise.CipherMode(cfg.Server.CipherMode),
+				SecurityPolicy: securityPolicy,
+			}).Listen(key)
+			if err != nil {
+				return nil, nil, err
+			}
+			udpAddr, err := net.ResolveUDPAddr("udp", serverAddr)
+			if err != nil {
+				_ = l.Close()
+				return nil, nil, err
+			}
+			conn, err := l.Dial(serverPK, udpAddr)
+			if err != nil {
+				_ = l.Close()
+				return nil, nil, err
+			}
+			return l, conn, nil
+		},
 	}
 	if err := client.Dial(serverPK, cfg.Server.Addr); err != nil {
 		return nil, nil, err

@@ -12,6 +12,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 const (
@@ -39,7 +40,7 @@ func waitUntil(timeout time.Duration, check func() error) error {
 func TestPeerServiceServeConnRequiresHandlers(t *testing.T) {
 	service := &PeerService{}
 
-	err := service.ServeConn(&giznet.Conn{})
+	err := service.ServeConn(&testGiznetConn{})
 	if err == nil {
 		t.Fatal("ServeConn should fail when handlers are missing")
 	}
@@ -112,7 +113,7 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
 
-	serverListener, err := (&giznet.ListenConfig{
+	serverListener, err := (&giznoise.ListenConfig{
 		Addr: "127.0.0.1:0",
 		SecurityPolicy: testGiznetSecurityPolicy{
 			allowService: func(_ giznet.PublicKey, service uint64) bool {
@@ -126,22 +127,22 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 		},
 	}).Listen(serverKey)
 	if err != nil {
-		t.Fatalf("giznet.Listen(server) error = %v", err)
+		t.Fatalf("giznoise.Listen(server) error = %v", err)
 	}
 	defer serverListener.Close()
 	go drainUDP(serverListener.UDP())
 
-	clientListener, err := (&giznet.ListenConfig{
+	clientListener, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: testGiznetSecurityPolicy{},
 	}).Listen(clientKey)
 	if err != nil {
-		t.Fatalf("giznet.Listen(client) error = %v", err)
+		t.Fatalf("giznoise.Listen(client) error = %v", err)
 	}
 	defer clientListener.Close()
 	go drainUDP(clientListener.UDP())
 
-	connCh := make(chan *giznet.Conn, 1)
+	connCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, acceptErr := serverListener.Accept()
@@ -158,7 +159,7 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 	}
 	defer clientConn.Close()
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-connCh:
 	case acceptErr := <-errCh:
@@ -254,7 +255,7 @@ func TestIntegrationPeerServiceServeConnClientCloseUnblocksAndMarksPeerOffline(t
 	}
 }
 
-func drainUDP(u *giznet.UDP) {
+func drainUDP(u *giznoise.UDP) {
 	buf := make([]byte, 65535)
 	for {
 		if _, _, err := u.ReadFrom(buf); err != nil {

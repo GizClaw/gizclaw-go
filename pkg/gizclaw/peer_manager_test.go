@@ -14,7 +14,7 @@ import (
 func TestManagerSetPeerDownDeletesPeer(t *testing.T) {
 	manager := &Manager{}
 	key := giznet.PublicKey{1}
-	conn := &giznet.Conn{}
+	conn := &testGiznetConn{}
 
 	manager.SetPeerUp(key, conn)
 	if runtime := manager.PeerRuntime(context.Background(), key); !runtime.Online {
@@ -33,8 +33,8 @@ func TestManagerSetPeerDownDeletesPeer(t *testing.T) {
 func TestManagerSetPeerUpReplacesConnection(t *testing.T) {
 	manager := &Manager{}
 	key := giznet.PublicKey{1}
-	oldConn := &giznet.Conn{}
-	newConn := &giznet.Conn{}
+	oldConn := &testGiznetConn{}
+	newConn := &testGiznetConn{}
 
 	manager.SetPeerUp(key, oldConn)
 	manager.SetPeerUp(key, newConn)
@@ -51,7 +51,7 @@ func TestManagerSetPeerUpReplacesConnection(t *testing.T) {
 func TestManagerSetPeerUpAndDownUpdatesRuntime(t *testing.T) {
 	manager := &Manager{}
 	key := giznet.PublicKey{1}
-	conn := &giznet.Conn{}
+	conn := &testGiznetConn{}
 
 	manager.SetPeerUp(key, conn)
 	if got, ok := manager.Peer(key); !ok || got != conn {

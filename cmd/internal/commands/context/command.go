@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/clicontext"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 	"github.com/spf13/cobra"
 )
 
@@ -62,7 +62,7 @@ func newCreateCmd() *cobra.Command {
 			name := args[0]
 			if err := store.CreateWithOptions(name, serverAddr, clicontext.CreateOptions{
 				ServerPublicKey: publicKey,
-				CipherMode:      giznet.CipherMode(cipherMode),
+				CipherMode:      giznoise.CipherMode(cipherMode),
 			}); err != nil {
 				return err
 			}

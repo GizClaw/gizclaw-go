@@ -13,11 +13,11 @@ import (
 )
 
 type transport struct {
-	conn    *giznet.Conn
+	conn    giznet.Conn
 	service uint64
 }
 
-func NewRoundTripper(conn *giznet.Conn, service uint64) *transport {
+func NewRoundTripper(conn giznet.Conn, service uint64) *transport {
 	return &transport{conn: conn, service: service}
 }
 

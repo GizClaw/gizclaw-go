@@ -38,7 +38,7 @@ const peerConnOpusFrameDuration = 20 * time.Millisecond
 // PeerConn is the in-memory runtime for one active peer connection.
 // It wraps the existing PeerService bundle and serves one live conn at a time.
 type PeerConn struct {
-	Conn    *giznet.Conn
+	Conn    giznet.Conn
 	Service *PeerService
 
 	closeOnce              sync.Once
@@ -394,7 +394,7 @@ func (h *PeerConn) serveDirectPackets() error {
 			if errors.Is(err, io.EOF) ||
 				errors.Is(err, net.ErrClosed) ||
 				errors.Is(err, giznet.ErrConnClosed) ||
-				errors.Is(err, giznet.ErrUDPClosed) ||
+				errors.Is(err, giznet.ErrClosed) ||
 				errors.Is(err, giznet.ErrServiceMuxClosed) {
 				return nil
 			}

@@ -12,10 +12,11 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/pkg/audio/stampedopus"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func TestNilListenerGuard(t *testing.T) {
-	var l *giznet.Listener
+	var l *giznoise.Listener
 
 	if _, err := l.Accept(); !errors.Is(err, giznet.ErrNilListener) {
 		t.Fatalf("Accept(nil listener) err=%v, want %v", err, giznet.ErrNilListener)
@@ -36,7 +37,7 @@ func TestListenAndCloseOwnedListener(t *testing.T) {
 		t.Fatalf("GenerateKeyPair failed: %v", err)
 	}
 
-	l, err := (&giznet.ListenConfig{
+	l, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: testSecurityPolicy{},
 	}).Listen(key)
@@ -54,7 +55,7 @@ func TestListenAndCloseOwnedListener(t *testing.T) {
 }
 
 func TestListenConfigCipherModes(t *testing.T) {
-	for _, mode := range []giznet.CipherMode{giznet.CipherModeAES256GCM, giznet.CipherModePlaintext} {
+	for _, mode := range []giznoise.CipherMode{giznoise.CipherModeAES256GCM, giznoise.CipherModePlaintext} {
 		t.Run(string(mode), func(t *testing.T) {
 			serverKey, err := giznet.GenerateKeyPair()
 			if err != nil {
@@ -65,12 +66,12 @@ func TestListenConfigCipherModes(t *testing.T) {
 				t.Fatalf("Generate client key failed: %v", err)
 			}
 
-			serverListener := NewTestListenerConfig(t, giznet.ListenConfig{CipherMode: mode}, serverKey)
+			serverListener := NewTestListenerConfig(t, giznoise.ListenConfig{CipherMode: mode}, serverKey)
 			defer serverListener.Close()
-			clientListener := NewTestListenerConfig(t, giznet.ListenConfig{CipherMode: mode}, clientKey)
+			clientListener := NewTestListenerConfig(t, giznoise.ListenConfig{CipherMode: mode}, clientKey)
 			defer clientListener.Close()
 
-			acceptCh := make(chan *giznet.Conn, 1)
+			acceptCh := make(chan giznet.Conn, 1)
 			errCh := make(chan error, 1)
 			go func() {
 				conn, err := serverListener.Accept()
@@ -86,7 +87,7 @@ func TestListenConfigCipherModes(t *testing.T) {
 				t.Fatalf("client Dial failed: %v", err)
 			}
 
-			var serverConn *giznet.Conn
+			var serverConn giznet.Conn
 			select {
 			case serverConn = <-acceptCh:
 			case err := <-errCh:
@@ -126,7 +127,7 @@ func TestListenerPeerMissingReturnsFalse(t *testing.T) {
 		t.Fatalf("Generate unknown key failed: %v", err)
 	}
 
-	l, err := (&giznet.ListenConfig{
+	l, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: testSecurityPolicy{},
 	}).Listen(key)
@@ -151,7 +152,7 @@ func TestListenConfigReceivesPeerOnlineOfflineEvents(t *testing.T) {
 	}
 
 	events := make(chan giznet.PeerEvent, 2)
-	serverListener := NewTestListenerConfig(t, giznet.ListenConfig{
+	serverListener := NewTestListenerConfig(t, giznoise.ListenConfig{
 		PeerEventHandler: giznet.PeerEventHandleFunc(func(ev giznet.PeerEvent) {
 			events <- ev
 		}),
@@ -199,7 +200,7 @@ func TestListenerDoesNotAcceptSamePeerAgainOnReconnect(t *testing.T) {
 	pair := NewConnectedPeerPair(t)
 	defer pair.Close()
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, err := pair.ServerListener.Accept()
@@ -238,7 +239,7 @@ func TestListenerAcceptsSamePeerAgainAfterConnCloseAndNewData(t *testing.T) {
 	}
 	waitForPeerOffline(t, pair.ServerListener.UDP(), pair.ClientKey.Public)
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, err := pair.ServerListener.Accept()
@@ -256,7 +257,7 @@ func TestListenerAcceptsSamePeerAgainAfterConnCloseAndNewData(t *testing.T) {
 		t.Fatalf("reconnected client Dial failed: %v", err)
 	}
 
-	var newServerConn *giznet.Conn
+	var newServerConn giznet.Conn
 	select {
 	case newServerConn = <-acceptCh:
 		if got := newServerConn.PublicKey(); got != pair.ClientKey.Public {
@@ -315,7 +316,7 @@ func TestPeerMultipleConcurrentConnections(t *testing.T) {
 	const peers = 3
 	type clientNode struct {
 		key      *giznet.KeyPair
-		listener *giznet.Listener
+		listener *giznoise.Listener
 	}
 	clients := make([]clientNode, 0, peers)
 	for i := range peers {
@@ -362,7 +363,7 @@ func TestPeerMultipleConcurrentConnections(t *testing.T) {
 }
 
 func TestNilServiceListenerGuard(t *testing.T) {
-	var conn *giznet.Conn
+	var conn *giznoise.Conn
 
 	if _, err := conn.Dial(1); !errors.Is(err, giznet.ErrNilConn) {
 		t.Fatalf("Dial(1, nil conn) err=%v, want %v", err, giznet.ErrNilConn)
@@ -382,8 +383,8 @@ func TestServiceListenerAcceptAndClose(t *testing.T) {
 	defer pair.Close()
 
 	listener := pair.ServerConn.ListenService(testServiceRPC)
-	if listener.Service() != testServiceRPC {
-		t.Fatalf("listener.Service()=%d, want %d", listener.Service(), testServiceRPC)
+	if serviceListener, ok := listener.(interface{ Service() uint64 }); !ok || serviceListener.Service() != testServiceRPC {
+		t.Fatalf("listener.Service() unavailable or wrong, want %d", testServiceRPC)
 	}
 	if listener.Addr().Network() != "kcp-service" {
 		t.Fatalf("listener.Addr().Network()=%q", listener.Addr().Network())
@@ -437,7 +438,7 @@ func TestServiceListenerAcceptAndClose(t *testing.T) {
 }
 
 func TestNilConnGuard(t *testing.T) {
-	var c *giznet.Conn
+	var c *giznoise.Conn
 
 	if _, err := c.Dial(testServiceRPC); !errors.Is(err, giznet.ErrNilConn) {
 		t.Fatalf("Dial(rpc, nil conn) err=%v, want %v", err, giznet.ErrNilConn)
@@ -499,7 +500,7 @@ func TestListenerAcceptAndConnEventOpus(t *testing.T) {
 	clientListener := NewTestListener(t, clientKey)
 	defer clientListener.Close()
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		c, err := serverListener.Accept()
@@ -515,7 +516,7 @@ func TestListenerAcceptAndConnEventOpus(t *testing.T) {
 		t.Fatalf("clientListener.Dial failed: %v", err)
 	}
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-acceptCh:
 	case err := <-errCh:
@@ -581,7 +582,7 @@ func TestListenerDoesNotAcceptSamePeerAgainAfterRemoteClose(t *testing.T) {
 	defer serverListener.Close()
 	clientListener := NewTestListener(t, clientKey)
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		c, err := serverListener.Accept()
@@ -595,7 +596,7 @@ func TestListenerDoesNotAcceptSamePeerAgainAfterRemoteClose(t *testing.T) {
 	if _, err := clientListener.Dial(serverKey.Public, serverListener.HostInfo().Addr); err != nil {
 		t.Fatalf("clientListener.Dial failed: %v", err)
 	}
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-acceptCh:
 	case err := <-errCh:
@@ -611,7 +612,7 @@ func TestListenerDoesNotAcceptSamePeerAgainAfterRemoteClose(t *testing.T) {
 	}
 	waitForPeerOffline(t, serverListener.UDP(), clientKey.Public)
 
-	nextAcceptCh := make(chan *giznet.Conn, 1)
+	nextAcceptCh := make(chan giznet.Conn, 1)
 	nextErrCh := make(chan error, 1)
 	go func() {
 		c, err := serverListener.Accept()
@@ -688,7 +689,7 @@ func TestConnOpenAcceptRPC(t *testing.T) {
 	clientListener := NewTestListener(t, clientKey)
 	defer clientListener.Close()
 
-	acceptConnCh := make(chan *giznet.Conn, 1)
+	acceptConnCh := make(chan giznet.Conn, 1)
 	acceptErrCh := make(chan error, 1)
 	go func() {
 		c, err := serverListener.Accept()
@@ -704,7 +705,7 @@ func TestConnOpenAcceptRPC(t *testing.T) {
 		t.Fatalf("clientListener.Dial failed: %v", err)
 	}
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-acceptConnCh:
 	case err := <-acceptErrCh:
@@ -850,7 +851,7 @@ func TestKCPStreamSurvivesNoiseRekey(t *testing.T) {
 		t.Fatalf("server stream request before rekey mismatch: got=%q want=%q", got, beforeRekey)
 	}
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, err := pair.ServerListener.Accept()
@@ -1024,11 +1025,11 @@ func TestConnUnderlyingErrorPropagation(t *testing.T) {
 
 	_ = pair.ClientListener.UDP().Close()
 
-	if _, err := pair.ClientConn.Dial(testServiceRPC); !errors.Is(err, giznet.ErrUDPClosed) {
-		t.Fatalf("Dial(rpc, after close) err=%v, want %v", err, giznet.ErrUDPClosed)
+	if _, err := pair.ClientConn.Dial(testServiceRPC); !errors.Is(err, giznoise.ErrUDPClosed) {
+		t.Fatalf("Dial(rpc, after close) err=%v, want %v", err, giznoise.ErrUDPClosed)
 	}
-	if _, err := pair.ClientConn.Write(testProtocolEvent, []byte("x")); !errors.Is(err, giznet.ErrUDPClosed) {
-		t.Fatalf("Write(after close) err=%v, want %v", err, giznet.ErrUDPClosed)
+	if _, err := pair.ClientConn.Write(testProtocolEvent, []byte("x")); !errors.Is(err, giznoise.ErrUDPClosed) {
+		t.Fatalf("Write(after close) err=%v, want %v", err, giznoise.ErrUDPClosed)
 	}
 }
 
@@ -1070,7 +1071,7 @@ func TestListenerDialReturnsExistingConnAndAcceptCanObserveIt(t *testing.T) {
 	clientListener := NewTestListener(t, clientKey)
 	defer clientListener.Close()
 
-	clientAcceptCh := make(chan *giznet.Conn, 1)
+	clientAcceptCh := make(chan giznet.Conn, 1)
 	clientAcceptErrCh := make(chan error, 1)
 	go func() {
 		conn, err := clientListener.Accept()
@@ -1081,7 +1082,7 @@ func TestListenerDialReturnsExistingConnAndAcceptCanObserveIt(t *testing.T) {
 		clientAcceptCh <- conn
 	}()
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, err := serverListener.Accept()
@@ -1097,7 +1098,7 @@ func TestListenerDialReturnsExistingConnAndAcceptCanObserveIt(t *testing.T) {
 		t.Fatalf("first Dial failed: %v", err)
 	}
 
-	var clientAcceptedConn *giznet.Conn
+	var clientAcceptedConn giznet.Conn
 	select {
 	case clientAcceptedConn = <-clientAcceptCh:
 		if clientAcceptedConn != firstConn {
@@ -1109,7 +1110,7 @@ func TestListenerDialReturnsExistingConnAndAcceptCanObserveIt(t *testing.T) {
 		t.Fatal("client Accept timeout after first Dial")
 	}
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-acceptCh:
 	case err := <-errCh:
@@ -1195,7 +1196,7 @@ func TestServerConnCloseAllowsNextRPCStreamOnNewConn(t *testing.T) {
 		t.Fatalf("serverConn.Close failed: %v", err)
 	}
 
-	nextConnCh := make(chan *giznet.Conn, 1)
+	nextConnCh := make(chan giznet.Conn, 1)
 	nextConnErrCh := make(chan error, 1)
 	go func() {
 		conn, err := pair.ServerListener.Accept()
@@ -1210,7 +1211,7 @@ func TestServerConnCloseAllowsNextRPCStreamOnNewConn(t *testing.T) {
 		t.Fatalf("client wake write after server Conn.Close failed: %v", err)
 	}
 
-	var nextServerConn *giznet.Conn
+	var nextServerConn giznet.Conn
 	select {
 	case nextServerConn = <-nextConnCh:
 		if got := nextServerConn.PublicKey(); got != pair.ClientKey.Public {
@@ -1273,7 +1274,7 @@ func TestServerConnCloseWithWaitingAcceptAndImmediateData(t *testing.T) {
 
 	serverConn := pair.ServerConn
 	for i := range 5 {
-		nextConnCh := make(chan *giznet.Conn, 1)
+		nextConnCh := make(chan giznet.Conn, 1)
 		nextErrCh := make(chan error, 1)
 		go func() {
 			conn, err := pair.ServerListener.Accept()

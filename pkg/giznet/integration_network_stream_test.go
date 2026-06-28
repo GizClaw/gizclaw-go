@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 // TestIntegration_ConnectionPoolCapacity verifies the server can handle
@@ -23,7 +24,7 @@ func TestIntegration_ConnectionPoolCapacity(t *testing.T) {
 	server := NewUDPNode(t, serverKey)
 	defer server.Close()
 
-	clients := make([]*giznet.UDP, 0, peerCount)
+	clients := make([]*giznoise.UDP, 0, peerCount)
 	clientKeys := make([]*giznet.KeyPair, 0, peerCount)
 	defer func() {
 		for _, c := range clients {
@@ -469,7 +470,7 @@ func TestIntegration_KCPService0AndNonZeroConcurrentActivity(t *testing.T) {
 	}
 }
 
-func openAcceptedStreamPair(t *testing.T, server, client *giznet.UDP, clientPK, serverPK giznet.PublicKey, service uint64) (net.Conn, net.Conn) {
+func openAcceptedStreamPair(t *testing.T, server, client *giznoise.UDP, clientPK, serverPK giznet.PublicKey, service uint64) (net.Conn, net.Conn) {
 	t.Helper()
 
 	acceptCh := make(chan net.Conn, 1)
@@ -582,7 +583,7 @@ func TestIntegration_RPCBidirectionalOverKCPStream(t *testing.T) {
 
 	ConnectNodes(t, client, clientKey, server, serverKey)
 
-	assertRPC := func(caller, callee *giznet.UDP, callerPK, calleePK giznet.PublicKey, req, resp []byte) {
+	assertRPC := func(caller, callee *giznoise.UDP, callerPK, calleePK giznet.PublicKey, req, resp []byte) {
 		t.Helper()
 
 		acceptCh := make(chan net.Conn, 1)
@@ -759,8 +760,8 @@ func TestIntegration_UnknownPeerOperations(t *testing.T) {
 	u := NewUDPNode(t, localKey)
 	defer u.Close()
 
-	if _, err := u.PeerServiceMux(unknownKey.Public); err != giznet.ErrPeerNotFound {
-		t.Fatalf("PeerServiceMux(unknown peer) err=%v, want %v", err, giznet.ErrPeerNotFound)
+	if _, err := u.PeerServiceMux(unknownKey.Public); err != giznoise.ErrPeerNotFound {
+		t.Fatalf("PeerServiceMux(unknown peer) err=%v, want %v", err, giznoise.ErrPeerNotFound)
 	}
 }
 
@@ -785,8 +786,8 @@ func TestIntegration_StreamBeforeSession(t *testing.T) {
 	client.SetPeerEndpoint(serverKey.Public, server.HostInfo().Addr)
 	server.SetPeerEndpoint(clientKey.Public, client.HostInfo().Addr)
 
-	if _, err := client.PeerServiceMux(serverKey.Public); err != giznet.ErrNoSession {
-		t.Fatalf("PeerServiceMux(before session) err=%v, want %v", err, giznet.ErrNoSession)
+	if _, err := client.PeerServiceMux(serverKey.Public); err != giznoise.ErrNoSession {
+		t.Fatalf("PeerServiceMux(before session) err=%v, want %v", err, giznoise.ErrNoSession)
 	}
 }
 
@@ -807,8 +808,8 @@ func TestIntegration_ClosedNodeOperations(t *testing.T) {
 		t.Fatalf("Close failed: %v", err)
 	}
 
-	if _, err := u.PeerServiceMux(peerKey.Public); err != giznet.ErrUDPClosed {
-		t.Fatalf("PeerServiceMux(after close) err=%v, want %v", err, giznet.ErrUDPClosed)
+	if _, err := u.PeerServiceMux(peerKey.Public); err != giznoise.ErrUDPClosed {
+		t.Fatalf("PeerServiceMux(after close) err=%v, want %v", err, giznoise.ErrUDPClosed)
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/runtime/peer"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 func TestPublicFiberAdapterServerInfo(t *testing.T) {
@@ -52,7 +53,7 @@ func TestPeerServicePublicRoundTrip(t *testing.T) {
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
 
-	serverListener, err := (&giznet.ListenConfig{
+	serverListener, err := (&giznoise.ListenConfig{
 		Addr: "127.0.0.1:0",
 		SecurityPolicy: testGiznetSecurityPolicy{
 			allowService: func(_ giznet.PublicKey, service uint64) bool {
@@ -61,22 +62,22 @@ func TestPeerServicePublicRoundTrip(t *testing.T) {
 		},
 	}).Listen(serverKey)
 	if err != nil {
-		t.Fatalf("giznet.Listen(server) error = %v", err)
+		t.Fatalf("giznoise.Listen(server) error = %v", err)
 	}
 	defer serverListener.Close()
 	go drainUDP(serverListener.UDP())
 
-	clientListener, err := (&giznet.ListenConfig{
+	clientListener, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: testGiznetSecurityPolicy{},
 	}).Listen(clientKey)
 	if err != nil {
-		t.Fatalf("giznet.Listen(client) error = %v", err)
+		t.Fatalf("giznoise.Listen(client) error = %v", err)
 	}
 	defer clientListener.Close()
 	go drainUDP(clientListener.UDP())
 
-	connCh := make(chan *giznet.Conn, 1)
+	connCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, err := serverListener.Accept()
@@ -93,7 +94,7 @@ func TestPeerServicePublicRoundTrip(t *testing.T) {
 	}
 	defer conn.Close()
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-connCh:
 	case err := <-errCh:

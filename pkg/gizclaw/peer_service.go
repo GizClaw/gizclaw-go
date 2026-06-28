@@ -37,7 +37,7 @@ type PeerService struct {
 
 var _ serverpublic.StrictServerInterface = (*serverPublic)(nil)
 
-func (s *PeerService) ServeConn(conn *giznet.Conn) error {
+func (s *PeerService) ServeConn(conn giznet.Conn) error {
 	if s == nil {
 		return errors.New("gizclaw: nil peer service")
 	}
@@ -64,7 +64,7 @@ func (s *PeerService) ServeConn(conn *giznet.Conn) error {
 	return g.Wait()
 }
 
-func (s *PeerService) ensureConnectedPeer(ctx context.Context, conn *giznet.Conn) error {
+func (s *PeerService) ensureConnectedPeer(ctx context.Context, conn giznet.Conn) error {
 	if s == nil || s.manager == nil {
 		return nil
 	}

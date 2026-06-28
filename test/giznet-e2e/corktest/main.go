@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 const defaultServiceID uint64 = 57
@@ -49,7 +50,7 @@ type config struct {
 	maxHeapGrowthMB    int64
 	maxHeapSysGrowthMB int64
 	serviceID          uint64
-	cipherMode         giznet.CipherMode
+	cipherMode         giznoise.CipherMode
 	requireOffline     bool
 	pprofAddr          string
 	memCSV             string
@@ -85,10 +86,10 @@ type memSnapshot struct {
 type endpointPair struct {
 	serverKey  *giznet.KeyPair
 	clientKey  *giznet.KeyPair
-	server     *giznet.Listener
-	client     *giznet.Listener
-	serverConn *giznet.Conn
-	clientConn *giznet.Conn
+	server     *giznoise.Listener
+	client     *giznoise.Listener
+	serverConn giznet.Conn
+	clientConn giznet.Conn
 }
 
 func main() {
@@ -123,7 +124,7 @@ func parseFlags() config {
 	flag.StringVar(&cfg.memCSV, "mem-csv", "", "optional path for periodic memory samples as CSV")
 	flag.Parse()
 
-	cfg.cipherMode = giznet.CipherMode(cipherMode)
+	cfg.cipherMode = giznoise.CipherMode(cipherMode)
 	return cfg
 }
 
@@ -285,7 +286,8 @@ func runDisconnect(cfg config) error {
 	}
 
 	deadline := time.Now().Add(cfg.disconnectWait)
-	var lastPeerInfo *giznet.PeerInfo
+	var lastPeerInfo any
+	var lastPeerOffline bool
 	var peerHandlePresent bool
 	readErrors := make([]error, 0, len(streams))
 	for time.Now().Before(deadline) {
@@ -298,11 +300,13 @@ func runDisconnect(cfg config) error {
 			}
 		}
 	drained:
-		lastPeerInfo = pair.server.UDP().PeerInfo(pair.clientKey.Public)
+		peerInfo := pair.server.UDP().PeerInfo(pair.clientKey.Public)
+		lastPeerInfo = peerInfo
+		lastPeerOffline = peerInfo == nil || peerInfo.State.String() == giznet.PeerStateOffline.String()
 		_, peerHandlePresent = pair.server.Peer(pair.clientKey.Public)
 		if len(readErrors) == len(streams) &&
 			!peerHandlePresent &&
-			(lastPeerInfo == nil || lastPeerInfo.State == giznet.PeerStateOffline) {
+			lastPeerOffline {
 			break
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -341,15 +345,16 @@ func runDisconnect(cfg config) error {
 	goroutineGrowth := runtime.NumGoroutine() - baseGoroutines
 
 	_, peerHandlePresent = pair.server.Peer(pair.clientKey.Public)
-	lastPeerInfo = pair.server.UDP().PeerInfo(pair.clientKey.Public)
+	peerInfo := pair.server.UDP().PeerInfo(pair.clientKey.Public)
+	lastPeerInfo = peerInfo
 	fmt.Printf("disconnect observed peer_handle_present=%t peer_info=%s heap_growth=%d goroutine_growth=%d\n",
 		peerHandlePresent, formatPeerInfo(lastPeerInfo), heapGrowth, goroutineGrowth)
 
 	if peerHandlePresent {
 		return errors.New("server listener still owns peer Conn after device disconnect")
 	}
-	if cfg.requireOffline && lastPeerInfo != nil && lastPeerInfo.State != giznet.PeerStateOffline {
-		return fmt.Errorf("server peer state after disconnect = %s, want offline or removed", lastPeerInfo.State)
+	if cfg.requireOffline && peerInfo != nil && peerInfo.State.String() != giznet.PeerStateOffline.String() {
+		return fmt.Errorf("server peer state after disconnect = %s, want offline or removed", peerInfo.State)
 	}
 	if heapGrowth > cfg.maxHeapGrowthMB*1024*1024 {
 		return fmt.Errorf("heap growth %d bytes exceeded limit %d MiB", heapGrowth, cfg.maxHeapGrowthMB)
@@ -404,8 +409,8 @@ func (cfg config) validate() error {
 	return nil
 }
 
-func listen(key *giznet.KeyPair, cipherMode giznet.CipherMode) (*giznet.Listener, error) {
-	return (&giznet.ListenConfig{
+func listen(key *giznet.KeyPair, cipherMode giznoise.CipherMode) (*giznoise.Listener, error) {
+	return (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: allowAllPolicy{},
 		CipherMode:     cipherMode,
@@ -432,7 +437,7 @@ func newEndpointPair(cfg config) (*endpointPair, error) {
 		return nil, fmt.Errorf("listen client: %w", err)
 	}
 
-	serverConnCh := make(chan *giznet.Conn, 1)
+	serverConnCh := make(chan giznet.Conn, 1)
 	acceptErrCh := make(chan error, 1)
 	go func() {
 		conn, err := server.Accept()
@@ -450,7 +455,7 @@ func newEndpointPair(cfg config) (*endpointPair, error) {
 		return nil, fmt.Errorf("dial server: %w", err)
 	}
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-serverConnCh:
 	case err := <-acceptErrCh:
@@ -493,7 +498,7 @@ func (p *endpointPair) Close() {
 	}
 }
 
-func openStreamPairs(serverConn, clientConn *giznet.Conn, cfg config) ([]streamPair, error) {
+func openStreamPairs(serverConn, clientConn giznet.Conn, cfg config) ([]streamPair, error) {
 	listener := serverConn.ListenService(cfg.serviceID)
 	defer listener.Close()
 
@@ -766,11 +771,11 @@ func readMem() memSnapshot {
 	}
 }
 
-func formatPeerInfo(info *giznet.PeerInfo) string {
+func formatPeerInfo(info any) string {
 	if info == nil {
 		return "<nil>"
 	}
-	return fmt.Sprintf("{state:%s rx:%d tx:%d last_seen:%s}", info.State, info.RxBytes, info.TxBytes, info.LastSeen.Format(time.RFC3339Nano))
+	return fmt.Sprintf("%+v", info)
 }
 
 func startPprof(addr string) (func(), error) {

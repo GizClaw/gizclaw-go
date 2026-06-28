@@ -9,6 +9,7 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/identity"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 var (
@@ -46,7 +47,7 @@ func TestStoreCreateAndLoad(t *testing.T) {
 
 	if err := s.CreateWithOptions("local", "127.0.0.1:9820", CreateOptions{
 		ServerPublicKey: testServerPublicKey,
-		CipherMode:      giznet.CipherModeAES256GCM,
+		CipherMode:      giznoise.CipherModeAES256GCM,
 	}); err != nil {
 		t.Fatalf("Create err=%v", err)
 	}
@@ -64,8 +65,8 @@ func TestStoreCreateAndLoad(t *testing.T) {
 	if cliCtx.Config.Server.PublicKey.String() != testServerPublicKey {
 		t.Fatalf("PublicKey=%q", cliCtx.Config.Server.PublicKey.String())
 	}
-	if cliCtx.Config.Server.CipherMode != giznet.CipherModeAES256GCM {
-		t.Fatalf("CipherMode=%q, want %q", cliCtx.Config.Server.CipherMode, giznet.CipherModeAES256GCM)
+	if cliCtx.Config.Server.CipherMode != giznoise.CipherModeAES256GCM {
+		t.Fatalf("CipherMode=%q, want %q", cliCtx.Config.Server.CipherMode, giznoise.CipherModeAES256GCM)
 	}
 	if cliCtx.KeyPair == nil || cliCtx.KeyPair.Public.IsZero() {
 		t.Fatal("KeyPair not loaded")
@@ -85,7 +86,7 @@ func TestStoreCreateRejectsInvalidCipherMode(t *testing.T) {
 	s := &Store{Root: t.TempDir()}
 	err := s.CreateWithOptions("local", "127.0.0.1:9820", CreateOptions{
 		ServerPublicKey: testServerPublicKey,
-		CipherMode:      giznet.CipherMode("bad"),
+		CipherMode:      giznoise.CipherMode("bad"),
 	})
 	if err == nil {
 		t.Fatal("CreateWithOptions should reject invalid cipher mode")

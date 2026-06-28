@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 type testSecurityPolicy struct {
@@ -23,10 +24,10 @@ func (p testSecurityPolicy) AllowService(pk giznet.PublicKey, service uint64) bo
 }
 
 // newListenerNode creates a giznet.Listener for tests using only public APIs.
-func newListenerNode(t *testing.T, key *giznet.KeyPair, cfgs ...giznet.ListenConfig) *giznet.Listener {
+func newListenerNode(t *testing.T, key *giznet.KeyPair, cfgs ...giznoise.ListenConfig) *giznoise.Listener {
 	t.Helper()
 
-	cfg := giznet.ListenConfig{
+	cfg := giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: testSecurityPolicy{},
 	}
@@ -55,12 +56,12 @@ func newListenerNode(t *testing.T, key *giznet.KeyPair, cfgs ...giznet.ListenCon
 	return l
 }
 
-func connectListenerNodes(t *testing.T, client *giznet.Listener, clientKey *giznet.KeyPair, server *giznet.Listener, serverKey *giznet.KeyPair) (*giznet.Conn, *giznet.Conn) {
+func connectListenerNodes(t *testing.T, client *giznoise.Listener, clientKey *giznet.KeyPair, server *giznoise.Listener, serverKey *giznet.KeyPair) (giznet.Conn, giznet.Conn) {
 	t.Helper()
 
 	server.SetPeerEndpoint(clientKey.Public, client.HostInfo().Addr)
 
-	acceptCh := make(chan *giznet.Conn, 1)
+	acceptCh := make(chan giznet.Conn, 1)
 	errCh := make(chan error, 1)
 	go func() {
 		conn, err := server.Accept()
@@ -87,13 +88,13 @@ func connectListenerNodes(t *testing.T, client *giznet.Listener, clientKey *gizn
 	return nil, nil
 }
 
-func waitForPeerEstablished(t *testing.T, u *giznet.UDP, pk giznet.PublicKey) {
+func waitForPeerEstablished(t *testing.T, u *giznoise.UDP, pk giznet.PublicKey) {
 	t.Helper()
 
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		info := u.PeerInfo(pk)
-		if info != nil && info.State == giznet.PeerStateEstablished {
+		if info != nil && info.State.String() == giznet.PeerStateEstablished.String() {
 			return
 		}
 		time.Sleep(10 * time.Millisecond)

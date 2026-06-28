@@ -71,9 +71,9 @@ func TestServerServeReturnsNilAfterClose(t *testing.T) {
 	}
 
 	server := &Server{
-		LocalStatic: *keyPair,
-		ListenAddr:  "127.0.0.1:0",
-		PeerStore:   mustBadgerInMemory(t, nil),
+		LocalStatic:   *keyPair,
+		PeerStore:     mustBadgerInMemory(t, nil),
+		PeerListeners: []giznet.Listener{newTestGiznetListener()},
 	}
 	if err := server.Listen(); err != nil {
 		t.Fatalf("Listen() error = %v", err)
@@ -312,7 +312,7 @@ func TestServerPeerEventHandlerMarksManagerOffline(t *testing.T) {
 		t.Fatalf("GenerateKeyPair error = %v", err)
 	}
 	server := &Server{manager: &Manager{}}
-	server.manager.SetPeerUp(keyPair.Public, &giznet.Conn{})
+	server.manager.SetPeerUp(keyPair.Public, &testGiznetConn{})
 
 	(*serverPeerEventHandler)(server).HandlePeerEvent(giznet.PeerEvent{PublicKey: keyPair.Public, State: giznet.PeerStateOffline})
 	runtime := server.manager.PeerRuntime(context.Background(), keyPair.Public)

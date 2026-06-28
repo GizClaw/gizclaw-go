@@ -29,15 +29,14 @@ var defaultRPCStreamTimeout = 30 * time.Second
 
 // Client holds device-side peer client configuration.
 type Client struct {
-	KeyPair *giznet.KeyPair
-	// CipherMode must match the server's low-level giznet cipher mode.
-	CipherMode giznet.CipherMode
+	KeyPair       *giznet.KeyPair
+	DialTransport DialTransportFunc
 
 	Device apitypes.DeviceInfo
 
 	mu       sync.RWMutex
-	listener *giznet.Listener
-	conn     *giznet.Conn
+	listener giznet.Listener
+	conn     giznet.Conn
 	serverPK giznet.PublicKey
 	rpc      *rpcClient
 
@@ -45,6 +44,8 @@ type Client struct {
 	packetSubscribers map[byte]map[chan []byte]struct{}
 	openPeerStream    func(int) (*PeerStream, error)
 }
+
+type DialTransportFunc func(key *giznet.KeyPair, serverPK giznet.PublicKey, serverAddr string, securityPolicy giznet.SecurityPolicy) (giznet.Listener, giznet.Conn, error)
 
 // Transform bridges a local genx stream to the connected peer workspace stream.
 func (c *Client) Transform(ctx context.Context, _ string, input genx.Stream) (genx.Stream, error) {
@@ -98,25 +99,12 @@ func (c *Client) Dial(serverPK giznet.PublicKey, serverAddr string) error {
 	if alreadyStarted {
 		return fmt.Errorf("gizclaw: client already started")
 	}
-
-	l, err := (&giznet.ListenConfig{
-		Addr:           ":0",
-		CipherMode:     c.CipherMode,
-		SecurityPolicy: clientSecurityPolicy{},
-	}).Listen(c.KeyPair)
-	if err != nil {
-		return fmt.Errorf("gizclaw: listen: %w", err)
+	if c.DialTransport == nil {
+		return fmt.Errorf("gizclaw: nil dial transport")
 	}
 
-	udpAddr, err := net.ResolveUDPAddr("udp", serverAddr)
+	l, conn, err := c.DialTransport(c.KeyPair, serverPK, serverAddr, clientSecurityPolicy{})
 	if err != nil {
-		_ = l.Close()
-		return fmt.Errorf("gizclaw: resolve addr: %w", err)
-	}
-
-	conn, err := l.Dial(serverPK, udpAddr)
-	if err != nil {
-		_ = l.Close()
 		return fmt.Errorf("gizclaw: dial: %w", err)
 	}
 	c.init(l, conn, serverPK)
@@ -150,7 +138,7 @@ func (c *Client) Serve() error {
 	return g.Wait()
 }
 
-func (c *Client) init(listener *giznet.Listener, conn *giznet.Conn, serverPK giznet.PublicKey) {
+func (c *Client) init(listener giznet.Listener, conn giznet.Conn, serverPK giznet.PublicKey) {
 	c.listener = listener
 	c.conn = conn
 	c.serverPK = serverPK
@@ -392,7 +380,7 @@ func (c *Client) rpcClient() *rpcClient {
 }
 
 // PeerConn returns the underlying peer connection.
-func (c *Client) PeerConn() *giznet.Conn {
+func (c *Client) PeerConn() giznet.Conn {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return c.conn
@@ -457,7 +445,7 @@ func isPeerPacketReadClosed(err error) bool {
 	return errors.Is(err, io.EOF) ||
 		errors.Is(err, net.ErrClosed) ||
 		errors.Is(err, giznet.ErrConnClosed) ||
-		errors.Is(err, giznet.ErrUDPClosed) ||
+		errors.Is(err, giznet.ErrClosed) ||
 		errors.Is(err, giznet.ErrServiceMuxClosed)
 }
 
@@ -545,7 +533,7 @@ func (c *Client) proxyService(service uint64) http.Handler {
 	})
 }
 
-func newServiceProxy(conn *giznet.Conn, service uint64) *httputil.ReverseProxy {
+func newServiceProxy(conn giznet.Conn, service uint64) *httputil.ReverseProxy {
 	target := &url.URL{
 		Scheme: "http",
 		Host:   "gizclaw",

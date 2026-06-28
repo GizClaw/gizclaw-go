@@ -9,6 +9,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 var BuildCommit = "dev"
@@ -60,10 +61,18 @@ func New(cfg Config) (srv *CmdServer, err error) {
 
 	gizServer := &gizclaw.Server{
 		LocalStatic: *cfg.KeyPair,
-		ListenAddr:  cfg.ListenAddr,
-		CipherMode:  cfg.CipherMode,
 		PeerStore:   peersKV,
 		BuildCommit: BuildCommit,
+		PeerListenerFactories: []gizclaw.PeerListenerFactory{
+			func(opts gizclaw.PeerListenerOptions) (giznet.Listener, error) {
+				return (&giznoise.ListenConfig{
+					Addr:             cfg.ListenAddr,
+					CipherMode:       cfg.CipherMode,
+					SecurityPolicy:   opts.SecurityPolicy,
+					PeerEventHandler: opts.PeerEventHandler,
+				}).Listen(opts.KeyPair)
+			},
+		},
 	}
 	gizServer.RewardClaimGenerator = cfg.SystemTasks.RewardClaim.Generator
 	gizServer.PetActionGenerator = cfg.SystemTasks.PetAction.Generator

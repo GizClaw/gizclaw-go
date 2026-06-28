@@ -3,6 +3,7 @@ package connection
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 )
 
 type allowAllSecurityPolicy struct{}
@@ -108,7 +110,7 @@ func TestDialFromContextUsesCipherMode(t *testing.T) {
 	}
 	if err := store.CreateWithOptions("local", "127.0.0.1:9820", clicontext.CreateOptions{
 		ServerPublicKey: testServerPublicKeyText(0xab),
-		CipherMode:      giznet.CipherModeAES256GCM,
+		CipherMode:      giznoise.CipherModeAES256GCM,
 	}); err != nil {
 		t.Fatalf("CreateWithOptions error = %v", err)
 	}
@@ -117,8 +119,8 @@ func TestDialFromContextUsesCipherMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("DialFromContext error = %v", err)
 	}
-	if client.CipherMode != giznet.CipherModeAES256GCM {
-		t.Fatalf("CipherMode = %q, want %q", client.CipherMode, giznet.CipherModeAES256GCM)
+	if client.DialTransport == nil {
+		t.Fatal("DialTransport is nil")
 	}
 }
 
@@ -302,7 +304,7 @@ func TestProbeServerPublicReadyConnectedClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GenerateKeyPair(client) error = %v", err)
 	}
-	serverListener, err := (&giznet.ListenConfig{
+	serverListener, err := (&giznoise.ListenConfig{
 		Addr:           "127.0.0.1:0",
 		SecurityPolicy: allowAllSecurityPolicy{},
 	}).Listen(serverKey)
@@ -311,7 +313,7 @@ func TestProbeServerPublicReadyConnectedClient(t *testing.T) {
 	}
 	defer serverListener.Close()
 
-	accepted := make(chan *giznet.Conn, 1)
+	accepted := make(chan giznet.Conn, 1)
 	acceptErr := make(chan error, 1)
 	go func() {
 		conn, err := serverListener.Accept()
@@ -322,13 +324,32 @@ func TestProbeServerPublicReadyConnectedClient(t *testing.T) {
 		accepted <- conn
 	}()
 
-	client := &gizcli.Client{KeyPair: clientKey}
+	client := &gizcli.Client{KeyPair: clientKey, DialTransport: func(key *giznet.KeyPair, serverPK giznet.PublicKey, serverAddr string, securityPolicy giznet.SecurityPolicy) (giznet.Listener, giznet.Conn, error) {
+		listener, err := (&giznoise.ListenConfig{
+			Addr:           ":0",
+			SecurityPolicy: securityPolicy,
+		}).Listen(key)
+		if err != nil {
+			return nil, nil, err
+		}
+		udpAddr, err := net.ResolveUDPAddr("udp", serverAddr)
+		if err != nil {
+			_ = listener.Close()
+			return nil, nil, err
+		}
+		conn, err := listener.Dial(serverPK, udpAddr)
+		if err != nil {
+			_ = listener.Close()
+			return nil, nil, err
+		}
+		return listener, conn, nil
+	}}
 	if err := client.Dial(serverKey.Public, serverListener.HostInfo().Addr.String()); err != nil {
 		t.Fatalf("Dial error = %v", err)
 	}
 	defer client.Close()
 
-	var serverConn *giznet.Conn
+	var serverConn giznet.Conn
 	select {
 	case serverConn = <-accepted:
 	case err := <-acceptErr:

@@ -7,14 +7,15 @@ import (
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/identity"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
 	"github.com/goccy/go-yaml"
 )
 
 // ServerConfig holds the connection info for a remote server.
 type ServerConfig struct {
-	Address    string            `yaml:"address"`
-	PublicKey  giznet.PublicKey  `yaml:"-"`
-	CipherMode giznet.CipherMode `yaml:"cipher-mode,omitempty"`
+	Address    string              `yaml:"address"`
+	PublicKey  giznet.PublicKey    `yaml:"-"`
+	CipherMode giznoise.CipherMode `yaml:"cipher-mode,omitempty"`
 }
 
 // Config is the per-cli-context configuration stored in config.yaml.
@@ -52,9 +53,9 @@ func Load(dir string) (*CLIContext, error) {
 	}
 	var raw struct {
 		Server struct {
-			Address    string            `yaml:"address"`
-			PublicKey  giznet.PublicKey  `yaml:"public-key"`
-			CipherMode giznet.CipherMode `yaml:"cipher-mode"`
+			Address    string              `yaml:"address"`
+			PublicKey  giznet.PublicKey    `yaml:"public-key"`
+			CipherMode giznoise.CipherMode `yaml:"cipher-mode"`
 		} `yaml:"server"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
