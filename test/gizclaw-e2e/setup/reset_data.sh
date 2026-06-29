@@ -28,6 +28,8 @@ fi
 
 admin_setup_config_home="${GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME:-$testdata_dir/admin-config-home}"
 admin_setup_context="${GIZCLAW_E2E_ADMIN_SETUP_CONTEXT:-e2e-admin}"
+admin_test_config_home="${GIZCLAW_E2E_ADMIN_TEST_CONFIG_HOME:-$testdata_dir/admin-config-home}"
+admin_test_context="${GIZCLAW_E2E_ADMIN_TEST_CONTEXT:-e2e-admin-test}"
 default_client_config_home="$testdata_dir/gizclaw-config-home"
 default_client_context="e2e-client"
 client_config_home="${GIZCLAW_E2E_CLIENT_CONFIG_HOME:-$testdata_dir/gizclaw-config-home}"
@@ -101,6 +103,21 @@ dashscope_ready() {
 
 init_data() {
   "$script_dir/start-server.sh" >/dev/null
+
+  local admin_test_public_key
+  XDG_CONFIG_HOME="$admin_test_config_home" \
+    "$bin_path" connect set-name "E2E Admin Test" --context "$admin_test_context" >/dev/null
+  admin_test_public_key="$(
+    XDG_CONFIG_HOME="$admin_test_config_home" \
+      "$bin_path" context show "$admin_test_context" |
+      sed -n 's/.*"identity_public":"\([^"]*\)".*/\1/p'
+  )"
+  if [[ -z "$admin_test_public_key" ]]; then
+    echo "failed to resolve public key for admin test context $admin_test_context" >&2
+    exit 2
+  fi
+  XDG_CONFIG_HOME="$admin_setup_config_home" \
+    "$bin_path" admin peers approve "$admin_test_public_key" admin --context "$admin_setup_context" >/dev/null
 
   XDG_CONFIG_HOME="$default_client_config_home" \
     "$bin_path" connect set-name "Living Room Device" --context "$default_client_context" >/dev/null

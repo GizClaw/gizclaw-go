@@ -259,15 +259,19 @@ the server `public-key` directly; do not point contexts at the server
 `identity.key`, because that file is the server private key.
 
 Committed fixture contexts are stable identities and should be used when a test
-depends on a known role or ACL state. Tests that create sandbox contexts at
-runtime are responsible for registering and approving those peers before using
-role-gated services.
+depends on a known role or ACL state. The setup admin context is `e2e-admin`;
+the fixed admin test context is `e2e-admin-test`. `reset_data.sh` registers the
+fixed admin test context and approves it as an admin peer before applying the
+resource fixtures. Tests that create sandbox contexts at runtime are responsible
+for registering those peers before using role-gated services.
 
 Optional role overrides in `.env` let e2e suites target existing context homes
 without changing test code:
 
 - `GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME` / `GIZCLAW_E2E_ADMIN_SETUP_CONTEXT`:
   setup resource initialization.
+- `GIZCLAW_E2E_ADMIN_TEST_CONFIG_HOME` / `GIZCLAW_E2E_ADMIN_TEST_CONTEXT`:
+  fixed admin test identity approved by `reset_data.sh`.
 - `GIZCLAW_E2E_ADMIN_CLI_CONFIG_HOME` / `GIZCLAW_E2E_ADMIN_CLI_CONTEXT`:
   admin CLI story target role.
 - `GIZCLAW_E2E_CLIENT_CONFIG_HOME` / `GIZCLAW_E2E_CLIENT_CONTEXT`: ordinary

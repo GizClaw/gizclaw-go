@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
@@ -399,6 +398,47 @@ func (h *Harness) EnsureContext(name string) Result {
 	return h.UseContext(name)
 }
 
+func (h *Harness) InstallFixedAdminContext(name string) Result {
+	h.t.Helper()
+
+	contextDir := h.contextDir(name)
+	if err := os.MkdirAll(contextDir, 0o755); err != nil {
+		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
+	}
+	fixtureIdentity := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home", "gizclaw", "e2e-admin-test", "identity.key")
+	identityData, err := os.ReadFile(fixtureIdentity)
+	if err != nil {
+		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
+	}
+	if len(identityData) != giznet.KeySize {
+		err := fmt.Errorf("fixed admin identity has %d bytes, want %d", len(identityData), giznet.KeySize)
+		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
+	}
+	if err := os.WriteFile(filepath.Join(contextDir, "identity.key"), identityData, 0o600); err != nil {
+		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
+	}
+
+	cfg := cliContextConfig{}
+	host, portText := splitHostPortForHarness(h.ServerAddr)
+	port := parsePortForHarness(h.t, portText)
+	cfg.Server.Host = host
+	cfg.Server.PublicAPIPort = defaultPort(h.ServerPublicPort, port)
+	cfg.Server.NoiseUDPPort = defaultPort(h.ServerNoisePort, port)
+	cfg.Server.ICEPort = defaultPort(h.ServerICEPort, 9821)
+	cfg.Server.PublicKey = h.ServerPublicKey
+	cfg.Server.Transport = h.defaultContextTransport()
+	cfg.Server.CipherMode = h.ServerCipherMode
+	h.t.Logf("install fixed admin context %s transport=%s public=%d noise=%d ice=%d", name, cfg.Server.Transport, cfg.Server.PublicAPIPort, cfg.Server.NoiseUDPPort, cfg.Server.ICEPort)
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
+	}
+	if err := os.WriteFile(filepath.Join(contextDir, "config.yaml"), data, 0o600); err != nil {
+		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
+	}
+	return h.UseContext(name)
+}
+
 func (h *Harness) defaultContextTransport() string {
 	transport := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONNECT_TRANSPORT"))
 	if transport == "" {
@@ -443,27 +483,6 @@ func (h *Harness) RegisterContext(name string, extraArgs ...string) Result {
 		return Result{Args: []string{"register-context", name}, Err: err, Stderr: err.Error()}
 	}
 	return Result{Args: append([]string{"register-context", name}, extraArgs...), Stdout: string(data)}
-}
-
-func (h *Harness) ApproveAdminPeer(publicKey string) {
-	h.t.Helper()
-
-	h.SetContextAlias("setup-admin", filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home"), "e2e-admin")
-	admin := h.ConnectClientFromContext("setup-admin")
-	defer admin.Close()
-	api, err := admin.ServerAdminClient()
-	if err != nil {
-		h.t.Fatalf("create setup admin API client: %v", err)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	resp, err := api.ApprovePeerWithResponse(ctx, publicKey, adminservice.ApproveRequest{Role: apitypes.PeerRoleAdmin})
-	if err != nil {
-		h.t.Fatalf("approve admin peer %s: %v", publicKey, err)
-	}
-	if resp.StatusCode() != http.StatusOK {
-		h.t.Fatalf("approve admin peer %s status = %d: %s", publicKey, resp.StatusCode(), strings.TrimSpace(string(resp.Body)))
-	}
 }
 
 func (h *Harness) deviceInfoFromArgs(_ string, extraArgs ...string) (apitypes.DeviceInfo, error) {
