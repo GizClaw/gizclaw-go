@@ -90,8 +90,8 @@ func newSocialHumanReviewHarness(t *testing.T) *clitest.Harness {
 	if err != nil {
 		t.Fatalf("create social human-review admin client: %v", err)
 	}
-	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT", "client-social-human-review-peer-a-sn")
-	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT", "client-social-human-review-peer-b-sn")
+	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT", "e2e-social-a", "client-social-human-review-peer-a-sn")
+	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT", "e2e-social-b", "client-social-human-review-peer-b-sn")
 	for _, peer := range []string{"peer-c"} {
 		h.CreateContext(peer).MustSucceed(t)
 		h.RegisterContext(peer, "--sn", "client-social-human-review-"+peer+"-sn").MustSucceed(t)

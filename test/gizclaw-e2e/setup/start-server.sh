@@ -9,7 +9,7 @@ workspace_dir="$testdata_dir/server-workspace"
 bin_path="$testdata_dir/bin/gizclaw"
 pid_file="$workspace_dir/gizclaw-server.pid"
 log_file="$workspace_dir/gizclaw-server.log"
-env_file="${GIZCLAW_E2E_ENV:-$e2e_dir/.env}"
+env_file="$e2e_dir/.env"
 
 if [[ -f "$env_file" ]]; then
   set -a
@@ -18,8 +18,7 @@ if [[ -f "$env_file" ]]; then
   set +a
 fi
 
-config_home="$testdata_dir/admin-config-home"
-config_home="${GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME:-$config_home}"
+config_home="${GIZCLAW_E2E_CONFIG_HOME:-$testdata_dir/config-home}"
 context_name="${GIZCLAW_E2E_ADMIN_SETUP_CONTEXT:-e2e-admin}"
 launch_label="com.gizclaw.e2e.server.$(printf '%s' "$repo_root" | cksum | awk '{print $1}')"
 

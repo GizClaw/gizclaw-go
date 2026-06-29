@@ -93,7 +93,6 @@ UDP port, and WebRTC ICE port for each run.
 ```sh
 ./test/gizclaw-e2e/setup/reset_data.sh
 GIZCLAW_E2E_CLIENT_CONTEXT=e2e-client \
-GIZCLAW_E2E_CONNECT_TRANSPORT=noise \
 go test -tags gizclaw_e2e -count=1 \
   ./test/gizclaw-e2e/client/admin \
   ./test/gizclaw-e2e/client/rpc \
@@ -103,7 +102,6 @@ go test -tags gizclaw_e2e -count=1 \
 
 ./test/gizclaw-e2e/setup/reset_data.sh
 GIZCLAW_E2E_CLIENT_CONTEXT=e2e-client-webrtc \
-GIZCLAW_E2E_CONNECT_TRANSPORT=webrtc \
 go test -tags gizclaw_e2e -count=1 \
   ./test/gizclaw-e2e/client/admin \
   ./test/gizclaw-e2e/client/rpc \
@@ -112,9 +110,9 @@ go test -tags gizclaw_e2e -count=1 \
   ./test/gizclaw-e2e/cmd/connect
 ```
 
-The harness logs the selected context transport and dial address when it binds
-an alias, creates a `cmd/connect` context, or opens a direct `gizcli.Client`
-connection.
+The harness reads transport from the selected context config, then logs the
+selected transport and dial address when it binds an alias, creates a
+`cmd/connect` context, or opens a direct `gizcli.Client` connection.
 
 7. For browser UI tests, start the matching UI surface after the needed client
    tests have created runtime state:
@@ -252,11 +250,11 @@ history by running the relevant client workflows.
 
 ## Config Homes
 
-`testdata/admin-config-home` and `testdata/gizclaw-config-home` are
-`XDG_CONFIG_HOME` roots. They must contain the normal `gizclaw/` config layout
-and committed client `identity.key` fixtures. Context config files must store
-the server `public-key` directly; do not point contexts at the server
-`identity.key`, because that file is the server private key.
+`testdata/config-home` is the shared `XDG_CONFIG_HOME` root for committed e2e
+contexts. It contains the normal `gizclaw/` config layout and committed client
+`identity.key` fixtures. Context config files must store the server
+`public-key` directly; do not point contexts at the server `identity.key`,
+because that file is the server private key.
 
 Committed fixture contexts are stable identities and should be used when a test
 depends on a known role or ACL state. The setup admin context is `e2e-admin`;
@@ -265,36 +263,29 @@ fixed admin test context and approves it as an admin peer before applying the
 resource fixtures. Tests that create sandbox contexts at runtime are responsible
 for registering those peers before using role-gated services.
 
-Optional role overrides in `.env` let e2e suites target existing context homes
-without changing test code:
+Context overrides in `.env` select identities inside that single config home:
 
-- `GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME` / `GIZCLAW_E2E_ADMIN_SETUP_CONTEXT`:
-  setup resource initialization.
-- `GIZCLAW_E2E_ADMIN_TEST_CONFIG_HOME` / `GIZCLAW_E2E_ADMIN_TEST_CONTEXT`:
-  fixed admin test identity approved by `reset_data.sh`.
-- `GIZCLAW_E2E_ADMIN_CLI_CONFIG_HOME` / `GIZCLAW_E2E_ADMIN_CLI_CONTEXT`:
-  admin CLI story target role.
-- `GIZCLAW_E2E_CLIENT_CONFIG_HOME` / `GIZCLAW_E2E_CLIENT_CONTEXT`: ordinary
-  client, workspace, and RPC cases. The committed contexts are `e2e-client`
-  for Noise over UDP and `e2e-client-webrtc` for WebRTC.
-- `GIZCLAW_E2E_CONNECT_TRANSPORT`: transport used by `cmd/connect` tests when
-  they create sandbox contexts. Set to `noise` or `webrtc` for #90 parity runs.
-- `GIZCLAW_E2E_SOCIAL_PERSON_A_CONFIG_HOME` /
-  `GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT`: social role A.
-- `GIZCLAW_E2E_SOCIAL_PERSON_B_CONFIG_HOME` /
-  `GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT`: social role B.
-- `GIZCLAW_E2E_PLAY_UI_CONFIG_HOME` / `GIZCLAW_E2E_PLAY_UI_CONTEXT`: Play UI
-  launcher.
-- `GIZCLAW_E2E_PLAY_CLI_CONFIG_HOME` / `GIZCLAW_E2E_PLAY_CLI_CONTEXT`: play CLI
-  story target role.
+- `GIZCLAW_E2E_CONFIG_HOME`: shared config home root. It defaults to
+  `test/gizclaw-e2e/testdata/config-home`.
+- `GIZCLAW_E2E_ADMIN_SETUP_CONTEXT`: setup resource initialization. The
+  committed context is `e2e-admin`.
+- `GIZCLAW_E2E_ADMIN_TEST_CONTEXT`: fixed admin test identity approved by
+  `reset_data.sh`. The committed context is `e2e-admin-test`.
+- `GIZCLAW_E2E_ADMIN_UI_CONTEXT`: Admin UI launcher. The committed context is
+  `e2e-admin`.
+- `GIZCLAW_E2E_CLIENT_CONTEXT`: ordinary client, workspace, RPC, and parity
+  cases. The committed contexts are `e2e-client` for Noise over UDP and
+  `e2e-client-webrtc` for WebRTC.
+- `GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT`: social role A. The committed context is
+  `e2e-social-a`.
+- `GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT`: social role B. The committed context is
+  `e2e-social-b`.
+- `GIZCLAW_E2E_PLAY_UI_CONTEXT`: Play UI launcher. The committed context is
+  `e2e-client`.
 
-Unset values fall back to the committed `testdata` config homes and context
-names.
-
-The setup scripts, chat client tests, UI resource lookup, and social peer A/B
-harness read their matching role overrides. Most `cmd/*` story tests still
-create isolated sandbox contexts unless a specific story opts into one of the
-CLI target roles.
+Transport is not configured with an environment variable. It comes from the
+selected context config. Most `cmd/*` story tests still create isolated sandbox
+contexts; those sandbox contexts inherit transport from `GIZCLAW_E2E_CLIENT_CONTEXT`.
 
 ## Client Tests
 

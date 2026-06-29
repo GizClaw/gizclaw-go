@@ -34,7 +34,7 @@ func newSharedSetupRPCHarness(t *testing.T) *sharedSetupRPCHarness {
 	t.Helper()
 
 	h := clitest.NewSetupHarness(t, "client-rpc-shared-resources")
-	configHome := getenvDefault("GIZCLAW_E2E_CLIENT_CONFIG_HOME", filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "gizclaw-config-home"))
+	configHome := getenvDefault("GIZCLAW_E2E_CONFIG_HOME", filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home"))
 	contextName := getenvDefault("GIZCLAW_E2E_CLIENT_CONTEXT", "e2e-client")
 	h.SetContextAlias("e2e-client", configHome, contextName)
 

@@ -25,8 +25,8 @@ func newSocialSimulatorHarness(t *testing.T) *clitest.Harness {
 
 	h := clitest.NewSetupHarness(t, "client-social")
 	configureSocialAdminContext(t, h)
-	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT", "client-social-peer-a-sn")
-	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT", "client-social-peer-b-sn")
+	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT", "e2e-social-a", "client-social-peer-a-sn")
+	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT", "e2e-social-b", "client-social-peer-b-sn")
 	for _, peer := range []string{"peer-c", "peer-d"} {
 		h.CreateContext(peer).MustSucceed(t)
 		h.RegisterContext(peer, "--sn", "client-social-"+peer+"-sn").MustSucceed(t)
@@ -37,9 +37,9 @@ func newSocialSimulatorHarness(t *testing.T) *clitest.Harness {
 func configureSocialAdminContext(t *testing.T, h *clitest.Harness) {
 	t.Helper()
 
-	configHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME"))
+	configHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONFIG_HOME"))
 	if configHome == "" {
-		configHome = filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home")
+		configHome = filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home")
 	}
 	contextName := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONTEXT"))
 	if contextName == "" {
@@ -48,21 +48,16 @@ func configureSocialAdminContext(t *testing.T, h *clitest.Harness) {
 	h.SetContextAlias("admin-a", configHome, contextName)
 }
 
-func configureSocialPeerContext(t *testing.T, h *clitest.Harness, alias, homeEnv, contextEnv, sn string) {
+func configureSocialPeerContext(t *testing.T, h *clitest.Harness, alias, contextEnv, defaultContext, sn string) {
 	t.Helper()
 
-	configHome := strings.TrimSpace(os.Getenv(homeEnv))
 	contextName := strings.TrimSpace(os.Getenv(contextEnv))
-	if configHome == "" && contextName == "" {
-		h.CreateContext(alias).MustSucceed(t)
-		h.RegisterContext(alias, "--sn", sn).MustSucceed(t)
-		return
-	}
-	if configHome == "" {
-		t.Fatalf("%s must be set when %s is set", homeEnv, contextEnv)
-	}
 	if contextName == "" {
-		contextName = alias
+		contextName = defaultContext
+	}
+	configHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONFIG_HOME"))
+	if configHome == "" {
+		configHome = filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home")
 	}
 	h.SetContextAlias(alias, configHome, contextName)
 	h.RegisterContext(alias, "--sn", sn).MustSucceed(t)

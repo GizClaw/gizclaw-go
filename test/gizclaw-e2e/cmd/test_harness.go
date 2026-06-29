@@ -212,13 +212,13 @@ func (h *Harness) UseSetupServer() {
 func (h *Harness) applySetupContextServer() {
 	h.t.Helper()
 
-	setupConfigHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME"))
+	setupConfigHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONFIG_HOME"))
 	setupContext := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONTEXT"))
 	if setupConfigHome == "" && setupContext == "" {
 		return
 	}
 	if setupConfigHome == "" {
-		setupConfigHome = filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home")
+		setupConfigHome = e2eConfigHome(h.RepoRoot)
 	}
 	if setupContext == "" {
 		setupContext = "e2e-admin"
@@ -405,7 +405,7 @@ func (h *Harness) InstallFixedAdminContext(name string) Result {
 	if err := os.MkdirAll(contextDir, 0o755); err != nil {
 		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
 	}
-	fixtureIdentity := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home", "gizclaw", "e2e-admin-test", "identity.key")
+	fixtureIdentity := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home", "gizclaw", "e2e-admin-test", "identity.key")
 	identityData, err := os.ReadFile(fixtureIdentity)
 	if err != nil {
 		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
@@ -440,18 +440,22 @@ func (h *Harness) InstallFixedAdminContext(name string) Result {
 }
 
 func (h *Harness) defaultContextTransport() string {
-	transport := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONNECT_TRANSPORT"))
-	if transport == "" {
-		transport = strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CLIENT_TRANSPORT"))
+	contextName := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CLIENT_CONTEXT"))
+	if contextName == "" {
+		contextName = "e2e-client"
 	}
-	if transport == "" && strings.Contains(strings.ToLower(os.Getenv("GIZCLAW_E2E_CLIENT_CONTEXT")), "webrtc") {
-		transport = "webrtc"
+	configPath := filepath.Join(e2eConfigHome(h.RepoRoot), "gizclaw", contextName, "config.yaml")
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		h.t.Fatalf("read e2e client context config %q: %v", configPath, err)
 	}
-	if transport == "" {
-		return "noise"
+	var cfg cliContextConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		h.t.Fatalf("parse e2e client context config %q: %v", configPath, err)
 	}
+	transport := cliContextTransport(cfg)
 	if transport != "noise" && transport != "webrtc" {
-		h.t.Fatalf("unsupported e2e connect transport %q", transport)
+		h.t.Fatalf("unsupported e2e client context transport %q in %s", transport, configPath)
 	}
 	return transport
 }
@@ -862,7 +866,7 @@ func (h *Harness) waitForServerReady() {
 func (h *Harness) waitForSetupServerReady() {
 	h.t.Helper()
 
-	setupConfigHome := setupAdminConfigHome(h.RepoRoot)
+	setupConfigHome := e2eConfigHome(h.RepoRoot)
 	setupContext := setupAdminContextName()
 	if err := h.probeSetupServer(setupConfigHome, setupContext, 2*time.Second); err != nil {
 		startScript := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "setup", "start-server.sh")
@@ -880,11 +884,14 @@ func (h *Harness) waitForSetupServerReady() {
 	}
 }
 
-func setupAdminConfigHome(repoRoot string) string {
-	if value := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME")); value != "" {
+func e2eConfigHome(repoRoot string) string {
+	if value := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONFIG_HOME")); value != "" {
+		if !filepath.IsAbs(value) {
+			return filepath.Join(repoRoot, value)
+		}
 		return value
 	}
-	return filepath.Join(repoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home")
+	return filepath.Join(repoRoot, "test", "gizclaw-e2e", "testdata", "config-home")
 }
 
 func setupAdminContextName() string {

@@ -8,7 +8,7 @@ testdata_dir="$e2e_dir/testdata"
 workspace_dir="$testdata_dir/server-workspace"
 resource_dir="$testdata_dir/resources"
 bin_path="$testdata_dir/bin/gizclaw"
-env_file="${GIZCLAW_E2E_ENV:-$e2e_dir/.env}"
+env_file="$e2e_dir/.env"
 mode="${1:-reset}"
 
 case "$mode" in
@@ -26,13 +26,10 @@ if [[ -f "$env_file" ]]; then
   set +a
 fi
 
-admin_setup_config_home="${GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME:-$testdata_dir/admin-config-home}"
+config_home="${GIZCLAW_E2E_CONFIG_HOME:-$testdata_dir/config-home}"
 admin_setup_context="${GIZCLAW_E2E_ADMIN_SETUP_CONTEXT:-e2e-admin}"
-admin_test_config_home="${GIZCLAW_E2E_ADMIN_TEST_CONFIG_HOME:-$testdata_dir/admin-config-home}"
 admin_test_context="${GIZCLAW_E2E_ADMIN_TEST_CONTEXT:-e2e-admin-test}"
-default_client_config_home="$testdata_dir/gizclaw-config-home"
 default_client_context="e2e-client"
-client_config_home="${GIZCLAW_E2E_CLIENT_CONFIG_HOME:-$testdata_dir/gizclaw-config-home}"
 client_context="${GIZCLAW_E2E_CLIENT_CONTEXT:-e2e-client}"
 
 # Preserve Flowcraft runtime placeholders while admin apply expands provider
@@ -105,10 +102,10 @@ init_data() {
   "$script_dir/start-server.sh" >/dev/null
 
   local admin_test_public_key
-  XDG_CONFIG_HOME="$admin_test_config_home" \
+  XDG_CONFIG_HOME="$config_home" \
     "$bin_path" connect set-name "E2E Admin Test" --context "$admin_test_context" >/dev/null
   admin_test_public_key="$(
-    XDG_CONFIG_HOME="$admin_test_config_home" \
+    XDG_CONFIG_HOME="$config_home" \
       "$bin_path" context show "$admin_test_context" |
       sed -n 's/.*"identity_public":"\([^"]*\)".*/\1/p'
   )"
@@ -116,13 +113,13 @@ init_data() {
     echo "failed to resolve public key for admin test context $admin_test_context" >&2
     exit 2
   fi
-  XDG_CONFIG_HOME="$admin_setup_config_home" \
+  XDG_CONFIG_HOME="$config_home" \
     "$bin_path" admin peers approve "$admin_test_public_key" admin --context "$admin_setup_context" >/dev/null
 
-  XDG_CONFIG_HOME="$default_client_config_home" \
+  XDG_CONFIG_HOME="$config_home" \
     "$bin_path" connect set-name "Living Room Device" --context "$default_client_context" >/dev/null
-  if [[ "$client_config_home" != "$default_client_config_home" || "$client_context" != "$default_client_context" ]]; then
-    XDG_CONFIG_HOME="$client_config_home" \
+  if [[ "$client_context" != "$default_client_context" ]]; then
+    XDG_CONFIG_HOME="$config_home" \
       "$bin_path" connect set-name "Living Room Device" --context "$client_context" >/dev/null
   fi
 
@@ -179,7 +176,7 @@ init_data() {
         fi
         ;;
     esac
-    XDG_CONFIG_HOME="$admin_setup_config_home" \
+    XDG_CONFIG_HOME="$config_home" \
       "$bin_path" admin apply --context "$admin_setup_context" -f "$resource_file"
   }
 
@@ -195,7 +192,7 @@ init_data() {
       echo "missing firmware fixture asset: $asset_path" >&2
       exit 2
     fi
-    XDG_CONFIG_HOME="$admin_setup_config_home" \
+    XDG_CONFIG_HOME="$config_home" \
       "$bin_path" admin firmwares upload-artifact "$firmware_id" --channel "$channel" -f "$asset_path" --context "$admin_setup_context" >/dev/null
   }
 

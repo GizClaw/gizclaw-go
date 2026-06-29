@@ -6,7 +6,7 @@ repo_root="$(cd "$script_dir/../../.." && pwd)"
 e2e_dir="$repo_root/test/gizclaw-e2e"
 testdata_dir="$repo_root/test/gizclaw-e2e/testdata"
 bin_path="$testdata_dir/bin/gizclaw"
-env_file="${GIZCLAW_E2E_ENV:-$e2e_dir/.env}"
+env_file="$e2e_dir/.env"
 
 if [[ -f "$env_file" ]]; then
   set -a
@@ -15,8 +15,7 @@ if [[ -f "$env_file" ]]; then
   set +a
 fi
 
-config_home="$testdata_dir/gizclaw-config-home"
-config_home="${GIZCLAW_E2E_PLAY_UI_CONFIG_HOME:-$config_home}"
+config_home="${GIZCLAW_E2E_CONFIG_HOME:-$testdata_dir/config-home}"
 context_name="${GIZCLAW_E2E_PLAY_UI_CONTEXT:-e2e-client}"
 pid_file="$testdata_dir/play-ui.pid"
 log_file="$testdata_dir/play-ui.log"

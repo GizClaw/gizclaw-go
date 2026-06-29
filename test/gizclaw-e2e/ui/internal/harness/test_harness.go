@@ -38,7 +38,7 @@ const (
 )
 
 const (
-	defaultClientConfigHome = "test/gizclaw-e2e/testdata/gizclaw-config-home"
+	defaultClientConfigHome = "test/gizclaw-e2e/testdata/config-home"
 	defaultClientContext    = "e2e-client"
 )
 
@@ -149,7 +149,7 @@ func captureStoryFailure(t testing.TB, page playwright.Page) {
 		t.Logf("browser failure url=%s body=%q", currentURL, truncateForLog(body, 4000))
 	}
 
-	artifactDir := getenvDefault("GIZCLAW_E2E_UI_ARTIFACT_DIR", filepath.Join(os.TempDir(), "gizclaw-e2e-ui-artifacts"))
+	artifactDir := filepath.Join(os.TempDir(), "gizclaw-e2e-ui-artifacts")
 	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
 		t.Logf("browser failure screenshot mkdir %s: %v", artifactDir, err)
 		return
@@ -338,8 +338,8 @@ func requireSmokeSeed(t *testing.T) Seed {
 func setupSeed(t testing.TB) Seed {
 	t.Helper()
 	return Seed{
-		AdminURL:              getenvDefault("GIZCLAW_E2E_ADMIN_URL", "http://127.0.0.1:8080"),
-		PlayURL:               getenvDefault("GIZCLAW_E2E_PLAY_URL", "http://127.0.0.1:8081"),
+		AdminURL:              "http://127.0.0.1:8080",
+		PlayURL:               "http://127.0.0.1:8081",
 		ErrorPlayURL:          os.Getenv("GIZCLAW_E2E_ERROR_PLAY_URL"),
 		DevicePublicKey:       setupClientPublicKey(t),
 		ActionDevicePublicKey: setupClientPublicKey(t),
@@ -349,12 +349,9 @@ func setupSeed(t testing.TB) Seed {
 
 func setupClientPublicKey(t testing.TB) string {
 	t.Helper()
-	path := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CLIENT_IDENTITY_KEY"))
-	if path == "" {
-		configHome := getenvDefault("GIZCLAW_E2E_CLIENT_CONFIG_HOME", defaultClientConfigHome)
-		contextName := getenvDefault("GIZCLAW_E2E_CLIENT_CONTEXT", defaultClientContext)
-		path = filepath.Join(configHome, "gizclaw", contextName, "identity.key")
-	}
+	configHome := getenvDefault("GIZCLAW_E2E_CONFIG_HOME", defaultClientConfigHome)
+	contextName := getenvDefault("GIZCLAW_E2E_CLIENT_CONTEXT", defaultClientContext)
+	path := filepath.Join(configHome, "gizclaw", contextName, "identity.key")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""

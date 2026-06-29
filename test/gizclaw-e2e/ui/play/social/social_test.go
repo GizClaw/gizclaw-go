@@ -302,7 +302,7 @@ func waitForSocialRPCReady(t testing.TB, peer *playSocialRPCPeer, label string) 
 func loadPlaySocialEndpoint(t testing.TB) playSocialEndpoint {
 	t.Helper()
 	repoRoot := findRepoRoot(t)
-	configHome := getenvDefaultLocal("GIZCLAW_E2E_PLAY_UI_CONFIG_HOME", filepath.Join(repoRoot, "test", "gizclaw-e2e", "testdata", "gizclaw-config-home"))
+	configHome := getenvDefaultLocal("GIZCLAW_E2E_CONFIG_HOME", filepath.Join(repoRoot, "test", "gizclaw-e2e", "testdata", "config-home"))
 	contextName := getenvDefaultLocal("GIZCLAW_E2E_PLAY_UI_CONTEXT", "e2e-client")
 	if !filepath.IsAbs(configHome) {
 		configHome = filepath.Join(repoRoot, configHome)

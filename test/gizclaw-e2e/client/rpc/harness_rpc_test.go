@@ -124,7 +124,7 @@ func newBusinessHarness(t *testing.T) *businessRPCHarness {
 func aliasSetupAdminContext(t *testing.T, h *clitest.Harness) {
 	t.Helper()
 
-	configHome := getenvDefault("GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME", filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home"))
+	configHome := getenvDefault("GIZCLAW_E2E_CONFIG_HOME", filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home"))
 	contextName := getenvDefault("GIZCLAW_E2E_ADMIN_SETUP_CONTEXT", "e2e-admin")
 	h.SetContextAlias("admin-a", configHome, contextName)
 }

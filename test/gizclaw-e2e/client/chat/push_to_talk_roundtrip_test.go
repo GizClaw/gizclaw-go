@@ -5,7 +5,6 @@ package chat
 import (
 	"errors"
 	"net"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -33,9 +32,6 @@ func allWorkspaceConfigPaths(t testing.TB) []string {
 func runLiveWorkspaceCase(t *testing.T, selected workspaceCase, paths []string) {
 	t.Helper()
 	if err := probeLiveWorkspaceSetup(); err != nil {
-		if os.Getenv("GIZCLAW_E2E_REQUIRE_LIVE") == "1" {
-			t.Fatalf("e2e setup server is not available: %v", err)
-		}
 		t.Skipf("e2e setup server is not available: %v", err)
 	}
 	for _, path := range paths {
@@ -70,9 +66,6 @@ func probeLiveWorkspaceSetup() error {
 }
 
 func shouldSkipUnavailableSetup(err error) bool {
-	if os.Getenv("GIZCLAW_E2E_REQUIRE_LIVE") == "1" {
-		return false
-	}
 	var netErr net.Error
 	if errors.As(err, &netErr) {
 		return true

@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	contextConfigDefaultHome = "test/gizclaw-e2e/testdata/gizclaw-config-home"
+	contextConfigDefaultHome = "test/gizclaw-e2e/testdata/config-home"
 	contextConfigDefaultName = "e2e-client"
 	contextConfigDefaultPath = contextConfigDefaultHome + "/gizclaw/" + contextConfigDefaultName + "/config.yaml"
 )
@@ -174,8 +174,8 @@ func loadConfig(path, contextConfigPath string) (config, error) {
 func defaultContextConfigPath(configPath string) string {
 	configDir := filepath.Dir(configPath)
 	candidates := []string{
-		filepath.Clean(filepath.Join(configDir, "..", "gizclaw-config-home", "gizclaw", "e2e-client", "config.yaml")),
-		filepath.Clean(filepath.Join(configDir, "..", "..", "testdata", "gizclaw-config-home", "gizclaw", "e2e-client", "config.yaml")),
+		filepath.Clean(filepath.Join(configDir, "..", "config-home", "gizclaw", "e2e-client", "config.yaml")),
+		filepath.Clean(filepath.Join(configDir, "..", "..", "testdata", "config-home", "gizclaw", "e2e-client", "config.yaml")),
 		filepath.Clean(contextConfigDefaultPath),
 	}
 	for _, candidate := range candidates {
@@ -189,7 +189,7 @@ func defaultContextConfigPath(configPath string) string {
 func defaultClientContextConfigPath() string {
 	candidates := []string{
 		filepath.Clean(contextConfigDefaultPath),
-		filepath.Clean(filepath.Join("..", "..", "testdata", "gizclaw-config-home", "gizclaw", contextConfigDefaultName, "config.yaml")),
+		filepath.Clean(filepath.Join("..", "..", "testdata", "config-home", "gizclaw", contextConfigDefaultName, "config.yaml")),
 	}
 	for _, candidate := range candidates {
 		if _, err := os.Stat(candidate); err == nil {
@@ -216,7 +216,7 @@ func envContextConfigPath(homeEnv, contextEnv, defaultHome, defaultName string) 
 
 func clientContextConfigPath() string {
 	return envContextConfigPath(
-		"GIZCLAW_E2E_CLIENT_CONFIG_HOME",
+		"GIZCLAW_E2E_CONFIG_HOME",
 		"GIZCLAW_E2E_CLIENT_CONTEXT",
 		contextConfigDefaultHome,
 		contextConfigDefaultName,

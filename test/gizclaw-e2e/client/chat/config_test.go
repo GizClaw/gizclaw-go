@@ -25,7 +25,7 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
 	}
 	dir := t.TempDir()
 	configDir := filepath.Join(dir, "testdata", "workspaces")
-	contextDir := filepath.Join(dir, "testdata", "gizclaw-config-home", "gizclaw", "e2e-client")
+	contextDir := filepath.Join(dir, "testdata", "config-home", "gizclaw", "e2e-client")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatalf("create config dir: %v", err)
 	}

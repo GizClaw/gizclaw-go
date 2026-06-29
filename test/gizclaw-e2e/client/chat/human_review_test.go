@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -17,9 +16,6 @@ import (
 )
 
 func TestHumanReview(t *testing.T) {
-	if os.Getenv("GIZCLAW_E2E_HUMAN_REVIEW") != "1" {
-		t.Skip("set GIZCLAW_E2E_HUMAN_REVIEW=1 for manual audio review")
-	}
 	runLiveWorkspaceCase(t, workspaceCaseHumanReview, allWorkspaceConfigPaths(t))
 }
 
