@@ -12,8 +12,7 @@ import (
 func TestClientRegisterThenReadUserStory(t *testing.T) {
 	h := clitest.NewSetupHarness(t, "301-client-register-then-read")
 
-	h.CreateContext("admin-a").MustSucceed(t)
-	h.RegisterContext("admin-a", "--sn", "connect-register-read-admin-sn").MustSucceed(t)
+	h.InstallFixedAdminContext("admin-a").MustSucceed(t)
 
 	h.CreateContext("device-a").MustSucceed(t)
 	h.RegisterContext(

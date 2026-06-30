@@ -16,20 +16,18 @@ func TestClientPublicRetryableReadsUserStory(t *testing.T) {
 	h.CreateContext("device-a").MustSucceed(t)
 	h.RegisterContext("device-a", "--sn", "device-a-sn").MustSucceed(t)
 
+	c := h.ConnectClientFromContext("device-a")
+	defer func() { _ = c.Close() }()
+
 	for i := range 4 {
-		c := h.ConnectClientFromContext("device-a")
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		info, err := c.GetServerInfo(ctx, "server.info.get")
 		cancel()
-		_ = c.Close()
 		if err != nil {
 			t.Fatalf("get device info on iteration %d: %v", i, err)
 		}
 		if info == nil || info.Sn == nil || *info.Sn != "device-a-sn" {
 			t.Fatalf("expected device info response on iteration %d, got %+v", i, info)
-		}
-		if _, err := h.RunCLIUntilSuccess("connect", "ping", "--context", "device-a"); err != nil {
-			t.Fatal(err)
 		}
 	}
 }

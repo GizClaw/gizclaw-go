@@ -9,9 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +21,8 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
 	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizwebrtc"
 	. "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/ui/internal/harness"
 	"github.com/goccy/go-yaml"
 	"github.com/playwright-community/playwright-go"
@@ -28,7 +32,10 @@ func playSocialStories() []Story {
 	return []Story{
 		{
 			Name: "205-play-social-shell",
-			Run: func(_ testing.TB, page *Page) {
+			Run: func(t testing.TB, page *Page) {
+				t.Cleanup(func() {
+					restorePlayHTTPWorkspace(t, page.Seed.PlayURL, SeedWorkspaceName)
+				})
 				page.GotoPlay("/")
 
 				page.ClickRoleLike("button", "Contacts")
@@ -49,7 +56,12 @@ func playSocialStories() []Story {
 				page.ExpectText("Join Group")
 				page.ExpectNoText("Request")
 
-				page.ClickRole("button", "Chat")
+				if err := page.Raw().Locator("header").GetByRole(playwright.AriaRole("button"), playwright.LocatorGetByRoleOptions{
+					Name:  "Chat",
+					Exact: playwright.Bool(true),
+				}).Click(); err != nil {
+					t.Fatalf("click header Chat: %v", err)
+				}
 				page.ExpectText("Append voice messages and replay history through the selected social workspace.")
 			},
 		},
@@ -185,12 +197,18 @@ type playSocialRPCPeer struct {
 type playSocialEndpoint struct {
 	address         string
 	serverPublicKey giznet.PublicKey
+	config          playContextConfig
 }
 
 type playContextConfig struct {
 	Server struct {
-		Address   string `yaml:"address"`
-		PublicKey string `yaml:"public-key"`
+		Address       string `yaml:"address"`
+		Host          string `yaml:"host"`
+		PublicAPIPort int    `yaml:"public-api-port"`
+		NoiseUDPPort  int    `yaml:"noise-udp-port"`
+		PublicKey     string `yaml:"public-key"`
+		Transport     string `yaml:"transport"`
+		CipherMode    string `yaml:"cipher-mode"`
 	} `yaml:"server"`
 }
 
@@ -202,7 +220,10 @@ func newPlaySocialRPCPeer(t testing.TB, label string) *playSocialRPCPeer {
 	if err != nil {
 		t.Fatalf("generate social peer key: %v", err)
 	}
-	client := &gizcli.Client{KeyPair: keyPair}
+	client := &gizcli.Client{
+		KeyPair:       keyPair,
+		DialTransport: playSocialDialTransport(endpoint.config),
+	}
 	if err := client.Dial(endpoint.serverPublicKey, endpoint.address); err != nil {
 		t.Fatalf("dial social peer: %v", err)
 	}
@@ -302,8 +323,8 @@ func waitForSocialRPCReady(t testing.TB, peer *playSocialRPCPeer, label string) 
 func loadPlaySocialEndpoint(t testing.TB) playSocialEndpoint {
 	t.Helper()
 	repoRoot := findRepoRoot(t)
-	configHome := getenvDefaultLocal("GIZCLAW_E2E_PLAY_UI_CONFIG_HOME", filepath.Join(repoRoot, "test", "gizclaw-e2e", "testdata", "gizclaw-config-home"))
-	contextName := getenvDefaultLocal("GIZCLAW_E2E_PLAY_UI_CONTEXT", "e2e-client")
+	configHome := getenvDefaultLocal("GIZCLAW_E2E_CONFIG_HOME", filepath.Join(repoRoot, "test", "gizclaw-e2e", "testdata", "config-home-giznet"))
+	contextName := getenvDefaultLocal("GIZCLAW_E2E_GEAR1_CONTEXT", "gear1")
 	if !filepath.IsAbs(configHome) {
 		configHome = filepath.Join(repoRoot, configHome)
 	}
@@ -315,9 +336,7 @@ func loadPlaySocialEndpoint(t testing.TB) playSocialEndpoint {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		t.Fatalf("parse Play UI context config: %v", err)
 	}
-	if strings.TrimSpace(cfg.Server.Address) == "" {
-		t.Fatal("Play UI context server address is empty")
-	}
+	address := playSocialDialAddress(t, cfg)
 	var publicKey giznet.PublicKey
 	if err := publicKey.UnmarshalText([]byte(strings.TrimSpace(cfg.Server.PublicKey))); err != nil {
 		t.Fatalf("parse Play UI context server public key: %v", err)
@@ -325,7 +344,103 @@ func loadPlaySocialEndpoint(t testing.TB) playSocialEndpoint {
 	if publicKey.IsZero() {
 		t.Fatal("Play UI context server public key is zero")
 	}
-	return playSocialEndpoint{address: strings.TrimSpace(cfg.Server.Address), serverPublicKey: publicKey}
+	return playSocialEndpoint{address: address, serverPublicKey: publicKey, config: cfg}
+}
+
+func playSocialDialTransport(cfg playContextConfig) gizcli.DialTransportFunc {
+	return func(key *giznet.KeyPair, serverPK giznet.PublicKey, serverAddr string, securityPolicy giznet.SecurityPolicy) (giznet.Listener, giznet.Conn, error) {
+		if playSocialTransport(cfg) == "webrtc" {
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			return gizwebrtc.Dial(ctx, key, serverPK, gizwebrtc.DialConfig{
+				SignalingURL:   "http://" + playSocialPublicAPIAddr(cfg) + gizwebrtc.SignalingPath,
+				CipherMode:     gizwebrtc.CipherMode(cfg.Server.CipherMode),
+				SecurityPolicy: securityPolicy,
+			})
+		}
+		l, err := (&giznoise.ListenConfig{
+			Addr:           ":0",
+			CipherMode:     giznoise.CipherMode(cfg.Server.CipherMode),
+			SecurityPolicy: securityPolicy,
+		}).Listen(key)
+		if err != nil {
+			return nil, nil, err
+		}
+		udpAddr, err := net.ResolveUDPAddr("udp", serverAddr)
+		if err != nil {
+			_ = l.Close()
+			return nil, nil, err
+		}
+		conn, err := l.Dial(serverPK, udpAddr)
+		if err != nil {
+			_ = l.Close()
+			return nil, nil, err
+		}
+		return l, conn, nil
+	}
+}
+
+func playSocialDialAddress(t testing.TB, cfg playContextConfig) string {
+	t.Helper()
+	if playSocialTransport(cfg) == "webrtc" {
+		return playSocialPublicAPIAddr(cfg)
+	}
+	return playSocialNoiseAddr(cfg)
+}
+
+func playSocialTransport(cfg playContextConfig) string {
+	transport := strings.TrimSpace(cfg.Server.Transport)
+	if transport == "" {
+		return "noise"
+	}
+	return transport
+}
+
+func playSocialPublicAPIAddr(cfg playContextConfig) string {
+	host, addressPort := playSocialHostAndAddressPort(cfg)
+	port := cfg.Server.PublicAPIPort
+	if port == 0 {
+		port = addressPort
+	}
+	if port == 0 {
+		port = 9820
+	}
+	return net.JoinHostPort(host, strconv.Itoa(port))
+}
+
+func playSocialNoiseAddr(cfg playContextConfig) string {
+	if strings.TrimSpace(cfg.Server.Address) != "" && cfg.Server.NoiseUDPPort == 0 && cfg.Server.Host == "" {
+		return strings.TrimSpace(cfg.Server.Address)
+	}
+	host, addressPort := playSocialHostAndAddressPort(cfg)
+	port := cfg.Server.NoiseUDPPort
+	if port == 0 {
+		port = addressPort
+	}
+	if port == 0 {
+		port = 9820
+	}
+	return net.JoinHostPort(host, strconv.Itoa(port))
+}
+
+func playSocialHostAndAddressPort(cfg playContextConfig) (string, int) {
+	host := strings.TrimSpace(cfg.Server.Host)
+	var port int
+	if addr := strings.TrimSpace(cfg.Server.Address); addr != "" {
+		addrHost, addrPort, err := net.SplitHostPort(addr)
+		if err == nil {
+			if host == "" {
+				host = addrHost
+			}
+			port, _ = strconv.Atoi(addrPort)
+		} else if host == "" {
+			host = addr
+		}
+	}
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	return host, port
 }
 
 func expectInputValue(t testing.TB, page *Page, selector string) string {
@@ -425,6 +540,23 @@ func restorePlayHTTPWorkspace(t testing.TB, playURL, workspaceName string) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("restore Play UI workspace %q status=%d body=%s", workspaceName, resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+
+	req, err = http.NewRequest(http.MethodPost, strings.TrimRight(playURL, "/")+"/peer-run/workspace/reload", nil)
+	if err != nil {
+		t.Fatalf("reload restored Play UI workspace request: %v", err)
+	}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("reload restored Play UI workspace %q: %v", workspaceName, err)
+	}
+	defer resp.Body.Close()
+	respBody, err = io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	if err != nil {
+		t.Fatalf("read reload restored Play UI workspace body: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("reload restored Play UI workspace %q status=%d body=%s", workspaceName, resp.StatusCode, strings.TrimSpace(string(respBody)))
 	}
 }
 

@@ -24,19 +24,45 @@ so they are not pulled into ordinary `go test ./...` runs.
    addresses, resource names, resource IDs, model IDs, voice IDs, and e2e
    identity keys are committed fixtures, not env values.
 
-2. Build the e2e CLI binary:
+2. Run the full ordered giznet e2e gate:
+
+```sh
+./test/gizclaw-e2e/run_giznet_tests.sh
+```
+
+The script selects `testdata/config-home-giznet`, builds the e2e CLI, resets
+server data, runs non-UI packages one at a time, starts the Admin UI and Play
+UI, then runs UI packages one at a time. It excludes human-review cases, which
+require separate interactive audio review. It stops e2e services on success or
+failure.
+
+To run both transport gates sequentially:
+
+```sh
+./test/gizclaw-e2e/run_tests_all.sh
+```
+
+For debugging, the same flow can be run manually.
+
+Human-review cases are not part of the default e2e gate. Run them explicitly:
+
+```sh
+./test/gizclaw-e2e/run_human_review_tests.sh
+```
+
+3. Build the e2e CLI binary:
 
 ```sh
 ./test/gizclaw-e2e/setup/build.sh
 ```
 
-3. Start the local e2e server:
+4. Start the local e2e server:
 
 ```sh
 ./test/gizclaw-e2e/setup/start-server.sh
 ```
 
-4. Clear and initialize server resources:
+5. Clear and initialize server resources:
 
 ```sh
 ./test/gizclaw-e2e/setup/reset_data.sh
@@ -54,25 +80,53 @@ workflows, workspaces, firmware metadata, ACL rows, and social graph
 resources. It does not call provider sync operations. It must not seed runtime
 history, message records, replay audio, or other non-resource state.
 
-5. Run client tests that create runtime state. These should run before any UI
+6. Run client tests that create runtime state. These should run before any UI
    test that expects conversations, history entries, replay data, or social
    message state to already exist:
 
 ```sh
-go test -tags gizclaw_e2e -count=1 ./test/gizclaw-e2e/client/admin
-go test -tags gizclaw_e2e -count=1 ./test/gizclaw-e2e/client/chat
-go test -tags gizclaw_e2e -count=1 ./test/gizclaw-e2e/client/rpc
-go test -tags gizclaw_e2e -count=1 ./test/gizclaw-e2e/client/social
+go test -tags gizclaw_e2e -count=1 -skip '^(TestHumanReview|TestServerSocialRPCHumanReview)$' ./test/gizclaw-e2e/client/admin
+go test -tags gizclaw_e2e -count=1 -skip '^(TestHumanReview|TestServerSocialRPCHumanReview)$' ./test/gizclaw-e2e/client/chat
+go test -tags gizclaw_e2e -count=1 -skip '^(TestHumanReview|TestServerSocialRPCHumanReview)$' ./test/gizclaw-e2e/client/rpc
+go test -tags gizclaw_e2e -count=1 -skip '^(TestHumanReview|TestServerSocialRPCHumanReview)$' ./test/gizclaw-e2e/client/social
 ```
 
-6. Run CLI story tests against the same setup-created server and resource
+7. Run CLI story tests against the same setup-created server and resource
    catalog:
 
 ```sh
 go test -tags gizclaw_e2e -count=1 ./test/gizclaw-e2e/cmd/connect
 ```
 
-7. For browser UI tests, start the matching UI surface after the needed client
+### Giznet Transport Parity
+
+The committed setup server exposes both giznet transports:
+
+- `9820/udp`: Noise over UDP
+- `9820/tcp`: public HTTP API and WebRTC signaling
+- `9821/udp` and `9821/tcp`: WebRTC ICE
+
+For #90 transport parity, run the same client suites twice with separate config
+homes and a data reset between runs. The default config home is
+`testdata/config-home-giznet`; the WebRTC config home is
+`testdata/config-home-webrtc`.
+
+Run these transport parity suites sequentially against the shared setup server.
+The shared `testdata/server-workspace` and committed context homes are mutable
+during e2e execution, so concurrent parity runs must use fully isolated server
+instances: a separate workspace directory, config home, public API port, Noise
+UDP port, and WebRTC ICE port for each run.
+
+```sh
+./test/gizclaw-e2e/run_giznet_tests.sh
+./test/gizclaw-e2e/run_webrtc_tests.sh
+```
+
+The harness reads transport from the selected config home's `gear1` context,
+then logs the selected transport and dial address when it binds an alias,
+creates a `cmd/connect` context, or opens a direct `gizcli.Client` connection.
+
+8. For browser UI tests, start the matching UI surface after the needed client
    tests have created runtime state:
 
 ```sh
@@ -88,7 +142,7 @@ go test -tags gizclaw_e2e -count=1 ./test/gizclaw-e2e/ui/play/...
 go test -tags gizclaw_e2e -count=1 ./test/gizclaw-e2e/ui/smoke/...
 ```
 
-8. Stop e2e services when finished:
+9. Stop e2e services when finished:
 
 ```sh
 ./test/gizclaw-e2e/setup/stop.sh
@@ -129,14 +183,17 @@ resource fixtures should use `.yaml`.
 
 Only credential-like provider values should be environment placeholders, such as
 `${GIZCLAW_E2E_OPENAI_API_KEY}`. Values are supplied by
-`test/gizclaw-e2e/.env` during setup. `reset_data.sh` skips real-provider
-fixtures whose required credentials are empty, while still initializing fake
-fixtures with committed non-secret defaults. Do not commit real provider keys,
-tokens, app secrets, or access keys. Stable e2e identity key pairs are committed
-config fixtures, not env values.
+`test/gizclaw-e2e/.env` during setup. `reset_data.sh init/reset` fails before
+starting setup when any required provider credential is missing. Do not commit
+real provider keys, tokens, app secrets, or access keys. Stable e2e identity key
+pairs are committed config fixtures, not env values.
 
 `~/Work/haivivi/env` can be used as a private source for local provider values.
-For example, MiniMax maps `minimax_cn_key` / `minimax_cn_group_id` and
+For example, Volc/Doubao maps `bytedance_ark_token` to
+`GIZCLAW_E2E_VOLC_ARK_API_KEY`, and maps `bytedance_speech_app_id`,
+`bytedance_speech_access_token`, and `bytedance_speech_search_api_key` to the
+matching `GIZCLAW_E2E_DOUBAO_*` values. MiniMax maps `minimax_cn_key` /
+`minimax_cn_group_id` and
 `minimax_global_key` / `minimax_global_group_id` to the matching
 `GIZCLAW_E2E_MINIMAX_*` values in `.env`. Qwen should be represented by the
 DashScope provider (`GIZCLAW_E2E_DASHSCOPE_API_KEY`) when a DashScope/Tongyi
@@ -193,11 +250,11 @@ gizclaw admin firmwares upload-artifact devkit-firmware-main \
   -f testdata/assets/firmware/devkit-firmware-main.tar
 ```
 
-Provider-independent resource rows use schema-valid committed metadata and do
-not require real provider credentials. Real provider resources still depend on
-credential values from `.env` and are skipped when those values are absent.
-`reward-claim` and `pet-action` are Volc/Doubao-backed gameplay system task
-model rows; business RPC tests skip when reset_data did not apply them.
+Provider-independent resource rows use schema-valid committed metadata, but the
+full e2e resource catalog also includes real provider rows. Required provider
+credential values must be present in `.env`; otherwise `reset_data.sh init/reset`
+fails fast and no partial e2e setup should be treated as valid. `reward-claim`
+and `pet-action` are Volc/Doubao-backed gameplay system task model rows.
 `client/admin` owns provider voice sync verification and should run before chat
 voice tests.
 
@@ -208,37 +265,38 @@ history by running the relevant client workflows.
 
 ## Config Homes
 
-`testdata/admin-config-home` and `testdata/gizclaw-config-home` are
-`XDG_CONFIG_HOME` roots. They must contain the normal `gizclaw/` config layout
-and committed client `identity.key` fixtures. Context config files must store
-the server `public-key` directly; do not point contexts at the server
-`identity.key`, because that file is the server private key.
+`testdata/config-home-giznet` and `testdata/config-home-webrtc` are committed
+`XDG_CONFIG_HOME` roots for transport parity. Each contains the normal
+`gizclaw/` config layout and committed client `identity.key` fixtures. Context
+config files must store the server `public-key` directly; do not point contexts
+at the server `identity.key`, because that file is the server private key.
 
-Optional role overrides in `.env` let e2e suites target existing context homes
-without changing test code:
+Committed fixture contexts are stable identities and should be used when a test
+depends on a known role or ACL state. Each config home uses the same role names:
 
-- `GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME` / `GIZCLAW_E2E_ADMIN_SETUP_CONTEXT`:
-  setup resource initialization.
-- `GIZCLAW_E2E_ADMIN_CLI_CONFIG_HOME` / `GIZCLAW_E2E_ADMIN_CLI_CONTEXT`:
-  admin CLI story target role.
-- `GIZCLAW_E2E_CLIENT_CONFIG_HOME` / `GIZCLAW_E2E_CLIENT_CONTEXT`: ordinary
-  client, workspace, and RPC cases.
-- `GIZCLAW_E2E_SOCIAL_PERSON_A_CONFIG_HOME` /
-  `GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT`: social role A.
-- `GIZCLAW_E2E_SOCIAL_PERSON_B_CONFIG_HOME` /
-  `GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT`: social role B.
-- `GIZCLAW_E2E_PLAY_UI_CONFIG_HOME` / `GIZCLAW_E2E_PLAY_UI_CONTEXT`: Play UI
-  launcher.
-- `GIZCLAW_E2E_PLAY_CLI_CONFIG_HOME` / `GIZCLAW_E2E_PLAY_CLI_CONTEXT`: play CLI
-  story target role.
+- `admin`: setup resource initialization, admin API/client tests, and Admin UI.
+- `gear1`: ordinary client, workspace, RPC, chat, Play UI, and social peer A.
+- `gear2`: secondary gear identity for two-peer social tests.
 
-Unset values fall back to the committed `testdata` config homes and context
-names.
+`reset_data.sh` uses `admin` to apply resource fixtures and registers `gear1`
+before applying resource fixtures. Tests that create sandbox contexts at runtime
+are responsible for registering those peers before using role-gated services.
 
-The setup scripts, chat client tests, UI resource lookup, and social peer A/B
-harness read their matching role overrides. Most `cmd/*` story tests still
-create isolated sandbox contexts unless a specific story opts into one of the
-CLI target roles.
+Context overrides in `.env` select identities inside the selected config home:
+
+- `GIZCLAW_E2E_CONFIG_HOME`: config home root. It defaults to
+  `test/gizclaw-e2e/testdata/config-home-giznet`; use
+  `test/gizclaw-e2e/testdata/config-home-webrtc` for WebRTC parity.
+- `GIZCLAW_E2E_ADMIN_CONTEXT`: setup resource initialization, admin API/client
+  tests, and Admin UI. The committed context is `admin`.
+- `GIZCLAW_E2E_GEAR1_CONTEXT`: primary gear identity. The committed context is
+  `gear1`.
+- `GIZCLAW_E2E_GEAR2_CONTEXT`: secondary gear identity. The committed context is
+  `gear2`.
+
+Transport is not configured with an environment variable. It comes from the
+selected config home. Most `cmd/*` story tests still create isolated sandbox
+contexts; those sandbox contexts inherit transport from `gear1`.
 
 ## Client Tests
 

@@ -5,7 +5,7 @@ metadata:
   name: volc-main-credential
 spec:
   provider: volc
-  description: Volc/Doubao main credential
+  description: Volc/Doubao speech credential
   body:
     app_id: "${GIZCLAW_E2E_DOUBAO_APP_ID}"
     api_key: "${GIZCLAW_E2E_DOUBAO_API_KEY}"

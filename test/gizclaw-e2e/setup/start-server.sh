@@ -9,7 +9,7 @@ workspace_dir="$testdata_dir/server-workspace"
 bin_path="$testdata_dir/bin/gizclaw"
 pid_file="$workspace_dir/gizclaw-server.pid"
 log_file="$workspace_dir/gizclaw-server.log"
-env_file="${GIZCLAW_E2E_ENV:-$e2e_dir/.env}"
+env_file="$e2e_dir/.env"
 
 if [[ -f "$env_file" ]]; then
   set -a
@@ -18,28 +18,33 @@ if [[ -f "$env_file" ]]; then
   set +a
 fi
 
-config_home="$testdata_dir/admin-config-home"
-config_home="${GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME:-$config_home}"
-context_name="${GIZCLAW_E2E_ADMIN_SETUP_CONTEXT:-e2e-admin}"
-launch_label="com.gizclaw.e2e.server.$(printf '%s' "$repo_root" | cksum | awk '{print $1}')"
-
-launchctl_supported() {
-  [[ "$(uname -s)" == "Darwin" ]] && command -v launchctl >/dev/null 2>&1
-}
-
-launchctl_pid() {
-  launchctl list "$launch_label" 2>/dev/null | awk -F'= ' '/"PID"/ {gsub(/[; \t]/, "", $2); print $2; exit}'
-}
+config_home="${GIZCLAW_E2E_CONFIG_HOME:-$testdata_dir/config-home-giznet}"
+context_name="${GIZCLAW_E2E_ADMIN_CONTEXT:-admin}"
 
 wait_ready() {
   for _ in {1..300}; do
-    if XDG_CONFIG_HOME="$config_home" "$bin_path" connect ping --context "$context_name" >/dev/null 2>&1; then
+    if ping_ready; then
       return 0
     fi
     sleep 0.1
   done
   echo "gizclaw e2e server did not become ready; log=$log_file" >&2
   return 1
+}
+
+ping_ready() {
+  XDG_CONFIG_HOME="$config_home" "$bin_path" connect ping --context "$context_name" >/dev/null 2>&1 &
+  local ping_pid="$!"
+  for _ in {1..20}; do
+    if ! kill -0 "$ping_pid" 2>/dev/null; then
+      wait "$ping_pid"
+      return $?
+    fi
+    sleep 0.1
+  done
+  kill "$ping_pid" 2>/dev/null || true
+  wait "$ping_pid" 2>/dev/null || true
+  return 124
 }
 
 if [[ ! -x "$bin_path" ]]; then
@@ -57,21 +62,11 @@ if [[ -f "$pid_file" ]]; then
 fi
 
 "$bin_path" migrate --workspace "$workspace_dir"
-if launchctl_supported; then
-  launchctl remove "$launch_label" >/dev/null 2>&1 || true
-  launchctl submit -l "$launch_label" -o "$log_file" -e "$log_file" -- "$bin_path" serve --force "$workspace_dir"
-  pid="$(launchctl_pid)"
-else
-  cd "$repo_root"
-  nohup "$bin_path" serve --force "$workspace_dir" >"$log_file" 2>&1 </dev/null &
-  pid="$!"
-fi
+cd "$repo_root"
+nohup "$bin_path" serve --force "$workspace_dir" >"$log_file" 2>&1 </dev/null &
+pid="$!"
 echo "$pid" >"$pid_file"
 wait_ready
-if launchctl_supported; then
-  pid="$(launchctl_pid)"
-  echo "$pid" >"$pid_file"
-fi
 if ! kill -0 "$pid" 2>/dev/null; then
   echo "gizclaw e2e server exited after readiness; log=$log_file" >&2
   tail -40 "$log_file" >&2 || true

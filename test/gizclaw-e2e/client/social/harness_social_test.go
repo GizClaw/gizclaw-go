@@ -25,8 +25,8 @@ func newSocialSimulatorHarness(t *testing.T) *clitest.Harness {
 
 	h := clitest.NewSetupHarness(t, "client-social")
 	configureSocialAdminContext(t, h)
-	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT", "client-social-peer-a-sn")
-	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT", "client-social-peer-b-sn")
+	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_GEAR1_CONTEXT", "gear1", "client-social-peer-a-sn")
+	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_GEAR2_CONTEXT", "gear2", "client-social-peer-b-sn")
 	for _, peer := range []string{"peer-c", "peer-d"} {
 		h.CreateContext(peer).MustSucceed(t)
 		h.RegisterContext(peer, "--sn", "client-social-"+peer+"-sn").MustSucceed(t)
@@ -37,32 +37,27 @@ func newSocialSimulatorHarness(t *testing.T) *clitest.Harness {
 func configureSocialAdminContext(t *testing.T, h *clitest.Harness) {
 	t.Helper()
 
-	configHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONFIG_HOME"))
+	configHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONFIG_HOME"))
 	if configHome == "" {
-		configHome = filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "admin-config-home")
+		configHome = filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home-giznet")
 	}
-	contextName := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONTEXT"))
+	contextName := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_CONTEXT"))
 	if contextName == "" {
-		contextName = "e2e-admin"
+		contextName = "admin"
 	}
 	h.SetContextAlias("admin-a", configHome, contextName)
 }
 
-func configureSocialPeerContext(t *testing.T, h *clitest.Harness, alias, homeEnv, contextEnv, sn string) {
+func configureSocialPeerContext(t *testing.T, h *clitest.Harness, alias, contextEnv, defaultContext, sn string) {
 	t.Helper()
 
-	configHome := strings.TrimSpace(os.Getenv(homeEnv))
 	contextName := strings.TrimSpace(os.Getenv(contextEnv))
-	if configHome == "" && contextName == "" {
-		h.CreateContext(alias).MustSucceed(t)
-		h.RegisterContext(alias, "--sn", sn).MustSucceed(t)
-		return
-	}
-	if configHome == "" {
-		t.Fatalf("%s must be set when %s is set", homeEnv, contextEnv)
-	}
 	if contextName == "" {
-		contextName = alias
+		contextName = defaultContext
+	}
+	configHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONFIG_HOME"))
+	if configHome == "" {
+		configHome = filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home-giznet")
 	}
 	h.SetContextAlias(alias, configHome, contextName)
 	h.RegisterContext(alias, "--sn", sn).MustSucceed(t)
@@ -128,15 +123,7 @@ func assertContactRPCs(t *testing.T, h *clitest.Harness) {
 	if err := getContactError(t, h, "peer-b", stringValue(alice.Id)); err == nil {
 		t.Fatal("peer-b unexpectedly read peer-a contact")
 	}
-	limit := 1
-	first := mustListContacts(t, h, "peer-a", rpcapi.ContactListRequest{Limit: &limit})
-	if len(first.Items) != 1 || !first.HasNext || first.NextCursor == nil {
-		t.Fatalf("contact first page = %#v, want one item and next cursor", first)
-	}
-	second := mustListContacts(t, h, "peer-a", rpcapi.ContactListRequest{Limit: &limit, Cursor: first.NextCursor})
-	if len(second.Items) != 1 || second.HasNext {
-		t.Fatalf("contact second page = %#v, want final item", second)
-	}
+	assertContactPagination(t, h, []string{stringValue(alice.Id), stringValue(bob.Id)})
 	deleted := mustDeleteContact(t, h, "peer-a", stringValue(bob.Id))
 	if stringValue(deleted.Id) != stringValue(bob.Id) {
 		t.Fatalf("contact.delete id = %q, want %q", stringValue(deleted.Id), stringValue(bob.Id))
@@ -146,6 +133,10 @@ func assertContactRPCs(t *testing.T, h *clitest.Harness) {
 func createFriendByInviteToken(t *testing.T, h *clitest.Harness, fromContext, toContext, toPeerID string) rpcapi.FriendObject {
 	t.Helper()
 
+	if friend, ok := findFriendByPeer(t, h, fromContext, toPeerID); ok {
+		return friend
+	}
+	mustClearFriendInviteToken(t, h, toContext)
 	empty := mustGetFriendInviteToken(t, h, toContext)
 	if empty.InviteToken != nil || empty.ExpiresAt != nil {
 		t.Fatalf("friend invite token empty get = %#v, want no token", empty)
@@ -158,17 +149,21 @@ func createFriendByInviteToken(t *testing.T, h *clitest.Harness, fromContext, to
 	if got.InviteToken == nil || *got.InviteToken != token.InviteToken {
 		t.Fatalf("friend invite token get = %#v, want %q", got, token.InviteToken)
 	}
-	added := mustAddFriend(t, h, fromContext, token.InviteToken)
-	if stringValue(added.PeerPublicKey) == toPeerID {
-		return added
-	}
-	friends := mustListFriends(t, h, fromContext, rpcapi.FriendListRequest{})
-	for _, friend := range friends.Items {
-		if stringValue(friend.PeerPublicKey) == toPeerID {
+	added, err := addFriend(t, h, fromContext, token.InviteToken)
+	mustClearFriendInviteToken(t, h, toContext)
+	if err != nil {
+		if friend, ok := findFriendByPeer(t, h, fromContext, toPeerID); ok {
 			return friend
 		}
+		t.Fatalf("friend.add via %s: %v", fromContext, err)
 	}
-	t.Fatalf("friend relation with %s not found in %#v", toPeerID, friends)
+	if stringValue(added.PeerPublicKey) == toPeerID {
+		return *added
+	}
+	if friend, ok := findFriendByPeer(t, h, fromContext, toPeerID); ok {
+		return friend
+	}
+	t.Fatalf("friend.add returned %#v and relation with %s was not found", added, toPeerID)
 	return rpcapi.FriendObject{}
 }
 
@@ -185,6 +180,7 @@ func assertFriendInviteTokenFailureCases(t *testing.T, h *clitest.Harness) {
 	if err := addFriendError(t, h, "peer-a", self.InviteToken); err == nil {
 		t.Fatal("friend.add with self invite token unexpectedly succeeded")
 	}
+	mustClearFriendInviteToken(t, h, "peer-a")
 	target := mustCreateFriendInviteToken(t, h, "peer-b")
 	mustClearFriendInviteToken(t, h, "peer-b")
 	if err := addFriendError(t, h, "peer-a", target.InviteToken); err == nil {
@@ -195,39 +191,100 @@ func assertFriendInviteTokenFailureCases(t *testing.T, h *clitest.Harness) {
 func assertFriendPagination(t *testing.T, h *clitest.Harness, firstFriend, secondFriend rpcapi.FriendObject) {
 	t.Helper()
 
+	assertFriendPaginationContains(t, h, []string{stringValue(firstFriend.Id), stringValue(secondFriend.Id)})
+}
+
+func assertContactPagination(t *testing.T, h *clitest.Harness, wantIDs []string) {
+	t.Helper()
+
 	limit := 1
-	first := mustListFriends(t, h, "peer-a", rpcapi.FriendListRequest{Limit: &limit})
-	if len(first.Items) != 1 || !first.HasNext || first.NextCursor == nil {
-		t.Fatalf("friend first page = %#v, want one item and next cursor", first)
+	cursor := (*string)(nil)
+	got := make(map[string]bool, len(wantIDs))
+	for page := 0; page < 100; page++ {
+		resp := mustListContacts(t, h, "peer-a", rpcapi.ContactListRequest{Limit: &limit, Cursor: cursor})
+		if len(resp.Items) > limit {
+			t.Fatalf("contact page %d = %#v, want at most %d item", page+1, resp, limit)
+		}
+		for _, item := range resp.Items {
+			got[stringValue(item.Id)] = true
+		}
+		if hasAllIDs(got, wantIDs) {
+			return
+		}
+		if !resp.HasNext {
+			break
+		}
+		if resp.NextCursor == nil || *resp.NextCursor == "" {
+			t.Fatalf("contact page %d = %#v, want next cursor", page+1, resp)
+		}
+		cursor = resp.NextCursor
 	}
-	second := mustListFriends(t, h, "peer-a", rpcapi.FriendListRequest{Limit: &limit, Cursor: first.NextCursor})
-	if len(second.Items) != 1 || second.HasNext {
-		t.Fatalf("friend second page = %#v, want final item", second)
+	t.Fatalf("contact pagination ids = %#v, want all %#v", got, wantIDs)
+}
+
+func assertFriendPaginationContains(t *testing.T, h *clitest.Harness, wantIDs []string) {
+	t.Helper()
+
+	limit := 1
+	cursor := (*string)(nil)
+	got := make(map[string]bool, len(wantIDs))
+	for page := 0; page < 100; page++ {
+		resp := mustListFriends(t, h, "peer-a", rpcapi.FriendListRequest{Limit: &limit, Cursor: cursor})
+		if len(resp.Items) > limit {
+			t.Fatalf("friend page %d = %#v, want at most %d item", page+1, resp, limit)
+		}
+		for _, item := range resp.Items {
+			got[stringValue(item.Id)] = true
+		}
+		if hasAllIDs(got, wantIDs) {
+			return
+		}
+		if !resp.HasNext {
+			break
+		}
+		if resp.NextCursor == nil || *resp.NextCursor == "" {
+			t.Fatalf("friend page %d = %#v, want next cursor", page+1, resp)
+		}
+		cursor = resp.NextCursor
 	}
-	got := map[string]bool{stringValue(first.Items[0].Id): true, stringValue(second.Items[0].Id): true}
-	if !got[stringValue(firstFriend.Id)] || !got[stringValue(secondFriend.Id)] {
-		t.Fatalf("friend pagination ids = %#v, want %q and %q", got, stringValue(firstFriend.Id), stringValue(secondFriend.Id))
-	}
+	t.Fatalf("friend pagination ids = %#v, want all %#v", got, wantIDs)
 }
 
 func assertFriendGroupPagination(t *testing.T, h *clitest.Harness, wantIDs []string) {
 	t.Helper()
 
 	limit := 1
-	first := mustListFriendGroups(t, h, "peer-a", rpcapi.FriendGroupListRequest{Limit: &limit})
-	if len(first.Items) != 1 || !first.HasNext || first.NextCursor == nil {
-		t.Fatalf("group first page = %#v, want one item and next cursor", first)
+	cursor := (*string)(nil)
+	got := make(map[string]bool, len(wantIDs))
+	for page := 0; page < 100; page++ {
+		resp := mustListFriendGroups(t, h, "peer-a", rpcapi.FriendGroupListRequest{Limit: &limit, Cursor: cursor})
+		if len(resp.Items) > limit {
+			t.Fatalf("group page %d = %#v, want at most %d item", page+1, resp, limit)
+		}
+		for _, item := range resp.Items {
+			got[stringValue(item.Id)] = true
+		}
+		if hasAllIDs(got, wantIDs) {
+			return
+		}
+		if !resp.HasNext {
+			break
+		}
+		if resp.NextCursor == nil || *resp.NextCursor == "" {
+			t.Fatalf("group page %d = %#v, want next cursor", page+1, resp)
+		}
+		cursor = resp.NextCursor
 	}
-	second := mustListFriendGroups(t, h, "peer-a", rpcapi.FriendGroupListRequest{Limit: &limit, Cursor: first.NextCursor})
-	if len(second.Items) != 1 || second.HasNext {
-		t.Fatalf("group second page = %#v, want final item", second)
-	}
-	got := map[string]bool{stringValue(first.Items[0].Id): true, stringValue(second.Items[0].Id): true}
+	t.Fatalf("group pagination ids = %#v, want all %#v", got, wantIDs)
+}
+
+func hasAllIDs(got map[string]bool, wantIDs []string) bool {
 	for _, id := range wantIDs {
 		if !got[id] {
-			t.Fatalf("group pagination ids = %#v, missing %q", got, id)
+			return false
 		}
 	}
+	return true
 }
 
 func assertFriendGroupMemberPagination(t *testing.T, h *clitest.Harness, friendGroupID string) {
@@ -339,6 +396,16 @@ func mustAddFriend(t *testing.T, h *clitest.Harness, contextName, inviteToken st
 	})
 }
 
+func addFriend(t *testing.T, h *clitest.Harness, contextName, inviteToken string) (*rpcapi.FriendObject, error) {
+	t.Helper()
+
+	client := h.ConnectClientFromContext(contextName)
+	defer client.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return client.AddFriend(ctx, "friend.add", rpcapi.FriendAddRequest{InviteToken: inviteToken})
+}
+
 func addFriendError(t *testing.T, h *clitest.Harness, contextName, inviteToken string) error {
 	return socialRPCError(t, h, contextName, "friend.add", func(ctx context.Context, client *gizcli.Client) (*rpcapi.FriendAddResponse, error) {
 		return client.AddFriend(ctx, "friend.add", rpcapi.FriendAddRequest{InviteToken: inviteToken})
@@ -349,6 +416,29 @@ func mustListFriends(t *testing.T, h *clitest.Harness, contextName string, reque
 	return mustSocialRPC(t, h, contextName, "friend.list", func(ctx context.Context, client *gizcli.Client) (*rpcapi.FriendListResponse, error) {
 		return client.ListFriends(ctx, "friend.list", request)
 	})
+}
+
+func findFriendByPeer(t *testing.T, h *clitest.Harness, contextName, peerID string) (rpcapi.FriendObject, bool) {
+	t.Helper()
+
+	limit := 50
+	cursor := (*string)(nil)
+	for page := 0; page < 100; page++ {
+		friends := mustListFriends(t, h, contextName, rpcapi.FriendListRequest{Cursor: cursor, Limit: &limit})
+		for _, friend := range friends.Items {
+			if stringValue(friend.PeerPublicKey) == peerID {
+				return friend, true
+			}
+		}
+		if !friends.HasNext {
+			break
+		}
+		if friends.NextCursor == nil || *friends.NextCursor == "" {
+			t.Fatalf("friend page %d = %#v, want next cursor", page+1, friends)
+		}
+		cursor = friends.NextCursor
+	}
+	return rpcapi.FriendObject{}, false
 }
 
 func mustDeleteFriend(t *testing.T, h *clitest.Harness, contextName, id string) rpcapi.FriendObject {

@@ -31,15 +31,16 @@ const (
 	SeedVolcCredentialName  = "volc-main-credential"
 	SeedVolcTenantName      = "volc-main"
 	SeedVolcVoiceID         = "volc-tenant:volc-main:zh_female_vv_mars_bigtts"
-	SeedWorkflowName        = "flowcraft-assistant"
+	SeedWorkflowName        = "flowcraft-voice-assistant"
 	SeedWorkspaceName       = "workspace-flowcraft-assistant"
 	SeedAltWorkspaceName    = "workspace-flowcraft-alt"
 	pollInterval            = 20 * time.Millisecond
 )
 
 const (
-	defaultClientConfigHome = "test/gizclaw-e2e/testdata/gizclaw-config-home"
-	defaultClientContext    = "e2e-client"
+	defaultClientConfigHome = "test/gizclaw-e2e/testdata/config-home-giznet"
+	defaultClientContext    = "gear1"
+	defaultActionContext    = "gear2"
 )
 
 type Story struct {
@@ -149,7 +150,7 @@ func captureStoryFailure(t testing.TB, page playwright.Page) {
 		t.Logf("browser failure url=%s body=%q", currentURL, truncateForLog(body, 4000))
 	}
 
-	artifactDir := getenvDefault("GIZCLAW_E2E_UI_ARTIFACT_DIR", filepath.Join(os.TempDir(), "gizclaw-e2e-ui-artifacts"))
+	artifactDir := filepath.Join(os.TempDir(), "gizclaw-e2e-ui-artifacts")
 	if err := os.MkdirAll(artifactDir, 0o755); err != nil {
 		t.Logf("browser failure screenshot mkdir %s: %v", artifactDir, err)
 		return
@@ -338,23 +339,20 @@ func requireSmokeSeed(t *testing.T) Seed {
 func setupSeed(t testing.TB) Seed {
 	t.Helper()
 	return Seed{
-		AdminURL:              getenvDefault("GIZCLAW_E2E_ADMIN_URL", "http://127.0.0.1:8080"),
-		PlayURL:               getenvDefault("GIZCLAW_E2E_PLAY_URL", "http://127.0.0.1:8081"),
+		AdminURL:              "http://127.0.0.1:8080",
+		PlayURL:               "http://127.0.0.1:8081",
 		ErrorPlayURL:          os.Getenv("GIZCLAW_E2E_ERROR_PLAY_URL"),
-		DevicePublicKey:       setupClientPublicKey(t),
-		ActionDevicePublicKey: setupClientPublicKey(t),
-		DeleteDevicePublicKey: setupClientPublicKey(t),
+		DevicePublicKey:       setupClientPublicKey(t, "GIZCLAW_E2E_GEAR1_CONTEXT", defaultClientContext),
+		ActionDevicePublicKey: setupClientPublicKey(t, "GIZCLAW_E2E_GEAR2_CONTEXT", defaultActionContext),
+		DeleteDevicePublicKey: setupClientPublicKey(t, "GIZCLAW_E2E_GEAR2_CONTEXT", defaultActionContext),
 	}
 }
 
-func setupClientPublicKey(t testing.TB) string {
+func setupClientPublicKey(t testing.TB, contextEnv, defaultContext string) string {
 	t.Helper()
-	path := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CLIENT_IDENTITY_KEY"))
-	if path == "" {
-		configHome := getenvDefault("GIZCLAW_E2E_CLIENT_CONFIG_HOME", defaultClientConfigHome)
-		contextName := getenvDefault("GIZCLAW_E2E_CLIENT_CONTEXT", defaultClientContext)
-		path = filepath.Join(configHome, "gizclaw", contextName, "identity.key")
-	}
+	configHome := getenvDefault("GIZCLAW_E2E_CONFIG_HOME", defaultClientConfigHome)
+	contextName := getenvDefault(contextEnv, defaultContext)
+	path := filepath.Join(configHome, "gizclaw", contextName, "identity.key")
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""

@@ -31,13 +31,12 @@ func newAdminAPIHarness(t *testing.T) *adminAPIHarness {
 	t.Helper()
 
 	h := clitest.NewSetupHarness(t, "client-admin")
-	h.CreateContext("admin-api-admin").MustSucceed(t)
+	h.InstallFixedAdminContext("admin-api-admin").MustSucceed(t)
 	h.CreateContext("admin-api-peer").MustSucceed(t)
 	adminKey := h.ContextPublicKey("admin-api-admin")
 	peerKey := h.ContextPublicKey("admin-api-peer")
-	adminSN := "client-admin-api-admin-" + adminKey
+	adminSN := "admin"
 	peerSN := "client-admin-api-peer-" + peerKey
-	h.RegisterContext("admin-api-admin", "--sn", adminSN).MustSucceed(t)
 	h.RegisterContext("admin-api-peer", "--sn", peerSN).MustSucceed(t)
 
 	admin := h.ConnectClientFromContext("admin-api-admin")
@@ -50,7 +49,6 @@ func newAdminAPIHarness(t *testing.T) *adminAPIHarness {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_, _ = api.DeletePeerWithResponse(ctx, peerKey)
-		_, _ = api.DeletePeerWithResponse(ctx, adminKey)
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

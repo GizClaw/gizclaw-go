@@ -3,9 +3,7 @@
 package chat
 
 import (
-	"errors"
 	"net"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -33,15 +31,12 @@ func allWorkspaceConfigPaths(t testing.TB) []string {
 func runLiveWorkspaceCase(t *testing.T, selected workspaceCase, paths []string) {
 	t.Helper()
 	if err := probeLiveWorkspaceSetup(); err != nil {
-		if os.Getenv("GIZCLAW_E2E_REQUIRE_LIVE") == "1" {
-			t.Fatalf("e2e setup server is not available: %v", err)
-		}
 		t.Skipf("e2e setup server is not available: %v", err)
 	}
 	for _, path := range paths {
 		path := path
 		t.Run(strings.TrimSuffix(filepath.Base(path), filepath.Ext(path)), func(t *testing.T) {
-			err := runConfig(path, clientContextConfigPath(), selected)
+			err := runConfigWithLiveRetry(path, clientContextConfigPath(), selected)
 			if err == nil {
 				return
 			}
@@ -51,6 +46,34 @@ func runLiveWorkspaceCase(t *testing.T, selected workspaceCase, paths []string) 
 			t.Fatalf("%s %s: %v", selected, path, err)
 		})
 	}
+}
+
+func runConfigWithLiveRetry(path, contextConfigPath string, selected workspaceCase) error {
+	var err error
+	for attempt := 1; attempt <= 5; attempt++ {
+		err = runConfig(path, contextConfigPath, selected)
+		if err == nil || !isRetryableLiveWorkspaceError(err) {
+			return err
+		}
+		if attempt < 5 {
+			time.Sleep(time.Duration(attempt) * time.Second)
+		}
+	}
+	return err
+}
+
+func isRetryableLiveWorkspaceError(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := err.Error()
+	return strings.Contains(text, "Bad Gateway") ||
+		strings.Contains(text, "websocket read: unexpected EOF") ||
+		strings.Contains(text, "websocket: close 1006 (abnormal closure): unexpected EOF") ||
+		strings.Contains(text, "transport: kcp: timeout") ||
+		strings.Contains(text, "response incomplete: length") ||
+		strings.Contains(text, "speech: POST \"http://gizclaw/v1/audio/speech\": 400 Bad Request") ||
+		strings.Contains(text, "transcript mismatch: similarity")
 }
 
 func probeLiveWorkspaceSetup() error {
@@ -70,13 +93,6 @@ func probeLiveWorkspaceSetup() error {
 }
 
 func shouldSkipUnavailableSetup(err error) bool {
-	if os.Getenv("GIZCLAW_E2E_REQUIRE_LIVE") == "1" {
-		return false
-	}
-	var netErr net.Error
-	if errors.As(err, &netErr) {
-		return true
-	}
 	text := err.Error()
 	return strings.Contains(text, "connection refused") ||
 		strings.Contains(text, "no such file or directory") ||

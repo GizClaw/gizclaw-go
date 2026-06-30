@@ -14,7 +14,7 @@ spec:
       source: manual
       provider:
         kind: volc-tenant
-        name: volc-main
+        name: volc-ark
       name: Reward claim policy model
       description: System task model for reward claim decisions
       capabilities:
@@ -37,7 +37,7 @@ spec:
       source: manual
       provider:
         kind: volc-tenant
-        name: volc-main
+        name: volc-ark
       name: Pet action policy model
       description: System task model for pet action decisions
       capabilities:

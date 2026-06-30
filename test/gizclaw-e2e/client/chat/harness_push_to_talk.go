@@ -135,6 +135,7 @@ func (d *personaDriver) consumeSelfStart(ctx context.Context, skipAssistantAudio
 	var frames [][]byte
 	var settle <-chan time.Time
 	var responseDeadline <-chan time.Time
+	responseTimeout := d.roundResponseTimeout()
 	var trace roundEventTrace
 	for {
 		if started && textDone && audioDone && settle == nil {
@@ -166,7 +167,7 @@ func (d *personaDriver) consumeSelfStart(ctx context.Context, skipAssistantAudio
 		case <-ctx.Done():
 			return stat, true, fmt.Errorf("consume self-start: %w; recent events: %s", ctx.Err(), trace.String())
 		case <-responseDeadline:
-			return stat, true, fmt.Errorf("self-start response timeout after %s; recent events: %s", workspaceRoundResponseTimeout, trace.String())
+			return stat, true, fmt.Errorf("self-start response timeout after %s; recent events: %s", responseTimeout, trace.String())
 		case <-settle:
 			settle = nil
 			if !textDone {
@@ -184,7 +185,7 @@ func (d *personaDriver) consumeSelfStart(ctx context.Context, skipAssistantAudio
 				continue
 			}
 			if !started {
-				responseDeadline = time.After(workspaceRoundResponseTimeout)
+				responseDeadline = time.After(responseTimeout)
 			}
 			started = true
 			stat.EventCount++

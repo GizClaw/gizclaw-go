@@ -31,7 +31,7 @@ const (
 	socialHumanReviewOutputUnderflowRetries = 3
 	socialHumanReviewSampleRate             = 48000
 	socialHumanReviewFrameSize              = socialHumanReviewSampleRate / 50
-	socialHumanReviewACLView                = "e2e-client"
+	socialHumanReviewACLView                = "gear1"
 	socialHumanReviewTTSModel               = "volc-bigtts"
 	socialHumanReviewVoiceResource          = "volc-tenant:volc-main:zh_female_vv_mars_bigtts"
 )
@@ -90,8 +90,8 @@ func newSocialHumanReviewHarness(t *testing.T) *clitest.Harness {
 	if err != nil {
 		t.Fatalf("create social human-review admin client: %v", err)
 	}
-	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_A_CONTEXT", "client-social-human-review-peer-a-sn")
-	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONFIG_HOME", "GIZCLAW_E2E_SOCIAL_PERSON_B_CONTEXT", "client-social-human-review-peer-b-sn")
+	configureSocialPeerContext(t, h, "peer-a", "GIZCLAW_E2E_GEAR1_CONTEXT", "gear1", "client-social-human-review-peer-a-sn")
+	configureSocialPeerContext(t, h, "peer-b", "GIZCLAW_E2E_GEAR2_CONTEXT", "gear2", "client-social-human-review-peer-b-sn")
 	for _, peer := range []string{"peer-c"} {
 		h.CreateContext(peer).MustSucceed(t)
 		h.RegisterContext(peer, "--sn", "client-social-human-review-"+peer+"-sn").MustSucceed(t)

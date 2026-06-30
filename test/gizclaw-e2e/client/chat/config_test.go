@@ -25,7 +25,7 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
 	}
 	dir := t.TempDir()
 	configDir := filepath.Join(dir, "testdata", "workspaces")
-	contextDir := filepath.Join(dir, "testdata", "gizclaw-config-home", "gizclaw", "e2e-client")
+	contextDir := filepath.Join(dir, "testdata", "config-home-giznet", "gizclaw", "gear1")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatalf("create config dir: %v", err)
 	}
@@ -46,6 +46,9 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
     "realtime": "setup-realtime"
   },
   "voice": "setup-voice",
+  "interrupt": {
+    "rounds": 1
+  },
   "rounds": 2,
   "timeout": "5s",
   "persona": "short"
@@ -76,6 +79,9 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
 	}
 	if cfg.Rounds != 2 || cfg.timeout != 5*time.Second {
 		t.Fatalf("rounds/timeout = %d/%s", cfg.Rounds, cfg.timeout)
+	}
+	if cfg.Interrupt.Rounds != 1 {
+		t.Fatalf("interrupt rounds = %d", cfg.Interrupt.Rounds)
 	}
 	if cfg.ClientPrivateKey != clientKey.Private.String() {
 		t.Fatalf("client private key was not loaded from setup context identity")
@@ -230,6 +236,7 @@ func TestConfigValidationErrors(t *testing.T) {
 		{"realtime", func(c *config) { c.Models.Realtime = "" }, "models.realtime"},
 		{"voice", func(c *config) { c.Voice = "" }, "voice"},
 		{"rounds", func(c *config) { c.Rounds = 0 }, "rounds"},
+		{"interrupt rounds", func(c *config) { c.Interrupt.Rounds = -1 }, "interrupt.rounds"},
 		{"timeout parse", func(c *config) { c.Timeout = "bad" }, "timeout"},
 		{"timeout positive", func(c *config) { c.Timeout = "-1s" }, "positive"},
 		{"persona", func(c *config) { c.Persona = "" }, "persona"},
@@ -281,7 +288,7 @@ func writeSetupContextConfig(t *testing.T, path string, serverKey, clientKey *gi
 	if err := os.MkdirAll(contextDir, 0o755); err != nil {
 		t.Fatalf("create context dir: %v", err)
 	}
-	contextYAML := "server:\n  address: 127.0.0.1:9820\n  public-key: " + serverKey.Public.String() + "\n  cipher-mode: " + cipherMode + "\n"
+	contextYAML := "server:\n  host: 127.0.0.1\n  public-api-port: 9820\n  noise-udp-port: 9820\n  public-key: " + serverKey.Public.String() + "\n  transport: noise\n  cipher-mode: " + cipherMode + "\n"
 	if err := os.WriteFile(path, []byte(contextYAML), 0o644); err != nil {
 		t.Fatalf("write context config: %v", err)
 	}

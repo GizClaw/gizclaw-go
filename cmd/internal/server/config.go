@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +16,10 @@ import (
 
 type Config struct {
 	KeyPair        *giznet.KeyPair
+	Host           string
+	PublicAPIPort  int
+	NoiseUDPPort   int
+	ICEPort        int
 	ListenAddr     string
 	CipherMode     giznoise.CipherMode
 	AdminPublicKey giznet.PublicKey
@@ -23,6 +28,7 @@ type Config struct {
 	Friends        FriendsConfig
 	FriendGroups   FriendGroupsConfig
 	SystemTasks    SystemTasksConfig
+	Gameplay       GameplayConfig
 }
 
 type FriendsConfig struct{}
@@ -48,7 +54,15 @@ type GeneratorTaskConfig struct {
 	Generator string `yaml:"generator"`
 }
 
+type GameplayConfig struct {
+	PetAdoptPointCost int64 `yaml:"pet_adopt_point_cost"`
+}
+
 type ConfigFile struct {
+	Host           string                    `yaml:"host"`
+	PublicAPIPort  int                       `yaml:"public-api-port"`
+	NoiseUDPPort   int                       `yaml:"noise-udp-port"`
+	ICEPort        int                       `yaml:"ice-port"`
 	ListenAddr     string                    `yaml:"listen"`
 	CipherMode     giznoise.CipherMode       `yaml:"cipher-mode"`
 	AdminPublicKey giznet.PublicKey          `yaml:"admin-public-key"`
@@ -57,6 +71,7 @@ type ConfigFile struct {
 	Friends        FriendsConfig             `yaml:"friends"`
 	FriendGroups   FriendGroupsConfig        `yaml:"friend_groups"`
 	SystemTasks    SystemTasksConfig         `yaml:"system_tasks"`
+	Gameplay       GameplayConfig            `yaml:"gameplay"`
 }
 
 const (
@@ -104,6 +119,10 @@ func LoadConfig(path string) (ConfigFile, error) {
 		return ConfigFile{}, fmt.Errorf("server: admin-identity-key is not supported; use admin-public-key")
 	}
 	var raw struct {
+		Host           string                    `yaml:"host"`
+		PublicAPIPort  int                       `yaml:"public-api-port"`
+		NoiseUDPPort   int                       `yaml:"noise-udp-port"`
+		ICEPort        int                       `yaml:"ice-port"`
 		ListenAddr     string                    `yaml:"listen"`
 		CipherMode     giznoise.CipherMode       `yaml:"cipher-mode"`
 		AdminPublicKey *giznet.PublicKey         `yaml:"admin-public-key"`
@@ -112,6 +131,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 		Friends        FriendsConfig             `yaml:"friends"`
 		FriendGroups   FriendGroupsConfig        `yaml:"friend_groups"`
 		SystemTasks    SystemTasksConfig         `yaml:"system_tasks"`
+		Gameplay       GameplayConfig            `yaml:"gameplay"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return ConfigFile{}, err
@@ -121,6 +141,10 @@ func LoadConfig(path string) (ConfigFile, error) {
 		return ConfigFile{}, err
 	}
 	cfg := ConfigFile{
+		Host:           raw.Host,
+		PublicAPIPort:  raw.PublicAPIPort,
+		NoiseUDPPort:   raw.NoiseUDPPort,
+		ICEPort:        raw.ICEPort,
 		ListenAddr:     raw.ListenAddr,
 		CipherMode:     raw.CipherMode,
 		AdminPublicKey: adminPublicKey,
@@ -129,6 +153,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 		Friends:        raw.Friends,
 		FriendGroups:   raw.FriendGroups,
 		SystemTasks:    raw.SystemTasks,
+		Gameplay:       raw.Gameplay,
 	}
 	return cfg, nil
 }
@@ -145,11 +170,27 @@ func resolveAdminPublicKey(publicKey *giznet.PublicKey) (giznet.PublicKey, error
 
 func DefaultConfig() Config {
 	return Config{
-		ListenAddr: ":9820",
+		Host:          "0.0.0.0",
+		PublicAPIPort: 9820,
+		NoiseUDPPort:  9820,
+		ICEPort:       9821,
+		ListenAddr:    ":9820",
 	}
 }
 
 func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
+	if cfg.Host == "" {
+		cfg.Host = fileCfg.Host
+	}
+	if cfg.PublicAPIPort == 0 {
+		cfg.PublicAPIPort = fileCfg.PublicAPIPort
+	}
+	if cfg.NoiseUDPPort == 0 {
+		cfg.NoiseUDPPort = fileCfg.NoiseUDPPort
+	}
+	if cfg.ICEPort == 0 {
+		cfg.ICEPort = fileCfg.ICEPort
+	}
 	if cfg.ListenAddr == "" {
 		cfg.ListenAddr = fileCfg.ListenAddr
 	}
@@ -168,6 +209,7 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	cfg.Friends = mergeFriendsConfig(cfg.Friends, fileCfg.Friends)
 	cfg.FriendGroups = mergeFriendGroupsConfig(cfg.FriendGroups, fileCfg.FriendGroups)
 	cfg.SystemTasks = mergeSystemTasksConfig(cfg.SystemTasks, fileCfg.SystemTasks)
+	cfg.Gameplay = mergeGameplayConfig(cfg.Gameplay, fileCfg.Gameplay)
 	return cfg, nil
 }
 
@@ -215,10 +257,26 @@ func mergeGeneratorTaskConfig(runtime GeneratorTaskConfig, file GeneratorTaskCon
 	return runtime
 }
 
+func mergeGameplayConfig(runtime GameplayConfig, file GameplayConfig) GameplayConfig {
+	if runtime.PetAdoptPointCost == 0 {
+		runtime.PetAdoptPointCost = file.PetAdoptPointCost
+	}
+	return runtime
+}
+
 func prepareConfig(cfg Config) (Config, error) {
 	defaults := DefaultConfig()
-	if cfg.ListenAddr == "" {
-		cfg.ListenAddr = defaults.ListenAddr
+	if cfg.Host == "" {
+		cfg.Host = defaults.Host
+	}
+	if cfg.PublicAPIPort == 0 {
+		cfg.PublicAPIPort = defaults.PublicAPIPort
+	}
+	if cfg.NoiseUDPPort == 0 {
+		cfg.NoiseUDPPort = defaults.NoiseUDPPort
+	}
+	if cfg.ICEPort == 0 {
+		cfg.ICEPort = defaults.ICEPort
 	}
 	if err := cfg.validate(); err != nil {
 		return Config{}, err
@@ -235,6 +293,15 @@ func prepareConfig(cfg Config) (Config, error) {
 
 func (cfg Config) validate() error {
 	if err := validateCipherMode(cfg.CipherMode); err != nil {
+		return err
+	}
+	if err := validatePort("public-api-port", cfg.PublicAPIPort); err != nil {
+		return err
+	}
+	if err := validatePort("noise-udp-port", cfg.NoiseUDPPort); err != nil {
+		return err
+	}
+	if err := validatePort("ice-port", cfg.ICEPort); err != nil {
 		return err
 	}
 	if err := validateOptionalModelPattern("system_tasks.reward_claim.generator", cfg.SystemTasks.RewardClaim.Generator); err != nil {
@@ -269,6 +336,24 @@ func (cfg Config) validate() error {
 	return nil
 }
 
+func (cfg Config) PublicAPIListenAddr() string {
+	if cfg.ListenAddr != "" {
+		return cfg.ListenAddr
+	}
+	return net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.PublicAPIPort))
+}
+
+func (cfg Config) NoiseUDPListenAddr() string {
+	if cfg.ListenAddr != "" {
+		return cfg.ListenAddr
+	}
+	return net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.NoiseUDPPort))
+}
+
+func (cfg Config) ICEListenAddr() string {
+	return net.JoinHostPort(cfg.Host, fmt.Sprintf("%d", cfg.ICEPort))
+}
+
 func parseConfigDuration(value string) (time.Duration, error) {
 	value = strings.TrimSpace(value)
 	if strings.HasSuffix(value, "d") {
@@ -288,6 +373,13 @@ func validateCipherMode(mode giznoise.CipherMode) error {
 	default:
 		return fmt.Errorf("server: unsupported cipher-mode %q", mode)
 	}
+}
+
+func validatePort(field string, port int) error {
+	if port < 0 || port > 65535 {
+		return fmt.Errorf("server: %s must be between 1 and 65535", field)
+	}
+	return nil
 }
 
 func validateOptionalModelPattern(field, pattern string) error {

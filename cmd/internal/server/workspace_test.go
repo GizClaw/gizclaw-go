@@ -99,6 +99,8 @@ system_tasks:
     cooldown: 30m
   pet_action:
     generator: model/pet-action
+gameplay:
+  pet_adopt_point_cost: -1
 `, testKeyPair(t, 0xab).Public.String())), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
@@ -126,9 +128,12 @@ system_tasks:
 	if got := cfg.Storage["acl-db"].SQLite.Dir; got != filepath.Join(workspace, "data", "acl.sqlite") {
 		t.Fatalf("acl db dir = %q", got)
 	}
+	if cfg.Gameplay.PetAdoptPointCost != -1 {
+		t.Fatalf("Gameplay = %+v", cfg.Gameplay)
+	}
 }
 
-func TestPrepareWorkspaceConfigUsesDefaultListenAddr(t *testing.T) {
+func TestPrepareWorkspaceConfigUsesDefaultPorts(t *testing.T) {
 	workspace := t.TempDir()
 	if err := os.WriteFile(filepath.Join(workspace, workspaceConfigFile), []byte(`
 stores:
@@ -145,8 +150,9 @@ peers:
 	if err != nil {
 		t.Fatalf("prepareWorkspaceConfig error = %v", err)
 	}
-	if cfg.ListenAddr != DefaultConfig().ListenAddr {
-		t.Fatalf("ListenAddr = %q, want %q", cfg.ListenAddr, DefaultConfig().ListenAddr)
+	defaults := DefaultConfig()
+	if cfg.Host != defaults.Host || cfg.PublicAPIPort != defaults.PublicAPIPort || cfg.NoiseUDPPort != defaults.NoiseUDPPort || cfg.ICEPort != defaults.ICEPort {
+		t.Fatalf("defaults host=%q public=%d noise=%d ice=%d", cfg.Host, cfg.PublicAPIPort, cfg.NoiseUDPPort, cfg.ICEPort)
 	}
 }
 

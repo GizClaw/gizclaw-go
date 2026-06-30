@@ -18,10 +18,25 @@ type historyReplayStats struct {
 	DownlinkPackets int
 }
 
+type historyReplayVerifyOptions struct {
+	audioASRMinRatio float64
+}
+
+func defaultHistoryReplayVerifyOptions() historyReplayVerifyOptions {
+	return historyReplayVerifyOptions{audioASRMinRatio: assistantAudioASRMinRatio}
+}
+
 func (d *personaDriver) verifyHistoryReplay(ctx context.Context, item rpcapi.PeerRunHistoryEntry) (historyReplayStats, error) {
+	return d.verifyHistoryReplayWithOptions(ctx, item, defaultHistoryReplayVerifyOptions())
+}
+
+func (d *personaDriver) verifyHistoryReplayWithOptions(ctx context.Context, item rpcapi.PeerRunHistoryEntry, options historyReplayVerifyOptions) (historyReplayStats, error) {
 	var stats historyReplayStats
 	if d == nil || d.transport == nil {
 		return stats, nil
+	}
+	if options.audioASRMinRatio <= 0 {
+		options.audioASRMinRatio = assistantAudioASRMinRatio
 	}
 	expected := strings.TrimSpace(item.Text)
 	if expected == "" {
@@ -40,14 +55,15 @@ func (d *personaDriver) verifyHistoryReplay(ctx context.Context, item rpcapi.Pee
 	streamID := ""
 	var trace roundEventTrace
 	start := time.Now()
-	deadline := time.NewTimer(workspaceRoundResponseTimeout)
+	responseTimeout := d.roundResponseTimeout()
+	deadline := time.NewTimer(responseTimeout)
 	defer deadline.Stop()
 	for !textDone || !audioDone || stats.DownlinkPackets == 0 {
 		select {
 		case <-ctx.Done():
 			return stats, fmt.Errorf("wait replay: %w; recent events: %s", ctx.Err(), trace.String())
 		case <-deadline.C:
-			return stats, fmt.Errorf("replay timeout after %s; recent events: %s", workspaceRoundResponseTimeout, trace.String())
+			return stats, fmt.Errorf("replay timeout after %s; recent events: %s", responseTimeout, trace.String())
 		case err := <-d.transport.errs:
 			return stats, fmt.Errorf("transport: %w; recent events: %s", err, trace.String())
 		case received := <-d.transport.events:
@@ -88,7 +104,7 @@ func (d *personaDriver) verifyHistoryReplay(ctx context.Context, item rpcapi.Pee
 		return stats, err
 	}
 	if skipReason := d.assistantAudioASRSkipReason(conversationMode{}); skipReason == "" {
-		audioASR, err := d.verifyAssistantAudioASR(ctx, 0, "history-replay", expected, frames)
+		audioASR, err := d.verifyAssistantAudioASRWithMinRatio(ctx, 0, "history-replay", expected, frames, options.audioASRMinRatio)
 		if err != nil {
 			return stats, fmt.Errorf("history replay audio asr: %w", err)
 		}

@@ -572,7 +572,7 @@ spec:
           id: reroute_start_storytell
           type: script
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             output_key: tmp_story_text
             system_prompt: |
@@ -582,7 +582,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -671,7 +671,7 @@ spec:
           id: state_after_origin
           type: script
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲孙悟空被天庭招安又反出天宫，偷桃盗丹、大闹天宫，最后被如来压在五行山下的故事。
@@ -680,7 +680,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -750,7 +750,7 @@ spec:
           id: state_after_heaven
           type: script
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲唐三藏西行出发，救出孙悟空，并让白龙马、猪八戒、沙悟净陆续入队的故事。
@@ -759,7 +759,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -829,7 +829,7 @@ spec:
           id: state_after_pilgrimage
           type: script
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲取经队伍进入连续劫难，真假难辨、误会加深，悟空被逐又归来的故事。
@@ -838,7 +838,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -907,7 +907,7 @@ spec:
           id: state_after_trials
           type: script
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲师徒经过女儿国等奇异国度，面对权力、欲望、人情和强妖阻路的故事。
@@ -916,7 +916,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -992,7 +992,7 @@ spec:
           id: state_after_kingdoms
           type: script
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲取经队伍接近灵山前的最后大劫、取得真经、经历无字经试炼并最终修成正果的故事。
@@ -1001,7 +1001,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -1221,7 +1221,7 @@ spec:
           id: write_story_progress
           type: script
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             output_key: tmp_story_text
             system_prompt: |
@@ -1231,7 +1231,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -1310,7 +1310,7 @@ spec:
           publish: true
           type: llm
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲孙悟空被天庭招安又反出天宫，偷桃盗丹、大闹天宫，最后被如来压在五行山下的故事。
@@ -1319,7 +1319,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -1379,7 +1379,7 @@ spec:
           publish: true
           type: llm
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲唐三藏西行出发，救出孙悟空，并让白龙马、猪八戒、沙悟净陆续入队的故事。
@@ -1388,7 +1388,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -1448,7 +1448,7 @@ spec:
           publish: true
           type: llm
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲取经队伍进入连续劫难，真假难辨、误会加深，悟空被逐又归来的故事。
@@ -1457,7 +1457,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -1516,7 +1516,7 @@ spec:
           publish: true
           type: llm
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲师徒经过女儿国等奇异国度，面对权力、欲望、人情和强妖阻路的故事。
@@ -1525,7 +1525,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.
@@ -1591,7 +1591,7 @@ spec:
           publish: true
           type: llm
         - config:
-            max_tokens: 2048
+            max_tokens: 80
             model: generate_model
             system_prompt: |
               你是西游记互动故事的讲述者，当前要讲取经队伍接近灵山前的最后大劫、取得真经、经历无字经试炼并最终修成正果的故事。
@@ -1600,7 +1600,7 @@ spec:
               不要使用 emoji、markdown、编号列表、项目符号、菜单或标签。
               只能输出自然中文。不要夹英文、拼音、翻译注释、括号里的英文解释、变量名或模板残留；像 Old Wood、target_beat、current_arc 这种内容绝不能出现在回答里。
               写得像真人讲故事，不要像文章、读后感、解读稿或演讲稿。不要长篇夸奖用户，不要重复总结用户上一轮的话。
-              每次回复控制在一到两句话，最多 60 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
+              每次回复控制在一句短句，最多 28 个汉字，最多问一个具体问题。每一轮只讲一个小情节，不要把本段故事一次性概括完。
               <execution_contract>
               story_progress_state and target_beat override story_memory and story_recent.
               Complete target_beat in this answer. Do not choose another progress target from recalled memory.

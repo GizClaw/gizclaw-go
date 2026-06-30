@@ -11,6 +11,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/gameplay/badge"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/gameplay/petspecies"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/system/acl"
+	"github.com/GizClaw/gizclaw-go/pkg/giznet"
 	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
 )
 
@@ -81,6 +82,35 @@ func TestFirstPetSpeciesSelectorScansPagesAndHandlesConfig(t *testing.T) {
 	})}).SelectSpecies(ctx, "peer-a")
 	if err == nil || err.Error() != "no usable pet species available" {
 		t.Fatalf("SelectSpecies(all denied) error = %v, want no usable species", err)
+	}
+}
+
+func TestFirstPetSpeciesSelectorFallsBackToPeerView(t *testing.T) {
+	ctx := context.Background()
+	key, err := giznet.GenerateKeyPair()
+	if err != nil {
+		t.Fatalf("GenerateKeyPair() error = %v", err)
+	}
+	species := &petspecies.Server{Store: kv.NewMemory(nil)}
+	if _, err := species.Put(ctx, "rabbit", apitypes.PetSpeciesSpec{Name: "Rabbit"}); err != nil {
+		t.Fatalf("Put rabbit error = %v", err)
+	}
+	view := "default-client"
+	auth := fakePeerACL{
+		allowedSubject:    acl.ViewSubject(view),
+		allowedResource:   acl.PetSpeciesResource("rabbit"),
+		allowedPermission: apitypes.ACLPermissionPetSpeciesUse,
+	}
+	got, err := (firstPetSpeciesSelector{
+		Service: species,
+		ACL:     auth,
+		Peers:   fakePeerConfigGetter{view: &view},
+	}).SelectSpecies(ctx, key.Public.String())
+	if err != nil {
+		t.Fatalf("SelectSpecies error = %v", err)
+	}
+	if got != "rabbit" {
+		t.Fatalf("SelectSpecies = %q, want rabbit", got)
 	}
 }
 

@@ -140,6 +140,35 @@ func TestWorkspaceCaseDispatchRejectsUnknown(t *testing.T) {
 	}
 }
 
+func TestRetryableLiveWorkspaceError(t *testing.T) {
+	retryable := []error{
+		errors.New("flowcraft: read ASR: buffer: read from closed buffer: websocket connect failed: Bad Gateway"),
+		errors.New("flowcraft: read ASR: buffer: read from closed buffer: websocket read: unexpected EOF"),
+		errors.New("ast websocket read: websocket: close 1006 (abnormal closure): unexpected EOF"),
+		errors.New("round 2: transport: kcp: timeout; recent events: none"),
+		errors.New("bytedance: response incomplete: length"),
+		errors.New("speech: POST \"http://gizclaw/v1/audio/speech\": 400 Bad Request"),
+		errors.New("interrupt second transcript mismatch: similarity 0.21 below 0.45"),
+	}
+	for _, err := range retryable {
+		if !isRetryableLiveWorkspaceError(err) {
+			t.Fatalf("isRetryableLiveWorkspaceError(%q) = false", err)
+		}
+	}
+	notRetryable := []error{
+		nil,
+		errors.New("read context config: no such file or directory"),
+		errors.New("client private key: invalid key"),
+		errors.New("interrupt missing second transcript"),
+		errors.New("context deadline exceeded"),
+	}
+	for _, err := range notRetryable {
+		if isRetryableLiveWorkspaceError(err) {
+			t.Fatalf("isRetryableLiveWorkspaceError(%v) = true", err)
+		}
+	}
+}
+
 func TestHistoryReplayStreamHelpers(t *testing.T) {
 	stream := "history-replay-1"
 	other := "assistant-live"

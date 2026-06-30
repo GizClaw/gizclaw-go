@@ -110,6 +110,9 @@ func TestTextHelpers(t *testing.T) {
 	if err := assertTextSimilar("contained", "第一段自动切分测试", "the third paragraph 第一段自动切分测试。", 1); err != nil {
 		t.Fatalf("assertTextSimilar(contained) error = %v", err)
 	}
+	if err := assertTextSimilar("auto split short replay asr", "第二段自动切分测试", "第二段。", realtimeAutoSplitReplayASRMin); err != nil {
+		t.Fatalf("assertTextSimilar(auto split short replay asr) error = %v", err)
+	}
 	if err := assertTextSimilar("different", "你好测试", "天气不错", 0.9); err == nil {
 		t.Fatal("assertTextSimilar() succeeded for unrelated text")
 	}
@@ -419,6 +422,85 @@ func TestPersonaDriverDefaultOpenAIPaths(t *testing.T) {
 	}
 	if bytes.Contains(transcriptionBody, []byte(`name="language"`)) {
 		t.Fatalf("input transcription unexpectedly set language: %s", transcriptionBody)
+	}
+}
+
+func TestPersonaDriverSynthesizeRetriesRetryableAPIError(t *testing.T) {
+	oggAudio := testOggOpus(t, [][]byte{
+		[]byte("OpusHeadxxxx"),
+		[]byte("OpusTagsyyyy"),
+		{0x11, 0x22},
+	})
+	attempts := 0
+	client := openai.NewClient(
+		option.WithAPIKey("test"),
+		option.WithBaseURL("http://gizclaw/v1"),
+		option.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if !strings.HasSuffix(req.URL.Path, "/audio/speech") {
+				t.Fatalf("unexpected OpenAI path %s", req.URL.Path)
+			}
+			attempts++
+			if attempts == 1 {
+				return &http.Response{
+					StatusCode: http.StatusBadRequest,
+					Header:     http.Header{"Content-Type": []string{"application/json"}},
+					Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"speech backend rejected request","type":"invalid_request_error","code":"speech_failed"}}`)),
+				}, nil
+			}
+			return binaryResponse("audio/ogg", oggAudio), nil
+		})}),
+	)
+	driver := &personaDriver{
+		cfg: config{
+			Models: modelConfig{TTS: "tts"},
+			Voice:  "voice",
+		},
+		client: client,
+	}
+
+	audio, packets, err := driver.synthesizeOpus(context.Background(), "你好测试")
+	if err != nil {
+		t.Fatalf("synthesizeOpus() error = %v", err)
+	}
+	if attempts != 2 || !bytes.Equal(audio, oggAudio) || len(packets) != 1 || !bytes.Equal(packets[0], []byte{0x11, 0x22}) {
+		t.Fatalf("synthesizeOpus() attempts/audio/packets = %d/%d/%#v", attempts, len(audio), packets)
+	}
+}
+
+func TestPersonaDriverTranscribeRetriesRetryableAPIError(t *testing.T) {
+	audioPath := filepath.Join(t.TempDir(), "input.ogg")
+	if err := os.WriteFile(audioPath, []byte("audio"), 0o644); err != nil {
+		t.Fatalf("write audio: %v", err)
+	}
+	attempts := 0
+	client := openai.NewClient(
+		option.WithAPIKey("test"),
+		option.WithBaseURL("http://gizclaw/v1"),
+		option.WithHTTPClient(&http.Client{Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			if !strings.HasSuffix(req.URL.Path, "/audio/transcriptions") {
+				t.Fatalf("unexpected OpenAI path %s", req.URL.Path)
+			}
+			attempts++
+			if attempts == 1 {
+				return &http.Response{
+					StatusCode: http.StatusBadRequest,
+					Header:     http.Header{"Content-Type": []string{"application/json"}},
+					Body:       io.NopCloser(strings.NewReader(`{"error":{"message":"audio decode failed","type":"invalid_request_error","code":"bad_audio"}}`)),
+				}, nil
+			}
+			return jsonResponse(`{"text":"你好测试"}`), nil
+		})}),
+	)
+	driver := &personaDriver{
+		cfg:    config{Models: modelConfig{ASR: "asr"}},
+		client: client,
+	}
+	got, err := driver.transcribe(context.Background(), audioPath)
+	if err != nil {
+		t.Fatalf("transcribe() error = %v", err)
+	}
+	if got != "你好测试" || attempts != 2 {
+		t.Fatalf("transcribe() = %q after %d attempts", got, attempts)
 	}
 }
 

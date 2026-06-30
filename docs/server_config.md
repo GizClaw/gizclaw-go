@@ -9,9 +9,12 @@ business settings such as TTLs and system task generators.
 ## Example
 
 ```yaml
-# Address the GizClaw server listens on.
-# Use ":9820" to listen on all interfaces, or "127.0.0.1:9820" for local-only.
-listen: ":9820"
+# Host and ports the GizClaw server binds.
+# public-api-port serves HTTP public APIs and the fixed WebRTC signaling path.
+# noise-udp-port serves noise-protocol-over-udp.
+host: 0.0.0.0
+public-api-port: 9820
+noise-udp-port: 9820
 
 # Optional transport cipher mode for giznet connections.
 # Supported values are:
@@ -20,6 +23,11 @@ listen: ":9820"
 #   plaintext     - no transport encryption, for local tests only
 # Omit or leave empty to use the command/runtime default.
 cipher-mode: chacha_poly
+
+# WebRTC transport settings.
+# The signaling path is fixed at /giznet/webrtc/v1/offer and is served on
+# public-api-port. ice-port serves WebRTC ICE over UDP and passive ICE-TCP.
+ice-port: 9821
 
 # Optional admin public key. When set, admin HTTP/RPC calls must authenticate as
 # this key. Leave empty only for local development or tests that inject runtime
@@ -252,7 +260,47 @@ system_tasks:
     # GenX generator pattern used by pet.feed, pet.wash, and pet.play.
     # The common setup uses the same model as reward_claim.
     generator: model/qwen-flash
+
+# Peer-facing gameplay defaults.
+gameplay:
+  # Points deducted by pet.adopt before the pet is created.
+  # Set a negative value to disable the adoption charge.
+  pet_adopt_point_cost: 100
 ```
+
+## Transport Config
+
+The server config uses explicit host and port fields. Do not infer one
+transport port from another.
+
+```yaml
+host: 0.0.0.0
+public-api-port: 9820
+noise-udp-port: 9820
+cipher-mode: chacha_poly
+
+ice-port: 9821
+```
+
+Binding direction:
+
+- `host:public-api-port/tcp` serves the public HTTP API and the fixed WebRTC
+  signaling path `/giznet/webrtc/v1/offer`.
+- `host:noise-udp-port/udp` serves `noise-protocol-over-udp`.
+- `host:ice-port/udp` serves WebRTC ICE UDP.
+- `host:ice-port/tcp` serves WebRTC passive ICE-TCP.
+
+Default ports:
+
+- `public-api-port`: `9820`
+- `noise-udp-port`: `9820`
+- `ice-port`: `9821`
+
+## CLI Context Config
+
+CLI contexts use the same explicit host/port model. See
+[context_config.md](context_config.md) for the context file schema and transport
+dialing behavior.
 
 ## Field Notes
 
@@ -276,6 +324,8 @@ system_tasks:
   `friend-group-message-assets`.
 - `system_tasks.*.generator` values must use `model/<model-id>`. The model id
   must match an admin `Model` resource, such as `qwen-flash`.
+- `gameplay.pet_adopt_point_cost` controls the point cost charged by
+  `pet.adopt`; a negative value disables the adoption charge.
 - `firmwares`, `pet-species`, and `badges` each use a KV metadata store plus a
   separate object store for uploaded binary assets.
 - `agenthost` is optional for the server itself, but workspace agents such as
@@ -306,6 +356,8 @@ system_tasks:
 - `friend_groups.message_max_audio_bytes` limits the decoded audio payload accepted by
   friend group message send before writing bytes to the configured object store.
 - `cipher-mode` accepts `chacha_poly`, `aes_256_gcm`, `plaintext`, or empty.
+- `host`, `public-api-port`, `noise-udp-port`, and `ice-port` are the
+  transport binding fields for the command server.
 - Asset services should use object-store operations such as get, put, delete,
   delete-prefix, and list. They should not require directory creation or rename
   semantics that are awkward for OSS-style backends.
