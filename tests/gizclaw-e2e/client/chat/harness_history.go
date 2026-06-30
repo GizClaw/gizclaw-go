@@ -19,7 +19,10 @@ type historyReplayStats struct {
 }
 
 type historyReplayVerifyOptions struct {
-	audioASRMinRatio float64
+	audioASRMinRatio        float64
+	SkipTextSimilarity      bool
+	SkipAssistantAudioASR   bool
+	AssistantAudioASRReason string
 }
 
 func defaultHistoryReplayVerifyOptions() historyReplayVerifyOptions {
@@ -100,8 +103,19 @@ func (d *personaDriver) verifyHistoryReplayWithOptions(ctx context.Context, item
 		}
 	}
 	stats.Text = strings.TrimSpace(text.String())
-	if err := assertTextSimilar("history replay text", expected, stats.Text, 0.35); err != nil {
-		return stats, err
+	if !options.SkipTextSimilarity {
+		if err := assertTextSimilar("history replay text", expected, stats.Text, 0.35); err != nil {
+			return stats, err
+		}
+	}
+	if options.SkipAssistantAudioASR {
+		reason := strings.TrimSpace(options.AssistantAudioASRReason)
+		if reason == "" {
+			reason = "lightweight-history-replay"
+		}
+		stats.AudioASR = "skipped: " + reason
+		fmt.Printf("workspace_progress event=history_replay_audio_asr_skipped workspace=%s reason=%s\n", d.cfg.Workspace, reason)
+		return stats, nil
 	}
 	if skipReason := d.assistantAudioASRSkipReason(conversationMode{}); skipReason == "" {
 		audioASR, err := d.verifyAssistantAudioASRWithMinRatio(ctx, 0, "history-replay", expected, frames, options.audioASRMinRatio)

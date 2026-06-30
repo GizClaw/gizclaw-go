@@ -12,8 +12,12 @@ import (
 )
 
 func (d *personaDriver) runPushToTalkRoundtrip(ctx context.Context) ([]roundStats, error) {
+	return d.runPushToTalkRoundtripWithMode(ctx, conversationMode{})
+}
+
+func (d *personaDriver) runPushToTalkRoundtripWithMode(ctx context.Context, mode conversationMode) ([]roundStats, error) {
 	d.useRoundtripUtterances()
-	return d.runConversation(ctx, conversationMode{})
+	return d.runConversation(ctx, mode)
 }
 
 func (d *personaDriver) useRoundtripUtterances() {

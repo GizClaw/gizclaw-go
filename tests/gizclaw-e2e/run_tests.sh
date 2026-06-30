@@ -18,7 +18,12 @@ chat_live_tests=(
   TestPushToTalkInterrupt
 )
 chat_default_live_patterns=(
-  '^TestPushToTalkRoundtrip$/^ast-translate$'
+  '^TestPushToTalkRoundtrip$'
+  '^TestRealtimeRoundtrip$'
+  '^TestHistoryReplay$'
+  '^TestRealtimeInterrupt$'
+  '^TestRealtimeAutoSplitHistory$'
+  '^TestPushToTalkInterrupt$'
 )
 
 if [[ -f "$env_file" ]]; then

@@ -110,7 +110,7 @@ func TestTextHelpers(t *testing.T) {
 	if err := assertTextSimilar("contained", "第一段自动切分测试", "the third paragraph 第一段自动切分测试。", 1); err != nil {
 		t.Fatalf("assertTextSimilar(contained) error = %v", err)
 	}
-	if err := assertTextSimilar("auto split short replay asr", "第二段自动切分测试", "第二段。", realtimeAutoSplitReplayASRMin); err != nil {
+	if err := assertTextSimilar("auto split short replay asr", "第二段自动切分测试", "第二段。", 0.30); err != nil {
 		t.Fatalf("assertTextSimilar(auto split short replay asr) error = %v", err)
 	}
 	if err := assertTextSimilar("different", "你好测试", "天气不错", 0.9); err == nil {
@@ -640,6 +640,70 @@ func TestPersonaDriverRunRoundVerifiesAssistantAudio(t *testing.T) {
 	}
 	if stat.DownlinkPackets != 1 {
 		t.Fatalf("downlink packets = %d, want 1", stat.DownlinkPackets)
+	}
+}
+
+func TestPersonaDriverRunRoundLightweightSkipsSemanticASR(t *testing.T) {
+	events := make(chan timedPeerEvent, 5)
+	label := "assistant"
+	opusPackets := make(chan timedPeerPacket, 1)
+	var publish sync.Once
+	stream := newFakePeerStream()
+	stream.push = func(chunk *genx.MessageChunk) error {
+		if _, ok := chunk.Part.(*genx.Blob); !ok {
+			return nil
+		}
+		publish.Do(func() {
+			responseStreamID := "response-stream-1"
+			events <- timedTextEvent("transcript", "完全不同的识别文本")
+			events <- timedTranscriptDoneEvent()
+			events <- newTimedPeerEvent(labeledTextEventWithStream("assistant", responseStreamID, "回复文本"))
+			events <- timedTextDoneEventWithStream("assistant", responseStreamID)
+			events <- newTimedPeerEvent(apitypes.PeerStreamEvent{
+				Type:     apitypes.PeerStreamEventTypeEos,
+				Label:    &label,
+				StreamId: &responseStreamID,
+			})
+			opusPackets <- newTimedPeerPacket([]byte{0x44})
+		})
+		return nil
+	}
+	driver := &personaDriver{
+		cfg: config{OutputDir: t.TempDir()},
+		transport: &chatTransport{
+			stream:      stream,
+			events:      events,
+			opusPackets: opusPackets,
+			errs:        make(chan error, 1),
+		},
+		generateUtterance: func(context.Context, int) (string, error) {
+			return "你好测试", nil
+		},
+		synthesizeAudio: func(context.Context, string) ([]byte, [][]byte, error) {
+			return []byte("ogg-audio"), [][]byte{{0x11}}, nil
+		},
+		transcribeAudioFile: func(context.Context, string) (string, error) {
+			t.Fatal("lightweight round should not call ASR")
+			return "", nil
+		},
+	}
+	stat, err := driver.runRound(context.Background(), 1, conversationMode{
+		SkipInputASR:             true,
+		SkipTranscriptSimilarity: true,
+		SkipAssistantAudioASR:    true,
+		AssistantAudioASRReason:  "history-replay",
+	})
+	if err != nil {
+		t.Fatalf("runRound() error = %v", err)
+	}
+	if stat.InputASR != "skipped: lightweight-behavior" {
+		t.Fatalf("input asr = %q", stat.InputASR)
+	}
+	if stat.Transcript != "完全不同的识别文本" {
+		t.Fatalf("transcript = %q", stat.Transcript)
+	}
+	if stat.AssistantAudioASR != "skipped: history-replay" {
+		t.Fatalf("assistant audio asr = %q", stat.AssistantAudioASR)
 	}
 }
 

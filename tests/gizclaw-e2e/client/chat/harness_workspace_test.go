@@ -140,6 +140,17 @@ func TestWorkspaceCaseDispatchRejectsUnknown(t *testing.T) {
 	}
 }
 
+func TestInterruptRoundsDefaultToOne(t *testing.T) {
+	d := &personaDriver{cfg: config{Rounds: 3}}
+	if got := d.interruptRoundCount(); got != 1 {
+		t.Fatalf("interruptRoundCount() = %d, want 1", got)
+	}
+	d.cfg.Interrupt.Rounds = 2
+	if got := d.interruptRoundCount(); got != 2 {
+		t.Fatalf("interruptRoundCount(explicit) = %d, want 2", got)
+	}
+}
+
 func TestRetryableLiveWorkspaceError(t *testing.T) {
 	retryable := []error{
 		errors.New("flowcraft: read ASR: buffer: read from closed buffer: websocket connect failed: Bad Gateway"),
@@ -483,7 +494,7 @@ func TestRunSkipsEnsureWorkspaceWhenDisabled(t *testing.T) {
 	runWorkspaceCaseForRun = func(*personaDriver, context.Context, workspaceCase) (workspaceCaseResult, error) {
 		return workspaceCaseResult{Rounds: []roundStats{{Index: 1, UserText: "你好", Transcript: "你好", AssistantText: "收到"}}}, nil
 	}
-	validateWorkspaceRuntimeForRun = func(context.Context, *personaDriver, runControlClient, config, []roundStats) (*workspaceRuntimeReport, error) {
+	validateWorkspaceRuntimeForRun = func(context.Context, *personaDriver, runControlClient, config, []roundStats, workspaceRuntimeValidationOptions) (*workspaceRuntimeReport, error) {
 		return nil, nil
 	}
 	if err := runConfig(configPath, contextConfigPath, workspaceCasePushToTalkRoundtrip); err != nil {
@@ -736,7 +747,7 @@ func TestValidateWorkspaceRuntimeForFlowcraft(t *testing.T) {
 	report, err := validateWorkspaceRuntime(context.Background(), nil, control, config{
 		Workspace: workspace,
 		Agent:     "flowcraft",
-	}, []roundStats{{Transcript: "你好"}})
+	}, []roundStats{{Transcript: "你好"}}, workspaceRuntimeValidationOptions{})
 	if err != nil {
 		t.Fatalf("validateWorkspaceRuntime() error = %v", err)
 	}
@@ -760,7 +771,7 @@ func TestValidateWorkspaceRuntimeReloadsDifferentWorkspace(t *testing.T) {
 	if _, err := validateWorkspaceRuntime(context.Background(), nil, control, config{
 		Workspace: workspace,
 		Agent:     "flowcraft",
-	}, []roundStats{{Transcript: "你好"}}); err != nil {
+	}, []roundStats{{Transcript: "你好"}}, workspaceRuntimeValidationOptions{}); err != nil {
 		t.Fatalf("validateWorkspaceRuntime() error = %v", err)
 	}
 	if control.selectedWorkspace != workspace || !control.reloaded {
@@ -779,7 +790,7 @@ func TestValidateWorkspaceRuntimeAllowsDisabledMemory(t *testing.T) {
 	report, err := validateWorkspaceRuntime(context.Background(), nil, control, config{
 		Workspace: workspace,
 		Agent:     "flowcraft",
-	}, []roundStats{{Transcript: "你好"}})
+	}, []roundStats{{Transcript: "你好"}}, workspaceRuntimeValidationOptions{})
 	if err != nil {
 		t.Fatalf("validateWorkspaceRuntime() error = %v", err)
 	}
