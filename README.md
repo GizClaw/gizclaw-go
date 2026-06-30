@@ -1,6 +1,8 @@
 # gizclaw-go
 
 [![CI](https://github.com/GizClaw/gizclaw-go/actions/workflows/ci.yml/badge.svg)](https://github.com/GizClaw/gizclaw-go/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/GizClaw/gizclaw-go/actions/workflows/codeql.yml/badge.svg)](https://github.com/GizClaw/gizclaw-go/actions/workflows/codeql.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/GizClaw/gizclaw-go)](https://goreportcard.com/report/github.com/GizClaw/gizclaw-go)
 
 `gizclaw-go` is the Go implementation of the GizClaw server, CLI, store layer, and agent/runtime packages.
 
@@ -59,4 +61,3 @@ For the full transport benchmark guide, matrix options, and `run.sh` profiles, s
 
 - GizClaw CLI skill: `skills/gizclaw-cli/SKILL.md`
 - GenX example: `examples/genx/README.md`
-
