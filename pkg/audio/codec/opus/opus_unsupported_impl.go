@@ -53,6 +53,20 @@ func (e *Encoder) Channels() int {
 	return e.channels
 }
 
+// SetComplexity validates input then returns unsupported error.
+func (e *Encoder) SetComplexity(complexity int) error {
+	if e == nil {
+		return fmt.Errorf("opus: encoder is nil")
+	}
+	if e.closed {
+		return fmt.Errorf("opus: encoder is nil")
+	}
+	if err := validateComplexity(complexity); err != nil {
+		return err
+	}
+	return unsupportedErr()
+}
+
 // Encode validates input then returns unsupported error.
 func (e *Encoder) Encode(pcm []int16, frameSize int) ([]byte, error) {
 	return e.EncodeWithMaxDataBytes(pcm, frameSize, DefaultMaxPacketSize)

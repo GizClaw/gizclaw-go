@@ -3,8 +3,12 @@
 package opus
 
 /*
-#include <opus/opus.h>
-#include <stdlib.h>
+	#include <opus/opus.h>
+	#include <stdlib.h>
+
+	static int gizclaw_opus_encoder_set_complexity(OpusEncoder *enc, int complexity) {
+		return opus_encoder_ctl(enc, OPUS_SET_COMPLEXITY(complexity));
+	}
 */
 import "C"
 
@@ -67,6 +71,21 @@ func (e *Encoder) Channels() int {
 		return 0
 	}
 	return e.channels
+}
+
+// SetComplexity sets libopus encoder complexity in the range [0, 10].
+func (e *Encoder) SetComplexity(complexity int) error {
+	if e == nil || e.enc == nil {
+		return fmt.Errorf("opus: encoder is nil")
+	}
+	if err := validateComplexity(complexity); err != nil {
+		return err
+	}
+	ret := C.gizclaw_opus_encoder_set_complexity(e.enc, C.int(complexity))
+	if ret != C.OPUS_OK {
+		return codecError("encoder_set_complexity", ret)
+	}
+	return nil
 }
 
 // Encode encodes one PCM frame into one Opus packet.

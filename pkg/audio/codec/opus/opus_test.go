@@ -201,6 +201,12 @@ func TestEncodeDecodeRoundTripAndClose(t *testing.T) {
 	if enc.SampleRate() != 16000 || enc.Channels() != 1 {
 		t.Fatalf("encoder accessors mismatch: sampleRate=%d channels=%d", enc.SampleRate(), enc.Channels())
 	}
+	if err := enc.SetComplexity(0); err != nil {
+		t.Fatalf("SetComplexity(0): %v", err)
+	}
+	if err := enc.SetComplexity(11); err == nil {
+		t.Fatal("SetComplexity(11) expected error")
+	}
 
 	dec, err := NewDecoder(16000, 1)
 	if err != nil {

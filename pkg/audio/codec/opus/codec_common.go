@@ -77,6 +77,13 @@ func validateApplication(app Application) error {
 	}
 }
 
+func validateComplexity(complexity int) error {
+	if complexity < 0 || complexity > 10 {
+		return fmt.Errorf("opus: complexity must be between 0 and 10, got %d", complexity)
+	}
+	return nil
+}
+
 func validateFrameSize(sampleRate, frameSize int) error {
 	if frameSize <= 0 {
 		return fmt.Errorf("opus: frame size must be positive, got %d", frameSize)
