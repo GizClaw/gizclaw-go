@@ -4,5 +4,5 @@ server:
   noise-udp-port: 9820
   ice-port: 9821
   public-key: BoYfN5LcjihD8j7HmzDW56s3E9F2R1AX8JsucW5Zvd7T
-  transport: noise
+  transport: webrtc
   cipher-mode: chacha_poly

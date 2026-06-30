@@ -5,7 +5,7 @@ metadata:
   name: volc-main
 spec:
   credential_name: volc-main-credential
-  description: Volc/Doubao main tenant
+  description: Volc/Doubao speech tenant
   region: cn-beijing
   resource_ids:
   - seed-tts-1.0

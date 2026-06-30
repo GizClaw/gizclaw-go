@@ -34,13 +34,13 @@ func newSharedSetupRPCHarness(t *testing.T) *sharedSetupRPCHarness {
 	t.Helper()
 
 	h := clitest.NewSetupHarness(t, "client-rpc-shared-resources")
-	configHome := getenvDefault("GIZCLAW_E2E_CONFIG_HOME", filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home"))
-	contextName := getenvDefault("GIZCLAW_E2E_CLIENT_CONTEXT", "e2e-client")
-	h.SetContextAlias("e2e-client", configHome, contextName)
+	configHome := getenvDefault("GIZCLAW_E2E_CONFIG_HOME", filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home-giznet"))
+	contextName := getenvDefault("GIZCLAW_E2E_GEAR1_CONTEXT", "gear1")
+	h.SetContextAlias("gear1", configHome, contextName)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	t.Cleanup(cancel)
-	peer := h.ConnectClientFromContext("e2e-client")
+	peer := h.ConnectClientFromContext("gear1")
 	t.Cleanup(func() { peer.Close() })
 	return &sharedSetupRPCHarness{ctx: ctx, h: h, peer: peer}
 }
@@ -87,8 +87,8 @@ func TestSharedSetupRPCFirmwareDownloadFixture(t *testing.T) {
 func TestSharedSetupRPCSocialFixtures(t *testing.T) {
 	env := newSharedSetupRPCHarness(t)
 
-	if got := env.h.ContextPublicKey("e2e-client"); got != sharedSetupSocialClientPublicKey {
-		t.Skipf("shared social fixture targets default e2e-client %s, got %s", sharedSetupSocialClientPublicKey, got)
+	if got := env.h.ContextPublicKey("gear1"); got != sharedSetupSocialClientPublicKey {
+		t.Skipf("shared social fixture targets default gear1 %s, got %s", sharedSetupSocialClientPublicKey, got)
 	}
 
 	friends, err := env.peer.ListFriends(env.ctx, "shared.social.friend.list", rpcapi.FriendListRequest{})

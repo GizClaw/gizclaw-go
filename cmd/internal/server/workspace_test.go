@@ -99,6 +99,8 @@ system_tasks:
     cooldown: 30m
   pet_action:
     generator: model/pet-action
+gameplay:
+  pet_adopt_point_cost: -1
 `, testKeyPair(t, 0xab).Public.String())), 0o644); err != nil {
 		t.Fatalf("WriteFile error = %v", err)
 	}
@@ -125,6 +127,9 @@ system_tasks:
 	}
 	if got := cfg.Storage["acl-db"].SQLite.Dir; got != filepath.Join(workspace, "data", "acl.sqlite") {
 		t.Fatalf("acl db dir = %q", got)
+	}
+	if cfg.Gameplay.PetAdoptPointCost != -1 {
+		t.Fatalf("Gameplay = %+v", cfg.Gameplay)
 	}
 }
 

@@ -3,8 +3,10 @@
 package admin_test
 
 import (
+	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
 	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
@@ -52,7 +54,10 @@ func TestAdminAPISyncMiniMaxTenantVoices(t *testing.T) {
 		t.Skip("no real MiniMax tenant is configured in this e2e environment")
 	}
 
-	resp, err := env.api.SyncMiniMaxTenantVoicesWithResponse(env.ctx, tenantName)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	resp, err := env.api.SyncMiniMaxTenantVoicesWithResponse(ctx, tenantName)
 	if err != nil {
 		t.Fatalf("sync MiniMax tenant voices: %v", err)
 	}
@@ -64,7 +69,7 @@ func TestAdminAPISyncMiniMaxTenantVoices(t *testing.T) {
 	providerKind := adminservice.VoiceProviderKind(apitypes.VoiceProviderKindMinimaxTenant)
 	source := adminservice.VoiceSource(apitypes.VoiceSourceSync)
 	limit := int32(50)
-	voices, err := env.api.ListVoicesWithResponse(env.ctx, &adminservice.ListVoicesParams{
+	voices, err := env.api.ListVoicesWithResponse(ctx, &adminservice.ListVoicesParams{
 		Limit:        &limit,
 		ProviderKind: &providerKind,
 		ProviderName: &tenantName,

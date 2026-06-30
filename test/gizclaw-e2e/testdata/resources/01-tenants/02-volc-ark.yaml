@@ -1,0 +1,9 @@
+---
+apiVersion: gizclaw.admin/v1alpha1
+kind: VolcTenant
+metadata:
+  name: volc-ark
+spec:
+  credential_name: volc-ark-credential
+  description: Volc Ark LLM tenant
+  region: cn-beijing

@@ -158,3 +158,5 @@ system_tasks:
     cooldown: 1ms
   pet_action:
     generator: model/pet-action
+gameplay:
+  pet_adopt_point_cost: -1

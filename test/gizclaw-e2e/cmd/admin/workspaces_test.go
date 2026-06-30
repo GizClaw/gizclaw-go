@@ -27,7 +27,7 @@ func TestAdminWorkspacesUserStory(t *testing.T) {
 
 	get := h.RunCLI("admin", "workspaces", "get", "workspace-flowcraft-assistant", "--context", "admin-a")
 	get.MustSucceed(t)
-	if !strings.Contains(get.Stdout, `"workflow_name":"flowcraft-assistant"`) {
+	if !strings.Contains(get.Stdout, `"workflow_name":"flowcraft-voice-assistant"`) {
 		t.Fatalf("workspaces get missing workflow name:\n%s", get.Stdout)
 	}
 

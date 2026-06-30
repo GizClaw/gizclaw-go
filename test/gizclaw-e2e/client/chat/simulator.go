@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -240,6 +241,7 @@ type conversationMode struct {
 }
 
 const flowcraftSelfStartStreamID = "flowcraft-self-start"
+const assistantAudioASRMinRatio = 0.35
 
 func (d *personaDriver) runRound(ctx context.Context, index int, mode conversationMode) (roundStats, error) {
 	stat := roundStats{Index: index}
@@ -303,14 +305,15 @@ func (d *personaDriver) runRound(ctx context.Context, index int, mode conversati
 	assistantStreamID := ""
 	var settle <-chan time.Time
 	var trace roundEventTrace
-	responseDeadline := time.NewTimer(workspaceRoundResponseTimeout)
+	responseTimeout := d.roundResponseTimeout()
+	responseDeadline := time.NewTimer(responseTimeout)
 	defer responseDeadline.Stop()
 	for transcriptText == "" || stat.TranscriptDone == 0 || stat.AssistantTextDone == 0 || stat.DownlinkPackets == 0 || !assistantAudioDone || settle != nil {
 		select {
 		case <-ctx.Done():
 			return stat, fmt.Errorf("round %d: wait response: %w; recent events: %s", index, ctx.Err(), trace.String())
 		case <-responseDeadline.C:
-			return stat, fmt.Errorf("round %d: response timeout after %s; recent events: %s", index, workspaceRoundResponseTimeout, trace.String())
+			return stat, fmt.Errorf("round %d: response timeout after %s; recent events: %s", index, responseTimeout, trace.String())
 		case <-settle:
 			settle = nil
 			switch {
@@ -459,8 +462,15 @@ func (d *personaDriver) runRound(ctx context.Context, index int, mode conversati
 }
 
 func (d *personaDriver) verifyAssistantAudioASR(ctx context.Context, index int, name, assistantText string, frames [][]byte) (string, error) {
+	return d.verifyAssistantAudioASRWithMinRatio(ctx, index, name, assistantText, frames, assistantAudioASRMinRatio)
+}
+
+func (d *personaDriver) verifyAssistantAudioASRWithMinRatio(ctx context.Context, index int, name, assistantText string, frames [][]byte, minRatio float64) (string, error) {
 	if len(frames) == 0 {
 		return "", fmt.Errorf("missing assistant audio chunks")
+	}
+	if minRatio <= 0 {
+		minRatio = assistantAudioASRMinRatio
 	}
 	chunks := assistantASRFrameChunks(len(frames))
 	fmt.Printf("workspace_progress event=assistant_audio_asr_start workspace=%s round=%d name=%s frames=%d parts=%d assistant_chars=%d\n", d.cfg.Workspace, index, name, len(frames), len(chunks), runeCount(assistantText))
@@ -481,7 +491,7 @@ func (d *personaDriver) verifyAssistantAudioASR(ctx context.Context, index int, 
 		fmt.Printf("workspace_progress event=assistant_audio_asr_part_done workspace=%s round=%d name=%s part=%d duration=%s text_chars=%d\n", d.cfg.Workspace, index, name, len(parts), time.Since(partStart).Truncate(time.Millisecond), runeCount(audioASR))
 	}
 	audioASR := strings.TrimSpace(strings.Join(parts, " "))
-	if err := assertTextSimilar("assistant audio asr", assistantText, audioASR, 0.35); err != nil {
+	if err := assertTextSimilar("assistant audio asr", assistantText, audioASR, minRatio); err != nil {
 		return "", err
 	}
 	fmt.Printf("workspace_progress event=assistant_audio_asr_done workspace=%s round=%d name=%s duration=%s text_chars=%d\n", d.cfg.Workspace, index, name, time.Since(started).Truncate(time.Millisecond), runeCount(audioASR))
@@ -534,6 +544,13 @@ func progressModeName(mode conversationMode) string {
 	return "push-to-talk"
 }
 
+func (d *personaDriver) roundResponseTimeout() time.Duration {
+	if d != nil && d.cfg.timeout > 0 {
+		return d.cfg.timeout
+	}
+	return workspaceRoundResponseTimeout
+}
+
 const (
 	workspaceRoundResponseTimeout = 180 * time.Second
 	assistantASRFramesPerChunk    = 600
@@ -564,6 +581,9 @@ func assistantASRFrameChunks(frameCount int) []frameChunkRange {
 
 func (d *personaDriver) runInterruptRounds(ctx context.Context, mode conversationMode) ([]interruptStats, error) {
 	count := d.cfg.Rounds
+	if d.cfg.Interrupt.Rounds > 0 {
+		count = d.cfg.Interrupt.Rounds
+	}
 	if count <= 0 {
 		count = 1
 	}
@@ -873,6 +893,31 @@ func (d *personaDriver) synthesizeOpus(ctx context.Context, text string) ([]byte
 	if d.synthesizeAudio != nil {
 		return d.synthesizeAudio(ctx, text)
 	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		audio, packets, err := d.synthesizeOpusOnce(ctx, text)
+		if err == nil {
+			return audio, packets, nil
+		}
+		lastErr = err
+		if !isRetryableSpeechError(err) || attempt == 3 {
+			break
+		}
+		timer := time.NewTimer(time.Duration(attempt) * 500 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, nil, fmt.Errorf("speech model=%s voice=%s text_chars=%d: %w", d.cfg.Models.TTS, d.cfg.Voice, utf8.RuneCountInString(text), ctx.Err())
+		case <-timer.C:
+		}
+	}
+	return nil, nil, fmt.Errorf("speech model=%s voice=%s text_chars=%d: %w", d.cfg.Models.TTS, d.cfg.Voice, utf8.RuneCountInString(text), lastErr)
+}
+
+func (d *personaDriver) synthesizeOpusOnce(ctx context.Context, text string) ([]byte, [][]byte, error) {
 	speech, err := d.client.Audio.Speech.New(ctx, openai.AudioSpeechNewParams{
 		Input:          text,
 		Model:          openai.SpeechModel(d.cfg.Models.TTS),
@@ -897,6 +942,19 @@ func (d *personaDriver) synthesizeOpus(ctx context.Context, text string) ([]byte
 	return audio, packets, nil
 }
 
+func isRetryableSpeechError(err error) bool {
+	var apiErr *openai.Error
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	switch apiErr.StatusCode {
+	case 400, 408, 409, 429:
+		return true
+	default:
+		return apiErr.StatusCode >= 500
+	}
+}
+
 func (d *personaDriver) transcribe(ctx context.Context, audioPath string) (string, error) {
 	if d.transcribeAudioFile != nil {
 		return d.transcribeAudioFile(ctx, audioPath)
@@ -904,6 +962,34 @@ func (d *personaDriver) transcribe(ctx context.Context, audioPath string) (strin
 	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
 	defer cancel()
 
+	stat, statErr := os.Stat(audioPath)
+	fileSize := int64(-1)
+	if statErr == nil {
+		fileSize = stat.Size()
+	}
+
+	var lastErr error
+	for attempt := 1; attempt <= 3; attempt++ {
+		text, err := d.transcribeOnce(ctx, audioPath)
+		if err == nil {
+			return text, nil
+		}
+		lastErr = err
+		if !isRetryableTranscriptionError(err) || attempt == 3 {
+			break
+		}
+		timer := time.NewTimer(time.Duration(attempt) * 500 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return "", fmt.Errorf("transcription %s size=%d: %w", audioPath, fileSize, ctx.Err())
+		case <-timer.C:
+		}
+	}
+	return "", fmt.Errorf("transcription %s size=%d: %w", audioPath, fileSize, lastErr)
+}
+
+func (d *personaDriver) transcribeOnce(ctx context.Context, audioPath string) (string, error) {
 	file, err := os.Open(audioPath)
 	if err != nil {
 		return "", fmt.Errorf("open audio for asr: %w", err)
@@ -921,6 +1007,19 @@ func (d *personaDriver) transcribe(ctx context.Context, audioPath string) (strin
 		return "", fmt.Errorf("transcription returned empty text")
 	}
 	return text, nil
+}
+
+func isRetryableTranscriptionError(err error) bool {
+	var apiErr *openai.Error
+	if !errors.As(err, &apiErr) {
+		return false
+	}
+	switch apiErr.StatusCode {
+	case 400, 408, 409, 429:
+		return true
+	default:
+		return apiErr.StatusCode >= 500
+	}
 }
 
 func (d *personaDriver) transcribeAssistantAudio(ctx context.Context, audioPath string) (string, error) {

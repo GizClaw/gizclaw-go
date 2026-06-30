@@ -260,6 +260,12 @@ system_tasks:
     # GenX generator pattern used by pet.feed, pet.wash, and pet.play.
     # The common setup uses the same model as reward_claim.
     generator: model/qwen-flash
+
+# Peer-facing gameplay defaults.
+gameplay:
+  # Points deducted by pet.adopt before the pet is created.
+  # Set a negative value to disable the adoption charge.
+  pet_adopt_point_cost: 100
 ```
 
 ## Transport Config
@@ -318,6 +324,8 @@ dialing behavior.
   `friend-group-message-assets`.
 - `system_tasks.*.generator` values must use `model/<model-id>`. The model id
   must match an admin `Model` resource, such as `qwen-flash`.
+- `gameplay.pet_adopt_point_cost` controls the point cost charged by
+  `pet.adopt`; a negative value disables the adoption charge.
 - `firmwares`, `pet-species`, and `badges` each use a KV metadata store plus a
   separate object store for uploaded binary assets.
 - `agenthost` is optional for the server itself, but workspace agents such as

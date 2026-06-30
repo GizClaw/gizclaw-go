@@ -346,6 +346,9 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 			RewardClaim: RewardClaimTaskConfig{Generator: "model/runtime-reward", Cooldown: "5m"},
 			PetAction:   GeneratorTaskConfig{Generator: "model/runtime-pet"},
 		},
+		Gameplay: GameplayConfig{
+			PetAdoptPointCost: 25,
+		},
 	}
 	fileCfg := ConfigFile{
 		ListenAddr:     ":1234",
@@ -366,6 +369,9 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 		SystemTasks: SystemTasksConfig{
 			RewardClaim: RewardClaimTaskConfig{Generator: "model/file-reward", Cooldown: "30m"},
 			PetAction:   GeneratorTaskConfig{Generator: "model/file-pet"},
+		},
+		Gameplay: GameplayConfig{
+			PetAdoptPointCost: -1,
 		},
 	}
 
@@ -393,6 +399,16 @@ func TestMergeFileConfigKeepsRuntimeOverrides(t *testing.T) {
 	}
 	if merged.SystemTasks.RewardClaim.Generator != "model/runtime-reward" || merged.SystemTasks.RewardClaim.Cooldown != "5m" || merged.SystemTasks.PetAction.Generator != "model/runtime-pet" {
 		t.Fatalf("SystemTasks = %+v", merged.SystemTasks)
+	}
+	if merged.Gameplay.PetAdoptPointCost != 25 {
+		t.Fatalf("Gameplay = %+v", merged.Gameplay)
+	}
+	fileOnly, err := mergeFileConfig(Config{}, fileCfg)
+	if err != nil {
+		t.Fatalf("mergeFileConfig file-only error = %v", err)
+	}
+	if fileOnly.Gameplay.PetAdoptPointCost != -1 {
+		t.Fatalf("file-only Gameplay = %+v", fileOnly.Gameplay)
 	}
 }
 

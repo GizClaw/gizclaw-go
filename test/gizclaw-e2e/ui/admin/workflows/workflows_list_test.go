@@ -15,7 +15,7 @@ func adminWorkflowsListStories() []Story {
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoAdmin("/ai/workflows")
 			page.ExpectText("Workflows")
-			page.ExpectText(SeedWorkflowName)
+			page.ExpectText("flowcraft-assistant")
 			page.ExpectText("Resource")
 		},
 	}}

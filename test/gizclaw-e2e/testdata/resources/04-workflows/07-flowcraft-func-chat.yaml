@@ -298,9 +298,29 @@ spec:
                 board.setVar("has_next_route", pending.length > 0);
               }
 
+              function setRestoredMainChannel(messages) {
+                const restored = messages.map(function(msg) {
+                  const out = { role: msg && msg.role ? msg.role : "user", parts: [] };
+                  if (msg && typeof msg.content === "string" && msg.content) {
+                    out.parts.push({ type: "text", text: msg.content });
+                  }
+                  const parts = Array.isArray(msg && msg.parts) ? msg.parts : [];
+                  for (const part of parts) {
+                    if ((part.type === "text" || part.type === "text/xml") && typeof part.text === "string") {
+                      out.parts.push({ type: "text", text: part.text });
+                    }
+                  }
+                  if (out.parts.length === 0) {
+                    out.parts.push({ type: "text", text: "" });
+                  }
+                  return out;
+                });
+                board.setChannel(board.MAIN_CHANNEL, restored);
+              }
+
               const originalMain = board.getVar("tmp_main_channel_before_format");
               if (Array.isArray(originalMain)) {
-                board.setChannel(board.MAIN_CHANNEL, originalMain);
+                setRestoredMainChannel(originalMain);
               }
           id: extract_formatch
           type: script

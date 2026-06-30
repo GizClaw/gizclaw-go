@@ -31,15 +31,16 @@ const (
 	SeedVolcCredentialName  = "volc-main-credential"
 	SeedVolcTenantName      = "volc-main"
 	SeedVolcVoiceID         = "volc-tenant:volc-main:zh_female_vv_mars_bigtts"
-	SeedWorkflowName        = "flowcraft-assistant"
+	SeedWorkflowName        = "flowcraft-voice-assistant"
 	SeedWorkspaceName       = "workspace-flowcraft-assistant"
 	SeedAltWorkspaceName    = "workspace-flowcraft-alt"
 	pollInterval            = 20 * time.Millisecond
 )
 
 const (
-	defaultClientConfigHome = "test/gizclaw-e2e/testdata/config-home"
-	defaultClientContext    = "e2e-client"
+	defaultClientConfigHome = "test/gizclaw-e2e/testdata/config-home-giznet"
+	defaultClientContext    = "gear1"
+	defaultActionContext    = "gear2"
 )
 
 type Story struct {
@@ -341,16 +342,16 @@ func setupSeed(t testing.TB) Seed {
 		AdminURL:              "http://127.0.0.1:8080",
 		PlayURL:               "http://127.0.0.1:8081",
 		ErrorPlayURL:          os.Getenv("GIZCLAW_E2E_ERROR_PLAY_URL"),
-		DevicePublicKey:       setupClientPublicKey(t),
-		ActionDevicePublicKey: setupClientPublicKey(t),
-		DeleteDevicePublicKey: setupClientPublicKey(t),
+		DevicePublicKey:       setupClientPublicKey(t, "GIZCLAW_E2E_GEAR1_CONTEXT", defaultClientContext),
+		ActionDevicePublicKey: setupClientPublicKey(t, "GIZCLAW_E2E_GEAR2_CONTEXT", defaultActionContext),
+		DeleteDevicePublicKey: setupClientPublicKey(t, "GIZCLAW_E2E_GEAR2_CONTEXT", defaultActionContext),
 	}
 }
 
-func setupClientPublicKey(t testing.TB) string {
+func setupClientPublicKey(t testing.TB, contextEnv, defaultContext string) string {
 	t.Helper()
 	configHome := getenvDefault("GIZCLAW_E2E_CONFIG_HOME", defaultClientConfigHome)
-	contextName := getenvDefault("GIZCLAW_E2E_CLIENT_CONTEXT", defaultClientContext)
+	contextName := getenvDefault(contextEnv, defaultContext)
 	path := filepath.Join(configHome, "gizclaw", contextName, "identity.key")
 	data, err := os.ReadFile(path)
 	if err != nil {

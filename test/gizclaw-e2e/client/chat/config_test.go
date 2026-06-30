@@ -25,7 +25,7 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
 	}
 	dir := t.TempDir()
 	configDir := filepath.Join(dir, "testdata", "workspaces")
-	contextDir := filepath.Join(dir, "testdata", "config-home", "gizclaw", "e2e-client")
+	contextDir := filepath.Join(dir, "testdata", "config-home-giznet", "gizclaw", "gear1")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		t.Fatalf("create config dir: %v", err)
 	}
@@ -46,6 +46,9 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
     "realtime": "setup-realtime"
   },
   "voice": "setup-voice",
+  "interrupt": {
+    "rounds": 1
+  },
   "rounds": 2,
   "timeout": "5s",
   "persona": "short"
@@ -76,6 +79,9 @@ func TestLoadConfigJSONAndDefaultClientConfig(t *testing.T) {
 	}
 	if cfg.Rounds != 2 || cfg.timeout != 5*time.Second {
 		t.Fatalf("rounds/timeout = %d/%s", cfg.Rounds, cfg.timeout)
+	}
+	if cfg.Interrupt.Rounds != 1 {
+		t.Fatalf("interrupt rounds = %d", cfg.Interrupt.Rounds)
 	}
 	if cfg.ClientPrivateKey != clientKey.Private.String() {
 		t.Fatalf("client private key was not loaded from setup context identity")
@@ -230,6 +236,7 @@ func TestConfigValidationErrors(t *testing.T) {
 		{"realtime", func(c *config) { c.Models.Realtime = "" }, "models.realtime"},
 		{"voice", func(c *config) { c.Voice = "" }, "voice"},
 		{"rounds", func(c *config) { c.Rounds = 0 }, "rounds"},
+		{"interrupt rounds", func(c *config) { c.Interrupt.Rounds = -1 }, "interrupt.rounds"},
 		{"timeout parse", func(c *config) { c.Timeout = "bad" }, "timeout"},
 		{"timeout positive", func(c *config) { c.Timeout = "-1s" }, "positive"},
 		{"persona", func(c *config) { c.Persona = "" }, "persona"},

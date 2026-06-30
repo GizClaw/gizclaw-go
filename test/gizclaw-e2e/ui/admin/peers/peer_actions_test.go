@@ -15,12 +15,14 @@ func adminPeerActionsStories() []Story {
 		{
 			Name: "112-admin-peer-actions",
 			Run: func(t testing.TB, page *Page) {
-				if page.Seed.ActionDevicePublicKey == "" {
-					t.Skipf("admin peer action seed public key is unavailable")
+				if page.Seed.DevicePublicKey == "" || page.Seed.ActionDevicePublicKey == "" {
+					t.Skipf("admin peer action seed public keys are unavailable")
 				}
-				page.GotoAdmin("/peers/" + url.PathEscape(page.Seed.ActionDevicePublicKey))
+				page.GotoAdmin("/peers/" + url.PathEscape(page.Seed.DevicePublicKey))
 				page.ClickRole("button", "Refresh Peer")
 				page.ExpectText("Peer refreshed.")
+
+				page.GotoAdmin("/peers/" + url.PathEscape(page.Seed.ActionDevicePublicKey))
 				page.ClickRole("tab", "Edit")
 				page.ClickRole("button", "Save Role")
 				page.ExpectText("Peer role saved as client.")

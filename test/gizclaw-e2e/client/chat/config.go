@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	contextConfigDefaultHome = "test/gizclaw-e2e/testdata/config-home"
-	contextConfigDefaultName = "e2e-client"
+	contextConfigDefaultHome = "test/gizclaw-e2e/testdata/config-home-giznet"
+	contextConfigDefaultName = "gear1"
 	contextConfigDefaultPath = contextConfigDefaultHome + "/gizclaw/" + contextConfigDefaultName + "/config.yaml"
 )
 
@@ -46,6 +46,7 @@ type config struct {
 type interruptConfig struct {
 	FirstUtterance  string `json:"first_utterance,omitempty"`
 	SecondUtterance string `json:"second_utterance,omitempty"`
+	Rounds          int    `json:"rounds,omitempty"`
 }
 
 type serverConfig struct {
@@ -174,8 +175,8 @@ func loadConfig(path, contextConfigPath string) (config, error) {
 func defaultContextConfigPath(configPath string) string {
 	configDir := filepath.Dir(configPath)
 	candidates := []string{
-		filepath.Clean(filepath.Join(configDir, "..", "config-home", "gizclaw", "e2e-client", "config.yaml")),
-		filepath.Clean(filepath.Join(configDir, "..", "..", "testdata", "config-home", "gizclaw", "e2e-client", "config.yaml")),
+		filepath.Clean(filepath.Join(configDir, "..", "config-home-giznet", "gizclaw", "gear1", "config.yaml")),
+		filepath.Clean(filepath.Join(configDir, "..", "..", "testdata", "config-home-giznet", "gizclaw", "gear1", "config.yaml")),
 		filepath.Clean(contextConfigDefaultPath),
 	}
 	for _, candidate := range candidates {
@@ -189,7 +190,7 @@ func defaultContextConfigPath(configPath string) string {
 func defaultClientContextConfigPath() string {
 	candidates := []string{
 		filepath.Clean(contextConfigDefaultPath),
-		filepath.Clean(filepath.Join("..", "..", "testdata", "config-home", "gizclaw", contextConfigDefaultName, "config.yaml")),
+		filepath.Clean(filepath.Join("..", "..", "testdata", "config-home-giznet", "gizclaw", contextConfigDefaultName, "config.yaml")),
 	}
 	for _, candidate := range candidates {
 		if _, err := os.Stat(candidate); err == nil {
@@ -217,7 +218,7 @@ func envContextConfigPath(homeEnv, contextEnv, defaultHome, defaultName string) 
 func clientContextConfigPath() string {
 	return envContextConfigPath(
 		"GIZCLAW_E2E_CONFIG_HOME",
-		"GIZCLAW_E2E_CLIENT_CONTEXT",
+		"GIZCLAW_E2E_GEAR1_CONTEXT",
 		contextConfigDefaultHome,
 		contextConfigDefaultName,
 	)
@@ -398,6 +399,9 @@ func (c *config) validate() error {
 	}
 	if c.Rounds <= 0 {
 		return fmt.Errorf("rounds must be positive")
+	}
+	if c.Interrupt.Rounds < 0 {
+		return fmt.Errorf("interrupt.rounds must be non-negative")
 	}
 	if c.Timeout == "" {
 		c.Timeout = "120s"

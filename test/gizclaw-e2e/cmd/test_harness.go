@@ -213,7 +213,7 @@ func (h *Harness) applySetupContextServer() {
 	h.t.Helper()
 
 	setupConfigHome := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CONFIG_HOME"))
-	setupContext := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONTEXT"))
+	setupContext := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_CONTEXT"))
 	if setupConfigHome == "" && setupContext == "" {
 		return
 	}
@@ -221,7 +221,7 @@ func (h *Harness) applySetupContextServer() {
 		setupConfigHome = e2eConfigHome(h.RepoRoot)
 	}
 	if setupContext == "" {
-		setupContext = "e2e-admin"
+		setupContext = "admin"
 	}
 
 	configPath := filepath.Join(setupConfigHome, "gizclaw", setupContext, "config.yaml")
@@ -405,7 +405,7 @@ func (h *Harness) InstallFixedAdminContext(name string) Result {
 	if err := os.MkdirAll(contextDir, 0o755); err != nil {
 		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
 	}
-	fixtureIdentity := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home", "gizclaw", "e2e-admin-test", "identity.key")
+	fixtureIdentity := filepath.Join(h.RepoRoot, "test", "gizclaw-e2e", "testdata", "config-home-giznet", "gizclaw", "admin", "identity.key")
 	identityData, err := os.ReadFile(fixtureIdentity)
 	if err != nil {
 		return Result{Args: []string{"install-fixed-admin-context", name}, Err: err, Stderr: err.Error()}
@@ -440,9 +440,9 @@ func (h *Harness) InstallFixedAdminContext(name string) Result {
 }
 
 func (h *Harness) defaultContextTransport() string {
-	contextName := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_CLIENT_CONTEXT"))
+	contextName := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_GEAR1_CONTEXT"))
 	if contextName == "" {
-		contextName = "e2e-client"
+		contextName = "gear1"
 	}
 	configPath := filepath.Join(e2eConfigHome(h.RepoRoot), "gizclaw", contextName, "config.yaml")
 	data, err := os.ReadFile(configPath)
@@ -891,14 +891,14 @@ func e2eConfigHome(repoRoot string) string {
 		}
 		return value
 	}
-	return filepath.Join(repoRoot, "test", "gizclaw-e2e", "testdata", "config-home")
+	return filepath.Join(repoRoot, "test", "gizclaw-e2e", "testdata", "config-home-giznet")
 }
 
 func setupAdminContextName() string {
-	if value := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_SETUP_CONTEXT")); value != "" {
+	if value := strings.TrimSpace(os.Getenv("GIZCLAW_E2E_ADMIN_CONTEXT")); value != "" {
 		return value
 	}
-	return "e2e-admin"
+	return "admin"
 }
 
 func (h *Harness) probeSetupServer(setupConfigHome, setupContext string, timeout time.Duration) error {

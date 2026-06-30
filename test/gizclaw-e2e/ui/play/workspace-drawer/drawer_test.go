@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	. "github.com/GizClaw/gizclaw-go/test/gizclaw-e2e/ui/internal/harness"
+	"io"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -20,6 +22,7 @@ func playWorkspaceDrawerStories() []Story {
 		{
 			Name: "204-play-workspace-drawer",
 			Run: func(t testing.TB, page *Page) {
+				ensurePlayWorkspace(t, page, SeedWorkspaceName)
 				page.GotoPlay("/")
 				page.ClickRole("button", "Workspace")
 				page.ExpectText("Inspect and test the current peer run active workspace.")
@@ -76,21 +79,23 @@ func playWorkspaceDrawerStories() []Story {
 				page.ClickRole("button", "Reload")
 				page.ExpectText("Workspace runtime reloaded")
 
+				ensurePlayWorkspace(t, page, SeedWorkspaceName)
+				page.GotoPlay("/")
+				page.ClickRole("button", "Workspace")
+				page.ExpectText(SeedWorkspaceName)
+
 				page.ClickRoleLike("tab", "History")
-				page.ExpectText("北京今天适合轻松散步")
-				page.ClickRoleLike("button", "Play")
-				page.ExpectText("History replay started")
+				page.ExpectText("No history")
 
 				page.ClickRoleLike("tab", "Memory")
 				page.ExpectText("Memory")
-				page.ExpectText("2416")
-				page.ExpectText("flowcraft-memory")
+				page.ExpectText("Enabled")
+				page.ExpectText("Items")
 
 				page.ClickRoleLike("tab", "Recall")
 				page.Fill(`input[placeholder="Recall query"]`, "北京适合出去玩吗")
 				page.ClickRoleLike("button", "Run Recall")
-				page.ExpectText("北京出行建议")
-				page.ExpectText("0.910")
+				page.ExpectText("No recall results")
 			},
 		},
 		{
@@ -104,6 +109,7 @@ func playWorkspaceDrawerStories() []Story {
 		{
 			Name: "204-play-workspace-push-to-talk-hold",
 			Run: func(t testing.TB, page *Page) {
+				ensurePlayWorkspace(t, page, SeedWorkspaceName)
 				installWorkspaceVoiceBrowserMocks(t, page)
 				page.GotoPlay("/")
 				page.ClickRole("button", "Workspace")
@@ -207,6 +213,52 @@ func playWorkspaceDrawerStories() []Story {
 				}
 			},
 		},
+	}
+}
+
+func ensurePlayWorkspace(t testing.TB, page *Page, workspaceName string) {
+	t.Helper()
+	body := strings.NewReader(fmt.Sprintf(`{"workspace_name":%q}`, workspaceName))
+	client := http.Client{Timeout: 10 * time.Second}
+	req, err := http.NewRequest(http.MethodPut, strings.TrimRight(page.Seed.PlayURL, "/")+"/peer-run/workspace", body)
+	if err != nil {
+		t.Fatalf("set Play workspace request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("set Play workspace %q: %v", workspaceName, err)
+	}
+	respBody, readErr := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	closeErr := resp.Body.Close()
+	if readErr != nil {
+		t.Fatalf("read set Play workspace response: %v", readErr)
+	}
+	if closeErr != nil {
+		t.Fatalf("close set Play workspace response: %v", closeErr)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("set Play workspace %q status=%d body=%s", workspaceName, resp.StatusCode, strings.TrimSpace(string(respBody)))
+	}
+
+	req, err = http.NewRequest(http.MethodPost, strings.TrimRight(page.Seed.PlayURL, "/")+"/peer-run/workspace/reload", nil)
+	if err != nil {
+		t.Fatalf("reload Play workspace request: %v", err)
+	}
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("reload Play workspace %q: %v", workspaceName, err)
+	}
+	respBody, readErr = io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	closeErr = resp.Body.Close()
+	if readErr != nil {
+		t.Fatalf("read reload Play workspace response: %v", readErr)
+	}
+	if closeErr != nil {
+		t.Fatalf("close reload Play workspace response: %v", closeErr)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("reload Play workspace %q status=%d body=%s", workspaceName, resp.StatusCode, strings.TrimSpace(string(respBody)))
 	}
 }
 

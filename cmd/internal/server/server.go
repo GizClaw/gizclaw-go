@@ -106,6 +106,7 @@ func New(cfg Config) (srv *CmdServer, err error) {
 	cmdSrv.Server = gizServer
 	gizServer.RewardClaimGenerator = cfg.SystemTasks.RewardClaim.Generator
 	gizServer.PetActionGenerator = cfg.SystemTasks.PetAction.Generator
+	gizServer.PetAdoptPointCost = cfg.Gameplay.PetAdoptPointCost
 	if cfg.SystemTasks.RewardClaim.Cooldown != "" {
 		cooldown, err := time.ParseDuration(cfg.SystemTasks.RewardClaim.Cooldown)
 		if err != nil {

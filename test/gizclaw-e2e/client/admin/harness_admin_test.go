@@ -35,7 +35,7 @@ func newAdminAPIHarness(t *testing.T) *adminAPIHarness {
 	h.CreateContext("admin-api-peer").MustSucceed(t)
 	adminKey := h.ContextPublicKey("admin-api-admin")
 	peerKey := h.ContextPublicKey("admin-api-peer")
-	adminSN := "e2e-admin-test"
+	adminSN := "admin"
 	peerSN := "client-admin-api-peer-" + peerKey
 	h.RegisterContext("admin-api-peer", "--sn", peerSN).MustSucceed(t)
 

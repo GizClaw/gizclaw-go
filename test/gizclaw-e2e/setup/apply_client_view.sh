@@ -36,8 +36,8 @@ if [[ -f "$env_file" ]]; then
   set +a
 fi
 
-config_home="${GIZCLAW_E2E_CONFIG_HOME:-$testdata_dir/config-home}"
-admin_setup_context="${GIZCLAW_E2E_ADMIN_SETUP_CONTEXT:-e2e-admin}"
+config_home="${GIZCLAW_E2E_CONFIG_HOME:-$testdata_dir/config-home-giznet}"
+admin_context="${GIZCLAW_E2E_ADMIN_CONTEXT:-admin}"
 
 if [[ ! -x "$bin_path" ]]; then
   "$script_dir/build.sh" >/dev/null
@@ -60,6 +60,6 @@ cat >"$resource_file" <<JSON
 JSON
 
 XDG_CONFIG_HOME="$config_home" \
-  "$bin_path" admin apply --context "$admin_setup_context" -f "$resource_file"
+  "$bin_path" admin apply --context "$admin_context" -f "$resource_file"
 
 echo "applied view '$view_name' to peer '$peer_public_key'"

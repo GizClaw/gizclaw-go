@@ -21,6 +21,9 @@
     }
   },
   "voice": "volc-tenant:volc-main:zh_female_vv_mars_bigtts",
+  "interrupt": {
+    "rounds": 1
+  },
   "rounds": 3,
   "timeout": "300s",
   "persona": "You are a concise Chinese voice translation test user. Keep every utterance short, clear, and speech friendly."

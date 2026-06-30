@@ -28,6 +28,7 @@ type Config struct {
 	Friends        FriendsConfig
 	FriendGroups   FriendGroupsConfig
 	SystemTasks    SystemTasksConfig
+	Gameplay       GameplayConfig
 }
 
 type FriendsConfig struct{}
@@ -53,6 +54,10 @@ type GeneratorTaskConfig struct {
 	Generator string `yaml:"generator"`
 }
 
+type GameplayConfig struct {
+	PetAdoptPointCost int64 `yaml:"pet_adopt_point_cost"`
+}
+
 type ConfigFile struct {
 	Host           string                    `yaml:"host"`
 	PublicAPIPort  int                       `yaml:"public-api-port"`
@@ -66,6 +71,7 @@ type ConfigFile struct {
 	Friends        FriendsConfig             `yaml:"friends"`
 	FriendGroups   FriendGroupsConfig        `yaml:"friend_groups"`
 	SystemTasks    SystemTasksConfig         `yaml:"system_tasks"`
+	Gameplay       GameplayConfig            `yaml:"gameplay"`
 }
 
 const (
@@ -125,6 +131,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 		Friends        FriendsConfig             `yaml:"friends"`
 		FriendGroups   FriendGroupsConfig        `yaml:"friend_groups"`
 		SystemTasks    SystemTasksConfig         `yaml:"system_tasks"`
+		Gameplay       GameplayConfig            `yaml:"gameplay"`
 	}
 	if err := yaml.Unmarshal(data, &raw); err != nil {
 		return ConfigFile{}, err
@@ -146,6 +153,7 @@ func LoadConfig(path string) (ConfigFile, error) {
 		Friends:        raw.Friends,
 		FriendGroups:   raw.FriendGroups,
 		SystemTasks:    raw.SystemTasks,
+		Gameplay:       raw.Gameplay,
 	}
 	return cfg, nil
 }
@@ -201,6 +209,7 @@ func mergeFileConfig(cfg Config, fileCfg ConfigFile) (Config, error) {
 	cfg.Friends = mergeFriendsConfig(cfg.Friends, fileCfg.Friends)
 	cfg.FriendGroups = mergeFriendGroupsConfig(cfg.FriendGroups, fileCfg.FriendGroups)
 	cfg.SystemTasks = mergeSystemTasksConfig(cfg.SystemTasks, fileCfg.SystemTasks)
+	cfg.Gameplay = mergeGameplayConfig(cfg.Gameplay, fileCfg.Gameplay)
 	return cfg, nil
 }
 
@@ -244,6 +253,13 @@ func mergeRewardClaimTaskConfig(runtime RewardClaimTaskConfig, file RewardClaimT
 func mergeGeneratorTaskConfig(runtime GeneratorTaskConfig, file GeneratorTaskConfig) GeneratorTaskConfig {
 	if runtime.Generator == "" {
 		runtime.Generator = file.Generator
+	}
+	return runtime
+}
+
+func mergeGameplayConfig(runtime GameplayConfig, file GameplayConfig) GameplayConfig {
+	if runtime.PetAdoptPointCost == 0 {
+		runtime.PetAdoptPointCost = file.PetAdoptPointCost
 	}
 	return runtime
 }

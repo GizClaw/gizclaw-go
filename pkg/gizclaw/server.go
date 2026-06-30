@@ -89,6 +89,7 @@ type Server struct {
 	RewardClaimGenerator         string
 	RewardClaimCooldown          time.Duration
 	PetActionGenerator           string
+	PetAdoptPointCost            int64
 	BuildCommit                  string
 	ACLDB                        *sql.DB
 
@@ -409,8 +410,9 @@ func (s *Server) init() error {
 	petServer := &pet.Server{
 		Store:           petStore,
 		Wallet:          walletServer,
-		SpeciesSelector: firstPetSpeciesSelector{Service: petSpeciesServer, ACL: aclServer},
+		SpeciesSelector: firstPetSpeciesSelector{Service: petSpeciesServer, ACL: aclServer, Peers: peersServer},
 		VoiceSelector:   firstVoiceSelector{Service: voiceServer},
+		AdoptPointCost:  s.PetAdoptPointCost,
 	}
 	contactServer := &contact.Server{
 		Store: contactStore,
@@ -532,6 +534,7 @@ func (s *Server) init() error {
 type firstPetSpeciesSelector struct {
 	Service *petspecies.Server
 	ACL     aclAuthorizer
+	Peers   peerConfigGetter
 }
 
 func (s firstPetSpeciesSelector) SelectSpecies(ctx context.Context, owner string) (string, error) {
@@ -542,13 +545,14 @@ func (s firstPetSpeciesSelector) SelectSpecies(ctx context.Context, owner string
 		return "", errors.New("acl service not configured")
 	}
 	cursor := ""
+	authorizer := s.authorizer(owner)
 	for {
 		items, hasNext, next, err := s.Service.List(ctx, cursor, 50)
 		if err != nil {
 			return "", err
 		}
 		for _, item := range items {
-			if err := s.ACL.Authorize(ctx, acl.AuthorizeRequest{
+			if err := authorizer.Authorize(ctx, acl.AuthorizeRequest{
 				Subject:    acl.PublicKeySubject(owner),
 				Resource:   acl.PetSpeciesResource(item.Id),
 				Permission: apitypes.ACLPermissionPetSpeciesUse,
@@ -564,6 +568,21 @@ func (s firstPetSpeciesSelector) SelectSpecies(ctx context.Context, owner string
 		cursor = *next
 	}
 	return "", errors.New("no usable pet species available")
+}
+
+func (s firstPetSpeciesSelector) authorizer(owner string) aclAuthorizer {
+	if s.Peers == nil {
+		return s.ACL
+	}
+	var pk giznet.PublicKey
+	if err := pk.UnmarshalText([]byte(owner)); err != nil {
+		return s.ACL
+	}
+	return peerAuthorizer{
+		ACL:       s.ACL,
+		Peers:     s.Peers,
+		PublicKey: pk,
+	}
 }
 
 type firstVoiceSelector struct {

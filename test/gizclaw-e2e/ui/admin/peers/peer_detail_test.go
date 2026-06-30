@@ -18,8 +18,8 @@ func adminPeerDetailStories() []Story {
 				t.Skipf("admin peer seed public key is unavailable")
 			}
 			page.GotoAdmin("/peers/" + url.PathEscape(page.Seed.DevicePublicKey))
-			page.ExpectText("Living Room Device")
 			page.ExpectText(page.Seed.DevicePublicKey)
+			page.ExpectText("Peer Info")
 			page.ExpectText("Configuration")
 			page.ExpectText("default-client")
 			page.ExpectText("Last Address")

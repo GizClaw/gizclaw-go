@@ -25,7 +25,7 @@ func adminVoicesListStories() []Story {
 		Name: "140-admin-volc-voice-detail-cli",
 		Run: func(_ testing.TB, page *Page) {
 			page.GotoAdmin("/ai/voices/" + url.PathEscape(SeedVolcVoiceID))
-			page.ExpectText("Volc Mars VV Female")
+			page.ExpectText("Vivi")
 			page.ClickRole("tab", "CLI")
 			page.ExpectText("Voice Resource Spec")
 			page.ExpectText(`"kind": "Voice"`)
