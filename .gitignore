@@ -24,9 +24,9 @@ coverage.out
 .tmp/
 
 # Local e2e runtime
-test/gizclaw-e2e/.env
-test/gizclaw-e2e/setup/.env
-test/gizclaw-e2e/.testbench/
+tests/gizclaw-e2e/.env
+tests/gizclaw-e2e/setup/.env
+tests/gizclaw-e2e/.testbench/
 tests/genx-e2e/.env
 
 # Local workspace metadata

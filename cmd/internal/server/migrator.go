@@ -6,10 +6,10 @@ import (
 	"fmt"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/stores"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/ai/credential"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/runtime/peer"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/services/system/acl"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/services/ai/credential"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/services/runtime/peer"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/services/system/acl"
 )
 
 type CmdMigrator struct {

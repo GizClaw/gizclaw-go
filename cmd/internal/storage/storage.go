@@ -12,10 +12,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/pkg/store/depotstore"
-	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
-	"github.com/GizClaw/gizclaw-go/pkg/store/objectstore"
-	"github.com/GizClaw/gizclaw-go/pkg/store/vecstore"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/depotstore"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/objectstore"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/vecstore"
 
 	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"

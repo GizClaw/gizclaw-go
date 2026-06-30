@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/storage"
-	"github.com/GizClaw/gizclaw-go/pkg/store/graph"
-	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
-	"github.com/GizClaw/gizclaw-go/pkg/store/objectstore"
-	"github.com/GizClaw/gizclaw-go/pkg/store/vecstore"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/graph"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/objectstore"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/vecstore"
 )
 
 // Kind constants for logical store categories.

@@ -2,7 +2,7 @@
 
 This directory contains the source OpenAPI specifications for GizClaw HTTP APIs.
 These JSON files are the contract used by generated Go clients, server
-interfaces, and shared API types under `pkg/gizclaw/api/`.
+interfaces, and shared API types under `pkgs/gizclaw/api/`.
 
 ## Layout
 
@@ -20,12 +20,12 @@ interfaces, and shared API types under `pkg/gizclaw/api/`.
 
 Generated Go code lives outside this directory:
 
-- `pkg/gizclaw/api/adminservice/generated.go`
-- `pkg/gizclaw/api/apitypes/generated.go`
-- `pkg/gizclaw/api/clientservice/generated.go`
-- `pkg/gizclaw/api/openaiservice/generated.go`
-- `pkg/gizclaw/api/rpcapi/generated.go`
-- `pkg/gizclaw/api/serverpublic/generated.go`
+- `pkgs/gizclaw/api/adminservice/generated.go`
+- `pkgs/gizclaw/api/apitypes/generated.go`
+- `pkgs/gizclaw/api/clientservice/generated.go`
+- `pkgs/gizclaw/api/openaiservice/generated.go`
+- `pkgs/gizclaw/api/rpcapi/generated.go`
+- `pkgs/gizclaw/api/serverpublic/generated.go`
 
 Generated TypeScript SDK packages live under `js/packages/`:
 
@@ -40,12 +40,12 @@ regenerate the corresponding Go and/or TypeScript package.
 Common commands:
 
 ```sh
-go generate ./pkg/gizclaw/api/adminservice
-go generate ./pkg/gizclaw/api/apitypes
-go generate ./pkg/gizclaw/api/clientservice
-go generate ./pkg/gizclaw/api/openaiservice
-go generate ./pkg/gizclaw/api/rpcapi
-go generate ./pkg/gizclaw/api/serverpublic
+go generate ./pkgs/gizclaw/api/adminservice
+go generate ./pkgs/gizclaw/api/apitypes
+go generate ./pkgs/gizclaw/api/clientservice
+go generate ./pkgs/gizclaw/api/openaiservice
+go generate ./pkgs/gizclaw/api/rpcapi
+go generate ./pkgs/gizclaw/api/serverpublic
 ```
 
 Regenerate TypeScript SDK packages with:
@@ -57,7 +57,7 @@ npm --prefix js run gen:sdk
 When in doubt, regenerate all API packages:
 
 ```sh
-go generate ./pkg/gizclaw/api/...
+go generate ./pkgs/gizclaw/api/...
 ```
 
 ## Maintenance Guidelines
@@ -72,10 +72,10 @@ go generate ./pkg/gizclaw/api/...
   Go code, implement the strict server interface, and add tests for both success
   and user-visible error paths.
 - When changing declarative admin resources, verify `resourcemanager` behavior
-  and CLI stories under `test/gizclaw-e2e/cmd/` when applicable.
+  and CLI stories under `tests/gizclaw-e2e/cmd/` when applicable.
 - Run focused tests for the touched API surface and coverage-sensitive packages.
   For broader API changes, prefer:
 
 ```sh
-go test ./pkg/gizclaw/... ./cmd/... -count=1
+go test ./pkgs/gizclaw/... ./cmd/... -count=1
 ```

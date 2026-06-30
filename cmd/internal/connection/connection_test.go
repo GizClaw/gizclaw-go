@@ -13,11 +13,11 @@ import (
 	"time"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/clicontext"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizhttp"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet/gizwebrtc"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/gizcli"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet/gizhttp"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet/giznoise"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet/gizwebrtc"
 )
 
 type allowAllSecurityPolicy struct{}

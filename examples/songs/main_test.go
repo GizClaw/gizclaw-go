@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/mp3"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/ogg"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/opus"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/pcm"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/portaudio"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/resampler"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/codec/mp3"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/codec/ogg"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/codec/opus"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/pcm"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/portaudio"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/resampler"
 )
 
 func patchDeps(t *testing.T) {

@@ -4,9 +4,9 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/api/rpcapi"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/gizcli"
 )
 
 var getServerInfoRPC = func(ctx context.Context, c *gizcli.Client, id string) (*rpcapi.ServerGetInfoResponse, error) {

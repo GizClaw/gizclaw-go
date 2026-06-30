@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet"
 )
 
 func TestNormalizeLegacyLongFlags(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/gizcli"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/adminapi"
 	"github.com/GizClaw/gizclaw-go/cmd/internal/commands/admin/cmdutil"

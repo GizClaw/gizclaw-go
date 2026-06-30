@@ -3,7 +3,7 @@ package server
 import (
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/kv"
 )
 
 func mustBadgerInMemory(t testing.TB, opts *kv.Options) kv.Store {

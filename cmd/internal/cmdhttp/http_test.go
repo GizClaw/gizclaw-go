@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/gizcli"
 )
 
 type stringAddr string

@@ -1,0 +1,10 @@
+package: serverpublic
+generate:
+  fiber-server: true
+  strict-server: true
+  client: true
+  models: true
+import-mapping:
+  ./types.json: github.com/GizClaw/gizclaw-go/pkgs/gizclaw/api/apitypes
+output-options:
+  skip-prune: true

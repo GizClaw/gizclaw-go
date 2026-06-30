@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/clicontext"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet/giznoise"
 )
 
 func testPublicKeyText(fill byte) string {

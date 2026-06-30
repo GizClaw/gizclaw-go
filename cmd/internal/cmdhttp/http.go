@@ -21,7 +21,7 @@ import (
 	"github.com/GizClaw/gizclaw-go/cmd/internal/publicapi"
 	adminui "github.com/GizClaw/gizclaw-go/cmd/ui/admin"
 	playui "github.com/GizClaw/gizclaw-go/cmd/ui/play"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/gizcli"
 )
 
 const (

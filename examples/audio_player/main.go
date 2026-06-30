@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/opus"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/codecconv"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/pcm"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/portaudio"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/codec/opus"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/codecconv"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/pcm"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/portaudio"
 )
 
 const defaultRate = "16k"

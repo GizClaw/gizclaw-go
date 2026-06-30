@@ -18,9 +18,9 @@ import (
 	"time"
 
 	doubaospeech "github.com/GizClaw/doubao-speech-go"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/codecconv"
-	"github.com/GizClaw/gizclaw-go/pkg/genx"
-	"github.com/GizClaw/gizclaw-go/pkg/genx/transformers"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/codecconv"
+	"github.com/GizClaw/gizclaw-go/pkgs/genx"
+	"github.com/GizClaw/gizclaw-go/pkgs/genx/transformers"
 )
 
 const (

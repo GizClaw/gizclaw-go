@@ -1,7 +1,7 @@
 package identity
 
 import (
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet"
 	"os"
 	"path/filepath"
 	"runtime"

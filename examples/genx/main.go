@@ -16,7 +16,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/GizClaw/gizclaw-go/pkg/genx"
+	"github.com/GizClaw/gizclaw-go/pkgs/genx"
 	"github.com/openai/openai-go"
 	"github.com/openai/openai-go/option"
 )

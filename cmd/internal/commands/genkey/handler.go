@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/GizClaw/gizclaw-go/pkg/giznet"
-	"github.com/GizClaw/gizclaw-go/pkg/gizrun"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizrun"
 )
 
 type Handler struct {

@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/ogg"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/codec/opus"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/pcm"
-	"github.com/GizClaw/gizclaw-go/pkg/audio/voiceprint"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/codec/ogg"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/codec/opus"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/pcm"
+	"github.com/GizClaw/gizclaw-go/pkgs/audio/voiceprint"
 )
 
 func patchDeps(t *testing.T) {

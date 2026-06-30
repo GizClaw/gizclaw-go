@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/connection"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/adminservice"
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/api/adminservice"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/api/apitypes"
 	"github.com/goccy/go-yaml"
 	"github.com/spf13/cobra"
 )

@@ -3,7 +3,7 @@ package admincmd
 import (
 	"encoding/json"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/apitypes"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/api/apitypes"
 )
 
 func testCredentialBodyString(body apitypes.CredentialBody, key string) string {

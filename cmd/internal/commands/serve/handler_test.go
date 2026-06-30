@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizrun"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizrun"
 )
 
 func TestHandlerRejectsMissingWorkspace(t *testing.T) {

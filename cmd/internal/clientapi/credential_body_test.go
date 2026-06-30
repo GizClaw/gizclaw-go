@@ -3,7 +3,7 @@ package clientapi
 import (
 	"encoding/json"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/api/rpcapi"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/api/rpcapi"
 )
 
 func testStringPtr(value string) *string { return &value }

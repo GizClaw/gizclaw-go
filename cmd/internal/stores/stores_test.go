@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	physicalstorage "github.com/GizClaw/gizclaw-go/cmd/internal/storage"
-	"github.com/GizClaw/gizclaw-go/pkg/store/graph"
-	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/graph"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/kv"
 	"github.com/goccy/go-yaml"
 )
 

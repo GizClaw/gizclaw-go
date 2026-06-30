@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/store/kv"
+	"github.com/GizClaw/gizclaw-go/pkgs/store/kv"
 	"github.com/goccy/go-yaml"
 )
 

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/GizClaw/gizclaw-go/pkg/gizclaw/gizcli"
+	"github.com/GizClaw/gizclaw-go/pkgs/gizclaw/gizcli"
 )
 
 func TestFirmwareHelp(t *testing.T) {

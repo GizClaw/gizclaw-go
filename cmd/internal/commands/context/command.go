@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/GizClaw/gizclaw-go/cmd/internal/clicontext"
-	"github.com/GizClaw/gizclaw-go/pkg/giznet/giznoise"
+	"github.com/GizClaw/gizclaw-go/pkgs/giznet/giznoise"
 	"github.com/spf13/cobra"
 )
 
