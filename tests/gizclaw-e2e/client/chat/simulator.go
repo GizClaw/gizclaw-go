@@ -700,6 +700,9 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 			if !stat.FirstAssistantStarted {
 				return stat, fmt.Errorf("interrupt did not receive first response before sending second turn; recent events: %s", trace.String())
 			}
+			if stat.InterruptedStreamID == "" {
+				return stat, fmt.Errorf("interrupt missing interrupted assistant stream id; recent events: %s", trace.String())
+			}
 			if stat.SecondTranscript == "" {
 				return stat, fmt.Errorf("interrupt missing second transcript; recent events: %s", trace.String())
 			}
@@ -733,6 +736,9 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 				stat.SecondAssistantAudioASR = "skipped: lightweight-interrupt"
 				if !stat.FirstAssistantStarted {
 					return stat, fmt.Errorf("interrupt did not receive first response before sending second turn; recent events: %s", trace.String())
+				}
+				if stat.InterruptedStreamID == "" {
+					return stat, fmt.Errorf("interrupt missing interrupted assistant stream id; recent events: %s", trace.String())
 				}
 				if stat.SecondTranscript == "" {
 					return stat, fmt.Errorf("interrupt missing second transcript; recent events: %s", trace.String())
@@ -792,8 +798,7 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 				if event.event.StreamId == nil || !streamIDMatches(*event.event.StreamId, secondStreamID) {
 					continue
 				}
-				interruptedAt = event.receivedAt
-				stat.InterruptedAfter = event.since(start)
+				return stat, fmt.Errorf("interrupt second stream started before interrupted assistant EOS: stream=%s label=%s type=%s; recent events: %s", *event.event.StreamId, eventLabel(event.event), event.event.Type, trace.String())
 			}
 			if event.event.StreamId != nil && !streamIDMatches(*event.event.StreamId, secondStreamID) {
 				if streamIDMatches(*event.event.StreamId, firstStreamID) && !interruptedAt.IsZero() && eventLabel(event.event) == "assistant" && event.event.Text != nil && strings.TrimSpace(*event.event.Text) != "" {
@@ -838,6 +843,9 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 				secondAssistant.WriteString(*event.event.Text)
 			}
 		case packet := <-d.transport.opusPackets:
+			if sentInterrupt && interruptedAt.IsZero() {
+				return stat, fmt.Errorf("interrupt downlink continued before interrupted assistant EOS; recent events: %s", trace.String())
+			}
 			if !interruptedAt.IsZero() {
 				if !packet.receivedAt.IsZero() && packet.receivedAt.Before(interruptedAt) {
 					continue

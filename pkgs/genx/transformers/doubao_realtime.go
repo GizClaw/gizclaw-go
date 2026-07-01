@@ -526,13 +526,19 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 	assistantStreamID := ""
 	assistantEpoch := uint64(1)
 
-	markAssistantStarted := func(streamID string) uint64 {
-		epoch := responseEpoch.Load()
+	markAssistantPending := func(streamID string, epoch uint64) {
+		if strings.TrimSpace(streamID) == "" {
+			return
+		}
 		assistantMu.Lock()
 		assistantActive = true
 		assistantStreamID = streamID
 		assistantEpoch = epoch
 		assistantMu.Unlock()
+	}
+	markAssistantStarted := func(streamID string) uint64 {
+		epoch := responseEpoch.Load()
+		markAssistantPending(streamID, epoch)
 		return epoch
 	}
 	markAssistantDone := func(epoch uint64) {
@@ -698,15 +704,20 @@ func (t *DoubaoRealtime) processLoop(ctx context.Context, input genx.Stream, out
 				// User speech ended - pop StreamID for upcoming response
 				slog.Info("doubao: ASR ended")
 				acceptAssistant.Store(true)
-				responseEpoch.Add(1)
+				epoch := responseEpoch.Add(1)
+				responseStreamID := ""
 				switch {
 				case t.mode == DoubaoRealtimeModePushToTalk || transcriptOpen:
 					if err := closeInputSegment(); err != nil {
 						return
 					}
+					responseStreamID = streamIDs.response()
 				case streamIDs.response() == "":
-					streamIDs.endInputSegment()
+					responseStreamID = streamIDs.endInputSegment()
+				default:
+					responseStreamID = streamIDs.response()
 				}
+				markAssistantPending(responseStreamID, epoch)
 
 			case doubaospeech.EventTTSStarted:
 				if !acceptAssistant.Load() {
