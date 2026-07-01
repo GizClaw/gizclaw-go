@@ -8,7 +8,7 @@ env_file="$script_dir/.env"
 selected_config_home="${GIZCLAW_E2E_CONFIG_HOME:-}"
 default_skip_regexp='^(TestHumanReview|TestServerSocialRPCHumanReview|TestSocialRealtimeHistoryRPC)$'
 go_test_timeout="45m"
-chat_pkg="./tests/gizclaw-e2e/client/chat"
+chat_pkg="./tests/gizclaw-e2e/go/chat"
 chat_live_tests=(
   TestPushToTalkRoundtrip
   TestHistoryReplay
@@ -76,17 +76,20 @@ run_chat_pkg() {
 	done
 }
 
-run_pattern() {
-  local pattern="$1"
-  local packages=()
-  while IFS= read -r pkg; do
-    packages+=("$pkg")
-  done < <(cd "$repo_root" && go list -tags gizclaw_e2e "$pattern")
+run_js_rpc_tests() {
+	echo "==> npm test --workspace @gizclaw/gizclaw"
+	(cd "$repo_root" && npm test --workspace @gizclaw/gizclaw)
 
-  local pkg
-  for pkg in "${packages[@]}"; do
-    run_pkg "$pkg"
-  done
+	echo "==> node tests/gizclaw-e2e/js/admin"
+	(cd "$repo_root/tests/gizclaw-e2e/js" && npm run test:admin)
+
+	echo "==> node tests/gizclaw-e2e/js/rpc"
+	(cd "$repo_root/tests/gizclaw-e2e/js" && npm run test:rpc)
+}
+
+run_desktop_tests() {
+	echo "==> go test tests/gizclaw-e2e/desktop"
+	(cd "$repo_root" && go test -v -tags gizclaw_e2e -count=1 -timeout "$go_test_timeout" ./tests/gizclaw-e2e/desktop/...)
 }
 
 echo "==> build e2e CLI"
@@ -95,20 +98,12 @@ echo "==> build e2e CLI"
 echo "==> reset e2e data"
 "$setup_dir/reset_data.sh" reset
 
-run_pkg "./tests/gizclaw-e2e/client/admin"
+run_js_rpc_tests
+run_desktop_tests
+run_pkg "./tests/gizclaw-e2e/go/admin"
 run_chat_pkg
-run_pkg "./tests/gizclaw-e2e/client/rpc"
-run_pkg "./tests/gizclaw-e2e/client/social"
+run_pkg "./tests/gizclaw-e2e/go/rpc"
+run_pkg "./tests/gizclaw-e2e/go/social"
 run_pkg "./tests/gizclaw-e2e/cmd/connect"
-
-echo "==> start Admin UI"
-"$setup_dir/start-admin-ui.sh" >/dev/null
-
-echo "==> start Play UI"
-"$setup_dir/start-play-ui.sh" >/dev/null
-
-run_pattern "./tests/gizclaw-e2e/ui/admin/..."
-run_pattern "./tests/gizclaw-e2e/ui/play/..."
-run_pattern "./tests/gizclaw-e2e/ui/smoke/..."
 
 echo "==> e2e run completed"

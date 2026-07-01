@@ -92,6 +92,7 @@ type Server struct {
 	PetActionGenerator           string
 	PetAdoptPointCost            int64
 	BuildCommit                  string
+	PublicEndpoint               string
 	ACLDB                        *sql.DB
 	WebRTCSignalingHandler       http.Handler
 
@@ -377,7 +378,9 @@ func (s *Server) init() error {
 	peersServer := &peer.Server{
 		Store:           peerStore,
 		BuildCommit:     s.BuildCommit,
+		Endpoint:        s.PublicEndpoint,
 		ServerPublicKey: s.LocalStatic.Public,
+		SignalingPath:   gizwebrtc.SignalingPath,
 	}
 	manager := NewManager(peersServer)
 	manager.PeerRun = &peerrun.Server{Store: peerRunStore}
@@ -530,9 +533,10 @@ func (s *Server) init() error {
 	}
 	s.sessions = sessions
 	mux := http.NewServeMux()
-	mux.Handle(gizwebrtc.SignalingPath, s.peerService.publicHTTPHandler(sessions))
-	mux.Handle("/api/public/", http.StripPrefix("/api/public", s.peerService.publicHTTPHandler(sessions)))
-	mux.HandleFunc("/api/public", redirectProxyPrefix("/api/public/"))
+	publicHandler := s.peerService.publicHTTPHandler(sessions)
+	mux.Handle("/login", publicHandler)
+	mux.Handle("/server-info", publicHandler)
+	mux.Handle(gizwebrtc.SignalingPath, publicHandler)
 	s.httpHandler = httpLabelSetHandler(mux)
 	return nil
 }

@@ -6,7 +6,7 @@ interfaces, and shared API types under `pkgs/gizclaw/api/`.
 
 ## Layout
 
-- `admin_service.json`, `client_service.json`, `server_public.json`, and
+- `admin_service.json`, `server_public.json`, `desktop_service.json`, and
   `rpc.json` define GizClaw API surfaces or shared protocol documents.
 - `openai-compat/v1/service.json` defines the OpenAI-compatible HTTP surface.
 - `types.json` collects shared schemas and exposes them through
@@ -22,17 +22,20 @@ Generated Go code lives outside this directory:
 
 - `pkgs/gizclaw/api/adminservice/generated.go`
 - `pkgs/gizclaw/api/apitypes/generated.go`
-- `pkgs/gizclaw/api/clientservice/generated.go`
 - `pkgs/gizclaw/api/openaiservice/generated.go`
 - `pkgs/gizclaw/api/rpcapi/generated.go`
 - `pkgs/gizclaw/api/serverpublic/generated.go`
 
-Generated TypeScript SDK packages live under `js/packages/`:
+Current generated TypeScript SDK code lives under `js/packages/gizclaw/`:
 
-- `js/packages/adminservice`
-- `js/packages/clientservice`
-- `js/packages/openaiservice`
-- `js/packages/serverpublic`
+- `js/packages/gizclaw/generated/adminservice`
+- `js/packages/gizclaw/generated/rpc`
+- `js/packages/gizclaw/generated/serverpublic`
+
+The old browser `client_service` API and CLI-served UI TypeScript clients were
+removed as part of the desktop clean break. Desktop UI code should consume the
+generated clients through `@gizclaw/gizclaw` WebRTC transports instead of
+reintroducing old CLI-served package boundaries.
 
 Do not edit generated files by hand. Change the source schema in `api/`, then
 regenerate the corresponding Go and/or TypeScript package.
@@ -42,7 +45,6 @@ Common commands:
 ```sh
 go generate ./pkgs/gizclaw/api/adminservice
 go generate ./pkgs/gizclaw/api/apitypes
-go generate ./pkgs/gizclaw/api/clientservice
 go generate ./pkgs/gizclaw/api/openaiservice
 go generate ./pkgs/gizclaw/api/rpcapi
 go generate ./pkgs/gizclaw/api/serverpublic
