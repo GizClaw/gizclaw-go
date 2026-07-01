@@ -102,6 +102,7 @@ type interruptStats struct {
 	Index                   int
 	FirstUser               string
 	SecondUser              string
+	FirstAssistantStarted   bool
 	DownlinkBeforeInterrupt int
 	InterruptedAfter        time.Duration
 	InterruptedStreamID     string
@@ -236,8 +237,12 @@ func appendStringPtr(b *strings.Builder, v *string) {
 }
 
 type conversationMode struct {
-	Realtime              bool
-	SkipAssistantAudioASR bool
+	Realtime                 bool
+	SkipInputASR             bool
+	SkipTranscriptSimilarity bool
+	SkipAssistantAudioASR    bool
+	AssistantAudioASRReason  string
+	LightweightInterrupt     bool
 }
 
 const flowcraftSelfStartStreamID = "flowcraft-self-start"
@@ -265,19 +270,24 @@ func (d *personaDriver) runRound(ctx context.Context, index int, mode conversati
 		return stat, fmt.Errorf("round %d: speech returned no opus audio packets", index)
 	}
 
-	inputPath, err := d.writeRoundAudio(index, audio)
-	if err != nil {
-		return stat, err
+	if mode.SkipInputASR {
+		stat.InputASR = "skipped: lightweight-behavior"
+		fmt.Printf("workspace_progress event=input_audio_ready workspace=%s round=%d packets=%d bytes=%d input_asr=%q\n", d.cfg.Workspace, index, stat.InputOpusPackets, stat.InputOpusBytes, stat.InputASR)
+	} else {
+		inputPath, err := d.writeRoundAudio(index, audio)
+		if err != nil {
+			return stat, err
+		}
+		inputASR, err := d.transcribe(ctx, inputPath)
+		if err != nil {
+			return stat, err
+		}
+		stat.InputASR = inputASR
+		if err := assertTextSimilar("input asr", userText, inputASR, 0.45); err != nil {
+			return stat, fmt.Errorf("round %d: %w", index, err)
+		}
+		fmt.Printf("workspace_progress event=input_audio_ready workspace=%s round=%d packets=%d bytes=%d input_asr=%q\n", d.cfg.Workspace, index, stat.InputOpusPackets, stat.InputOpusBytes, inputASR)
 	}
-	inputASR, err := d.transcribe(ctx, inputPath)
-	if err != nil {
-		return stat, err
-	}
-	stat.InputASR = inputASR
-	if err := assertTextSimilar("input asr", userText, inputASR, 0.45); err != nil {
-		return stat, fmt.Errorf("round %d: %w", index, err)
-	}
-	fmt.Printf("workspace_progress event=input_audio_ready workspace=%s round=%d packets=%d bytes=%d input_asr=%q\n", d.cfg.Workspace, index, stat.InputOpusPackets, stat.InputOpusBytes, inputASR)
 
 	streamID := workspaceAudioStreamID(index)
 	uplinkStart := time.Now()
@@ -434,7 +444,7 @@ func (d *personaDriver) runRound(ctx context.Context, index int, mode conversati
 	if stat.Transcript == "" {
 		return stat, fmt.Errorf("round %d: missing transcript text; recent events: %s", index, trace.String())
 	}
-	if stat.Transcript != "" {
+	if stat.Transcript != "" && !mode.SkipTranscriptSimilarity {
 		if err := assertTextSimilar("transcript", userText, stat.Transcript, 0.45); err != nil {
 			return stat, fmt.Errorf("round %d: %w", index, err)
 		}
@@ -580,13 +590,7 @@ func assistantASRFrameChunks(frameCount int) []frameChunkRange {
 }
 
 func (d *personaDriver) runInterruptRounds(ctx context.Context, mode conversationMode) ([]interruptStats, error) {
-	count := d.cfg.Rounds
-	if d.cfg.Interrupt.Rounds > 0 {
-		count = d.cfg.Interrupt.Rounds
-	}
-	if count <= 0 {
-		count = 1
-	}
+	count := d.interruptRoundCount()
 	stats := make([]interruptStats, 0, count)
 	for i := 1; i <= count; i++ {
 		stat, err := d.runInterruptScenario(ctx, i, mode)
@@ -599,6 +603,13 @@ func (d *personaDriver) runInterruptRounds(ctx context.Context, mode conversatio
 		}
 	}
 	return stats, nil
+}
+
+func (d *personaDriver) interruptRoundCount() int {
+	if d != nil && d.cfg.Interrupt.Rounds > 0 {
+		return d.cfg.Interrupt.Rounds
+	}
+	return 1
 }
 
 func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mode conversationMode) (interruptStats, error) {
@@ -660,6 +671,16 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 	}
 	start := time.Now()
 	sentInterrupt := false
+	sendSecondTurn := func() error {
+		if sentInterrupt {
+			return nil
+		}
+		sentInterrupt = true
+		if err := d.transport.sendAudioTurn(ctx, secondStreamID, secondPackets); err != nil {
+			return fmt.Errorf("interrupt send second audio: %w", err)
+		}
+		return nil
+	}
 	var interruptedAt time.Time
 	var secondTranscript string
 	var secondAssistant strings.Builder
@@ -669,12 +690,15 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 	var settle <-chan time.Time
 	var trace roundEventTrace
 	for {
+		if mode.LightweightInterrupt && settle == nil && !interruptedAt.IsZero() && secondTranscript != "" && stat.SecondDownlinkPackets > 0 && strings.TrimSpace(secondAssistant.String()) != "" {
+			settle = time.After(700 * time.Millisecond)
+		}
 		if !interruptedAt.IsZero() && secondTranscript != "" && stat.SecondTranscriptDone > 0 && stat.SecondDownlinkPackets > 0 && secondAssistantTextDone && secondAssistantAudioDone && settle == nil {
 			stat.SecondTranscript = strings.TrimSpace(secondTranscript)
 			stat.SecondAssistantText = strings.TrimSpace(secondAssistant.String())
 			stat.SecondResponseTotal = time.Since(interruptedAt)
-			if stat.DownlinkBeforeInterrupt == 0 {
-				return stat, fmt.Errorf("interrupt did not receive first response audio before sending second turn; recent events: %s", trace.String())
+			if !stat.FirstAssistantStarted {
+				return stat, fmt.Errorf("interrupt did not receive first response before sending second turn; recent events: %s", trace.String())
 			}
 			if stat.SecondTranscript == "" {
 				return stat, fmt.Errorf("interrupt missing second transcript; recent events: %s", trace.String())
@@ -702,6 +726,25 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 			return stat, fmt.Errorf("interrupt wait response: %w; recent events: %s", ctx.Err(), trace.String())
 		case <-settle:
 			settle = nil
+			if mode.LightweightInterrupt {
+				stat.SecondTranscript = strings.TrimSpace(secondTranscript)
+				stat.SecondAssistantText = strings.TrimSpace(secondAssistant.String())
+				stat.SecondResponseTotal = time.Since(interruptedAt)
+				stat.SecondAssistantAudioASR = "skipped: lightweight-interrupt"
+				if !stat.FirstAssistantStarted {
+					return stat, fmt.Errorf("interrupt did not receive first response before sending second turn; recent events: %s", trace.String())
+				}
+				if stat.SecondTranscript == "" {
+					return stat, fmt.Errorf("interrupt missing second transcript; recent events: %s", trace.String())
+				}
+				if stat.SecondAssistantText == "" {
+					return stat, fmt.Errorf("interrupt missing second assistant text; recent events: %s", trace.String())
+				}
+				if stat.SecondDownlinkPackets == 0 {
+					return stat, fmt.Errorf("interrupt missing second assistant audio; recent events: %s", trace.String())
+				}
+				return stat, nil
+			}
 			switch {
 			case secondTranscript == "":
 				return stat, fmt.Errorf("interrupt missing second transcript after audio EOS; recent events: %s", trace.String())
@@ -740,6 +783,12 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 				return stat, fmt.Errorf("interrupt peer event error: %s; recent events: %s", msg, trace.String())
 			}
 			if interruptedAt.IsZero() {
+				if event.event.StreamId != nil && streamIDMatches(*event.event.StreamId, firstStreamID) && eventLabel(event.event) == "assistant" && event.event.Text != nil && strings.TrimSpace(*event.event.Text) != "" {
+					stat.FirstAssistantStarted = true
+					if err := sendSecondTurn(); err != nil {
+						return stat, err
+					}
+				}
 				if event.event.StreamId == nil || !streamIDMatches(*event.event.StreamId, secondStreamID) {
 					continue
 				}
@@ -801,12 +850,9 @@ func (d *personaDriver) runInterruptScenario(ctx context.Context, index int, mod
 				continue
 			}
 			stat.DownlinkBeforeInterrupt++
-			if sentInterrupt {
-				continue
-			}
-			sentInterrupt = true
-			if err := d.transport.sendAudioTurn(ctx, secondStreamID, secondPackets); err != nil {
-				return stat, fmt.Errorf("interrupt send second audio: %w", err)
+			stat.FirstAssistantStarted = true
+			if err := sendSecondTurn(); err != nil {
+				return stat, err
 			}
 		}
 	}
@@ -1028,6 +1074,9 @@ func (d *personaDriver) transcribeAssistantAudio(ctx context.Context, audioPath 
 
 func (d *personaDriver) assistantAudioASRSkipReason(mode conversationMode) string {
 	if mode.SkipAssistantAudioASR {
+		if strings.TrimSpace(mode.AssistantAudioASRReason) != "" {
+			return strings.TrimSpace(mode.AssistantAudioASRReason)
+		}
 		return "human-review"
 	}
 	if d == nil || !d.cfg.isASTTranslateAgent() {

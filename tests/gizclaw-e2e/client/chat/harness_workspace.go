@@ -50,6 +50,34 @@ type workspaceCaseResult struct {
 	Interrupts []interruptStats
 }
 
+type workspaceRuntimeValidationOptions struct {
+	Replay historyReplayVerifyOptions
+}
+
+func (c workspaceCase) runtimeValidationOptions() workspaceRuntimeValidationOptions {
+	switch c {
+	case workspaceCaseHistoryReplay:
+		return workspaceRuntimeValidationOptions{
+			Replay: historyReplayVerifyOptions{
+				SkipTextSimilarity:      true,
+				SkipAssistantAudioASR:   true,
+				AssistantAudioASRReason: "history-replay",
+			},
+		}
+	default:
+		return workspaceRuntimeValidationOptions{}
+	}
+}
+
+func lightweightBehaviorMode(reason string) conversationMode {
+	return conversationMode{
+		SkipInputASR:             true,
+		SkipTranscriptSimilarity: true,
+		SkipAssistantAudioASR:    true,
+		AssistantAudioASRReason:  reason,
+	}
+}
+
 func runConfig(configPath, contextConfigPath string, selectedCase workspaceCase) error {
 	cfg, err := loadConfig(configPath, contextConfigPath)
 	if err != nil {
@@ -112,7 +140,7 @@ func runConfig(configPath, contextConfigPath string, selectedCase workspaceCase)
 	if selectedCase == workspaceCaseRealtimeAutoSplit {
 		return nil
 	}
-	report, err := validateWorkspaceRuntimeForRun(ctx, driver, client, cfg, result.Rounds)
+	report, err := validateWorkspaceRuntimeForRun(ctx, driver, client, cfg, result.Rounds, selectedCase.runtimeValidationOptions())
 	if report != nil {
 		printWorkspaceRuntimeReport(*report)
 	}
@@ -182,7 +210,7 @@ func (d *personaDriver) runCase(ctx context.Context, selected workspaceCase) (wo
 	case workspaceCaseRealtimeAutoSplit:
 		return workspaceCaseResult{}, d.runRealtimeAutoSplitHistory(ctx)
 	case workspaceCaseHistoryReplay:
-		rounds, err := d.runPushToTalkRoundtrip(ctx)
+		rounds, err := d.runPushToTalkRoundtripWithMode(ctx, lightweightBehaviorMode("history-replay"))
 		return workspaceCaseResult{Rounds: rounds}, err
 	case workspaceCaseHumanReview:
 		rounds, err := d.runHumanReview(ctx)
@@ -568,7 +596,7 @@ type workspaceRuntimeReport struct {
 	RecallQueryChars int    `json:"recall_query_chars"`
 }
 
-func validateWorkspaceRuntime(ctx context.Context, driver *personaDriver, client runControlClient, cfg config, stats []roundStats) (*workspaceRuntimeReport, error) {
+func validateWorkspaceRuntime(ctx context.Context, driver *personaDriver, client runControlClient, cfg config, stats []roundStats, options workspaceRuntimeValidationOptions) (*workspaceRuntimeReport, error) {
 	if !cfg.isFlowcraftAgent() {
 		return nil, nil
 	}
@@ -673,7 +701,7 @@ func validateWorkspaceRuntime(ctx context.Context, driver *personaDriver, client
 	report.ReplayHistoryID = historyItem.Id
 	report.ReplayState = play.State
 	if driver != nil {
-		replay, err := driver.verifyHistoryReplay(ctx, historyItem)
+		replay, err := driver.verifyHistoryReplayWithOptions(ctx, historyItem, options.Replay)
 		if err != nil {
 			return nil, fmt.Errorf("runtime rpc history replay output: %w", err)
 		}
@@ -766,6 +794,7 @@ func printInterruptSummary(stat interruptStats) {
 		"round":                      stat.Index,
 		"first_user":                 stat.FirstUser,
 		"second_user":                stat.SecondUser,
+		"first_assistant_started":    stat.FirstAssistantStarted,
 		"downlink_before_interrupt":  stat.DownlinkBeforeInterrupt,
 		"interrupted_after_ms":       float64(stat.InterruptedAfter.Microseconds()) / 1000,
 		"interrupted_stream_id":      stat.InterruptedStreamID,

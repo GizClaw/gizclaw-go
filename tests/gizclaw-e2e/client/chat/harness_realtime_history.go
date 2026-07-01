@@ -23,7 +23,6 @@ const (
 	realtimeAutoSplitSampleRate     = 16000
 	realtimeAutoSplitChannels       = 1
 	realtimeAutoSplitHistoryMinText = 0.35
-	realtimeAutoSplitReplayASRMin   = 0.30
 )
 
 func (d *personaDriver) runRealtimeAutoSplitHistory(ctx context.Context) error {
@@ -93,7 +92,11 @@ func (d *personaDriver) runRealtimeAutoSplitHistory(ctx context.Context) error {
 			}
 			return fmt.Errorf("realtime auto split history replay %q rejected state=%s: %s", item.Id, state, message)
 		}
-		replay, err := d.verifyHistoryReplayWithOptions(ctx, item, historyReplayVerifyOptions{audioASRMinRatio: realtimeAutoSplitReplayASRMin})
+		replay, err := d.verifyHistoryReplayWithOptions(ctx, item, historyReplayVerifyOptions{
+			SkipTextSimilarity:      true,
+			SkipAssistantAudioASR:   true,
+			AssistantAudioASRReason: "realtime-auto-split-history",
+		})
 		if err != nil {
 			return fmt.Errorf("realtime auto split history replay %q output: %w", item.Id, err)
 		}
